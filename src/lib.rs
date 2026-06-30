@@ -24,5 +24,7 @@ pub mod ports;
 pub mod viewer;
 
 pub use domain::bundle::{Bundle, BundleKind, ContinuationBundle};
+pub use domain::context::{Context, Decision};
+pub use domain::contract::Contract;
 pub use domain::intent::{Intent, IntentState};
 pub use domain::session::{Message, Role, Session};

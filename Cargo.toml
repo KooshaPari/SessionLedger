@@ -1,3 +1,7 @@
+[workspace]
+members = ["crates/sl-viewer"]
+resolver = "2"
+
 [package]
 name = "session-ledger"
 version = "0.1.0"

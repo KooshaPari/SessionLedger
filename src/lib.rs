@@ -24,5 +24,5 @@ pub mod ports;
 pub mod viewer;
 
 pub use domain::bundle::{Bundle, BundleKind, ContinuationBundle};
-pub use domain::intent::IntentState;
+pub use domain::intent::{Intent, IntentState};
 pub use domain::session::{Message, Role, Session};

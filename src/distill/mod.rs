@@ -5,9 +5,13 @@
 //! envelope (Acceptance + Intent + Context + Provenance + Worklog) from a
 //! session. LLM-backed intent extraction and memory write-through arrive in
 //! Phase 3 behind the [`crate::ports`] traits.
+//!
+//! The P1 [`extractor`] module provides the heuristic intent extractor adapter.
+
+pub mod extractor;
 
 use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
-use crate::domain::session::{Role, Session};
+use crate::domain::session::Session;
 use serde_json::json;
 
 /// Compile a normalized session into a continuation bundle.
@@ -19,8 +23,9 @@ pub fn compile(session: &Session) -> ContinuationBundle {
     let mut bundle = ContinuationBundle::new(session.id.clone());
 
     let user_turns = session.user_turns();
-    let last_user =
-        session.messages.iter().rev().find(|m| m.role == Role::User).map(|m| m.content.clone());
+
+    // Use the heuristic extractor to produce structured intent data.
+    let intent = extractor::HeuristicIntentExtractor::extract_intent(session);
 
     bundle.push(Bundle::new(
         BundleKind::Acceptance,
@@ -30,7 +35,15 @@ pub fn compile(session: &Session) -> ContinuationBundle {
             "user_turns": user_turns,
         }),
     ));
-    bundle.push(Bundle::new(BundleKind::Intent, json!({ "latest_user_request": last_user })));
+    bundle.push(Bundle::new(
+        BundleKind::Intent,
+        json!({
+            "goal": intent.goal,
+            "acceptance_signals": intent.acceptance_signals,
+            "constraints": intent.constraints,
+            "user_turn_count": intent.user_turn_count,
+        }),
+    ));
     bundle.push(Bundle::new(
         BundleKind::Context,
         json!({ "cwd": session.cwd, "title": session.title }),

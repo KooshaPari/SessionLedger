@@ -6,6 +6,7 @@
 //! - [`Compressor`]    ← forgecode zstd codec / omni-context-rtk.
 //! - [`TraceSink`]     ← pheno-tracing `TracePort`.
 
+use crate::domain::intent::Intent;
 use crate::domain::session::Session;
 
 /// Error surface for port operations. Adapters map their native errors into this.
@@ -63,4 +64,19 @@ pub trait Compressor {
 /// Observability sink for ledger operations (pheno-tracing).
 pub trait TraceSink {
     fn span(&self, name: &str);
+}
+
+/// Structured intent extraction from a session's message stream.
+///
+/// Parses session messages and extracts the user's goal, acceptance signals,
+/// and constraints into a structured [`Intent`] value.
+///
+/// # Errors
+/// Returns [`PortError::Backend`] if extraction fails (adapter-level failure).
+pub trait IntentExtractor {
+    /// Extract structured intent from a normalized session.
+    ///
+    /// # Errors
+    /// Returns [`PortError::Backend`] if the underlying extraction fails.
+    fn extract(&self, session: &Session) -> Result<Intent, PortError>;
 }

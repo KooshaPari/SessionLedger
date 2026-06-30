@@ -2,21 +2,39 @@ use dioxus::prelude::*;
 
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::detail_pane::{extract_detail, BundleDetail};
+use crate::history_tab::HistoryTimeline;
+use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
+
+/// Tab identifiers for the viewer.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Tab {
+    Bundles,
+    History,
+    Memory,
+}
 
 /// Root application component.
 ///
-/// Two-panel layout:
-/// - Left panel: session/bundle list
-/// - Right panel: detail view for the selected bundle
+/// Three-tab layout:
+/// - **Bundles** — browse compiled continuation bundles (the original view)
+/// - **History** — session history timeline
+/// - **Memory** — wiki/docs view of distilled memories
+///
+/// Each tab has its own sidebar list and detail panel.
 #[component]
 pub fn App() -> Element {
-    let bundles = use_signal(sample_bundles);
-    let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
+    let mut active_tab: Signal<Tab> = use_signal(|| Tab::Bundles);
 
-    let summaries: Vec<BundleSummary> = bundles.iter().map(|b| summarize(&b)).collect();
+    let bundles_class = if active_tab() == Tab::Bundles { "tab active" } else { "tab" };
+    let history_class = if active_tab() == Tab::History { "tab active" } else { "tab" };
+    let memory_class = if active_tab() == Tab::Memory { "tab active" } else { "tab" };
 
-    let detail = selected_idx().and_then(|idx| bundles.get(idx)).map(|b| extract_detail(&b));
+    let tab_body = match active_tab() {
+        Tab::Bundles => rsx! { BundlesTab {} },
+        Tab::History => rsx! { HistoryTimeline {} },
+        Tab::Memory => rsx! { MemoryWiki {} },
+    };
 
     rsx! {
         style {
@@ -42,28 +60,67 @@ pub fn App() -> Element {
                 .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; }}
                 .detail-section li {{ font-size: 13px; line-height: 1.7; color: #a1a6b5; }}
                 .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: #5c5f6e; font-size: 14px; }}
+                .tab-bar {{ display: flex; border-bottom: 1px solid #2a2d35; background: #13151c; }}
+                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border-bottom: 2px solid transparent; transition: all 0.15s; }}
+                .tab:hover {{ color: #8b8fa3; background: #1a1c26; }}
+                .tab.active {{ color: #6c8cff; border-bottom-color: #6c8cff; background: #161822; }}
             "#,
         }
         div { class: "app",
             div { class: "sidebar",
-                h2 { "Compiled Bundles" }
-                for (i, summary) in summaries.iter().enumerate() {
-                    BundleRow {
-                        key: "{summary.source_id}",
-                        summary: summary.clone(),
-                        is_selected: selected_idx() == Some(i),
-                        on_click: move |_| {
-                            selected_idx.set(Some(i));
-                        },
+                div { class: "tab-bar",
+                    div {
+                        class: "{bundles_class}",
+                        onclick: move |_| active_tab.set(Tab::Bundles),
+                        "Bundles"
+                    }
+                    div {
+                        class: "{history_class}",
+                        onclick: move |_| active_tab.set(Tab::History),
+                        "History"
+                    }
+                    div {
+                        class: "{memory_class}",
+                        onclick: move |_| active_tab.set(Tab::Memory),
+                        "Memory"
                     }
                 }
+                {tab_body}
             }
-            match detail {
-                Some(d) => rsx! { DetailView { detail: d.clone() } },
-                None => rsx! {
-                    div { class: "empty-state", "Select a bundle from the list to view details" }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Bundles tab (original compiled-bundles view)
+// ---------------------------------------------------------------------------
+
+/// The compiled-bundles tab — the original sidebar + detail panel.
+#[component]
+fn BundlesTab() -> Element {
+    let bundles = use_signal(sample_bundles);
+    let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
+
+    let summaries: Vec<BundleSummary> = bundles.iter().map(|b| summarize(&b)).collect();
+    let detail = selected_idx().and_then(|idx| bundles.get(idx)).map(|b| extract_detail(&b));
+
+    rsx! {
+        h2 { "Compiled Bundles" }
+        for (i, summary) in summaries.iter().enumerate() {
+            BundleRow {
+                key: "{summary.source_id}",
+                summary: summary.clone(),
+                is_selected: selected_idx() == Some(i),
+                on_click: move |_| {
+                    selected_idx.set(Some(i));
                 },
             }
+        }
+        match detail {
+            Some(d) => rsx! { DetailView { detail: d.clone() } },
+            None => rsx! {
+                div { class: "empty-state", "Select a bundle from the list to view details" }
+            },
         }
     }
 }

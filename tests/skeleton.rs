@@ -25,6 +25,7 @@ fn compiled_bundle_is_injectable_and_complete() {
         BundleKind::Acceptance,
         BundleKind::Intent,
         BundleKind::Context,
+        BundleKind::Contract,
         BundleKind::Provenance,
         BundleKind::Worklog,
     ] {

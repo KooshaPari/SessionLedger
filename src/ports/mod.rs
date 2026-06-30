@@ -6,6 +6,8 @@
 //! - [`Compressor`]    ← forgecode zstd codec / omni-context-rtk.
 //! - [`TraceSink`]     ← pheno-tracing `TracePort`.
 
+use crate::domain::context::Context;
+use crate::domain::contract::Contract;
 use crate::domain::intent::Intent;
 use crate::domain::session::Session;
 
@@ -79,4 +81,36 @@ pub trait IntentExtractor {
     /// # Errors
     /// Returns [`PortError::Backend`] if the underlying extraction fails.
     fn extract(&self, session: &Session) -> Result<Intent, PortError>;
+}
+
+/// Structured context extraction from a session's message stream.
+///
+/// Parses session messages and extracts the working context — files touched,
+/// decisions reached, symbols referenced, and environment state — into a
+/// structured [`Context`] value.
+///
+/// # Errors
+/// Returns [`PortError::Backend`] if extraction fails (adapter-level failure).
+pub trait ContextExtractor {
+    /// Extract structured working-context from a normalized session.
+    ///
+    /// # Errors
+    /// Returns [`PortError::Backend`] if the underlying extraction fails.
+    fn extract(&self, session: &Session) -> Result<Context, PortError>;
+}
+
+/// Structured contract extraction from a session's message stream.
+///
+/// Parses session messages and extracts acceptance criteria — done-conditions,
+/// test commands, invariants, and do-not-touch rules — into a structured
+/// [`Contract`] value.
+///
+/// # Errors
+/// Returns [`PortError::Backend`] if extraction fails (adapter-level failure).
+pub trait ContractExtractor {
+    /// Extract structured acceptance contract from a normalized session.
+    ///
+    /// # Errors
+    /// Returns [`PortError::Backend`] if the underlying extraction fails.
+    fn extract(&self, session: &Session) -> Result<Contract, PortError>;
 }

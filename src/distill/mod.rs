@@ -7,7 +7,11 @@
 //! Phase 3 behind the [`crate::ports`] traits.
 //!
 //! The P1 [`extractor`] module provides the heuristic intent extractor adapter.
+//! The P2 [`context_extractor`] and [`contract_extractor`] modules add heuristic
+//! context and contract extraction adapters.
 
+pub mod context_extractor;
+pub mod contract_extractor;
 pub mod extractor;
 
 use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
@@ -24,8 +28,10 @@ pub fn compile(session: &Session) -> ContinuationBundle {
 
     let user_turns = session.user_turns();
 
-    // Use the heuristic extractor to produce structured intent data.
+    // Use the heuristic extractors to produce structured data.
     let intent = extractor::HeuristicIntentExtractor::extract_intent(session);
+    let context = context_extractor::HeuristicContextExtractor::extract_context(session);
+    let contract = contract_extractor::HeuristicContractExtractor::extract_contract(session);
 
     bundle.push(Bundle::new(
         BundleKind::Acceptance,
@@ -46,7 +52,23 @@ pub fn compile(session: &Session) -> ContinuationBundle {
     ));
     bundle.push(Bundle::new(
         BundleKind::Context,
-        json!({ "cwd": session.cwd, "title": session.title }),
+        json!({
+            "cwd": context.cwd,
+            "title": context.title,
+            "files_mentioned": context.files_mentioned,
+            "key_decisions": context.key_decisions,
+            "key_symbols": context.key_symbols,
+            "environment_notes": context.environment_notes,
+        }),
+    ));
+    bundle.push(Bundle::new(
+        BundleKind::Contract,
+        json!({
+            "success_criteria": contract.success_criteria,
+            "tests_or_verifications": contract.tests_or_verifications,
+            "constraints": contract.constraints,
+            "do_not_touch": contract.do_not_touch,
+        }),
     ));
     bundle.push(Bundle::new(
         BundleKind::Provenance,

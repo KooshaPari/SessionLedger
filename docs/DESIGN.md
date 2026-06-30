@@ -100,6 +100,24 @@ edges. SessionLedger maps cleanly:
 This makes the bundle interchangeable with other OKF-style consumers and keeps
 distilled knowledge queryable, not opaque blobs.
 
+### 4.1 OKF export implementation
+
+Added in `feat/okf-export-v2`:
+
+- **Port** [`src/ports/okf.rs`](src/ports/okf.rs) — defines the `OkfDocument`/`OkfEntity`/`OkfRelation`/`OkfProvenance`
+  data model and the `OkfExporter` trait (`trait OkfExporter { type Output; fn export(&self, bundle: &ContinuationBundle) -> Result<Self::Output, PortError>; }`).
+- **Adapter** [`src/export/okf.rs`](src/export/okf.rs) — `JsonOkfExporter` produces `serde_json::Value`, plus a
+  free-standing `export_to_okf()` convenience function (the `--okf` entry point).
+
+| Bundle kind        | OKF entity type       | Relation type     |
+|--------------------|-----------------------|-------------------|
+| `Intent` (goal)    | `intent`              | `verified_by` → acceptance, `bounded_by` → constraint |
+| `Intent` (accept.) | `acceptance`          | ← `verified_by` |
+| `Intent` (constr.) | `constraint`          | ← `bounded_by` |
+| `Context`          | `resource` / `state`   | `grounds` |
+| `Contract`         | `criteria`            | `requires` |
+| `Acceptance`       | `gate`                | (document-level) |
+
 ---
 
 ## 5. Flows

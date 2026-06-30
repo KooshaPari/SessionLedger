@@ -12,6 +12,7 @@
 //! - [`distill`]: the "dream" pass — distills a session into memory stores and
 //!   produces the [`domain::bundle::ContinuationBundle`].
 //! - [`viewer`]: read model for the wiki / docs / history surface.
+//! - [`export`]: export adapters (OKF, YAML, etc.) for compiled bundles.
 //!
 //! Nothing here duplicates forgecode (lifecycle FSM + zstd + ADR-103 pruning),
 //! `OmniRoute` memory (FTS5 + Qdrant), or pheno-tracing — those are composed via
@@ -19,6 +20,7 @@
 
 pub mod distill;
 pub mod domain;
+pub mod export;
 pub mod ingestion;
 pub mod ports;
 pub mod viewer;
@@ -28,3 +30,5 @@ pub use domain::context::{Context, Decision};
 pub use domain::contract::Contract;
 pub use domain::intent::{Intent, IntentState};
 pub use domain::session::{Message, Role, Session};
+pub use export::okf::export_to_okf;
+pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};

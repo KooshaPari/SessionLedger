@@ -5,6 +5,7 @@
 //! - [`MemoryStore`]   ← `OmniRoute` `src/lib/memory` (FTS5 + Qdrant, hybrid recall).
 //! - [`Compressor`]    ← forgecode zstd codec / omni-context-rtk.
 //! - [`TraceSink`]     ← pheno-tracing `TracePort`.
+//! - [`OkfExporter`]   ← OKF (Open Knowledge Format) entity/relation export.
 
 use crate::domain::context::Context;
 use crate::domain::contract::Contract;
@@ -114,3 +115,6 @@ pub trait ContractExtractor {
     /// Returns [`PortError::Backend`] if the underlying extraction fails.
     fn extract(&self, session: &Session) -> Result<Contract, PortError>;
 }
+
+/// OKF (Open Knowledge Format) data model and export port.
+pub mod okf;

@@ -1,0 +1,25 @@
+[package]
+name = "session-ledger"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Session ledger: compile/distill agent sessions into injectable continuation bundles (Acceptance/Contract/Context/Intent), crash-recovery + duplicate-chat merge + lost-work localization"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/KooshaPari/SessionLedger"
+readme = "README.md"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+sha2 = "0.10"
+time = { version = "0.3", features = ["serde", "formatting"] }
+
+[dev-dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }

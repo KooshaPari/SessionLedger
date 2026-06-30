@@ -1,0 +1,6 @@
+//! Pure domain model. No I/O, no adapters.
+
+pub mod bundle;
+pub mod dedup;
+pub mod intent;
+pub mod session;

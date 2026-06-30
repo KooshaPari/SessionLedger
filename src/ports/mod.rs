@@ -7,6 +7,7 @@
 //! - [`TraceSink`]     ← pheno-tracing `TracePort`.
 //! - [`OkfExporter`]   ← OKF (Open Knowledge Format) entity/relation export.
 
+use crate::domain::acceptance::Acceptance;
 use crate::domain::context::Context;
 use crate::domain::contract::Contract;
 use crate::domain::intent::Intent;
@@ -118,3 +119,19 @@ pub trait ContractExtractor {
 
 /// OKF (Open Knowledge Format) data model and export port.
 pub mod okf;
+
+/// Structured acceptance extraction from a session's message stream.
+///
+/// Parses session messages and extracts evidence of completion / verification
+/// — passing tests, user confirmations, completed goals — into a structured
+/// [`Acceptance`] value.
+///
+/// # Errors
+/// Returns [`PortError::Backend`] if extraction fails (adapter-level failure).
+pub trait AcceptanceExtractor {
+    /// Extract structured acceptance evidence from a normalized session.
+    ///
+    /// # Errors
+    /// Returns [`PortError::Backend`] if the underlying extraction fails.
+    fn extract(&self, session: &Session) -> Result<Acceptance, PortError>;
+}

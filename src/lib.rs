@@ -25,6 +25,7 @@ pub mod ingestion;
 pub mod ports;
 pub mod viewer;
 
+pub use domain::acceptance::Acceptance;
 pub use domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 pub use domain::context::{Context, Decision};
 pub use domain::contract::Contract;

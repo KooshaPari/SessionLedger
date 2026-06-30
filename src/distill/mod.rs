@@ -9,7 +9,11 @@
 //! The P1 [`extractor`] module provides the heuristic intent extractor adapter.
 //! The P2 [`context_extractor`] and [`contract_extractor`] modules add heuristic
 //! context and contract extraction adapters.
+//! The P3 [`acceptance_extractor`] and [`compiler`] modules add the acceptance
+//! extractor and the bundle compiler.
 
+pub mod acceptance_extractor;
+pub mod compiler;
 pub mod context_extractor;
 pub mod contract_extractor;
 pub mod extractor;

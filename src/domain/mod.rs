@@ -1,5 +1,6 @@
 //! Pure domain model. No I/O, no adapters.
 
+pub mod acceptance;
 pub mod bundle;
 pub mod context;
 pub mod contract;

@@ -1,0 +1,320 @@
+//! Bundle compiler — orchestrates all four extractors over a session and
+//! produces an injectable [`ContinuationBundle`].
+//!
+//! The compiler runs the [`IntentExtractor`], [`ContextExtractor`],
+//! [`ContractExtractor`], and [`AcceptanceExtractor`] over a normalized
+//! [`Session`] and assembles the results into a
+//! [`ContinuationBundle`] with provenance. It also provides a method to render
+//! the bundle as an injectable text payload for a new session.
+//!
+//! # Example
+//!
+//! ```rust
+//! use session_ledger::distill::compiler::BundleCompiler;
+//! use session_ledger::distill::extractor::HeuristicIntentExtractor;
+//! use session_ledger::distill::context_extractor::HeuristicContextExtractor;
+//! use session_ledger::distill::contract_extractor::HeuristicContractExtractor;
+//! use session_ledger::distill::acceptance_extractor::HeuristicAcceptanceExtractor;
+//! use session_ledger::domain::session::{Session, Corpus};
+//!
+//! let session = Session::new("test", Corpus::Forge);
+//! let compiler = BundleCompiler::new(
+//!     HeuristicIntentExtractor,
+//!     HeuristicContextExtractor,
+//!     HeuristicContractExtractor,
+//!     HeuristicAcceptanceExtractor,
+//! );
+//! let bundle = compiler.compile(&session).expect("compilation should succeed");
+//! assert!(bundle.is_injectable());
+//! let text = compiler.render_injectable(&bundle);
+//! assert!(!text.is_empty());
+//! ```
+
+use crate::domain::acceptance::Acceptance;
+use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
+use crate::domain::context::Context;
+use crate::domain::contract::Contract;
+use crate::domain::intent::Intent;
+use crate::domain::session::Session;
+use crate::ports::{
+    AcceptanceExtractor, ContextExtractor, ContractExtractor, IntentExtractor, PortError,
+};
+use serde_json::json;
+
+/// Compilation error.
+#[derive(Debug, thiserror::Error)]
+pub enum CompileError {
+    #[error("extraction failed: {0}")]
+    Extraction(#[from] PortError),
+}
+
+/// Orchestrator that runs all four extractors over a session and produces an
+/// injectable [`ContinuationBundle`].
+///
+/// Generic over the four extractor types so different backends (heuristic, LLM,
+/// etc.) can be injected at compile time.
+#[derive(Debug, Clone)]
+pub struct BundleCompiler<IE, CE, CtrE, AE> {
+    intent: IE,
+    context: CE,
+    contract: CtrE,
+    acceptance: AE,
+}
+
+impl<IE, CE, CtrE, AE> BundleCompiler<IE, CE, CtrE, AE>
+where
+    IE: IntentExtractor,
+    CE: ContextExtractor,
+    CtrE: ContractExtractor,
+    AE: AcceptanceExtractor,
+{
+    /// Create a new compiler with the given extractors.
+    #[must_use]
+    pub fn new(
+        intent_extractor: IE,
+        context_extractor: CE,
+        contract_extractor: CtrE,
+        acceptance_extractor: AE,
+    ) -> Self {
+        Self {
+            intent: intent_extractor,
+            context: context_extractor,
+            contract: contract_extractor,
+            acceptance: acceptance_extractor,
+        }
+    }
+
+    /// Run all extractors and assemble the bundle.
+    ///
+    /// # Errors
+    /// Returns [`CompileError::Extraction`] if any extractor fails.
+    pub fn compile(&self, session: &Session) -> Result<ContinuationBundle, CompileError> {
+        let intent: Intent = self.intent.extract(session)?;
+        let context: Context = self.context.extract(session)?;
+        let contract: Contract = self.contract.extract(session)?;
+        let acceptance: Acceptance = self.acceptance.extract(session)?;
+
+        let mut bundle = ContinuationBundle::new(session.id.clone());
+
+        // Check if session appears ready for injection.
+        let ready = acceptance.satisfaction_score > 0 || !session.messages.is_empty();
+
+        bundle.push(Bundle::new(
+            BundleKind::Acceptance,
+            json!({
+                "ready": ready,
+                "scope_sized": ready,
+                "user_turns": session.user_turns(),
+                "evidence": acceptance.evidence,
+                "user_confirmed": acceptance.user_confirmed,
+                "testing_evidence": acceptance.testing_evidence,
+                "satisfaction_score": acceptance.satisfaction_score,
+            }),
+        ));
+        bundle.push(Bundle::new(
+            BundleKind::Intent,
+            json!({
+                "goal": intent.goal,
+                "acceptance_signals": intent.acceptance_signals,
+                "constraints": intent.constraints,
+                "user_turn_count": intent.user_turn_count,
+            }),
+        ));
+        bundle.push(Bundle::new(
+            BundleKind::Context,
+            json!({
+                "cwd": context.cwd,
+                "title": context.title,
+                "files_mentioned": context.files_mentioned,
+                "key_decisions": context.key_decisions,
+                "key_symbols": context.key_symbols,
+                "environment_notes": context.environment_notes,
+            }),
+        ));
+        bundle.push(Bundle::new(
+            BundleKind::Contract,
+            json!({
+                "success_criteria": contract.success_criteria,
+                "tests_or_verifications": contract.tests_or_verifications,
+                "constraints": contract.constraints,
+                "do_not_touch": contract.do_not_touch,
+            }),
+        ));
+        bundle.push(Bundle::new(
+            BundleKind::Provenance,
+            json!({ "corpus": session.corpus, "source_id": session.id }),
+        ));
+
+        Ok(bundle)
+    }
+
+    /// Render a compiled bundle as injectable text payload for a new session.
+    ///
+    /// The output is a formatted text block suitable for injection as a system
+    /// prompt or context prefix in a new agent session. All bundle slices are
+    /// rendered in a structured, human-readable format.
+    #[must_use]
+    pub fn render_injectable(&self, bundle: &ContinuationBundle) -> String {
+        let mut parts: Vec<String> = Vec::new();
+
+        parts.push(format!(
+            "[CONTINUATION BUNDLE] source: {} | injectable: {}",
+            bundle.source_id,
+            if bundle.is_injectable() { "YES" } else { "NO" }
+        ));
+
+        let total_tokens = bundle.total_token_estimate();
+        parts.push(format!(
+            "token budget estimate: ~{total_tokens} (sum across {} slices)",
+            bundle.bundles.len()
+        ));
+        parts.push(String::new());
+
+        for slice in &bundle.bundles {
+            let label = match slice.kind {
+                BundleKind::Acceptance => "--- ACCEPTANCE (resume gate) ---",
+                BundleKind::Intent => "--- INTENT (goal / acceptance signals) ---",
+                BundleKind::Context => "--- CONTEXT (working state) ---",
+                BundleKind::Contract => "--- CONTRACT (criteria / constraints) ---",
+                BundleKind::Provenance => "--- PROVENANCE (origin) ---",
+                BundleKind::Worklog => "--- WORKLOG (diff / outstanding) ---",
+                BundleKind::Dedup => "--- DEDUP (merge key) ---",
+            };
+            parts.push(label.to_string());
+
+            match &slice.kind {
+                BundleKind::Acceptance
+                | BundleKind::Intent
+                | BundleKind::Context
+                | BundleKind::Contract
+                | BundleKind::Provenance
+                | BundleKind::Worklog
+                | BundleKind::Dedup => {
+                    // Render the JSON body in a compact but readable form.
+                    if let Some(obj) = slice.body.as_object() {
+                        for (key, val) in obj {
+                            let rendered = match val {
+                                serde_json::Value::String(s) => s.clone(),
+                                serde_json::Value::Array(arr) => {
+                                    let items: Vec<String> = arr
+                                        .iter()
+                                        .filter_map(|v| v.as_str().map(String::from))
+                                        .collect();
+                                    if items.is_empty() {
+                                        "(empty)".to_string()
+                                    } else {
+                                        items.join(", ")
+                                    }
+                                }
+                                other => other.to_string(),
+                            };
+                            parts.push(format!("  {key}: {rendered}"));
+                        }
+                    } else {
+                        parts.push(format!("  {}", slice.body));
+                    }
+                }
+            }
+
+            parts.push(String::new());
+        }
+
+        parts.push("--- END CONTINUATION BUNDLE ---".to_string());
+        parts.join("\n")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::distill::acceptance_extractor::HeuristicAcceptanceExtractor;
+    use crate::distill::context_extractor::HeuristicContextExtractor;
+    use crate::distill::contract_extractor::HeuristicContractExtractor;
+    use crate::distill::extractor::HeuristicIntentExtractor;
+    use crate::domain::session::{Corpus, Message, Role};
+
+    fn sample_session() -> Session {
+        let mut s = Session::new("sess-compile-test", Corpus::Forge);
+        s.cwd = Some("/home/user/proj".into());
+        s.title = Some("add auth".into());
+        s.messages.push(Message::new(Role::User, "add JWT authentication to the API"));
+        s.messages
+            .push(Message::new(Role::Assistant, "I'll add jsonwebtoken and implement middleware"));
+        s.messages.push(Message::new(Role::User, "looks good, all tests pass, ship it"));
+        s
+    }
+
+    fn make_compiler() -> BundleCompiler<
+        HeuristicIntentExtractor,
+        HeuristicContextExtractor,
+        HeuristicContractExtractor,
+        HeuristicAcceptanceExtractor,
+    > {
+        BundleCompiler::new(
+            HeuristicIntentExtractor,
+            HeuristicContextExtractor,
+            HeuristicContractExtractor,
+            HeuristicAcceptanceExtractor,
+        )
+    }
+
+    #[test]
+    fn full_bundle_compilation_produces_all_expected_kinds() {
+        let compiler = make_compiler();
+        let bundle = compiler.compile(&sample_session()).expect("compilation should succeed");
+
+        assert!(bundle.is_injectable(), "bundle must be injectable");
+
+        for kind in [
+            BundleKind::Acceptance,
+            BundleKind::Intent,
+            BundleKind::Context,
+            BundleKind::Contract,
+            BundleKind::Provenance,
+        ] {
+            assert!(bundle.has(kind), "missing bundle kind {kind:?}");
+        }
+
+        // Should NOT include Worklog or Dedup (not in the 4-extractor compiler).
+        assert!(!bundle.has(BundleKind::Worklog));
+        assert!(!bundle.has(BundleKind::Dedup));
+    }
+
+    #[test]
+    fn render_injectable_produces_non_empty_text() {
+        let compiler = make_compiler();
+        let bundle = compiler.compile(&sample_session()).expect("compilation should succeed");
+        let text = compiler.render_injectable(&bundle);
+
+        assert!(!text.is_empty(), "injectable text must not be empty");
+        assert!(text.contains("CONTINUATION BUNDLE"), "must have bundle header");
+        assert!(text.contains("source: sess-compile-test"), "must contain source id");
+        assert!(text.contains("ACCEPTANCE"), "must contain acceptance section");
+        assert!(text.contains("INTENT"), "must contain intent section");
+        assert!(text.contains("CONTEXT"), "must contain context section");
+        assert!(text.contains("CONTRACT"), "must contain contract section");
+        assert!(text.contains("PROVENANCE"), "must contain provenance section");
+        assert!(text.contains("END CONTINUATION BUNDLE"), "must have footer");
+    }
+
+    #[test]
+    fn compiler_rejects_on_extractor_failure() {
+        // Use a compiler where an extractor always fails.
+        use crate::ports::PortError;
+        struct FailingExtractor;
+        impl IntentExtractor for FailingExtractor {
+            fn extract(&self, _session: &Session) -> Result<Intent, PortError> {
+                Err(PortError::Backend("simulated failure".to_string()))
+            }
+        }
+
+        let compiler = BundleCompiler::new(
+            FailingExtractor,
+            HeuristicContextExtractor,
+            HeuristicContractExtractor,
+            HeuristicAcceptanceExtractor,
+        );
+        let result = compiler.compile(&sample_session());
+        assert!(result.is_err(), "should fail when an extractor fails");
+    }
+}

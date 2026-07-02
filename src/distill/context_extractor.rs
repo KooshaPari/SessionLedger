@@ -647,4 +647,49 @@ mod tests {
         assert!(is_file_path("/etc"));
         assert!(is_file_path("/path/to/file"));
     }
+
+    #[test]
+    fn symbol_extraction_left_true_right_false() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "call HashMap::new but not with ()"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.key_symbols.iter().any(|sym| sym.contains("HashMap::new")),
+                "LEFT=true (::), RIGHT=false (no ()): should extract");
+    }
+
+    #[test]
+    fn symbol_extraction_left_false_right_true() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "invoke process() with no double colon"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(!ctx.key_symbols.is_empty(),
+                "LEFT=false (no ::), RIGHT=true (()): should extract");
+    }
+
+    #[test]
+    fn symbol_extraction_both_false() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "variable myvar and identifier count should not be extracted"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(!ctx.key_symbols.iter().any(|sym| sym == "myvar" || sym == "count"),
+                "LEFT=false (no ::), RIGHT=false (no ()): should NOT extract");
+    }
+
+    #[test]
+    fn file_path_contains_slash_true() {
+        assert!(is_file_path("src/main.rs"),
+                "LEFT=true (contains /): should be file path");
+    }
+
+    #[test]
+    fn file_path_extension_true() {
+        assert!(is_file_path("config.toml"),
+                "RIGHT=true (has extension): should be file path when >= 3 chars");
+    }
+
+    #[test]
+    fn file_path_no_slash_no_extension() {
+        assert!(!is_file_path("myvar"),
+                "LEFT=false (no /), RIGHT=false (no extension or short): NOT file path");
+    }
 }

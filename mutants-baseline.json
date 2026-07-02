@@ -1,0 +1,17 @@
+{
+  "mutation_kill_rate": 0.545,
+  "total_evaluated": 66,
+  "caught": 36,
+  "missed": 30,
+  "floor": 0.54,
+  "generated_at": "2026-07-02",
+  "note": "Baseline from an interrupted cargo-mutants 27.1.0 run over the distill extractors (66 testable of 77 evaluated; 11 unviable excluded). floor is the ratchet: overall kill rate must not regress below it. distill/compiler.rs has since been raised to 1.0 (PR #9) — the per_file value below records the baseline snapshot at measurement time, not current main.",
+  "per_file": {
+    "distill/contract_extractor.rs": 1.0,
+    "distill/extractor.rs": 0.83,
+    "distill/acceptance_extractor.rs": 0.57,
+    "distill/context_extractor.rs": 0.50,
+    "domain/acceptance.rs": 0.50,
+    "distill/compiler.rs": 0.29
+  }
+}

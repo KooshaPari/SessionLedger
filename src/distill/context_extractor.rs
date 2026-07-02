@@ -264,4 +264,316 @@ mod tests {
         let ctx = extractor.extract(&fixture_session()).expect("extraction should succeed");
         assert_eq!(ctx.cwd.as_deref(), Some("/home/user/proj"));
     }
+
+    #[test]
+    fn file_paths_with_various_extensions() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "check package.json, Cargo.toml, src/main.rs, test.py, config.yaml"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".json")));
+        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".toml")));
+        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".rs")));
+        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".py")));
+        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".yaml")));
+    }
+
+    #[test]
+    fn ignores_file_extensions_on_short_tokens() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "the .rs and .ts are extensions"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        // ".rs" and ".ts" alone are too short (< 3 chars) and won't match
+        assert!(!ctx.files_mentioned.contains(&".rs".to_string()));
+        assert!(!ctx.files_mentioned.contains(&".ts".to_string()));
+    }
+
+    #[test]
+    fn paths_with_slashes_are_files() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "update src/lib/utils.rs and tests/integration/mod.rs"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.files_mentioned.iter().any(|f| f == "src/lib/utils.rs"));
+        assert!(ctx.files_mentioned.iter().any(|f| f == "tests/integration/mod.rs"));
+    }
+
+    #[test]
+    fn deduplicates_file_mentions() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "edit src/main.rs"));
+        s.messages.push(Message::new(Role::Assistant, "sure, I'll update src/main.rs"));
+        s.messages.push(Message::new(Role::User, "and src/main.rs should also handle errors"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        let count = ctx.files_mentioned.iter().filter(|f| f == &"src/main.rs").count();
+        assert_eq!(count, 1, "src/main.rs should only appear once");
+    }
+
+    #[test]
+    fn extracts_symbols_with_double_colon() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "use HashMap::new and Vec::with_capacity"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.key_symbols.iter().any(|sym| sym == "HashMap::new"));
+        assert!(ctx.key_symbols.iter().any(|sym| sym == "Vec::with_capacity"));
+    }
+
+    #[test]
+    fn extracts_function_calls() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "call foo() and do_something() now"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        // Function calls with () in the token are extracted
+        assert!(!ctx.key_symbols.is_empty());
+    }
+
+    #[test]
+    fn deduplicates_symbols() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "HashMap::new is useful"));
+        s.messages.push(Message::new(Role::Assistant, "yes, HashMap::new"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        let count = ctx.key_symbols.iter().filter(|sym| *sym == "HashMap::new").count();
+        assert_eq!(count, 1, "HashMap::new should only appear once");
+    }
+
+    #[test]
+    fn trims_symbols_of_punctuation() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "use HashMap::new and Vec::new and slice::first"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        // Symbols should be trimmed of parens, brackets, braces
+        assert!(ctx.key_symbols.iter().any(|sym| sym == "HashMap::new"));
+        assert!(ctx.key_symbols.iter().any(|sym| sym == "Vec::new"));
+    }
+
+    #[test]
+    fn all_decision_patterns_detected() {
+        for pattern in DECISION_PATTERNS {
+            let mut s = Session::new("test", Corpus::Forge);
+            s.messages.push(Message::new(Role::User, &format!("we {}", pattern)));
+            let ctx = HeuristicContextExtractor::extract_context(&s);
+            assert!(!ctx.key_decisions.is_empty(), "pattern '{}' should be detected", pattern);
+        }
+    }
+
+    #[test]
+    fn decision_pattern_case_insensitive() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "DECIDED to use this approach"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.key_decisions.iter().any(|d| d.summary.contains("decided")));
+    }
+
+    #[test]
+    fn decision_includes_rationale() {
+        let mut s = Session::new("test", Corpus::Forge);
+        let msg_text = "we decided to refactor the parser";
+        s.messages.push(Message::new(Role::User, msg_text));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.key_decisions.iter().any(|d| d.rationale.as_deref() == Some(msg_text)));
+    }
+
+    #[test]
+    fn deduplicates_decisions_by_summary() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "I decided on this plan"));
+        s.messages.push(Message::new(Role::Assistant, "yes, I decided on this plan too"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        let decision_count = ctx.key_decisions.iter().filter(|d| d.summary.contains("decided")).count();
+        assert_eq!(decision_count, 1, "duplicate decision patterns should be deduplicated");
+    }
+
+    #[test]
+    fn all_environment_patterns_detected() {
+        for pattern in ENVIRONMENT_PATTERNS {
+            let mut s = Session::new("test", Corpus::Forge);
+            s.messages.push(Message::new(Role::User, &format!("please {} the tool", pattern)));
+            let ctx = HeuristicContextExtractor::extract_context(&s);
+            assert!(!ctx.environment_notes.is_empty(), "pattern '{}' should be detected", pattern);
+        }
+    }
+
+    #[test]
+    fn environment_pattern_case_insensitive() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "NPM INSTALL and CARGO BUILD"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(!ctx.environment_notes.is_empty());
+    }
+
+    #[test]
+    fn deduplicates_environment_notes() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "install the package"));
+        s.messages.push(Message::new(Role::Assistant, "ok, installing now"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        // Notes are deduplicated after sort
+        assert!(!ctx.environment_notes.is_empty());
+        // Check that environment_notes doesn't have exact duplicates
+        let original_len = ctx.environment_notes.len();
+        let mut dedup = ctx.environment_notes.clone();
+        dedup.sort();
+        dedup.dedup();
+        assert_eq!(dedup.len(), original_len, "environment notes should be deduplicated");
+    }
+
+    #[test]
+    fn empty_message_content_handled() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, ""));
+        s.messages.push(Message::new(Role::Assistant, ""));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.is_empty(), "empty messages should result in empty context");
+    }
+
+    #[test]
+    fn whitespace_only_messages_handled() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "   \t\n  "));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.is_empty(), "whitespace-only messages should result in empty context");
+    }
+
+    #[test]
+    fn very_long_file_path() {
+        let mut s = Session::new("test", Corpus::Forge);
+        let long_path = "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/file.rs";
+        s.messages.push(Message::new(Role::User, &format!("update {}", long_path)));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.files_mentioned.iter().any(|f| f == long_path));
+    }
+
+    #[test]
+    fn very_long_message() {
+        let mut s = Session::new("test", Corpus::Forge);
+        let long_msg = "src/file.rs ".repeat(1000);
+        s.messages.push(Message::new(Role::User, &long_msg));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.files_mentioned.iter().any(|f| f == "src/file.rs"));
+        // Should not panic or crash
+    }
+
+    #[test]
+    fn symbols_with_numbers_and_underscores() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "call my_func_123() and Test_Class::method_v2()"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.key_symbols.iter().any(|sym| sym.contains("my_func_123")));
+        assert!(ctx.key_symbols.iter().any(|sym| sym.contains("Test_Class::method_v2")));
+    }
+
+    #[test]
+    fn file_paths_with_hyphens() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "check src/my-module/index.ts and my-config.yaml"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.files_mentioned.iter().any(|f| f == "src/my-module/index.ts"));
+        assert!(ctx.files_mentioned.iter().any(|f| f == "my-config.yaml"));
+    }
+
+    #[test]
+    fn context_with_none_cwd_and_title() {
+        let s = Session::new("test", Corpus::Forge);
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert_eq!(ctx.cwd, None);
+        assert_eq!(ctx.title, None);
+    }
+
+    #[test]
+    fn context_with_populated_cwd_and_title() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.cwd = Some("/var/www/project".to_string());
+        s.title = Some("bug fix #123".to_string());
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert_eq!(ctx.cwd.as_deref(), Some("/var/www/project"));
+        assert_eq!(ctx.title.as_deref(), Some("bug fix #123"));
+    }
+
+    #[test]
+    fn file_path_detection_boundary_exactly_3_chars() {
+        // Exactly 3 chars with extension should match
+        assert!(is_file_path("a.rs"));
+        assert!(is_file_path("x.py"));
+    }
+
+    #[test]
+    fn file_path_detection_boundary_less_than_3_chars() {
+        // Less than 3 chars should not match
+        assert!(!is_file_path("a"));
+        assert!(!is_file_path("ab"));
+        assert!(!is_file_path("a."));
+    }
+
+    #[test]
+    fn file_path_detection_unknown_extension() {
+        // Unknown extension should not match even if > 3 chars
+        assert!(!is_file_path("file.xyz"));
+        assert!(!is_file_path("thing.unknown"));
+    }
+
+    #[test]
+    fn file_path_detection_slash_overrides_extension_check() {
+        // Path with `/` should be file regardless of extension
+        assert!(is_file_path("src/foo"));
+        assert!(is_file_path("docs/readme.txt")); // .txt is not in the list, but / makes it a file
+    }
+
+    #[test]
+    fn mixed_content_session() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.cwd = Some("/home/dev".into());
+        s.title = Some("feature xyz".into());
+        s.messages.push(Message::new(Role::User, "I'll refactor src/parser.rs"));
+        s.messages.push(Message::new(Role::Assistant, "Decided to use regex::Regex"));
+        s.messages.push(Message::new(Role::User, "Install regex and run cargo test"));
+        s.messages.push(Message::new(Role::Assistant, "Done. verify_parse works"));
+
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+
+        assert_eq!(ctx.cwd.as_deref(), Some("/home/dev"));
+        assert_eq!(ctx.title.as_deref(), Some("feature xyz"));
+        assert!(ctx.files_mentioned.contains(&"src/parser.rs".to_string()));
+        assert!(ctx.key_decisions.iter().any(|d| d.summary.contains("decided")));
+        assert!(ctx.key_symbols.iter().any(|sym| sym == "regex::Regex"));
+        assert!(!ctx.environment_notes.is_empty());
+    }
+
+    #[test]
+    fn symbols_in_comments_and_quoted_text() {
+        let mut s = Session::new("test", Corpus::Forge);
+        // Symbols should be extracted even if in descriptions
+        s.messages.push(Message::new(Role::User, "Use String::from to convert"));
+        s.messages.push(Message::new(Role::Assistant, "Also consider format!"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.key_symbols.iter().any(|sym| sym == "String::from"));
+    }
+
+    #[test]
+    fn environment_pattern_with_spaces() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "I need to set up the environment"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        // "set up" is a pattern, should match
+        assert!(ctx.environment_notes.iter().any(|n| n.contains("set up")));
+    }
+
+    #[test]
+    fn decision_rationale_preserves_full_message() {
+        let mut s = Session::new("test", Corpus::Forge);
+        let full_msg = "We decided to use async/await for all I/O operations because it's cleaner";
+        s.messages.push(Message::new(Role::User, full_msg));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.key_decisions.iter().any(|d|
+            d.rationale.as_deref().map(|r| r.contains("async/await")).unwrap_or(false)
+        ));
+    }
+
+    #[test]
+    fn multiple_messages_accumulate_findings() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "file1.rs"));
+        s.messages.push(Message::new(Role::User, "file2.rs"));
+        s.messages.push(Message::new(Role::User, "file3.rs"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert_eq!(ctx.files_mentioned.len(), 3);
+    }
 }

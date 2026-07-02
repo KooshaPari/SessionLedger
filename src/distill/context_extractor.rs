@@ -576,4 +576,75 @@ mod tests {
         let ctx = HeuristicContextExtractor::extract_context(&s);
         assert_eq!(ctx.files_mentioned.len(), 3);
     }
+
+    #[test]
+    fn symbol_extraction_requires_double_colon_or_function_call() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "use HashMap::new"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(ctx.key_symbols.iter().any(|sym| sym.contains("HashMap::new")),
+                "Should extract symbol with :: but no ()");
+    }
+
+    #[test]
+    fn symbol_extraction_with_function_call_no_double_colon() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "call foo() to start processing"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(!ctx.key_symbols.is_empty(),
+                "Should extract function call foo() even without ::");
+    }
+
+    #[test]
+    fn symbol_not_extracted_without_double_colon_or_function_call() {
+        let mut s = Session::new("test", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "the variable myvar is important"));
+        let ctx = HeuristicContextExtractor::extract_context(&s);
+        assert!(!ctx.key_symbols.iter().any(|sym| sym == "myvar"),
+                "Should NOT extract plain identifier without :: or ()");
+    }
+
+    #[test]
+    fn is_file_path_with_forward_slash() {
+        assert!(is_file_path("src/main.rs"));
+        assert!(is_file_path("./relative/path.txt"));
+        assert!(is_file_path("../../parent/file.py"));
+    }
+
+    #[test]
+    fn is_file_path_with_common_extension() {
+        assert!(is_file_path("config.toml"));
+        assert!(is_file_path("Cargo.lock"));
+        assert!(is_file_path("setup.py"));
+    }
+
+    #[test]
+    fn is_file_path_rejects_short_tokens() {
+        assert!(!is_file_path(""));
+        assert!(!is_file_path("a"));
+        assert!(!is_file_path("ab"));
+    }
+
+    #[test]
+    fn is_file_path_rejects_plain_identifier() {
+        assert!(!is_file_path("myvar"));
+        assert!(!is_file_path("SomeClass"));
+    }
+
+    #[test]
+    fn is_file_path_windows_style_forward_slash() {
+        assert!(is_file_path("C:/Users/project"));
+    }
+
+    #[test]
+    fn is_file_path_backward_slash_not_recognized() {
+        assert!(!is_file_path("C:\\Users\\project\\file.txt"));
+    }
+
+    #[test]
+    fn is_file_path_leading_slash_without_second_segment() {
+        assert!(!is_file_path("/"));
+        assert!(is_file_path("/etc"));
+        assert!(is_file_path("/path/to/file"));
+    }
 }

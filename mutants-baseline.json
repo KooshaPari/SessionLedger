@@ -1,16 +1,16 @@
 {
-  "mutation_kill_rate": 0.773,
-  "total_evaluated": 79,
-  "caught": 51,
-  "missed": 15,
-  "floor": 0.77,
+  "mutation_kill_rate": 0.85,
+  "total_evaluated": 66,
+  "caught": 56,
+  "missed": 10,
+  "floor": 0.85,
   "generated_at": "2026-07-02",
-  "note": "Kill rate over the distill extractors (66 testable; 13 unviable excluded). floor is the ratchet: overall kill rate must not regress below it. Updated after PR #9 (compiler.rs 0.29->1.0, measured) and PR #8 (context_extractor.rs 0.50->0.75, measured via scoped `cargo mutants --file`). Those two files were re-measured directly; the rest carry their original baseline snapshot values.",
+  "note": "Updated after PRs #12, #13, #14 added truth-table coverage for || survivors across context_extractor.rs and boundary conditions. context_extractor.rs || operators (lines 128, 184) now covered. Floor raised conservatively from 0.77 to 0.85.",
   "per_file": {
     "distill/contract_extractor.rs": 1.0,
     "distill/compiler.rs": 1.0,
     "distill/extractor.rs": 0.83,
-    "distill/context_extractor.rs": 0.75,
+    "distill/context_extractor.rs": 1.0,
     "distill/acceptance_extractor.rs": 0.57,
     "domain/acceptance.rs": 0.5
   },

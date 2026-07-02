@@ -32,4 +32,32 @@ pub use domain::contract::Contract;
 pub use domain::intent::{Intent, IntentState};
 pub use domain::session::{Message, Role, Session};
 pub use export::okf::export_to_okf;
+pub use ingestion::{parse_jsonl_sessions, read_jsonl_sessions, IngestionError};
 pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};
+
+/// Process a single session through the entire ingest→distill→export pipeline.
+///
+/// Compiles the session into a [`ContinuationBundle`] via
+/// [`distill::compile`], then exports the result as an [`OkfDocument`].
+#[must_use]
+pub fn process_session(session: &Session) -> OkfDocument {
+    let bundle = distill::compile(session);
+    export_to_okf(&bundle, session.corpus.as_str())
+}
+
+/// Read a JSONL file, compile every session, and return the exported documents.
+///
+/// This is the top-level pipeline entry point for batch processing: reads
+/// [`Session`]s from a JSONL file, distills each into a
+/// [`ContinuationBundle`], and exports the results as [`OkfDocument`]s.
+///
+/// # Errors
+///
+/// Returns [`IngestionError::Io`] if the file cannot be opened or read, or
+/// [`IngestionError::Json`] if a line contains invalid session JSON.
+pub fn process_jsonl_file<P: AsRef<std::path::Path>>(
+    path: P,
+) -> Result<Vec<OkfDocument>, IngestionError> {
+    let sessions = read_jsonl_sessions(path)?;
+    Ok(sessions.iter().map(process_session).collect())
+}

@@ -52,6 +52,20 @@ pub struct Session {
     pub messages: Vec<Message>,
 }
 
+impl Corpus {
+    /// Return the kebab-case corpus name as a string slice.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Forge => "forge",
+            Self::Codex => "codex",
+            Self::ClaudeCode => "claude-code",
+            Self::Cursor => "cursor",
+            Self::FactoryDroid => "factory-droid",
+        }
+    }
+}
+
 impl Session {
     #[must_use]
     pub fn new(id: impl Into<String>, corpus: Corpus) -> Self {

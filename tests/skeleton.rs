@@ -4,7 +4,10 @@ use session_ledger::distill;
 use session_ledger::domain::dedup::DedupKey;
 use session_ledger::domain::intent::IntentState;
 use session_ledger::domain::session::Corpus;
-use session_ledger::{Bundle, BundleKind, ContinuationBundle, Message, Role, Session};
+use session_ledger::{
+    parse_jsonl_sessions, process_session, Bundle, BundleKind, ContinuationBundle, Message, Role,
+    Session,
+};
 
 fn sample_session() -> Session {
     let mut s = Session::new("sess-1", Corpus::Forge);
@@ -73,4 +76,72 @@ fn bundle_roundtrips_through_json() {
     let s = serde_json::to_string(&bundle).expect("serialize");
     let back: ContinuationBundle = serde_json::from_str(&s).expect("deserialize");
     assert_eq!(bundle, back);
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline integration: JSONL ingestion → distill compilation → OKF export
+// ---------------------------------------------------------------------------
+
+fn sample_jsonl() -> String {
+    let mut s1 = Session::new("pipeline-int-1", Corpus::Forge);
+    s1.cwd = Some("/home/user/proj".into());
+    s1.title = Some("fix pagination".into());
+    s1.messages.push(Message::new(
+        Role::User,
+        "fix the pagination bug but don't change the database schema",
+    ));
+    s1.messages.push(Message::new(Role::Assistant, "on it"));
+    s1.messages.push(Message::new(Role::User, "looks good, tests pass now"));
+
+    let mut s2 = Session::new("pipeline-int-2", Corpus::Codex);
+    s2.cwd = Some("/home/user/proj".into());
+    s2.title = Some("add auth".into());
+    s2.messages.push(Message::new(Role::User, "add JWT authentication to the API"));
+    s2.messages.push(Message::new(Role::Assistant, "I'll add jsonwebtoken and middleware"));
+    s2.messages.push(Message::new(Role::User, "lgtm, ship it"));
+
+    let mut buf = String::new();
+    buf.push_str(&serde_json::to_string(&s1).expect("serialize s1"));
+    buf.push('\n');
+    buf.push_str(&serde_json::to_string(&s2).expect("serialize s2"));
+    buf.push('\n');
+    buf
+}
+
+#[test]
+fn pipeline_round_trips_jsonl_through_ingest_distill_export() {
+    let jsonl = sample_jsonl();
+
+    // Stage 1: Ingestion — parse JSONL into sessions.
+    let sessions = parse_jsonl_sessions(jsonl.as_bytes()).expect("parse JSONL");
+    assert_eq!(sessions.len(), 2, "should parse two sessions");
+
+    // Stage 2: process_session compiles AND exports in one step.
+    let docs: Vec<_> = sessions.iter().map(process_session).collect();
+    assert_eq!(docs.len(), 2, "should produce two documents");
+
+    // First document: forge session "fix pagination"
+    let doc1 = &docs[0];
+    assert_eq!(doc1.source_id, "pipeline-int-1");
+    assert_eq!(doc1.provenance.corpus, "forge");
+    assert!(doc1.entities.iter().any(|e| e.r#type == "gate"), "should have gate entity");
+    assert!(doc1.entities.iter().any(|e| e.r#type == "intent"), "should have intent entity");
+    assert!(
+        doc1.entities.iter().any(|e| e.r#type == "constraint"),
+        "should have constraint entity"
+    );
+    assert!(doc1.relations.iter().any(|r| r.r#type == "bounded_by"), "should have bounded_by edge");
+
+    // Second document: codex session "add auth"
+    let doc2 = &docs[1];
+    assert_eq!(doc2.source_id, "pipeline-int-2");
+    assert_eq!(doc2.provenance.corpus, "codex");
+
+    // Round-trip through JSON serialization.
+    for doc in &docs {
+        let json_str = serde_json::to_string_pretty(doc).expect("serialize");
+        let back: session_ledger::OkfDocument =
+            serde_json::from_str(&json_str).expect("deserialize OKF document");
+        assert_eq!(doc, &back, "OKF document round-trips through JSON");
+    }
 }

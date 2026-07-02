@@ -145,3 +145,90 @@ fn pipeline_round_trips_jsonl_through_ingest_distill_export() {
         assert_eq!(doc, &back, "OKF document round-trips through JSON");
     }
 }
+
+// ---------------------------------------------------------------------------
+// T03: focused single-session JSONL → OKF round-trip
+// ---------------------------------------------------------------------------
+
+fn forge_jsonl_roundtrip_fixture() -> String {
+    // Minimal but realistic forge-format Session: id, cwd, title, 3 messages.
+    // Serializes each Session as one JSON object per line.
+    let mut s = Session::new("t03-forge-roundtrip", Corpus::Forge);
+    s.cwd = Some("/Users/koosha/projects/SessionLedger".into());
+    s.title = Some("wire ingest→distill→export and prove JSONL round-trip".into());
+    s.messages.push(Message::new(
+        Role::User,
+        "wire the ingest→distill→export pipeline and prove a JSONL round-trip",
+    ));
+    s.messages.push(Message::new(
+        Role::Assistant,
+        "compiling the session into a ContinuationBundle and exporting an OkfDocument",
+    ));
+    s.messages.push(Message::new(
+        Role::User,
+        "looks good — verify the OKF document has non-empty context or bundle",
+    ));
+
+    let mut buf = String::new();
+    buf.push_str(&serde_json::to_string(&s).expect("serialize forge session"));
+    buf.push('\n');
+    buf
+}
+
+#[test]
+fn real_jsonl_roundtrip_produces_okf_document() {
+    // (1) Build a minimal valid forge-format JSONL string in-memory:
+    //     one session with id, cwd, and 2+ messages.
+    let jsonl = forge_jsonl_roundtrip_fixture();
+    assert!(jsonl.contains("t03-forge-roundtrip"));
+    assert!(jsonl.contains("\"corpus\":\"forge\""));
+    assert!(jsonl.contains("\"cwd\":"));
+
+    // (2) Parse it through the production JSONL ingestion entry point.
+    let sessions = parse_jsonl_sessions(jsonl.as_bytes()).expect("parse JSONL fixture");
+
+    // (3) Exactly one session round-tripped out of the JSONL.
+    assert_eq!(sessions.len(), 1, "JSONL fixture should yield exactly one session");
+    let session = &sessions[0];
+    assert_eq!(session.id, "t03-forge-roundtrip");
+    assert_eq!(session.corpus, Corpus::Forge);
+    assert!(session.cwd.as_deref().is_some_and(|s| !s.is_empty()));
+    assert!(session.title.as_deref().is_some_and(|s| !s.is_empty()));
+    assert!(
+        session.messages.len() >= 2,
+        "fixture must carry 2+ messages to satisfy the round-trip contract"
+    );
+
+    // (4) Run the full compile → export pipeline on the parsed session.
+    let doc = process_session(session);
+
+    // (5) The OkfDocument must carry a non-empty bundle or context.
+    //     The OKF surface has no direct `context`/`bundle` fields; the compiled
+    //     bundle manifests as the entity graph, and the Context bundle
+    //     produces `resource` (cwd) and `state` (title) entities. Require
+    //     either: (a) the bundle produced entities, OR (b) the document
+    //     carries context entities.
+    let has_bundle_entities = doc
+        .entities
+        .iter()
+        .any(|e| matches!(e.r#type.as_str(), "intent" | "gate" | "criteria"));
+    let has_context_entities = doc
+        .entities
+        .iter()
+        .any(|e| matches!(e.r#type.as_str(), "resource" | "state"));
+
+    assert!(
+        has_bundle_entities || has_context_entities,
+        "OKF document must carry a non-empty bundle (intent/gate/criteria) or \
+         context (resource/state) — got entities: {:?}",
+        doc.entities.iter().map(|e| e.r#type.as_str()).collect::<Vec<_>>()
+    );
+
+    // The context entities (when present) must reflect the round-tripped values.
+    if let Some(res) = doc.entities.iter().find(|e| e.r#type == "resource") {
+        assert_eq!(res.properties["cwd"], session.cwd.as_deref().unwrap());
+    }
+    if let Some(state) = doc.entities.iter().find(|e| e.r#type == "state") {
+        assert_eq!(state.properties["title"], session.title.as_deref().unwrap());
+    }
+}

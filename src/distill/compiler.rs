@@ -297,6 +297,114 @@ mod tests {
         assert!(text.contains("END CONTINUATION BUNDLE"), "must have footer");
     }
 
+    /// Acceptance extractor returning a fixed satisfaction score, so the
+    /// `ready` boundary in `compile()` can be pinned independent of heuristics.
+    struct FixedScoreAcceptance(u8);
+    impl AcceptanceExtractor for FixedScoreAcceptance {
+        fn extract(&self, _session: &Session) -> Result<Acceptance, PortError> {
+            let mut a = Acceptance::empty();
+            a.satisfaction_score = self.0;
+            Ok(a)
+        }
+    }
+
+    fn compiler_with_score(
+        score: u8,
+    ) -> BundleCompiler<
+        HeuristicIntentExtractor,
+        HeuristicContextExtractor,
+        HeuristicContractExtractor,
+        FixedScoreAcceptance,
+    > {
+        BundleCompiler::new(
+            HeuristicIntentExtractor,
+            HeuristicContextExtractor,
+            HeuristicContractExtractor,
+            FixedScoreAcceptance(score),
+        )
+    }
+
+    fn empty_session() -> Session {
+        Session::new("sess-empty", Corpus::Forge)
+    }
+
+    fn session_with_one_message() -> Session {
+        let mut s = Session::new("sess-one-msg", Corpus::Forge);
+        s.messages.push(Message::new(Role::User, "hello"));
+        s
+    }
+
+    /// Read the `ready` flag the compiler wrote into the Acceptance slice.
+    fn ready_flag(bundle: &ContinuationBundle) -> bool {
+        let slice = bundle
+            .bundles
+            .iter()
+            .find(|b| b.kind == BundleKind::Acceptance)
+            .expect("acceptance slice must exist");
+        slice.body.get("ready").and_then(serde_json::Value::as_bool).expect("ready must be a bool")
+    }
+
+    // `ready = satisfaction_score > 0 || !session.messages.is_empty();`
+    // The four combinations below pin every operator on that line so the
+    // surviving mutants (`> -> ==`, `> -> <`, `> -> >=`, `|| -> &&`, `delete !`)
+    // all flip at least one asserted value.
+
+    #[test]
+    fn ready_false_when_score_zero_and_no_messages() {
+        // score == 0, messages empty -> orig: false.
+        // Anchors: `> -> >=` (0>=0 true), `> -> ==` (0==0 true), `delete !`
+        // (is_empty() true) would each flip this to `true`.
+        let bundle =
+            compiler_with_score(0).compile(&empty_session()).expect("compilation should succeed");
+        assert!(!ready_flag(&bundle), "empty session with score 0 must NOT be ready");
+    }
+
+    #[test]
+    fn ready_true_when_score_positive_and_no_messages() {
+        // score == 1, messages empty -> orig: true (via score > 0).
+        // Anchors: `> -> <` (1<0 false) and `|| -> &&` (true && false) would
+        // each flip this to `false`.
+        let bundle =
+            compiler_with_score(1).compile(&empty_session()).expect("compilation should succeed");
+        assert!(ready_flag(&bundle), "score 1 must be ready even with no messages");
+    }
+
+    #[test]
+    fn ready_true_when_score_zero_but_messages_present() {
+        // score == 0, messages non-empty -> orig: true (via !is_empty()).
+        // Anchors: `|| -> &&` (false && true) and `delete !` (false || is_empty()
+        // = false) would each flip this to `false`.
+        let bundle = compiler_with_score(0)
+            .compile(&session_with_one_message())
+            .expect("compilation should succeed");
+        assert!(ready_flag(&bundle), "non-empty session must be ready even at score 0");
+    }
+
+    #[test]
+    fn ready_flag_mirrors_into_scope_sized() {
+        // `scope_sized` is derived from the same `ready` value; assert they track
+        // together across the boundary so a mutation on line 100 can't silently
+        // desync the two fields.
+        let unready =
+            compiler_with_score(0).compile(&empty_session()).expect("compilation should succeed");
+        let unready_slice = unready
+            .bundles
+            .iter()
+            .find(|b| b.kind == BundleKind::Acceptance)
+            .expect("acceptance slice");
+        assert_eq!(unready_slice.body.get("scope_sized").and_then(serde_json::Value::as_bool), Some(false));
+
+        let ready = compiler_with_score(1)
+            .compile(&session_with_one_message())
+            .expect("compilation should succeed");
+        let ready_slice = ready
+            .bundles
+            .iter()
+            .find(|b| b.kind == BundleKind::Acceptance)
+            .expect("acceptance slice");
+        assert_eq!(ready_slice.body.get("scope_sized").and_then(serde_json::Value::as_bool), Some(true));
+    }
+
     #[test]
     fn compiler_rejects_on_extractor_failure() {
         // Use a compiler where an extractor always fails.

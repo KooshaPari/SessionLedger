@@ -268,7 +268,10 @@ mod tests {
     #[test]
     fn file_paths_with_various_extensions() {
         let mut s = Session::new("test", Corpus::Forge);
-        s.messages.push(Message::new(Role::User, "check package.json, Cargo.toml, src/main.rs, test.py, config.yaml"));
+        s.messages.push(Message::new(
+            Role::User,
+            "check package.json, Cargo.toml, src/main.rs, test.py, config.yaml",
+        ));
         let ctx = HeuristicContextExtractor::extract_context(&s);
         assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".json")));
         assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".toml")));
@@ -290,7 +293,8 @@ mod tests {
     #[test]
     fn paths_with_slashes_are_files() {
         let mut s = Session::new("test", Corpus::Forge);
-        s.messages.push(Message::new(Role::User, "update src/lib/utils.rs and tests/integration/mod.rs"));
+        s.messages
+            .push(Message::new(Role::User, "update src/lib/utils.rs and tests/integration/mod.rs"));
         let ctx = HeuristicContextExtractor::extract_context(&s);
         assert!(ctx.files_mentioned.iter().any(|f| f == "src/lib/utils.rs"));
         assert!(ctx.files_mentioned.iter().any(|f| f == "tests/integration/mod.rs"));
@@ -378,7 +382,8 @@ mod tests {
         s.messages.push(Message::new(Role::User, "I decided on this plan"));
         s.messages.push(Message::new(Role::Assistant, "yes, I decided on this plan too"));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        let decision_count = ctx.key_decisions.iter().filter(|d| d.summary.contains("decided")).count();
+        let decision_count =
+            ctx.key_decisions.iter().filter(|d| d.summary.contains("decided")).count();
         assert_eq!(decision_count, 1, "duplicate decision patterns should be deduplicated");
     }
 
@@ -464,7 +469,8 @@ mod tests {
     #[test]
     fn file_paths_with_hyphens() {
         let mut s = Session::new("test", Corpus::Forge);
-        s.messages.push(Message::new(Role::User, "check src/my-module/index.ts and my-config.yaml"));
+        s.messages
+            .push(Message::new(Role::User, "check src/my-module/index.ts and my-config.yaml"));
         let ctx = HeuristicContextExtractor::extract_context(&s);
         assert!(ctx.files_mentioned.iter().any(|f| f == "src/my-module/index.ts"));
         assert!(ctx.files_mentioned.iter().any(|f| f == "my-config.yaml"));
@@ -562,9 +568,11 @@ mod tests {
         let full_msg = "We decided to use async/await for all I/O operations because it's cleaner";
         s.messages.push(Message::new(Role::User, full_msg));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(ctx.key_decisions.iter().any(|d|
-            d.rationale.as_deref().map(|r| r.contains("async/await")).unwrap_or(false)
-        ));
+        assert!(ctx.key_decisions.iter().any(|d| d
+            .rationale
+            .as_deref()
+            .map(|r| r.contains("async/await"))
+            .unwrap_or(false)));
     }
 
     #[test]
@@ -582,8 +590,10 @@ mod tests {
         let mut s = Session::new("test", Corpus::Forge);
         s.messages.push(Message::new(Role::User, "use HashMap::new"));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(ctx.key_symbols.iter().any(|sym| sym.contains("HashMap::new")),
-                "Should extract symbol with :: but no ()");
+        assert!(
+            ctx.key_symbols.iter().any(|sym| sym.contains("HashMap::new")),
+            "Should extract symbol with :: but no ()"
+        );
     }
 
     #[test]
@@ -591,8 +601,7 @@ mod tests {
         let mut s = Session::new("test", Corpus::Forge);
         s.messages.push(Message::new(Role::User, "call foo() to start processing"));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(!ctx.key_symbols.is_empty(),
-                "Should extract function call foo() even without ::");
+        assert!(!ctx.key_symbols.is_empty(), "Should extract function call foo() even without ::");
     }
 
     #[test]
@@ -600,8 +609,10 @@ mod tests {
         let mut s = Session::new("test", Corpus::Forge);
         s.messages.push(Message::new(Role::User, "the variable myvar is important"));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(!ctx.key_symbols.iter().any(|sym| sym == "myvar"),
-                "Should NOT extract plain identifier without :: or ()");
+        assert!(
+            !ctx.key_symbols.iter().any(|sym| sym == "myvar"),
+            "Should NOT extract plain identifier without :: or ()"
+        );
     }
 
     #[test]
@@ -653,8 +664,10 @@ mod tests {
         let mut s = Session::new("test", Corpus::Forge);
         s.messages.push(Message::new(Role::User, "call HashMap::new but not with ()"));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(ctx.key_symbols.iter().any(|sym| sym.contains("HashMap::new")),
-                "LEFT=true (::), RIGHT=false (no ()): should extract");
+        assert!(
+            ctx.key_symbols.iter().any(|sym| sym.contains("HashMap::new")),
+            "LEFT=true (::), RIGHT=false (no ()): should extract"
+        );
     }
 
     #[test]
@@ -662,35 +675,42 @@ mod tests {
         let mut s = Session::new("test", Corpus::Forge);
         s.messages.push(Message::new(Role::User, "invoke process() with no double colon"));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(!ctx.key_symbols.is_empty(),
-                "LEFT=false (no ::), RIGHT=true (()): should extract");
+        assert!(!ctx.key_symbols.is_empty(), "LEFT=false (no ::), RIGHT=true (()): should extract");
     }
 
     #[test]
     fn symbol_extraction_both_false() {
         let mut s = Session::new("test", Corpus::Forge);
-        s.messages.push(Message::new(Role::User, "variable myvar and identifier count should not be extracted"));
+        s.messages.push(Message::new(
+            Role::User,
+            "variable myvar and identifier count should not be extracted",
+        ));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(!ctx.key_symbols.iter().any(|sym| sym == "myvar" || sym == "count"),
-                "LEFT=false (no ::), RIGHT=false (no ()): should NOT extract");
+        assert!(
+            !ctx.key_symbols.iter().any(|sym| sym == "myvar" || sym == "count"),
+            "LEFT=false (no ::), RIGHT=false (no ()): should NOT extract"
+        );
     }
 
     #[test]
     fn file_path_contains_slash_true() {
-        assert!(is_file_path("src/main.rs"),
-                "LEFT=true (contains /): should be file path");
+        assert!(is_file_path("src/main.rs"), "LEFT=true (contains /): should be file path");
     }
 
     #[test]
     fn file_path_extension_true() {
-        assert!(is_file_path("config.toml"),
-                "RIGHT=true (has extension): should be file path when >= 3 chars");
+        assert!(
+            is_file_path("config.toml"),
+            "RIGHT=true (has extension): should be file path when >= 3 chars"
+        );
     }
 
     #[test]
     fn file_path_no_slash_no_extension() {
-        assert!(!is_file_path("myvar"),
-                "LEFT=false (no /), RIGHT=false (no extension or short): NOT file path");
+        assert!(
+            !is_file_path("myvar"),
+            "LEFT=false (no /), RIGHT=false (no extension or short): NOT file path"
+        );
     }
 
     // ── Truth-table tests for line 128: `clean.contains("::") || is_func_call` ──
@@ -785,8 +805,14 @@ mod tests {
         // but for the wrong reason; a mutation to `&&` would let "abc" pass the guard
         // and fall through — still returning false here.  We therefore pair this with
         // a token that WOULD pass the extension check to prove guard non-activation.
-        assert!(!is_file_path("abc"), "len=3, no ext/slash: guard must not fire, extension check rejects");
+        assert!(
+            !is_file_path("abc"),
+            "len=3, no ext/slash: guard must not fire, extension check rejects"
+        );
         // "main.rs" (len=7) must pass — guard doesn't fire, extension check passes.
-        assert!(is_file_path("main.rs"), "len>=3 with known extension: must be accepted when guard doesn't fire");
+        assert!(
+            is_file_path("main.rs"),
+            "len>=3 with known extension: must be accepted when guard doesn't fire"
+        );
     }
 }

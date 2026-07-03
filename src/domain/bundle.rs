@@ -87,3 +87,135 @@ impl ContinuationBundle {
         self.bundles.push(bundle);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn make_bundle(kind: BundleKind) -> Bundle {
+        Bundle::new(kind, json!({}))
+    }
+
+    fn make_bundle_tokens(kind: BundleKind, tokens: u32) -> Bundle {
+        Bundle { kind, token_estimate: tokens, body: json!({}) }
+    }
+
+    // ── is_injectable ────────────────────────────────────────────────────────
+
+    #[test]
+    fn empty_bundle_is_not_injectable() {
+        let cb = ContinuationBundle::new("s1");
+        assert!(!cb.is_injectable());
+    }
+
+    #[test]
+    fn bundle_with_only_intent_is_not_injectable() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle(BundleKind::Intent));
+        assert!(!cb.is_injectable());
+    }
+
+    #[test]
+    fn bundle_with_acceptance_is_injectable() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle(BundleKind::Acceptance));
+        assert!(cb.is_injectable());
+    }
+
+    #[test]
+    fn bundle_with_acceptance_and_others_is_injectable() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle(BundleKind::Intent));
+        cb.push(make_bundle(BundleKind::Acceptance));
+        cb.push(make_bundle(BundleKind::Contract));
+        assert!(cb.is_injectable());
+    }
+
+    // ── has ──────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn has_returns_false_for_missing_kind() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle(BundleKind::Intent));
+        assert!(!cb.has(BundleKind::Contract));
+    }
+
+    #[test]
+    fn has_returns_true_for_present_kind() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle(BundleKind::Contract));
+        assert!(cb.has(BundleKind::Contract));
+    }
+
+    #[test]
+    fn has_all_bundle_kinds() {
+        let kinds = [
+            BundleKind::Acceptance,
+            BundleKind::Contract,
+            BundleKind::Context,
+            BundleKind::Intent,
+            BundleKind::Provenance,
+            BundleKind::Worklog,
+            BundleKind::Dedup,
+        ];
+        let mut cb = ContinuationBundle::new("s1");
+        for k in kinds {
+            cb.push(make_bundle(k));
+        }
+        for k in kinds {
+            assert!(cb.has(k), "missing {k:?}");
+        }
+    }
+
+    // ── total_token_estimate ─────────────────────────────────────────────────
+
+    #[test]
+    fn empty_bundle_total_tokens_is_zero() {
+        let cb = ContinuationBundle::new("s1");
+        assert_eq!(cb.total_token_estimate(), 0);
+    }
+
+    #[test]
+    fn single_bundle_total_tokens() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle_tokens(BundleKind::Intent, 42));
+        assert_eq!(cb.total_token_estimate(), 42);
+    }
+
+    #[test]
+    fn multiple_bundles_total_tokens_sum() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle_tokens(BundleKind::Intent, 100));
+        cb.push(make_bundle_tokens(BundleKind::Contract, 200));
+        cb.push(make_bundle_tokens(BundleKind::Context, 300));
+        assert_eq!(cb.total_token_estimate(), 600);
+    }
+
+    #[test]
+    fn zero_token_bundles_sum_to_zero() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle_tokens(BundleKind::Intent, 0));
+        cb.push(make_bundle_tokens(BundleKind::Contract, 0));
+        assert_eq!(cb.total_token_estimate(), 0);
+    }
+
+    // ── push / ordering ──────────────────────────────────────────────────────
+
+    #[test]
+    fn push_appends_in_order() {
+        let mut cb = ContinuationBundle::new("s1");
+        cb.push(make_bundle(BundleKind::Intent));
+        cb.push(make_bundle(BundleKind::Contract));
+        assert_eq!(cb.bundles[0].kind, BundleKind::Intent);
+        assert_eq!(cb.bundles[1].kind, BundleKind::Contract);
+    }
+
+    // ── Bundle::new defaults ─────────────────────────────────────────────────
+
+    #[test]
+    fn bundle_new_token_estimate_is_zero() {
+        let b = Bundle::new(BundleKind::Intent, json!({"k": "v"}));
+        assert_eq!(b.token_estimate, 0);
+    }
+}

@@ -33,3 +33,96 @@ impl DedupKey {
         &self.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::session::{Corpus, Session};
+
+    fn make_session(id: &str, cwd: Option<&str>) -> Session {
+        let mut s = Session::new(id, Corpus::Forge);
+        s.cwd = cwd.map(|c| c.to_string());
+        s
+    }
+
+    #[test]
+    fn same_cwd_same_topic_produces_same_key() {
+        let s1 = make_session("a", Some("/home/user/proj"));
+        let s2 = make_session("b", Some("/home/user/proj"));
+        let k1 = DedupKey::derive(&s1, "fix-login");
+        let k2 = DedupKey::derive(&s2, "fix-login");
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn different_cwd_produces_different_key() {
+        let s1 = make_session("a", Some("/home/user/proj-a"));
+        let s2 = make_session("b", Some("/home/user/proj-b"));
+        let k1 = DedupKey::derive(&s1, "fix-login");
+        let k2 = DedupKey::derive(&s2, "fix-login");
+        assert_ne!(k1, k2);
+    }
+
+    #[test]
+    fn different_topic_produces_different_key() {
+        let s = make_session("a", Some("/home/user/proj"));
+        let k1 = DedupKey::derive(&s, "fix-login");
+        let k2 = DedupKey::derive(&s, "add-feature");
+        assert_ne!(k1, k2);
+    }
+
+    #[test]
+    fn no_cwd_uses_sentinel() {
+        let s = make_session("a", None);
+        let k = DedupKey::derive(&s, "topic");
+        // Should be a valid hex string (64 chars for SHA-256)
+        assert_eq!(k.as_str().len(), 64);
+        // Must differ from a session with a cwd
+        let s2 = make_session("b", Some("<no-cwd>"));
+        // literal "<no-cwd>" in cwd treated same as sentinel
+        let k2 = DedupKey::derive(&s2, "topic");
+        assert_eq!(k.as_str(), k2.as_str());
+    }
+
+    #[test]
+    fn key_is_lowercase_hex() {
+        let s = make_session("a", Some("/proj"));
+        let k = DedupKey::derive(&s, "slug");
+        assert!(k.as_str().chars().all(|c| c.is_ascii_hexdigit()));
+        assert_eq!(k.as_str(), k.as_str().to_lowercase());
+    }
+
+    #[test]
+    fn key_is_stable_across_calls() {
+        let s = make_session("x", Some("/stable/path"));
+        let k1 = DedupKey::derive(&s, "same-topic");
+        let k2 = DedupKey::derive(&s, "same-topic");
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn whitespace_in_cwd_is_normalized() {
+        let s1 = make_session("a", Some("  /proj  "));
+        let s2 = make_session("b", Some("/proj"));
+        let k1 = DedupKey::derive(&s1, "slug");
+        let k2 = DedupKey::derive(&s2, "slug");
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn topic_whitespace_is_normalized() {
+        let s = make_session("a", Some("/proj"));
+        let k1 = DedupKey::derive(&s, "  slug  ");
+        let k2 = DedupKey::derive(&s, "slug");
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn cwd_is_case_normalized() {
+        let s1 = make_session("a", Some("/PROJ/PATH"));
+        let s2 = make_session("b", Some("/proj/path"));
+        let k1 = DedupKey::derive(&s1, "slug");
+        let k2 = DedupKey::derive(&s2, "slug");
+        assert_eq!(k1, k2);
+    }
+}

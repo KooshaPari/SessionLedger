@@ -88,3 +88,223 @@ impl IntentState {
         matches!(self, IntentState::Verified)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── is_terminal ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn pruned_is_terminal() {
+        assert!(IntentState::Pruned.is_terminal());
+    }
+
+    #[test]
+    fn pending_is_not_terminal() {
+        assert!(!IntentState::Pending.is_terminal());
+    }
+
+    #[test]
+    fn extracting_is_not_terminal() {
+        assert!(!IntentState::Extracting.is_terminal());
+    }
+
+    #[test]
+    fn extracted_is_not_terminal() {
+        assert!(!IntentState::Extracted.is_terminal());
+    }
+
+    #[test]
+    fn verified_is_not_terminal() {
+        assert!(!IntentState::Verified.is_terminal());
+    }
+
+    // ── is_prune_eligible ────────────────────────────────────────────────────
+
+    #[test]
+    fn verified_is_prune_eligible() {
+        assert!(IntentState::Verified.is_prune_eligible());
+    }
+
+    #[test]
+    fn pending_is_not_prune_eligible() {
+        assert!(!IntentState::Pending.is_prune_eligible());
+    }
+
+    #[test]
+    fn extracting_is_not_prune_eligible() {
+        assert!(!IntentState::Extracting.is_prune_eligible());
+    }
+
+    #[test]
+    fn extracted_is_not_prune_eligible() {
+        assert!(!IntentState::Extracted.is_prune_eligible());
+    }
+
+    #[test]
+    fn pruned_is_not_prune_eligible() {
+        assert!(!IntentState::Pruned.is_prune_eligible());
+    }
+
+    // ── can_transition — legal forward path ──────────────────────────────────
+
+    #[test]
+    fn pending_to_extracting_allowed() {
+        assert!(IntentState::Pending.can_transition(IntentState::Extracting));
+    }
+
+    #[test]
+    fn extracting_to_extracted_allowed() {
+        assert!(IntentState::Extracting.can_transition(IntentState::Extracted));
+    }
+
+    #[test]
+    fn extracted_to_verified_allowed() {
+        assert!(IntentState::Extracted.can_transition(IntentState::Verified));
+    }
+
+    #[test]
+    fn verified_to_pruned_allowed() {
+        assert!(IntentState::Verified.can_transition(IntentState::Pruned));
+    }
+
+    // ── can_transition — legal revert to Pending ─────────────────────────────
+
+    #[test]
+    fn extracting_to_pending_allowed() {
+        assert!(IntentState::Extracting.can_transition(IntentState::Pending));
+    }
+
+    #[test]
+    fn extracted_to_pending_allowed() {
+        assert!(IntentState::Extracted.can_transition(IntentState::Pending));
+    }
+
+    #[test]
+    fn verified_to_pending_allowed() {
+        assert!(IntentState::Verified.can_transition(IntentState::Pending));
+    }
+
+    // ── can_transition — illegal transitions ─────────────────────────────────
+
+    #[test]
+    fn pending_to_pending_illegal() {
+        assert!(!IntentState::Pending.can_transition(IntentState::Pending));
+    }
+
+    #[test]
+    fn pending_to_extracted_illegal() {
+        assert!(!IntentState::Pending.can_transition(IntentState::Extracted));
+    }
+
+    #[test]
+    fn pending_to_verified_illegal() {
+        assert!(!IntentState::Pending.can_transition(IntentState::Verified));
+    }
+
+    #[test]
+    fn pending_to_pruned_illegal() {
+        assert!(!IntentState::Pending.can_transition(IntentState::Pruned));
+    }
+
+    #[test]
+    fn extracting_to_verified_illegal() {
+        assert!(!IntentState::Extracting.can_transition(IntentState::Verified));
+    }
+
+    #[test]
+    fn extracting_to_pruned_illegal() {
+        assert!(!IntentState::Extracting.can_transition(IntentState::Pruned));
+    }
+
+    #[test]
+    fn extracted_to_extracting_illegal() {
+        assert!(!IntentState::Extracted.can_transition(IntentState::Extracting));
+    }
+
+    #[test]
+    fn extracted_to_pruned_illegal() {
+        assert!(!IntentState::Extracted.can_transition(IntentState::Pruned));
+    }
+
+    #[test]
+    fn verified_to_extracted_illegal() {
+        assert!(!IntentState::Verified.can_transition(IntentState::Extracted));
+    }
+
+    #[test]
+    fn verified_to_extracting_illegal() {
+        assert!(!IntentState::Verified.can_transition(IntentState::Extracting));
+    }
+
+    #[test]
+    fn pruned_to_pending_illegal() {
+        assert!(!IntentState::Pruned.can_transition(IntentState::Pending));
+    }
+
+    #[test]
+    fn pruned_to_extracting_illegal() {
+        assert!(!IntentState::Pruned.can_transition(IntentState::Extracting));
+    }
+
+    #[test]
+    fn pruned_to_extracted_illegal() {
+        assert!(!IntentState::Pruned.can_transition(IntentState::Extracted));
+    }
+
+    #[test]
+    fn pruned_to_verified_illegal() {
+        assert!(!IntentState::Pruned.can_transition(IntentState::Verified));
+    }
+
+    #[test]
+    fn pruned_to_pruned_illegal() {
+        assert!(!IntentState::Pruned.can_transition(IntentState::Pruned));
+    }
+
+    // ── Intent::is_empty ─────────────────────────────────────────────────────
+
+    #[test]
+    fn empty_intent_is_empty() {
+        assert!(Intent::empty().is_empty());
+    }
+
+    #[test]
+    fn intent_with_goal_is_not_empty() {
+        let mut i = Intent::empty();
+        i.goal = Some("fix the bug".into());
+        assert!(!i.is_empty());
+    }
+
+    #[test]
+    fn intent_with_acceptance_signal_is_not_empty() {
+        let mut i = Intent::empty();
+        i.acceptance_signals.push("tests pass".into());
+        assert!(!i.is_empty());
+    }
+
+    #[test]
+    fn intent_with_constraint_is_not_empty() {
+        let mut i = Intent::empty();
+        i.constraints.push("don't touch auth".into());
+        assert!(!i.is_empty());
+    }
+
+    #[test]
+    fn intent_user_turn_count_does_not_affect_emptiness() {
+        // user_turn_count alone does NOT make an intent non-empty
+        let mut i = Intent::empty();
+        i.user_turn_count = 5;
+        assert!(i.is_empty());
+    }
+
+    #[test]
+    fn empty_intent_fields_are_default() {
+        let i = Intent::empty();
+        assert!(i.goal.is_none());
+        assert!(i.acceptance_signals.is_empty());
+        assert!(i.constraints.is_empty());
+        assert_eq!(i.user_turn_count, 0);
+    }
+}

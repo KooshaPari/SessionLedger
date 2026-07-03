@@ -61,3 +61,81 @@ impl Context {
             && self.environment_notes.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_context_is_empty() {
+        assert!(Context::empty().is_empty());
+    }
+
+    #[test]
+    fn empty_context_all_fields_none_or_empty() {
+        let ctx = Context::empty();
+        assert!(ctx.cwd.is_none());
+        assert!(ctx.title.is_none());
+        assert!(ctx.files_mentioned.is_empty());
+        assert!(ctx.key_decisions.is_empty());
+        assert!(ctx.key_symbols.is_empty());
+        assert!(ctx.environment_notes.is_empty());
+    }
+
+    #[test]
+    fn cwd_alone_makes_non_empty() {
+        let mut ctx = Context::empty();
+        ctx.cwd = Some("/home/user/project".into());
+        assert!(!ctx.is_empty());
+    }
+
+    #[test]
+    fn title_alone_makes_non_empty() {
+        let mut ctx = Context::empty();
+        ctx.title = Some("fix auth bug".into());
+        assert!(!ctx.is_empty());
+    }
+
+    #[test]
+    fn files_mentioned_alone_makes_non_empty() {
+        let mut ctx = Context::empty();
+        ctx.files_mentioned.push("src/main.rs".into());
+        assert!(!ctx.is_empty());
+    }
+
+    #[test]
+    fn key_decisions_alone_makes_non_empty() {
+        let mut ctx = Context::empty();
+        ctx.key_decisions.push(Decision {
+            summary: "use Axum".into(),
+            rationale: None,
+        });
+        assert!(!ctx.is_empty());
+    }
+
+    #[test]
+    fn key_symbols_alone_makes_non_empty() {
+        let mut ctx = Context::empty();
+        ctx.key_symbols.push("SessionLedger".into());
+        assert!(!ctx.is_empty());
+    }
+
+    #[test]
+    fn environment_notes_alone_makes_non_empty() {
+        let mut ctx = Context::empty();
+        ctx.environment_notes.push("cargo installed".into());
+        assert!(!ctx.is_empty());
+    }
+
+    #[test]
+    fn decision_rationale_can_be_none() {
+        let d = Decision { summary: "s".into(), rationale: None };
+        assert!(d.rationale.is_none());
+    }
+
+    #[test]
+    fn decision_rationale_can_be_some() {
+        let d = Decision { summary: "s".into(), rationale: Some("because".into()) };
+        assert_eq!(d.rationale.as_deref(), Some("because"));
+    }
+}

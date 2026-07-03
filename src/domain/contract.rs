@@ -43,3 +43,61 @@ impl Contract {
             && self.do_not_touch.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_contract_is_empty() {
+        assert!(Contract::empty().is_empty());
+    }
+
+    #[test]
+    fn empty_contract_all_vecs_empty() {
+        let c = Contract::empty();
+        assert!(c.success_criteria.is_empty());
+        assert!(c.tests_or_verifications.is_empty());
+        assert!(c.constraints.is_empty());
+        assert!(c.do_not_touch.is_empty());
+    }
+
+    #[test]
+    fn success_criteria_alone_makes_non_empty() {
+        let mut c = Contract::empty();
+        c.success_criteria.push("login works".into());
+        assert!(!c.is_empty());
+    }
+
+    #[test]
+    fn tests_or_verifications_alone_makes_non_empty() {
+        let mut c = Contract::empty();
+        c.tests_or_verifications.push("cargo test".into());
+        assert!(!c.is_empty());
+    }
+
+    #[test]
+    fn constraints_alone_makes_non_empty() {
+        let mut c = Contract::empty();
+        c.constraints.push("no breaking changes".into());
+        assert!(!c.is_empty());
+    }
+
+    #[test]
+    fn do_not_touch_alone_makes_non_empty() {
+        let mut c = Contract::empty();
+        c.do_not_touch.push("src/auth.rs".into());
+        assert!(!c.is_empty());
+    }
+
+    #[test]
+    fn fully_populated_contract_is_not_empty() {
+        let c = Contract {
+            success_criteria: vec!["ok".into()],
+            tests_or_verifications: vec!["test".into()],
+            constraints: vec!["con".into()],
+            do_not_touch: vec!["file".into()],
+        };
+        assert!(!c.is_empty());
+    }
+}

@@ -16,16 +16,17 @@ environment:
 processes:
   # One-shot: build the daemon in isolation (never the bare workspace root —
   # sl-viewer pulls webkit2gtk-sys which does not resolve on macOS).
+  # sl-daemon is excluded from the root workspace; build from within its own crate.
   sl-daemon-build:
-    command: "cargo build -p sl-daemon --release"
-    working_dir: "../.."
+    command: "cargo build --release"
+    working_dir: "."
     availability:
       restart: "no"
 
   # Long-running ETL daemon: watch → compile → export OKF.
   sl-daemon:
-    command: "cargo run -p sl-daemon --release -- --watch $SL_WATCH_DIR --out $SL_OUT_DIR"
-    working_dir: "../.."
+    command: "./target/release/sl-daemon --watch $SL_WATCH_DIR --out $SL_OUT_DIR"
+    working_dir: "."
     depends_on:
       sl-daemon-build:
         condition: process_completed_successfully

@@ -84,7 +84,7 @@ pub fn all_timeline_entries() -> Vec<TimelineEntry> {
     let mut entries: Vec<TimelineEntry> =
         sample_sessions().iter().map(to_timeline_entry).collect();
     // Sort newest-first by message count as a proxy for chronological order.
-    entries.sort_by(|a, b| b.total_messages.cmp(&a.total_messages));
+    entries.sort_by_key(|e| std::cmp::Reverse(e.total_messages));
     entries
 }
 

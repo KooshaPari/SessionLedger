@@ -191,11 +191,8 @@ fn WikiRow(page: MemoryWikiPage, is_selected: bool, on_click: EventHandler<()>) 
 #[component]
 fn WikiPageDetail(page: MemoryWikiPage) -> Element {
     let title_text = page.title.clone().unwrap_or_else(|| "Distilled Memory".into());
-    let confirmation_text = if page.acceptance.user_confirmed {
-        "user confirmed"
-    } else {
-        "no explicit confirmation"
-    };
+    let confirmation_text =
+        if page.acceptance.user_confirmed { "user confirmed" } else { "no explicit confirmation" };
 
     rsx! {
         div { class: "wiki-page",

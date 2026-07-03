@@ -300,6 +300,10 @@ mod sqlite_impl {
 /// - `"system"` → [`Role::System`]
 /// - `"tool"` → [`Role::Tool`]
 /// - anything else (e.g. `"subagent"`, forge-specific roles) → [`Role::Subagent`]
+///
+/// Used by the `sqlite` feature's `sqlite_impl::parse_messages`.  The function
+/// is unconditionally compiled so the role tests run regardless of feature flags.
+#[cfg_attr(not(feature = "sqlite"), allow(dead_code))]
 pub(crate) fn map_role(role: &str) -> crate::domain::session::Role {
     use crate::domain::session::Role;
     match role {

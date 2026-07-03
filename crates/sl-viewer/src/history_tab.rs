@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use session_ledger::domain::session::{Corpus, Session};
 use session_ledger::viewer::SessionSummary;
 
-use crate::mock_data::sample_sessions;
+use crate::app::SessionContext;
 
 /// A single entry in the history timeline.
 #[derive(Debug, Clone, PartialEq)]
@@ -78,11 +78,10 @@ pub fn to_timeline_entry(session: &Session) -> TimelineEntry {
     }
 }
 
-/// Build all timeline entries from mock data.
+/// Build all timeline entries from a slice of sessions.
 #[must_use]
-pub fn all_timeline_entries() -> Vec<TimelineEntry> {
-    let mut entries: Vec<TimelineEntry> =
-        sample_sessions().iter().map(to_timeline_entry).collect();
+pub fn all_timeline_entries(sessions: &[Session]) -> Vec<TimelineEntry> {
+    let mut entries: Vec<TimelineEntry> = sessions.iter().map(to_timeline_entry).collect();
     // Sort newest-first by message count as a proxy for chronological order.
     entries.sort_by_key(|e| std::cmp::Reverse(e.total_messages));
     entries
@@ -100,9 +99,13 @@ fn corpus_label(corpus: Corpus) -> &'static str {
 }
 
 /// The full history timeline component.
+///
+/// Reads sessions from the [`SessionContext`] injected by the root [`App`]
+/// component.  When `FORGE_DB` is set, those are real ingested sessions.
 #[component]
 pub fn HistoryTimeline() -> Element {
-    let entries = use_signal(all_timeline_entries);
+    let ctx = use_context::<SessionContext>();
+    let entries = use_signal(move || all_timeline_entries(&ctx.0));
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
 
     let selected = selected_idx().and_then(|idx| entries.get(idx)).map(|r| (*r).clone());
@@ -207,11 +210,7 @@ pub fn HistoryTimeline() -> Element {
 fn TimelineRow(entry: TimelineEntry, is_selected: bool, on_click: EventHandler<()>) -> Element {
     let sel_class = if is_selected { " selected" } else { "" };
     let corpus_class = format!("corpus-badge corpus-{}", corpus_label(entry.corpus));
-    let status_text = if entry.summary.unfinished {
-        "in progress"
-    } else {
-        "completed"
-    };
+    let status_text = if entry.summary.unfinished { "in progress" } else { "completed" };
 
     rsx! {
         div {
@@ -250,9 +249,9 @@ fn TimelineRow(entry: TimelineEntry, is_selected: bool, on_click: EventHandler<(
 /// Detail view showing all messages in a session.
 #[component]
 fn TimelineDetail(entry: TimelineEntry) -> Element {
-    // Look up the full session from mock data to show all messages.
-    let sessions = sample_sessions();
-    let session = sessions.iter().find(|s| s.id == entry.summary.id);
+    // Look up the full session from the injected context (real or mock data).
+    let ctx = use_context::<SessionContext>();
+    let session = ctx.0.iter().find(|s| s.id == entry.summary.id).cloned();
     let title_text = entry.summary.title.clone().unwrap_or_else(|| "Session Details".into());
     let status_text = if entry.summary.unfinished { "In Progress" } else { "Completed" };
 

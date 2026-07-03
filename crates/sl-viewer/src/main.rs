@@ -15,10 +15,7 @@ fn main() {
     use dioxus::desktop::{Config, WindowBuilder};
 
     dioxus::LaunchBuilder::desktop()
-        .with_cfg(
-            Config::new()
-                .with_window(WindowBuilder::new().with_title(VIEWER_TITLE)),
-        )
+        .with_cfg(Config::new().with_window(WindowBuilder::new().with_title(VIEWER_TITLE)))
         .launch(App);
 }
 
@@ -29,7 +26,5 @@ fn main() {
     // programmatically we can switch to a wrapper component that emits a
     // `<Title>` element from `dioxus::document`.
     let _ = VIEWER_TITLE;
-    dioxus::LaunchBuilder::web()
-        .with_cfg(dioxus::web::Config::default())
-        .launch(App);
+    dioxus::LaunchBuilder::web().with_cfg(dioxus::web::Config::default()).launch(App);
 }

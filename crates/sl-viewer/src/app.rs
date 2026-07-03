@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
+use session_ledger::domain::session::Session;
 
 use crate::bundle_list::{summarize, BundleSummary};
+use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::history_tab::HistoryTimeline;
 use crate::memory_tab::MemoryWiki;
@@ -15,16 +17,49 @@ enum Tab {
     Memory,
 }
 
+/// Shared session data provided at the root of the component tree.
+///
+/// Consumers call `use_context::<SessionContext>()` to access the loaded sessions.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SessionContext(pub Vec<Session>);
+
+/// Resolve the active [`DataSource`].
+///
+/// Resolution order:
+/// 1. `FORGE_DB` environment variable (path to a Forge SQLite file)
+/// 2. Default: in-memory mock data
+fn resolve_data_source() -> DataSource {
+    #[cfg(feature = "sqlite")]
+    if let Ok(path) = std::env::var("FORGE_DB") {
+        let p = std::path::PathBuf::from(path);
+        return DataSource::ForgeDb(p);
+    }
+    DataSource::Mock
+}
+
 /// Root application component.
 ///
 /// Three-tab layout:
 /// - **Bundles** — browse compiled continuation bundles (the original view)
-/// - **History** — session history timeline
+/// - **History** — session history timeline (renders real Forge sessions when
+///   `FORGE_DB` env var points at a Forge SQLite database)
 /// - **Memory** — wiki/docs view of distilled memories
 ///
-/// Each tab has its own sidebar list and detail panel.
+/// Real corpus data is loaded once at startup and injected via Dioxus context
+/// so every child component can access it without prop-drilling.
 #[component]
 pub fn App() -> Element {
+    // Load sessions once at the root; propagate via context.
+    let source = resolve_data_source();
+    let sessions = match load_sessions(&source) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[sl-viewer] failed to load corpus ({e}); falling back to mock data");
+            crate::mock_data::sample_sessions()
+        }
+    };
+    use_context_provider(|| SessionContext(sessions));
+
     let mut active_tab: Signal<Tab> = use_signal(|| Tab::Bundles);
 
     let bundles_class = if active_tab() == Tab::Bundles { "tab active" } else { "tab" };

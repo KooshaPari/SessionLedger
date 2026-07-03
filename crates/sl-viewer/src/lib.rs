@@ -15,5 +15,7 @@ pub mod detail_pane;
 pub mod history_tab;
 pub mod memory_tab;
 pub mod mock_data;
+pub mod session_list;
 
 pub use app::App;
+pub use session_list::SessionList;

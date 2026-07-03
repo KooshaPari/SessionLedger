@@ -70,7 +70,8 @@ fn sanitize(id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use session_ledger::{Corpus, Message, Role, Session};
+    use session_ledger::domain::session::Corpus;
+    use session_ledger::{Message, Role, Session};
 
     /// Build a JSONL file of `n` forge sessions in `dir`, return its path.
     ///

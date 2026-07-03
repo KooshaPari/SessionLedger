@@ -18,3 +18,11 @@ tempfile = "3"
 
 [lints.rust]
 unsafe_code = "forbid"
+
+# Standalone workspace root: resolve sl-daemon independently of the parent
+# workspace. The sibling `sl-viewer` crate pulls dioxus-desktop -> wry ->
+# webkit2gtk-sys, which cannot resolve on macOS; isolating sl-daemon lets
+# `cargo test -p sl-daemon` / `cargo build` work on macOS without being dragged
+# into sl-viewer's platform-specific graph. The `session-ledger` path dep above
+# still resolves via its relative path.
+[workspace]

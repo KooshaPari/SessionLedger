@@ -1,5 +1,8 @@
 [workspace]
-members = ["crates/sl-viewer", "crates/sl-daemon"]
+# sl-daemon is its own workspace root (see crates/sl-daemon/Cargo.toml) so it can
+# resolve on macOS without sl-viewer's webkit2gtk-sys graph. It is excluded here.
+members = ["crates/sl-viewer"]
+exclude = ["crates/sl-daemon"]
 resolver = "2"
 
 [package]

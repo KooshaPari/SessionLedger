@@ -7,7 +7,8 @@
 
 use std::path::{Path, PathBuf};
 
-use session_ledger::{Corpus, Message, Role, Session};
+use session_ledger::domain::session::Corpus;
+use session_ledger::{Message, Role, Session};
 use tokio::sync::mpsc;
 
 // The daemon's modules are private to its binary crate, so the pipeline is

@@ -208,14 +208,10 @@ fn real_jsonl_roundtrip_produces_okf_document() {
     //     produces `resource` (cwd) and `state` (title) entities. Require
     //     either: (a) the bundle produced entities, OR (b) the document
     //     carries context entities.
-    let has_bundle_entities = doc
-        .entities
-        .iter()
-        .any(|e| matches!(e.r#type.as_str(), "intent" | "gate" | "criteria"));
-    let has_context_entities = doc
-        .entities
-        .iter()
-        .any(|e| matches!(e.r#type.as_str(), "resource" | "state"));
+    let has_bundle_entities =
+        doc.entities.iter().any(|e| matches!(e.r#type.as_str(), "intent" | "gate" | "criteria"));
+    let has_context_entities =
+        doc.entities.iter().any(|e| matches!(e.r#type.as_str(), "resource" | "state"));
 
     assert!(
         has_bundle_entities || has_context_entities,

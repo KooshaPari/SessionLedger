@@ -392,7 +392,10 @@ mod tests {
             .iter()
             .find(|b| b.kind == BundleKind::Acceptance)
             .expect("acceptance slice");
-        assert_eq!(unready_slice.body.get("scope_sized").and_then(serde_json::Value::as_bool), Some(false));
+        assert_eq!(
+            unready_slice.body.get("scope_sized").and_then(serde_json::Value::as_bool),
+            Some(false)
+        );
 
         let ready = compiler_with_score(1)
             .compile(&session_with_one_message())
@@ -402,7 +405,10 @@ mod tests {
             .iter()
             .find(|b| b.kind == BundleKind::Acceptance)
             .expect("acceptance slice");
-        assert_eq!(ready_slice.body.get("scope_sized").and_then(serde_json::Value::as_bool), Some(true));
+        assert_eq!(
+            ready_slice.body.get("scope_sized").and_then(serde_json::Value::as_bool),
+            Some(true)
+        );
     }
 
     #[test]

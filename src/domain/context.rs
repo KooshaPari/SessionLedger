@@ -106,10 +106,7 @@ mod tests {
     #[test]
     fn key_decisions_alone_makes_non_empty() {
         let mut ctx = Context::empty();
-        ctx.key_decisions.push(Decision {
-            summary: "use Axum".into(),
-            rationale: None,
-        });
+        ctx.key_decisions.push(Decision { summary: "use Axum".into(), rationale: None });
         assert!(!ctx.is_empty());
     }
 

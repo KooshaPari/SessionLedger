@@ -42,10 +42,8 @@ pub fn parse_jsonl_sessions<R: std::io::Read>(reader: R) -> Result<Vec<Session>,
         if trimmed.is_empty() {
             continue;
         }
-        let session: Session = serde_json::from_str(trimmed).map_err(|e| IngestionError::Json {
-            line: line_num + 1,
-            msg: e.to_string(),
-        })?;
+        let session: Session = serde_json::from_str(trimmed)
+            .map_err(|e| IngestionError::Json { line: line_num + 1, msg: e.to_string() })?;
         sessions.push(session);
     }
     Ok(sessions)

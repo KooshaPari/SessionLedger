@@ -19,6 +19,33 @@ agent sessions (Forge, Codex, Claude Code, Cursor, …). It:
    *in-progress / unfinished* section.
 3. General session **observability + history**.
 
+## Launch the Viewer
+
+The desktop viewer (`crates/sl-viewer/`) is a Dioxus 0.6 native app that
+renders compiled bundles, session history, and distilled memory.
+
+```bash
+cargo run -p sl-viewer
+```
+
+Opens a native window with three tabs: **Bundles**, **History**, **Memory**.
+
+### Web (WASM) mode
+
+```bash
+# one-time install
+cargo install dioxus-cli
+
+# serve on http://localhost:8080
+dx serve --platform web -p sl-viewer
+```
+
+### Prebuilt binaries
+
+Head to the [Releases page](../../releases) — each `v*` tag publishes
+per-platform archives (`tar.gz` / `.zip`) with a standalone binary. No Rust
+toolchain needed.
+
 ## Architecture (hexagonal)
 
 ```

@@ -1,0 +1,145 @@
+# Release workflow for sl-viewer (Dioxus desktop app).
+#
+# Packages the native desktop viewer binary on tag push (v*) and attaches
+# it to a GitHub Release.  The viewer is a single-codebase Dioxus 0.6 app
+# (default feature = desktop / native window).
+#
+# Usage:
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# The resulting Release will contain per-platform archives:
+#   sl-viewer-<version>-x86_64-unknown-linux-gnu.tar.gz
+#   sl-viewer-<version>-x86_64-apple-darwin.tar.gz
+#   sl-viewer-<version>-x86_64-pc-windows-msvc.zip
+#
+# Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-viewer/README.md
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  build:
+    name: build · ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+            archiver: tar czf
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+            archiver: tar czf
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+            archiver: tar czf
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: build sl-viewer (desktop)
+        run: cargo build -p sl-viewer --release --target ${{ matrix.target }} --locked
+        env:
+          # The desktop feature is the default — explicit is clearer for CI.
+          CARGO_FEATURES: desktop
+
+      - name: package binary
+        shell: bash
+        run: |
+          PKG="sl-viewer"
+          VER="${{ github.ref_name }}"
+          TARGET="${{ matrix.target }}"
+          DIR="${PKG}-${VER}-${TARGET}"
+
+          mkdir -p "${DIR}"
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp "target/${TARGET}/release/${PKG}.exe" "${DIR}/"
+            7z a -tzip "${DIR}.zip" "${DIR}"
+            echo "ASSET=${DIR}.zip" >> "$GITHUB_ENV"
+          else
+            cp "target/${TARGET}/release/${PKG}" "${DIR}/"
+            tar czf "${DIR}.tar.gz" "${DIR}"
+            echo "ASSET=${DIR}.tar.gz" >> "$GITHUB_ENV"
+          fi
+
+          echo "ASSET_PATH=${DIR}.${{ matrix.archive }}" >> "$GITHUB_ENV"
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ env.ASSET_PATH }}
+          if-no-files-found: error
+
+  release:
+    name: create Release · attach assets
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: list assets
+        run: ls -lh artifacts/
+
+      - name: create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "sl-viewer ${{ github.ref_name }}"
+          body: |
+            ## sl-viewer ${{ github.ref_name }}
+
+            Desktop Dioxus viewer for SessionLedger compiled bundles.
+
+            ### Launch
+
+            ```bash
+            # Linux / macOS
+            ./sl-viewer
+
+            # Windows
+            sl-viewer.exe
+            ```
+
+            ### Checksums
+
+            | Asset | Platform |
+            | ----- | -------- |
+            | `sl-viewer-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz` | Linux (x86_64) |
+            | `sl-viewer-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz`   | macOS (Intel)   |
+            | `sl-viewer-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz`  | macOS (Apple Silicon) |
+            | `sl-viewer-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip`   | Windows (x86_64) |
+
+            See [`crates/sl-viewer/README.md`](https://github.com/KooshaPari/SessionLedger/tree/main/crates/sl-viewer) for build instructions.
+          draft: false
+          prerelease: false
+          files: artifacts/*

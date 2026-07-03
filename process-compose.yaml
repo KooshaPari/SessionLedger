@@ -1,0 +1,54 @@
+# SessionLedger — repo-root process-compose orchestration.
+#
+# Managed services:
+#   sl-daemon  — ETL daemon: watch *.jsonl sessions → compile → write OKF docs.
+#
+# Usage:
+#   process-compose up
+#
+# Environment overrides (set before `up`):
+#   SL_WATCH_DIR  — directory to watch for *.jsonl transcripts (default: ./sessions)
+#   SL_OUT_DIR    — where <session-id>.okf.json files are written (default: ./okf-out)
+#
+# The daemon crate is isolated from the root workspace (sl-viewer pulls
+# webkit2gtk-sys which does not resolve on macOS). Build and run target both
+# operate from within crates/sl-daemon rather than the workspace root.
+
+version: "0.5"
+
+environment:
+  - "SL_WATCH_DIR=${SL_WATCH_DIR:-./sessions}"
+  - "SL_OUT_DIR=${SL_OUT_DIR:-./okf-out}"
+
+processes:
+  # Build step: compile sl-daemon in isolation from its own crate root.
+  # Must run before the daemon itself starts.
+  sl-daemon-build:
+    command: "cargo build --release"
+    working_dir: "crates/sl-daemon"
+    availability:
+      restart: "no"
+
+  # Long-running ETL daemon: seed + watch → bounded mpsc → compile → OKF.
+  # On startup it sweeps the watch dir once, then listens for new/changed files.
+  # On failure it restarts after 5 s backoff so transient errors self-heal.
+  sl-daemon:
+    command: "crates/sl-daemon/target/release/sl-daemon --watch $SL_WATCH_DIR --out $SL_OUT_DIR"
+    depends_on:
+      sl-daemon-build:
+        condition: process_completed_successfully
+    environment:
+      - "SL_WATCH_DIR=${SL_WATCH_DIR:-./sessions}"
+      - "SL_OUT_DIR=${SL_OUT_DIR:-./okf-out}"
+    availability:
+      restart: "on_failure"
+      backoff_seconds: 5
+    readiness_probe:
+      exec:
+        command: "test -d $SL_OUT_DIR"
+      initial_delay_seconds: 2
+      period_seconds: 5
+    description: >
+      Watches $SL_WATCH_DIR for new/changed *.jsonl session transcripts.
+      For each file, runs the session-ledger pipeline (ingest → compile → export)
+      and writes one <session-id>.okf.json into $SL_OUT_DIR.

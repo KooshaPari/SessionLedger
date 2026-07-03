@@ -1,0 +1,20 @@
+[package]
+name = "sl-daemon"
+version = "0.1.0"
+edition = "2021"
+description = "SessionLedger daemon — watches session dirs, compiles sessions, exports OKF documents"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+session-ledger = { path = "../.." }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "signal", "fs", "time"] }
+notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.rust]
+unsafe_code = "forbid"

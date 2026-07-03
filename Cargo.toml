@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/sl-viewer"]
+members = ["crates/sl-viewer", "crates/sl-daemon"]
 resolver = "2"
 
 [package]

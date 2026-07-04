@@ -19,6 +19,7 @@ pub mod live_feed;
 pub mod memory_tab;
 pub mod mock_data;
 pub mod session_list;
+pub mod timeline;
 
 pub use app::App;
 pub use corpus_loader::{load_sessions, DataSource};

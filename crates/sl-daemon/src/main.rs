@@ -26,6 +26,7 @@
 mod cli;
 mod etl;
 mod export;
+mod filter;
 mod http;
 mod tag;
 mod watcher;
@@ -118,6 +119,45 @@ enum Command {
         #[command(subcommand)]
         action: TagAction,
     },
+
+    /// Search / filter bundles by date, model, token count, or tags.
+    ///
+    /// When no `--bundles` paths are given, all bundles are fetched from the
+    /// daemon via GET /api/bundles.
+    Search {
+        /// Include only bundles created on or after this date (YYYY-MM-DD).
+        #[arg(long)]
+        since: Option<String>,
+
+        /// Include only bundles created on or before this date (YYYY-MM-DD).
+        #[arg(long)]
+        until: Option<String>,
+
+        /// Include only bundles whose model name contains this substring
+        /// (case-insensitive).
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Include only bundles with at least this many tokens.
+        #[arg(long)]
+        min_tokens: Option<u64>,
+
+        /// Include only bundles that carry this tag (repeat for AND logic).
+        #[arg(long = "tag", action = clap::ArgAction::Append)]
+        tags: Vec<String>,
+
+        /// Maximum number of results to return (default: 50).
+        #[arg(long, default_value = "50")]
+        limit: usize,
+
+        /// Output format: text | json | csv  (default: text).
+        #[arg(long, default_value = "text")]
+        format: String,
+
+        /// OKF bundle file paths to search. If omitted, fetches all from the
+        /// daemon.
+        bundles: Vec<PathBuf>,
+    },
 }
 
 /// Sub-actions for `sl tag`.
@@ -177,6 +217,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Tag { action } => {
             run_tag(action);
+        }
+        Command::Search { since, until, model, min_tokens, tags, limit, format, bundles } => {
+            run_search(&args.url, since, until, model, min_tokens, tags, limit, &format, &bundles)
+                .await;
         }
     }
 
@@ -494,4 +538,59 @@ async fn run_summary(base_url: &str, given_bundles: &[PathBuf]) {
     let metas = load_metas(&paths);
     let summary = export::compute_summary(&metas);
     print!("{}", export::render_summary(&summary));
+}
+
+// ---------------------------------------------------------------------------
+// search
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
+async fn run_search(
+    base_url: &str,
+    since: Option<String>,
+    until: Option<String>,
+    model: Option<String>,
+    min_tokens: Option<u64>,
+    tags: Vec<String>,
+    limit: usize,
+    format_str: &str,
+    given_bundles: &[PathBuf],
+) {
+    use std::str::FromStr as _;
+
+    let paths = resolve_bundle_paths(base_url, given_bundles).await;
+    let metas = load_metas(&paths);
+
+    let spec = filter::FilterSpec { since, until, model, min_tokens, tags, limit };
+    let matched: Vec<&export::BundleMeta> = filter::apply_filters(&metas, &spec);
+
+    if matched.is_empty() {
+        eprintln!("no bundles matched the given filters");
+        return;
+    }
+
+    let owned: Vec<export::BundleMeta> = matched.into_iter().cloned().collect();
+
+    let rendered = match export::ExportFormat::from_str(format_str) {
+        Ok(export::ExportFormat::Csv) => export::render_csv(&owned),
+        Ok(export::ExportFormat::Markdown) => export::render_markdown(&owned),
+        Ok(export::ExportFormat::Json) => export::render_json(&owned),
+        // Default / "text": one session_id  created_at  model  token_count  tags line each
+        _ => {
+            let mut out = String::new();
+            for m in &owned {
+                out.push_str(&format!(
+                    "{}\t{}\t{}\t{}\t[{}]\n",
+                    m.session_id,
+                    m.created_at,
+                    m.model,
+                    m.token_count,
+                    m.tags.join(", ")
+                ));
+            }
+            out
+        }
+    };
+
+    print!("{rendered}");
 }

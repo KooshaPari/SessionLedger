@@ -9,6 +9,7 @@ use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
+use crate::timeline::TimelineView;
 
 /// Tab identifiers for the viewer.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -17,6 +18,7 @@ enum Tab {
     History,
     Memory,
     LiveFeed,
+    Timeline,
 }
 
 /// Shared session data provided at the root of the component tree.
@@ -68,12 +70,14 @@ pub fn App() -> Element {
     let history_class = if active_tab() == Tab::History { "tab active" } else { "tab" };
     let memory_class = if active_tab() == Tab::Memory { "tab active" } else { "tab" };
     let feed_class = if active_tab() == Tab::LiveFeed { "tab active" } else { "tab" };
+    let timeline_class = if active_tab() == Tab::Timeline { "tab active" } else { "tab" };
 
     let tab_body = match active_tab() {
         Tab::Bundles => rsx! { BundlesTab {} },
         Tab::History => rsx! { HistoryTimeline {} },
         Tab::Memory => rsx! { MemoryWiki {} },
         Tab::LiveFeed => rsx! { LiveFeed {} },
+        Tab::Timeline => rsx! { TimelineView { bundles: sample_bundles() } },
     };
 
     rsx! {
@@ -177,6 +181,11 @@ pub fn App() -> Element {
                         class: "{feed_class}",
                         onclick: move |_| active_tab.set(Tab::LiveFeed),
                         "Live Feed"
+                    }
+                    div {
+                        class: "{timeline_class}",
+                        onclick: move |_| active_tab.set(Tab::Timeline),
+                        "Timeline"
                     }
                 }
                 {tab_body}

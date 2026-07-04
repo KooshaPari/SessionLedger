@@ -1,0 +1,49 @@
+# AGENTS.md — SessionLedger
+
+Agent entrypoint for autonomous work. Read before editing.
+
+## Working directory
+
+Cargo workspace. Feature work in a git worktree, never on `main`:
+
+```
+git worktree add -b <type>/<topic> .claude/worktrees/<topic> origin/main
+```
+
+`<type>` ∈ `feat|fix|chore|ci|docs`. Worktrees under `.claude/worktrees/` only.
+
+## Build / test / lint
+
+```bash
+cargo build --all-targets --locked        # build
+cargo test  --all-features --locked       # run the suite (86+ tests)
+cargo clippy --all-targets --all-features # lint
+cargo fmt --all --check                   # format check
+```
+
+sl-viewer (Dioxus 0.6 desktop) needs the Dioxus CLI: `cargo install dioxus-cli`, then `dx serve` / `dx bundle` from `crates/sl-viewer`.
+
+Fast inner loop: `cargo test -p sl-daemon` / `cargo check -p sl-viewer`.
+
+## Key files
+
+| Path | What |
+|------|------|
+| `crates/sl-daemon` | watch → compile session bundles (the compiler daemon) |
+| `crates/sl-viewer` | Dioxus 0.6 desktop viewer (bundle/history/memory tabs) |
+| `README.md` | overview + Releases link | `.github/workflows/release.yml` | per-OS viewer build |
+
+## Forbidden
+
+- No direct commits to `main` (protected — PR only).
+- No `git reset --hard`, `git stash`, `git clean` in worktrees.
+- No `--no-verify` / hook bypass without operator approval.
+- No AI attribution in commit/PR metadata.
+- Do not work a branch/worktree another actor is on.
+
+## Gotchas
+
+- MSRV is pinned in `rust-toolchain.toml`; workspace `rust-version = "1.85"`.
+- clippy warnings — fix, don't `#[allow]` without a tracking-issue comment.
+- sl-viewer is Dioxus 0.6 — `dx` toolchain required for desktop bundling (see electrobun/dioxus codesign notes when packaging macOS).
+- CI uses `--locked` — keep `Cargo.lock` committed and current.

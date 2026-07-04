@@ -23,6 +23,7 @@
 //! * `1` — daemon not running (for `status` / `tail` when daemon absent)
 //! * `2` — general / unexpected error
 
+mod archive;
 mod cli;
 mod etl;
 mod export;
@@ -36,6 +37,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
+use std::path::Path;
 use tokio::sync::{broadcast, mpsc};
 
 /// Channel depth. Bounded so a slow consumer applies backpressure to the
@@ -118,6 +120,37 @@ enum Command {
     Tag {
         #[command(subcommand)]
         action: TagAction,
+    },
+
+    /// Archive bundles older than a given date by gzipping them.
+    Archive {
+        /// Archive bundles with created_at strictly before this date (YYYY-MM-DD).
+        #[arg(long)]
+        before: String,
+
+        /// Directory containing the bundle JSON files (and where the archive
+        /// sub-tree will be created).
+        #[arg(long, default_value = ".")]
+        data_dir: std::path::PathBuf,
+
+        /// Print what would be archived without touching the filesystem.
+        #[arg(long)]
+        dry_run: bool,
+    },
+
+    /// Restore a previously archived bundle by decompressing it.
+    Restore {
+        /// Bundle ID (without extension) to restore from the archive.
+        bundle_id: String,
+
+        /// Directory that contains the `archive/` sub-tree.
+        #[arg(long, default_value = ".")]
+        data_dir: std::path::PathBuf,
+
+        /// Directory to write the restored `.okf.json` file into.
+        /// Defaults to `<data_dir>`.
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
 
     /// Search / filter bundles by date, model, token count, or tags.
@@ -217,6 +250,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Tag { action } => {
             run_tag(action);
+        }
+        Command::Archive { before, data_dir, dry_run } => {
+            run_archive(&before, &data_dir, dry_run);
+        }
+        Command::Restore { bundle_id, data_dir, out } => {
+            run_restore(&bundle_id, &data_dir, out.as_deref());
         }
         Command::Search { since, until, model, min_tokens, tags, limit, format, bundles } => {
             run_search(&args.url, since, until, model, min_tokens, tags, limit, &format, &bundles)
@@ -538,6 +577,66 @@ async fn run_summary(base_url: &str, given_bundles: &[PathBuf]) {
     let metas = load_metas(&paths);
     let summary = export::compute_summary(&metas);
     print!("{}", export::render_summary(&summary));
+}
+
+// ---------------------------------------------------------------------------
+// archive
+// ---------------------------------------------------------------------------
+
+fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
+    let before = match chrono::NaiveDate::parse_from_str(before_str, "%Y-%m-%d") {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("error: invalid --before date {before_str:?}: {e}");
+            std::process::exit(2);
+        }
+    };
+
+    if dry_run {
+        println!("[dry-run] bundles that would be archived (before {before}):");
+    }
+
+    match archive::archive_bundles(data_dir, before, dry_run) {
+        Ok(stats) => {
+            let mb_saved = stats.bytes_saved as f64 / 1_048_576.0;
+            println!(
+                "Archived {} bundle(s), saved {:.2} MB  (archive: {})",
+                stats.archived_count,
+                mb_saved,
+                stats.archive_dir.display()
+            );
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            std::process::exit(2);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// restore
+// ---------------------------------------------------------------------------
+
+fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
+    let archive_root = data_dir.join("archive");
+    let archive_path = match archive::find_archive_path(&archive_root, bundle_id) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("error: {e}");
+            std::process::exit(2);
+        }
+    };
+
+    let output_dir = out.unwrap_or(data_dir);
+    match archive::restore_bundle(&archive_path, output_dir) {
+        Ok(restored) => {
+            println!("Restored: {}", restored.display());
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            std::process::exit(2);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

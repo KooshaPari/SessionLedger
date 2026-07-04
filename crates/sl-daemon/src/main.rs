@@ -153,6 +153,23 @@ enum Command {
         out: Option<PathBuf>,
     },
 
+    /// Replay a compiled OKF bundle, streaming its entities in chronological
+    /// order.  Connects to the running daemon's SSE endpoint unless
+    /// `--bundle` points to a local file.
+    Replay {
+        /// Bundle ID (e.g. `sess-abc`) or path to a `.okf.json` file.
+        bundle_id: String,
+
+        /// Playback speed multiplier (default 1.0).  `--speed 2.0` replays
+        /// at 2× real-time.
+        #[arg(long, default_value = "1.0")]
+        speed: f64,
+
+        /// Print all entities at once without any delay.
+        #[arg(long)]
+        no_stream: bool,
+    },
+
     /// Search / filter bundles by date, model, token count, or tags.
     ///
     /// When no `--bundles` paths are given, all bundles are fetched from the
@@ -256,6 +273,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Restore { bundle_id, data_dir, out } => {
             run_restore(&bundle_id, &data_dir, out.as_deref());
+        }
+        Command::Replay { bundle_id, speed, no_stream } => {
+            run_replay(&args.url, &bundle_id, speed, no_stream).await;
         }
         Command::Search { since, until, model, min_tokens, tags, limit, format, bundles } => {
             run_search(&args.url, since, until, model, min_tokens, tags, limit, &format, &bundles)
@@ -692,4 +712,171 @@ async fn run_search(
     };
 
     print!("{rendered}");
+}
+
+// ---------------------------------------------------------------------------
+// replay
+// ---------------------------------------------------------------------------
+
+/// Format a timestamp from seconds as `HH:MM:SS`.
+pub(crate) fn format_timestamp(secs: u64) -> String {
+    let h = secs / 3600;
+    let m = (secs % 3600) / 60;
+    let s = secs % 60;
+    format!("{h:02}:{m:02}:{s:02}")
+}
+
+/// Truncate `text` to at most `max_chars` characters, appending `…` when cut.
+pub(crate) fn truncate(text: &str, max_chars: usize) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    if chars.len() <= max_chars {
+        text.to_owned()
+    } else {
+        let mut s: String = chars[..max_chars.saturating_sub(1)].iter().collect();
+        s.push('\u{2026}');
+        s
+    }
+}
+
+/// Format one OKF entity into a single stdout line.
+///
+/// Output: `[HH:MM:SS] <type>/<id>: <label_preview>`
+pub(crate) fn format_entity_line(entity: &serde_json::Value, event_index: usize) -> String {
+    let ts = format_timestamp(event_index as u64);
+    let entity_type = entity.get("type").and_then(|v| v.as_str()).unwrap_or("unknown");
+    let entity_id = entity.get("id").and_then(|v| v.as_str()).unwrap_or("?");
+    let label = entity.get("label").and_then(|v| v.as_str()).unwrap_or("");
+    let preview = truncate(label, 80);
+    format!("[{ts}] {entity_type}/{entity_id}: {preview}")
+}
+
+async fn run_replay(base_url: &str, bundle_id: &str, speed: f64, no_stream: bool) {
+    use futures_util::TryStreamExt as _;
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    use tokio_util::io::StreamReader;
+
+    // Build `?speed=N` only when not no_stream (speed irrelevant then).
+    let speed_param = if no_stream { String::new() } else { format!("?speed={speed}") };
+    let url = format!("{}/api/replay/{bundle_id}{speed_param}", base_url.trim_end_matches('/'));
+
+    let client = reqwest::Client::new();
+    let resp = match client.get(&url).header("Accept", "text/event-stream").send().await {
+        Ok(r) => r,
+        Err(e) if e.is_connect() => {
+            eprintln!("daemon not running at {base_url}");
+            std::process::exit(1);
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            std::process::exit(2);
+        }
+    };
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        eprintln!("server error {status}: {body}");
+        std::process::exit(2);
+    }
+
+    let byte_stream = resp.bytes_stream().map_err(std::io::Error::other);
+    let stream_reader = StreamReader::new(byte_stream);
+    let mut lines = BufReader::new(stream_reader).lines();
+
+    // Parse SSE line-by-line; accumulate data for each event block.
+    let mut current_event: Option<String> = None;
+    let mut current_data = String::new();
+
+    let print_entity = |data: &str| {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(data) {
+            // Done sentinel.
+            if v.as_object().is_some_and(|o| o.is_empty()) {
+                println!("[replay complete]");
+                return;
+            }
+            let idx = v.get("event_index").and_then(|x| x.as_u64()).unwrap_or(0) as usize;
+            if let Some(entity) = v.get("entity") {
+                println!("{}", format_entity_line(entity, idx));
+            }
+        }
+    };
+
+    tokio::select! {
+        _ = async {
+            while let Ok(Some(line)) = lines.next_line().await {
+                if let Some(stripped) = line.strip_prefix("event: ") {
+                    current_event = Some(stripped.to_owned());
+                } else if let Some(data) = line.strip_prefix("data: ") {
+                    current_data = data.to_owned();
+                } else if line.is_empty() {
+                    // End of event block.
+                    if matches!(current_event.as_deref(), Some("done")) {
+                        println!("[replay complete]");
+                        break;
+                    }
+                    if !current_data.is_empty() {
+                        print_entity(&current_data);
+                    }
+                    current_event = None;
+                    current_data.clear();
+                }
+            }
+        } => {}
+        _ = tokio::signal::ctrl_c() => {
+            println!("\nstopped.");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Unit tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_timestamp_zero() {
+        assert_eq!(format_timestamp(0), "00:00:00");
+    }
+
+    #[test]
+    fn format_timestamp_one_hour_one_min_one_sec() {
+        assert_eq!(format_timestamp(3661), "01:01:01");
+    }
+
+    #[test]
+    fn truncate_short_string_unchanged() {
+        assert_eq!(truncate("hello", 80), "hello");
+    }
+
+    #[test]
+    fn truncate_long_string_ends_with_ellipsis() {
+        let s = "a".repeat(100);
+        let result = truncate(&s, 80);
+        assert!(result.ends_with('\u{2026}'));
+        assert_eq!(result.chars().count(), 80);
+    }
+
+    #[test]
+    fn format_entity_line_produces_expected_format() {
+        let entity = serde_json::json!({
+            "type": "intent",
+            "id": "intent-0",
+            "label": "fix the pagination bug"
+        });
+        let line = format_entity_line(&entity, 0);
+        assert!(line.starts_with("[00:00:00]"));
+        assert!(line.contains("intent/intent-0"));
+        assert!(line.contains("fix the pagination bug"));
+    }
+
+    #[test]
+    fn format_entity_line_missing_fields_use_defaults() {
+        let entity = serde_json::json!({});
+        let line = format_entity_line(&entity, 5);
+        assert!(line.starts_with("[00:00:05]"));
+        assert!(line.contains("unknown/?"));
+    }
 }

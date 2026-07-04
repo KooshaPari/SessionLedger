@@ -1,3 +1,4 @@
+mod theme;
 use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 

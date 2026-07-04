@@ -14,6 +14,7 @@ pub mod bundle_list;
 pub mod corpus_loader;
 pub mod detail_pane;
 pub mod history_tab;
+pub mod live_feed;
 pub mod memory_tab;
 pub mod mock_data;
 pub mod session_list;

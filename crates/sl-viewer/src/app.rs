@@ -5,6 +5,7 @@ use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::history_tab::HistoryTimeline;
+use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
 use crate::session_list::SessionList;
@@ -15,6 +16,7 @@ enum Tab {
     Bundles,
     History,
     Memory,
+    LiveFeed,
 }
 
 /// Shared session data provided at the root of the component tree.
@@ -65,11 +67,13 @@ pub fn App() -> Element {
     let bundles_class = if active_tab() == Tab::Bundles { "tab active" } else { "tab" };
     let history_class = if active_tab() == Tab::History { "tab active" } else { "tab" };
     let memory_class = if active_tab() == Tab::Memory { "tab active" } else { "tab" };
+    let feed_class = if active_tab() == Tab::LiveFeed { "tab active" } else { "tab" };
 
     let tab_body = match active_tab() {
         Tab::Bundles => rsx! { BundlesTab {} },
         Tab::History => rsx! { HistoryTimeline {} },
         Tab::Memory => rsx! { MemoryWiki {} },
+        Tab::LiveFeed => rsx! { LiveFeed {} },
     };
 
     rsx! {
@@ -113,6 +117,21 @@ pub fn App() -> Element {
                 .badge {{ display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }}
                 .badge-ok {{ background: #1a3a2a; color: #4ade80; }}
                 .badge-contract {{ background: #2a1a3a; color: #c084fc; }}
+                .live-feed {{ display: flex; flex-direction: column; height: 100%; }}
+                .live-feed-header {{ display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #2a2d35; background: #13151c; }}
+                .live-feed-title {{ font-size: 13px; font-weight: 600; color: #c8cdd6; flex: 1; }}
+                .feed-status {{ font-size: 11px; font-weight: 600; }}
+                .feed-status.live {{ color: #4ade80; }}
+                .feed-status.disconnected {{ color: #f87171; }}
+                .feed-status.connecting {{ color: #facc15; }}
+                .retry-btn {{ padding: 3px 10px; font-size: 11px; font-weight: 600; background: #252836; border: 1px solid #2a2d35; border-radius: 4px; color: #8b8fa3; cursor: pointer; }}
+                .retry-btn:hover {{ background: #2f3244; color: #c8cdd6; }}
+                .live-feed-list {{ flex: 1; overflow-y: auto; padding: 8px 0; }}
+                .feed-empty {{ padding: 16px 20px; font-size: 13px; color: #5c5f6e; }}
+                .feed-entry {{ display: flex; gap: 10px; align-items: baseline; padding: 6px 16px; border-bottom: 1px solid #1e2029; font-family: monospace; }}
+                .feed-entry:hover {{ background: #1c1f2b; }}
+                .feed-ts {{ font-size: 11px; color: #5c5f6e; white-space: nowrap; }}
+                .feed-path {{ font-size: 12px; color: #a1b4ff; word-break: break-all; }}
             "#,
         }
         div { class: "app",
@@ -132,6 +151,11 @@ pub fn App() -> Element {
                         class: "{memory_class}",
                         onclick: move |_| active_tab.set(Tab::Memory),
                         "Memory"
+                    }
+                    div {
+                        class: "{feed_class}",
+                        onclick: move |_| active_tab.set(Tab::LiveFeed),
+                        "Live Feed"
                     }
                 }
                 {tab_body}

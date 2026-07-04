@@ -23,7 +23,7 @@ use std::sync::Arc;
 use axum::extract::{Path as AxumPath, Query, State};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use futures_core::Stream;
 use serde::Deserialize;
@@ -32,6 +32,7 @@ use tokio::sync::broadcast;
 
 use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
+use crate::validation::{validate_okf_bundle, PostBundle};
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt as _;
 use tower_http::cors::{Any, CorsLayer};
@@ -56,6 +57,7 @@ pub(crate) fn router(state: AppState) -> Router {
         .route("/api/search", get(search_bundles))
         .route("/api/stream", get(sse_stream))
         .route("/api/replay/{bundle_id}", get(replay_bundle))
+        .route("/api/ingest", post(ingest_bundle))
         .with_state(state)
         .layer(cors)
 }
@@ -190,6 +192,22 @@ async fn search_bundles(
     let matched: Vec<BundleMeta> = apply_filters(&metas, &spec).into_iter().cloned().collect();
 
     Json(matched).into_response()
+}
+
+/// `POST /api/ingest` — validate an OKF bundle payload before accepting it.
+///
+/// Returns `200 OK` with the [`crate::validation::ValidationResult`] JSON when the
+/// bundle passes all structural checks. Returns `422 Unprocessable Entity` with
+/// the same JSON body when one or more validation errors are found. This allows
+/// clients to distinguish a transport-level failure (4xx/5xx from the proxy or
+/// server) from a business-logic rejection (422 with actionable error details).
+async fn ingest_bundle(Json(payload): Json<PostBundle>) -> Response {
+    let result = validate_okf_bundle(&payload);
+    if result.valid {
+        Json(&result).into_response()
+    } else {
+        (axum::http::StatusCode::UNPROCESSABLE_ENTITY, Json(&result)).into_response()
+    }
 }
 
 // ---------------------------------------------------------------------------

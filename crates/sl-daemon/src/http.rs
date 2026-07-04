@@ -20,7 +20,7 @@ use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use axum::extract::{Query, State};
+use axum::extract::{Path as AxumPath, Query, State};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
@@ -55,6 +55,7 @@ pub(crate) fn router(state: AppState) -> Router {
         .route("/api/bundles", get(list_bundles))
         .route("/api/search", get(search_bundles))
         .route("/api/stream", get(sse_stream))
+        .route("/api/replay/{bundle_id}", get(replay_bundle))
         .with_state(state)
         .layer(cors)
 }
@@ -227,6 +228,121 @@ fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
 }
 
 // ---------------------------------------------------------------------------
+// replay
+// ---------------------------------------------------------------------------
+
+/// Query parameters for `GET /api/replay/:bundle_id`.
+#[derive(Debug, Deserialize)]
+pub(crate) struct ReplayParams {
+    /// Playback speed multiplier (default 1.0).  `speed=2.0` replays at 2×
+    /// real-time by halving the inter-event delay.
+    #[serde(default = "default_speed")]
+    pub speed: f64,
+}
+
+fn default_speed() -> f64 {
+    1.0
+}
+
+/// Base inter-event delay in milliseconds at speed = 1.0.
+const BASE_DELAY_MS: f64 = 200.0;
+
+/// Calculate the inter-event delay for a given speed multiplier.
+///
+/// Returns at least 1 ms so we never produce a zero-duration sleep.
+pub(crate) fn delay_ms_for_speed(speed: f64) -> u64 {
+    let speed = if speed <= 0.0 { 1.0 } else { speed };
+    let ms = (BASE_DELAY_MS / speed).round() as u64;
+    ms.max(1)
+}
+
+/// `GET /api/replay/:bundle_id` — SSE stream of OKF entities in order.
+///
+/// Opens `<out_dir>/<bundle_id>.okf.json`, reads all entities, and streams
+/// each one as an SSE event with the following shape:
+///
+/// ```text
+/// data: {"entity_index":0,"total_entities":5,"entity":{...}}\n\n
+/// ```
+///
+/// After the last entity it sends:
+/// ```text
+/// event: done\ndata: {}\n\n
+/// ```
+///
+/// The optional `?speed=<f>` query parameter (default 1.0) controls how
+/// quickly entities are emitted: `speed=2.0` halves the inter-event delay.
+async fn replay_bundle(
+    AxumPath(bundle_id): AxumPath<String>,
+    Query(params): Query<ReplayParams>,
+    State(state): State<AppState>,
+) -> Response {
+    // Sanitise the bundle_id: reject any path traversal.
+    if bundle_id.contains('/') || bundle_id.contains('\\') || bundle_id.contains("..") {
+        return (axum::http::StatusCode::BAD_REQUEST, "invalid bundle_id").into_response();
+    }
+
+    let filename = if bundle_id.ends_with(".okf.json") {
+        bundle_id.clone()
+    } else {
+        format!("{bundle_id}.okf.json")
+    };
+
+    let path = state.out_dir.join(&filename);
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return (axum::http::StatusCode::NOT_FOUND, format!("bundle {bundle_id:?} not found"))
+                .into_response();
+        }
+        Err(e) => {
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to read bundle: {e}"),
+            )
+                .into_response();
+        }
+    };
+
+    let doc: serde_json::Value = match serde_json::from_str(&contents) {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+                format!("invalid OKF JSON: {e}"),
+            )
+                .into_response();
+        }
+    };
+
+    // Extract the entities array; fall back to empty if absent.
+    let entities: Vec<serde_json::Value> =
+        doc.get("entities").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+
+    let delay = delay_ms_for_speed(params.speed);
+    let total = entities.len();
+
+    let stream = async_stream::stream! {
+        for (idx, entity) in entities.into_iter().enumerate() {
+            if idx > 0 {
+                tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
+            }
+            let payload = serde_json::json!({
+                "event_index": idx,
+                "total_events": total,
+                "entity": entity,
+            });
+            let data = payload.to_string();
+            yield Ok::<Event, Infallible>(Event::default().event("entity").data(data));
+        }
+        // Final done sentinel.
+        yield Ok(Event::default().event("done").data("{}"));
+    };
+
+    Sse::new(stream).keep_alive(KeepAlive::default()).into_response()
+}
+
+// ---------------------------------------------------------------------------
 // Unit tests for params_to_spec
 // ---------------------------------------------------------------------------
 
@@ -283,5 +399,36 @@ mod tests {
         let p = SearchParams { tags: Some("rust".into()), ..SearchParams::default() };
         let spec = params_to_spec(&p);
         assert_eq!(spec.tags, vec!["rust"]);
+    }
+
+    // --- replay helpers ---
+
+    #[test]
+    fn delay_speed_1_is_base() {
+        assert_eq!(delay_ms_for_speed(1.0), 200);
+    }
+
+    #[test]
+    fn delay_speed_2_is_half_base() {
+        assert_eq!(delay_ms_for_speed(2.0), 100);
+    }
+
+    #[test]
+    fn delay_speed_10_is_clamped_to_1ms_min() {
+        // BASE_DELAY_MS(200) / 10 = 20ms — still above minimum.
+        assert_eq!(delay_ms_for_speed(10.0), 20);
+    }
+
+    #[test]
+    fn delay_zero_or_negative_defaults_to_base() {
+        // Non-positive speed treated as 1.0.
+        assert_eq!(delay_ms_for_speed(0.0), 200);
+        assert_eq!(delay_ms_for_speed(-5.0), 200);
+    }
+
+    #[test]
+    fn delay_very_high_speed_at_least_1ms() {
+        // 200 / 1000 = 0.2 → rounds to 0 → clamped to 1.
+        assert!(delay_ms_for_speed(1000.0) >= 1);
     }
 }

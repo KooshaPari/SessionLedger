@@ -9,6 +9,7 @@ use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
+use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
 use crate::timeline::TimelineView;
 
@@ -21,6 +22,7 @@ enum Tab {
     LiveFeed,
     Search,
     Timeline,
+    Replay,
 }
 
 /// Shared session data provided at the root of the component tree.
@@ -74,6 +76,7 @@ pub fn App() -> Element {
     let feed_class = if active_tab() == Tab::LiveFeed { "tab active" } else { "tab" };
     let search_class = if active_tab() == Tab::Search { "tab active" } else { "tab" };
     let timeline_class = if active_tab() == Tab::Timeline { "tab active" } else { "tab" };
+    let replay_class = if active_tab() == Tab::Replay { "tab active" } else { "tab" };
 
     let tab_body = match active_tab() {
         Tab::Bundles => rsx! { BundlesTab {} },
@@ -82,6 +85,7 @@ pub fn App() -> Element {
         Tab::LiveFeed => rsx! { LiveFeed {} },
         Tab::Search => rsx! { SearchView {} },
         Tab::Timeline => rsx! { TimelineView { bundles: sample_bundles() } },
+        Tab::Replay => rsx! { ReplayView {} },
     };
 
     rsx! {
@@ -206,6 +210,11 @@ pub fn App() -> Element {
                         class: "{timeline_class}",
                         onclick: move |_| active_tab.set(Tab::Timeline),
                         "Timeline"
+                    }
+                    div {
+                        class: "{replay_class}",
+                        onclick: move |_| active_tab.set(Tab::Replay),
+                        "Replay"
                     }
                 }
                 {tab_body}

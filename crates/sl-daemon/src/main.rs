@@ -8,6 +8,8 @@
 //! | `sl status` | Check daemon liveness (`GET /healthz`)                    |
 //! | `sl list`   | List compiled OKF bundle paths (`GET /api/bundles`)       |
 //! | `sl tail`   | Stream new bundle paths as they arrive (`GET /api/stream`)|
+//! | `sl export` | Export bundle metadata as CSV / Markdown / JSON            |
+//! | `sl summary`| Print aggregate statistics across all bundles              |
 //!
 //! ## HTTP API (exposed by `sl serve`)
 //!
@@ -23,6 +25,7 @@
 
 mod cli;
 mod etl;
+mod export;
 mod http;
 mod watcher;
 
@@ -82,6 +85,32 @@ enum Command {
 
     /// Stream new bundle paths as they arrive (SSE). Press Ctrl+C to stop.
     Tail,
+
+    /// Export bundle metadata as CSV, Markdown, or JSON.
+    ///
+    /// When no bundle paths are given, all bundles are fetched from the daemon
+    /// via GET /api/bundles.  Each bundle path must point to an OKF JSON file
+    /// on the local filesystem.
+    Export {
+        /// Output format: csv | md | json  (default: csv).
+        #[arg(long, default_value = "csv")]
+        format: String,
+
+        /// Write output to this file; defaults to stdout.
+        #[arg(long)]
+        out: Option<PathBuf>,
+
+        /// OKF bundle file paths to export.  If omitted, fetches all from
+        /// the daemon.
+        bundles: Vec<PathBuf>,
+    },
+
+    /// Print aggregate statistics across all bundles.
+    Summary {
+        /// OKF bundle file paths to summarise.  If omitted, fetches all from
+        /// the daemon.
+        bundles: Vec<PathBuf>,
+    },
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -95,6 +124,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Status => run_status(&args.url).await,
         Command::List => run_list(&args.url).await,
         Command::Tail => run_tail(&args.url).await,
+        Command::Export { format, out, bundles } => {
+            run_export(&args.url, &format, out.as_deref(), &bundles).await;
+        }
+        Command::Summary { bundles } => {
+            run_summary(&args.url, &bundles).await;
+        }
     }
 
     Ok(())
@@ -275,4 +310,91 @@ async fn run_tail(base_url: &str) {
             println!("\nstopped.");
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// export
+// ---------------------------------------------------------------------------
+
+/// Load OKF JSON files from `paths` into [`export::BundleMeta`] objects.
+///
+/// Skips files that cannot be read or parsed, printing a warning to stderr.
+fn load_metas(paths: &[PathBuf]) -> Vec<export::BundleMeta> {
+    paths
+        .iter()
+        .filter_map(|p| match std::fs::read_to_string(p) {
+            Err(e) => {
+                eprintln!("warning: cannot read {}: {e}", p.display());
+                None
+            }
+            Ok(text) => match serde_json::from_str::<serde_json::Value>(&text) {
+                Err(e) => {
+                    eprintln!("warning: cannot parse {}: {e}", p.display());
+                    None
+                }
+                Ok(v) => Some(export::BundleMeta::from_value(&v)),
+            },
+        })
+        .collect()
+}
+
+async fn resolve_bundle_paths(base_url: &str, given: &[PathBuf]) -> Vec<PathBuf> {
+    if !given.is_empty() {
+        return given.to_vec();
+    }
+    let client = reqwest::Client::new();
+    match cli::fetch_bundle_paths(&client, base_url).await {
+        Ok(paths) => paths.into_iter().map(PathBuf::from).collect(),
+        Err(e) => {
+            eprintln!("error fetching bundle list: {e}");
+            std::process::exit(2);
+        }
+    }
+}
+
+async fn run_export(
+    base_url: &str,
+    format_str: &str,
+    out_path: Option<&std::path::Path>,
+    given_bundles: &[PathBuf],
+) {
+    use std::str::FromStr as _;
+
+    let fmt = match export::ExportFormat::from_str(format_str) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("error: {e}");
+            std::process::exit(2);
+        }
+    };
+
+    let paths = resolve_bundle_paths(base_url, given_bundles).await;
+    let metas = load_metas(&paths);
+
+    let rendered = match fmt {
+        export::ExportFormat::Csv => export::render_csv(&metas),
+        export::ExportFormat::Markdown => export::render_markdown(&metas),
+        export::ExportFormat::Json => export::render_json(&metas),
+    };
+
+    match out_path {
+        Some(p) => {
+            if let Err(e) = std::fs::write(p, &rendered) {
+                eprintln!("error writing to {}: {e}", p.display());
+                std::process::exit(2);
+            }
+        }
+        None => print!("{rendered}"),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// summary
+// ---------------------------------------------------------------------------
+
+async fn run_summary(base_url: &str, given_bundles: &[PathBuf]) {
+    let paths = resolve_bundle_paths(base_url, given_bundles).await;
+    let metas = load_metas(&paths);
+    let summary = export::compute_summary(&metas);
+    print!("{}", export::render_summary(&summary));
 }

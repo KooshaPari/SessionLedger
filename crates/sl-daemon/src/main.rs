@@ -31,6 +31,7 @@ mod filter;
 mod http;
 mod tag;
 mod validation;
+mod metrics;
 mod watcher;
 
 use std::net::SocketAddr;

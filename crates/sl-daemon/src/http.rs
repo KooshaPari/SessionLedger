@@ -31,6 +31,7 @@ use serde_json::Value;
 use tokio::sync::broadcast;
 
 use crate::export::BundleMeta;
+use crate::metrics::compute_metrics;
 use crate::filter::{apply_filters, FilterSpec};
 use crate::validation::{validate_okf_bundle, PostBundle};
 use tokio_stream::wrappers::BroadcastStream;
@@ -58,6 +59,7 @@ pub(crate) fn router(state: AppState) -> Router {
         .route("/api/stream", get(sse_stream))
         .route("/api/replay/{bundle_id}", get(replay_bundle))
         .route("/api/ingest", post(ingest_bundle))
+        .route("/api/metrics", get(metrics_handler))
         .with_state(state)
         .layer(cors)
 }
@@ -449,4 +451,8 @@ mod tests {
         // 200 / 1000 = 0.2 → rounds to 0 → clamped to 1.
         assert!(delay_ms_for_speed(1000.0) >= 1);
     }
+}
+
+async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
+    Json(compute_metrics(&state.out_dir))
 }

@@ -60,9 +60,7 @@ pub fn LiveFeed() -> Element {
                 use futures_util::StreamExt;
                 use tokio_util::io::StreamReader;
 
-                let stream = stream.map(|r| {
-                    r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
-                });
+                let stream = stream.map(|r| r.map_err(std::io::Error::other));
                 let reader = StreamReader::new(stream);
                 let mut lines = BufReader::new(reader).lines();
 

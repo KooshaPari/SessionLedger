@@ -1,18 +1,20 @@
 # SessionLedger — repo-root process-compose orchestration.
 #
 # Managed services:
-#   sl-daemon  — ETL daemon: watch *.jsonl sessions → compile → write OKF docs.
+#   sl-build     — one-shot: compile sl-daemon + sl-viewer.
+#   sl-daemon    — ETL daemon: watch *.jsonl sessions → compile → write OKF docs.
+#   sl-viewer    — Dioxus desktop viewer for compiled OKF documents.
+#   sl-cli-check — one-shot healthcheck printed to log on startup.
 #
 # Usage:
-#   process-compose up
+#   make build && process-compose up   # build then start all services
+#   process-compose down               # tear down
+#   make dev                           # build + up in one step
+#   make dev-down                      # alias for process-compose down
 #
 # Environment overrides (set before `up`):
 #   SL_WATCH_DIR  — directory to watch for *.jsonl transcripts (default: ./sessions)
 #   SL_OUT_DIR    — where <session-id>.okf.json files are written (default: ./okf-out)
-#
-# The daemon crate is isolated from the root workspace (sl-viewer pulls
-# webkit2gtk-sys which does not resolve on macOS). Build and run target both
-# operate from within crates/sl-daemon rather than the workspace root.
 
 version: "0.5"
 
@@ -21,22 +23,20 @@ environment:
   - "SL_OUT_DIR=${SL_OUT_DIR:-./okf-out}"
 
 processes:
-  # Build step: compile sl-daemon in isolation from its own crate root.
-  # Must run before the daemon itself starts.
-  sl-daemon-build:
-    command: "cargo build --release"
-    working_dir: "crates/sl-daemon"
+  # ─── build step ────────────────────────────────────────────────────────────
+  # Compile both crates before any runtime service starts.
+  sl-build:
+    command: "cargo build -p sl-daemon -p sl-viewer"
     availability:
       restart: "no"
 
-  # Long-running ETL daemon: seed + watch → bounded mpsc → compile → OKF.
-  # On startup it sweeps the watch dir once, then listens for new/changed files.
-  # On failure it restarts after 5 s backoff so transient errors self-heal.
+  # ─── long-running daemon ───────────────────────────────────────────────────
+  # File-watcher ETL: sweep + watch → compile → OKF export.
+  # Restarts automatically on failure with a 5 s backoff.
   sl-daemon:
-    command: "./target/debug/sl-daemon serve --watch $SL_WATCH_DIR --out $SL_OUT_DIR --http-bind 127.0.0.1:8080"
-    working_dir: "crates/sl-daemon"
+    command: "./target/debug/sl-daemon --watch $SL_WATCH_DIR --out $SL_OUT_DIR --workers 4"
     depends_on:
-      sl-daemon-build:
+      sl-build:
         condition: process_completed_successfully
     environment:
       - "SL_WATCH_DIR=${SL_WATCH_DIR:-./sessions}"
@@ -44,29 +44,33 @@ processes:
     availability:
       restart: "on_failure"
       backoff_seconds: 5
-    readiness_probe:
-      http_get:
-        host: "127.0.0.1"
-        port: 8080
-        path: "/healthz"
-      initial_delay_seconds: 2
-      period_seconds: 5
     description: >
       Watches $SL_WATCH_DIR for new/changed *.jsonl session transcripts.
-      For each file, runs the session-ledger pipeline (ingest → compile → export)
-      and writes one <session-id>.okf.json into $SL_OUT_DIR.
+      Compiles each session into a ContinuationBundle and exports one
+      <session-id>.okf.json into $SL_OUT_DIR.
 
-  # One-shot readiness check: verifies the daemon HTTP API is reachable.
-  # Exits 0 when the daemon is healthy, 1 otherwise.
-  sl-cli-check:
-    command: "./target/debug/sl-daemon status"
-    working_dir: "crates/sl-daemon"
-    is_daemon: false
+  # ─── desktop viewer ────────────────────────────────────────────────────────
+  # Dioxus desktop app — opens once the daemon is running.
+  sl-viewer:
+    command: "./target/debug/sl-viewer"
     depends_on:
       sl-daemon:
-        condition: process_healthy
+        condition: process_started
+    availability:
+      restart: "on_failure"
+      backoff_seconds: 3
+    description: >
+      Dioxus desktop viewer that renders compiled OKF knowledge-graph documents.
+
+  # ─── one-shot readiness probe ──────────────────────────────────────────────
+  # Prints the daemon version to the process-compose log on startup.
+  sl-cli-check:
+    command: "./target/debug/sl-daemon --version && echo 'sl-daemon binary OK'"
+    depends_on:
+      sl-daemon:
+        condition: process_started
     availability:
       restart: "no"
     description: >
-      One-shot CLI probe: calls `sl status` (GET /healthz) to confirm the
-      daemon is reachable after startup.
+      One-shot probe: verifies the sl-daemon binary is present after startup
+      and prints its version to the process-compose log.

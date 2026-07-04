@@ -1,0 +1,33 @@
+# Local stub for webkit2gtk-sys 2.0.1 (yanked on crates.io).
+# wry 0.45.0 pins webkit2gtk-sys = "=2.0.1"; the crate was yanked after 2.0.2
+# was published, leaving cargo unable to resolve the graph on a clean checkout.
+# This stub satisfies the version requirement; the real FFI code is Linux-only
+# and is never compiled on macOS (the host we build/check on).
+[package]
+name = "webkit2gtk-sys"
+version = "2.0.1"
+edition = "2021"
+description = "Stub — satisfies wry 0.45 version pin on non-Linux hosts"
+license = "MIT"
+build = "build.rs"
+links = "web_kit2"
+
+[features]
+v2_6 = []
+v2_8 = ["v2_6"]
+v2_10 = ["v2_8"]
+v2_12 = ["v2_10"]
+v2_14 = ["v2_12"]
+v2_16 = ["v2_14"]
+v2_18 = ["v2_16"]
+v2_20 = ["v2_18"]
+v2_22 = ["v2_20"]
+v2_24 = ["v2_22"]
+v2_26 = ["v2_24"]
+v2_28 = ["v2_26"]
+v2_30 = ["v2_28"]
+v2_32 = ["v2_30"]
+v2_34 = ["v2_32"]
+v2_36 = ["v2_34"]
+v2_38 = ["v2_36"]
+v2_40 = ["v2_38"]

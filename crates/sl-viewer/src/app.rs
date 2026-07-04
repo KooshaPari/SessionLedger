@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 
+use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
@@ -8,7 +9,6 @@ use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
-use crate::session_list::SessionList;
 
 /// Tab identifiers for the viewer.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -132,6 +132,27 @@ pub fn App() -> Element {
                 .feed-entry:hover {{ background: #1c1f2b; }}
                 .feed-ts {{ font-size: 11px; color: #5c5f6e; white-space: nowrap; }}
                 .feed-path {{ font-size: 12px; color: #a1b4ff; word-break: break-all; }}
+                .compare-btn {{ padding: 2px 8px; font-size: 10px; font-weight: 600; background: #1e2435; border: 1px solid #2a2d35; border-radius: 4px; color: #8b8fa3; cursor: pointer; margin-left: 6px; }}
+                .compare-btn:hover {{ background: #2a2d45; color: #c8cdd6; }}
+                .compare-btn.active {{ background: #2a1a3a; color: #c084fc; border-color: #4a2a6a; }}
+                .diff-panel {{ border-top: 2px solid #6c8cff; background: #0d0f18; padding: 0; flex-shrink: 0; max-height: 340px; overflow-y: auto; }}
+                .diff-header {{ display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid #2a2d35; background: #13151c; }}
+                .diff-title {{ flex: 1; font-size: 13px; font-weight: 600; color: #c8cdd6; }}
+                .diff-badge {{ display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; background: #2a1a1a; color: #f87171; }}
+                .diff-badge-same {{ background: #1a3a2a; color: #4ade80; }}
+                .diff-close {{ cursor: pointer; font-size: 14px; color: #5c5f6e; padding: 2px 6px; border-radius: 4px; }}
+                .diff-close:hover {{ background: #252836; color: #c8cdd6; }}
+                .diff-col-headers {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border-bottom: 1px solid #2a2d35; background: #13151c; }}
+                .diff-rows {{ display: flex; flex-direction: column; }}
+                .diff-row {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 12px; border-bottom: 1px solid #1e2029; font-family: monospace; align-items: start; }}
+                .diff-row-changed {{ background: #1a1520; }}
+                .diff-row-changed .diff-col-a {{ color: #f87171; }}
+                .diff-row-changed .diff-col-b {{ color: #4ade80; }}
+                .diff-field-label {{ color: #8b8fa3; font-weight: 600; font-family: system-ui, sans-serif; font-size: 11px; padding-top: 1px; }}
+                .diff-col-a {{ color: #c8cdd6; overflow-wrap: break-word; }}
+                .diff-col-b {{ color: #c8cdd6; overflow-wrap: break-word; }}
+                .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
+                .main-upper {{ flex: 1; overflow-y: auto; }}
             "#,
         }
         div { class: "app",
@@ -173,22 +194,136 @@ pub fn App() -> Element {
 fn BundlesTab() -> Element {
     let bundles = use_signal(sample_bundles);
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
+    let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
 
     let summaries: Vec<BundleSummary> = bundles.iter().map(|b| summarize(&b)).collect();
     let detail = selected_idx().and_then(|idx| bundles.get(idx)).map(|b| extract_detail(&b));
 
+    // Determine if we should show the diff panel.
+    let diff_pair: Option<(OkfBundle, OkfBundle)> =
+        selected_idx().zip(compare_idx()).and_then(|(ia, ib)| {
+            let a = bundles.get(ia).as_ref().map(|b| OkfBundle::from_bundle(b))?;
+            let c = bundles.get(ib).as_ref().map(|b| OkfBundle::from_bundle(b))?;
+            Some((a, c))
+        });
+
     rsx! {
         h2 { "Compiled Bundles" }
-        SessionList {
+        SessionListWithCompare {
             items: summaries,
             selected_idx: selected_idx(),
+            compare_idx: compare_idx(),
             on_select: move |idx| selected_idx.set(Some(idx)),
-        }
-        match detail {
-            Some(d) => rsx! { DetailView { detail: d.clone() } },
-            None => rsx! {
-                div { class: "empty-state", "Select a bundle from the list to view details" }
+            on_compare: move |idx| {
+                // Toggle: clicking same row again clears compare slot.
+                if compare_idx() == Some(idx) {
+                    compare_idx.set(None);
+                } else {
+                    compare_idx.set(Some(idx));
+                }
             },
+        }
+        div { class: "main-content",
+            div { class: "main-upper",
+                match detail {
+                    Some(d) => rsx! { DetailView { detail: d.clone() } },
+                    None => rsx! {
+                        div { class: "empty-state", "Select a bundle from the list to view details" }
+                    },
+                }
+            }
+            if let Some((a, b)) = diff_pair {
+                BundleDiff {
+                    bundle_a: a,
+                    bundle_b: b,
+                    on_close: move |_| compare_idx.set(None),
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SessionList variant with a per-row "Compare" button
+// ---------------------------------------------------------------------------
+
+#[derive(Props, Clone, PartialEq)]
+struct SessionListWithCompareProps {
+    items: Vec<BundleSummary>,
+    selected_idx: Option<usize>,
+    compare_idx: Option<usize>,
+    on_select: EventHandler<usize>,
+    on_compare: EventHandler<usize>,
+}
+
+#[component]
+fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
+    let mut query = use_signal(String::new);
+    let needle = query().to_lowercase();
+    let filtered: Vec<(usize, BundleSummary)> = props
+        .items
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| {
+            needle.is_empty()
+                || s.intent_goal.to_lowercase().contains(&needle)
+                || s.source_id.to_lowercase().contains(&needle)
+        })
+        .map(|(i, s)| (i, s.clone()))
+        .collect();
+    let count = filtered.len();
+    let plural = if count == 1 { "" } else { "s" };
+
+    rsx! {
+        div { class: "session-list",
+            input {
+                class: "search-input",
+                placeholder: "Filter sessions...",
+                value: "{query}",
+                oninput: move |e| query.set(e.value()),
+            }
+            div { class: "session-count",
+                "{count} session{plural}"
+                if props.compare_idx.is_some() {
+                    span { style: "color:#c084fc; margin-left:8px;", "compare slot active" }
+                }
+            }
+            for (orig_idx, summary) in filtered.into_iter() {
+                {
+                    let is_selected = props.selected_idx == Some(orig_idx);
+                    let is_compare = props.compare_idx == Some(orig_idx);
+                    let cls = if is_selected { "session-item selected" } else { "session-item" };
+                    let compare_cls = if is_compare { "compare-btn active" } else { "compare-btn" };
+                    let s = summary.clone();
+                    rsx! {
+                        div {
+                            class: "{cls}",
+                            onclick: move |_| props.on_select.call(orig_idx),
+                            div { class: "session-source",
+                                "{s.source_id}"
+                                span {
+                                    class: "{compare_cls}",
+                                    onclick: move |evt| {
+                                        evt.stop_propagation();
+                                        props.on_compare.call(orig_idx);
+                                    },
+                                    "⇄"
+                                }
+                            }
+                            div { class: "session-goal", "{s.intent_goal}" }
+                            div { class: "session-meta",
+                                span { class: "meta-bundles", "󰆧 {s.bundle_count}" }
+                                if s.has_acceptance {
+                                    span { class: "badge badge-ok", "✓ AC" }
+                                }
+                                if s.has_contract {
+                                    span { class: "badge badge-contract", "◎ CT" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

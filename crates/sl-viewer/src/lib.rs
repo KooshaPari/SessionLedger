@@ -10,6 +10,7 @@
 //! [`App`] regardless of renderer.
 
 pub mod app;
+pub mod bundle_diff;
 pub mod bundle_list;
 pub mod corpus_loader;
 pub mod detail_pane;

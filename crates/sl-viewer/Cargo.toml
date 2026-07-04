@@ -10,6 +10,11 @@ session-ledger = { path = "../.." }
 dioxus = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+reqwest = { version = "0.12", features = ["stream", "rustls-tls"], default-features = false, optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+tokio-util = { version = "0.7", features = ["io"], optional = true }
+futures-util = { version = "0.3", optional = true }
+chrono = { version = "0.4", features = ["clock"], default-features = false, optional = true }
 # sqlite feature: wire real Forge corpus into the viewer
 rusqlite = { version = "0.32", optional = true }
 zstd = { version = "0.13", optional = true }
@@ -21,7 +26,7 @@ tempfile = "3"
 
 [features]
 default = ["desktop"]
-desktop = ["dioxus/desktop"]
+desktop = ["dioxus/desktop", "dep:reqwest", "dep:tokio", "dep:tokio-util", "dep:futures-util", "dep:chrono"]
 web = ["dioxus/web"]
 # Enable loading real Forge SQLite sessions in the viewer.
 # Requires: ZSTD_SYS_USE_PKG_CONFIG=1 (links against system libzstd).

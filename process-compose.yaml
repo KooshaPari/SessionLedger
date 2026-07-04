@@ -33,7 +33,7 @@ processes:
   # On startup it sweeps the watch dir once, then listens for new/changed files.
   # On failure it restarts after 5 s backoff so transient errors self-heal.
   sl-daemon:
-    command: "crates/sl-daemon/target/release/sl-daemon --watch $SL_WATCH_DIR --out $SL_OUT_DIR"
+    command: "crates/sl-daemon/target/release/sl-daemon --watch $SL_WATCH_DIR --out $SL_OUT_DIR --http-bind 127.0.0.1:8080"
     depends_on:
       sl-daemon-build:
         condition: process_completed_successfully
@@ -44,8 +44,10 @@ processes:
       restart: "on_failure"
       backoff_seconds: 5
     readiness_probe:
-      exec:
-        command: "test -d $SL_OUT_DIR"
+      http_get:
+        host: "127.0.0.1"
+        port: 8080
+        path: "/healthz"
       initial_delay_seconds: 2
       period_seconds: 5
     description: >

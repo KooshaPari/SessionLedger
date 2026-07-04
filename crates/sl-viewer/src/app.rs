@@ -9,6 +9,7 @@ use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
+use crate::search_view::SearchView;
 use crate::timeline::TimelineView;
 
 /// Tab identifiers for the viewer.
@@ -18,6 +19,7 @@ enum Tab {
     History,
     Memory,
     LiveFeed,
+    Search,
     Timeline,
 }
 
@@ -70,6 +72,7 @@ pub fn App() -> Element {
     let history_class = if active_tab() == Tab::History { "tab active" } else { "tab" };
     let memory_class = if active_tab() == Tab::Memory { "tab active" } else { "tab" };
     let feed_class = if active_tab() == Tab::LiveFeed { "tab active" } else { "tab" };
+    let search_class = if active_tab() == Tab::Search { "tab active" } else { "tab" };
     let timeline_class = if active_tab() == Tab::Timeline { "tab active" } else { "tab" };
 
     let tab_body = match active_tab() {
@@ -77,6 +80,7 @@ pub fn App() -> Element {
         Tab::History => rsx! { HistoryTimeline {} },
         Tab::Memory => rsx! { MemoryWiki {} },
         Tab::LiveFeed => rsx! { LiveFeed {} },
+        Tab::Search => rsx! { SearchView {} },
         Tab::Timeline => rsx! { TimelineView { bundles: sample_bundles() } },
     };
 
@@ -121,6 +125,17 @@ pub fn App() -> Element {
                 .badge {{ display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }}
                 .badge-ok {{ background: #1a3a2a; color: #4ade80; }}
                 .badge-contract {{ background: #2a1a3a; color: #c084fc; }}
+                .search-view {{ display: flex; flex-direction: column; height: 100%; overflow-y: auto; }}
+                .search-form {{ padding: 0 0 8px 0; border-bottom: 1px solid #2a2d35; }}
+                .search-fields {{ display: flex; flex-direction: column; gap: 4px; padding: 10px 16px; }}
+                .search-label {{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; }}
+                .search-actions {{ display: flex; gap: 8px; padding: 8px 16px 10px; }}
+                .search-btn {{ padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; border: 1px solid #2a2d35; background: #252836; color: #8b8fa3; }}
+                .search-btn:hover {{ background: #2f3244; color: #c8cdd6; }}
+                .search-btn-primary {{ background: #1e2a4a; color: #6c8cff; border-color: #2a3a6a; }}
+                .search-btn-primary:hover {{ background: #263460; color: #a0b4ff; }}
+                .search-results {{ flex: 1; overflow-y: auto; }}
+                .search-error {{ padding: 10px 16px; font-size: 13px; color: #f87171; background: #2a1a1a; border-bottom: 1px solid #3a2020; }}
                 .live-feed {{ display: flex; flex-direction: column; height: 100%; }}
                 .live-feed-header {{ display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #2a2d35; background: #13151c; }}
                 .live-feed-title {{ font-size: 13px; font-weight: 600; color: #c8cdd6; flex: 1; }}
@@ -181,6 +196,11 @@ pub fn App() -> Element {
                         class: "{feed_class}",
                         onclick: move |_| active_tab.set(Tab::LiveFeed),
                         "Live Feed"
+                    }
+                    div {
+                        class: "{search_class}",
+                        onclick: move |_| active_tab.set(Tab::Search),
+                        "Search"
                     }
                     div {
                         class: "{timeline_class}",

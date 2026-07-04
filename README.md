@@ -46,6 +46,46 @@ Head to the [Releases page](../../releases) — each `v*` tag publishes
 per-platform archives (`tar.gz` / `.zip`) with a standalone binary. No Rust
 toolchain needed.
 
+## CLI Commands (`sl-daemon`)
+
+The daemon binary exposes four subcommands:
+
+| Command | Description |
+|---------|-------------|
+| `sl serve` | Start the file-watcher daemon (long-running). |
+| `sl status` | Check daemon liveness — exits 0 if running, 1 if not. |
+| `sl list` | List compiled OKF bundle paths via the HTTP API. |
+| `sl tail --url http://localhost:9001` | Stream new bundle paths as they arrive (SSE). |
+
+### Common flags
+
+- `--url <base-url>` — base URL for `status`, `list`, and `tail` (default: `http://127.0.0.1:8080`).
+- `--watch <dir>` / `--out <dir>` — watch/output directories for `serve`.
+- `--http-bind <addr>` — bind address for the embedded HTTP server (default: `127.0.0.1:8080`; pass `off` to disable).
+
+### Quick start
+
+```bash
+# Build (debug)
+cargo build -p sl-daemon
+
+# Start daemon
+./crates/sl-daemon/target/debug/sl-daemon serve \
+  --watch ~/.forge/sessions \
+  --out /tmp/sl-okf-output
+
+# In another terminal — check health
+./crates/sl-daemon/target/debug/sl-daemon status
+
+# List compiled bundles
+./crates/sl-daemon/target/debug/sl-daemon list
+
+# Tail live bundle events
+./crates/sl-daemon/target/debug/sl-daemon tail --url http://localhost:8080
+```
+
+Or use `process-compose up` to manage the full service lifecycle (build → serve → readiness check).
+
 ## Architecture (hexagonal)
 
 ```

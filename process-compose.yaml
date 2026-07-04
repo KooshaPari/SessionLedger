@@ -33,7 +33,8 @@ processes:
   # On startup it sweeps the watch dir once, then listens for new/changed files.
   # On failure it restarts after 5 s backoff so transient errors self-heal.
   sl-daemon:
-    command: "crates/sl-daemon/target/release/sl-daemon --watch $SL_WATCH_DIR --out $SL_OUT_DIR --http-bind 127.0.0.1:8080"
+    command: "./target/debug/sl-daemon serve --watch $SL_WATCH_DIR --out $SL_OUT_DIR --http-bind 127.0.0.1:8080"
+    working_dir: "crates/sl-daemon"
     depends_on:
       sl-daemon-build:
         condition: process_completed_successfully
@@ -54,3 +55,18 @@ processes:
       Watches $SL_WATCH_DIR for new/changed *.jsonl session transcripts.
       For each file, runs the session-ledger pipeline (ingest → compile → export)
       and writes one <session-id>.okf.json into $SL_OUT_DIR.
+
+  # One-shot readiness check: verifies the daemon HTTP API is reachable.
+  # Exits 0 when the daemon is healthy, 1 otherwise.
+  sl-cli-check:
+    command: "./target/debug/sl-daemon status"
+    working_dir: "crates/sl-daemon"
+    is_daemon: false
+    depends_on:
+      sl-daemon:
+        condition: process_healthy
+    availability:
+      restart: "no"
+    description: >
+      One-shot CLI probe: calls `sl status` (GET /healthz) to confirm the
+      daemon is reachable after startup.

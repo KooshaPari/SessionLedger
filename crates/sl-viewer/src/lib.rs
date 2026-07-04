@@ -18,6 +18,7 @@ pub mod history_tab;
 pub mod live_feed;
 pub mod memory_tab;
 pub mod mock_data;
+pub mod search_view;
 pub mod session_list;
 pub mod timeline;
 

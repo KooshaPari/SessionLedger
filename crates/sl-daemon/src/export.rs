@@ -3,14 +3,14 @@
 //! All rendering functions are pure (no I/O) so they can be unit-tested without
 //! a running daemon or real OKF files on disk.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
 // OKF bundle metadata (only the fields we care about)
 // ---------------------------------------------------------------------------
 
 /// Subset of an OKF document used for export / summary.
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct BundleMeta {
     #[serde(default)]
     pub session_id: String,

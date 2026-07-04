@@ -20,14 +20,18 @@ use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use futures_core::Stream;
+use serde::Deserialize;
 use serde_json::Value;
 use tokio::sync::broadcast;
+
+use crate::export::BundleMeta;
+use crate::filter::{apply_filters, FilterSpec};
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt as _;
 use tower_http::cors::{Any, CorsLayer};
@@ -49,6 +53,7 @@ pub(crate) fn router(state: AppState) -> Router {
     Router::new()
         .route("/healthz", get(healthz))
         .route("/api/bundles", get(list_bundles))
+        .route("/api/search", get(search_bundles))
         .route("/api/stream", get(sse_stream))
         .with_state(state)
         .layer(cors)
@@ -101,6 +106,91 @@ async fn sse_stream(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
+/// Query parameters accepted by `GET /api/search`.
+///
+/// All fields are optional; omitted fields mean "no constraint on that axis".
+/// `tags` is a comma-separated string (e.g. `?tags=rust,ml`) that is split on
+/// the server side before being handed to [`apply_filters`].
+#[derive(Debug, Deserialize)]
+pub(crate) struct SearchParams {
+    /// ISO date lower bound, e.g. `2024-01-01`.
+    pub since: Option<String>,
+    /// ISO date upper bound, e.g. `2024-12-31`.
+    pub until: Option<String>,
+    /// Case-insensitive model substring, e.g. `claude`.
+    pub model: Option<String>,
+    /// Minimum token count.
+    pub min_tokens: Option<u64>,
+    /// Comma-separated tags; ALL must be present (AND logic).
+    pub tags: Option<String>,
+    /// Maximum results (default 50).
+    #[serde(default = "default_limit")]
+    pub limit: usize,
+}
+
+fn default_limit() -> usize {
+    50
+}
+
+impl Default for SearchParams {
+    fn default() -> Self {
+        Self {
+            since: None,
+            until: None,
+            model: None,
+            min_tokens: None,
+            tags: None,
+            limit: default_limit(),
+        }
+    }
+}
+
+/// Build a [`FilterSpec`] from HTTP query parameters.
+///
+/// This is a pure function so it can be unit-tested without a running server.
+pub(crate) fn params_to_spec(p: &SearchParams) -> FilterSpec {
+    let tags: Vec<String> = p
+        .tags
+        .as_deref()
+        .unwrap_or("")
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_owned)
+        .collect();
+
+    FilterSpec {
+        since: p.since.clone(),
+        until: p.until.clone(),
+        model: p.model.clone(),
+        min_tokens: p.min_tokens,
+        tags,
+        limit: p.limit,
+    }
+}
+
+/// `GET /api/search` — filter bundles by date, model, tokens, and tags.
+///
+/// Returns a JSON array of [`BundleMeta`] objects matching the query.
+async fn search_bundles(
+    State(state): State<AppState>,
+    Query(params): Query<SearchParams>,
+) -> Response {
+    let raw = match read_all_bundles(&state.out_dir) {
+        Ok(v) => v,
+        Err(e) => {
+            let msg = format!("failed to read bundles: {e}");
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, msg).into_response();
+        }
+    };
+
+    let metas: Vec<BundleMeta> = raw.iter().map(BundleMeta::from_value).collect();
+    let spec = params_to_spec(&params);
+    let matched: Vec<BundleMeta> = apply_filters(&metas, &spec).into_iter().cloned().collect();
+
+    Json(matched).into_response()
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -134,4 +224,64 @@ fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
     }
 
     Ok(results)
+}
+
+// ---------------------------------------------------------------------------
+// Unit tests for params_to_spec
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_params_produce_default_spec() {
+        let p = SearchParams::default();
+        let spec = params_to_spec(&p);
+        assert!(spec.since.is_none());
+        assert!(spec.until.is_none());
+        assert!(spec.model.is_none());
+        assert!(spec.min_tokens.is_none());
+        assert!(spec.tags.is_empty());
+        assert_eq!(spec.limit, 50);
+    }
+
+    #[test]
+    fn since_until_model_min_tokens_propagate() {
+        let p = SearchParams {
+            since: Some("2024-01-01".into()),
+            until: Some("2024-12-31".into()),
+            model: Some("claude".into()),
+            min_tokens: Some(1000),
+            tags: None,
+            limit: 10,
+        };
+        let spec = params_to_spec(&p);
+        assert_eq!(spec.since.as_deref(), Some("2024-01-01"));
+        assert_eq!(spec.until.as_deref(), Some("2024-12-31"));
+        assert_eq!(spec.model.as_deref(), Some("claude"));
+        assert_eq!(spec.min_tokens, Some(1000));
+        assert_eq!(spec.limit, 10);
+    }
+
+    #[test]
+    fn tags_comma_separated_parsed_correctly() {
+        let p = SearchParams { tags: Some("rust, ml, perf".into()), ..SearchParams::default() };
+        let spec = params_to_spec(&p);
+        assert_eq!(spec.tags, vec!["rust", "ml", "perf"]);
+    }
+
+    #[test]
+    fn empty_tags_string_yields_empty_vec() {
+        let p = SearchParams { tags: Some(String::new()), ..SearchParams::default() };
+        let spec = params_to_spec(&p);
+        assert!(spec.tags.is_empty());
+    }
+
+    #[test]
+    fn single_tag_no_trailing_comma() {
+        let p = SearchParams { tags: Some("rust".into()), ..SearchParams::default() };
+        let spec = params_to_spec(&p);
+        assert_eq!(spec.tags, vec!["rust"]);
+    }
 }

@@ -27,6 +27,7 @@ mod cli;
 mod etl;
 mod export;
 mod http;
+mod tag;
 mod watcher;
 
 use std::net::SocketAddr;
@@ -111,6 +112,50 @@ enum Command {
         /// the daemon.
         bundles: Vec<PathBuf>,
     },
+
+    /// Manage tags on OKF bundle files.
+    Tag {
+        #[command(subcommand)]
+        action: TagAction,
+    },
+}
+
+/// Sub-actions for `sl tag`.
+#[derive(Subcommand, Debug)]
+enum TagAction {
+    /// Add one or more tags to a bundle.
+    Add {
+        /// Path to the `.okf.json` bundle file.
+        bundle: PathBuf,
+        /// Tags to add.
+        #[arg(required = true)]
+        tags: Vec<String>,
+    },
+
+    /// Remove one or more tags from a bundle.
+    Remove {
+        /// Path to the `.okf.json` bundle file.
+        bundle: PathBuf,
+        /// Tags to remove.
+        #[arg(required = true)]
+        tags: Vec<String>,
+    },
+
+    /// List current tags on a bundle.
+    List {
+        /// Path to the `.okf.json` bundle file.
+        bundle: PathBuf,
+    },
+
+    /// Search a directory for bundles that carry a specific tag.
+    Search {
+        /// Tag to search for.
+        tag: String,
+        /// Directory to scan (recursively) for `*.okf.json` files.
+        /// Defaults to the current directory.
+        #[arg(default_value = ".")]
+        dir: PathBuf,
+    },
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -129,6 +174,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Summary { bundles } => {
             run_summary(&args.url, &bundles).await;
+        }
+        Command::Tag { action } => {
+            run_tag(action);
         }
     }
 
@@ -385,6 +433,55 @@ async fn run_export(
             }
         }
         None => print!("{rendered}"),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// tag
+// ---------------------------------------------------------------------------
+
+fn run_tag(action: TagAction) {
+    match action {
+        TagAction::Add { bundle, tags } => match tag::add(&bundle, &tags) {
+            Ok(updated) => {
+                eprintln!("tags updated: {:?}", updated);
+            }
+            Err(e) => {
+                eprintln!("error: {e}");
+                std::process::exit(2);
+            }
+        },
+        TagAction::Remove { bundle, tags } => match tag::remove(&bundle, &tags) {
+            Ok(updated) => {
+                eprintln!("tags updated: {:?}", updated);
+            }
+            Err(e) => {
+                eprintln!("error: {e}");
+                std::process::exit(2);
+            }
+        },
+        TagAction::List { bundle } => match tag::list(&bundle) {
+            Ok(tags) => {
+                for t in &tags {
+                    println!("{t}");
+                }
+            }
+            Err(e) => {
+                eprintln!("error: {e}");
+                std::process::exit(2);
+            }
+        },
+        TagAction::Search { tag: search_tag, dir } => match tag::search_dir(&dir, &search_tag) {
+            Ok(paths) => {
+                for p in &paths {
+                    println!("{}", p.display());
+                }
+            }
+            Err(e) => {
+                eprintln!("error: {e}");
+                std::process::exit(2);
+            }
+        },
     }
 }
 

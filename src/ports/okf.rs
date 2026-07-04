@@ -118,6 +118,9 @@ pub struct OkfDocument {
     pub relations: Vec<OkfRelation>,
     /// Document-level provenance.
     pub provenance: OkfProvenance,
+    /// User-defined tags for filtering and searching bundles.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
 }
 
 impl OkfDocument {
@@ -133,6 +136,7 @@ impl OkfDocument {
                 corpus: corpus.into(),
                 source_id: bundle.source_id.clone(),
             },
+            tags: Vec::new(),
         }
     }
 

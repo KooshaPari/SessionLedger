@@ -36,25 +36,19 @@ pub enum EtlError {
 /// Returns the paths written (stable order — same as the sessions in the file).
 /// `out_dir` is created if missing.
 pub fn transform_file(jsonl_path: &Path, out_dir: &Path) -> Result<Vec<PathBuf>, EtlError> {
-    let sessions = read_jsonl_sessions(jsonl_path).map_err(|source| EtlError::Ingest {
-        path: jsonl_path.to_path_buf(),
-        source,
-    })?;
+    let sessions = read_jsonl_sessions(jsonl_path)
+        .map_err(|source| EtlError::Ingest { path: jsonl_path.to_path_buf(), source })?;
 
-    std::fs::create_dir_all(out_dir).map_err(|source| EtlError::Write {
-        path: out_dir.to_path_buf(),
-        source,
-    })?;
+    std::fs::create_dir_all(out_dir)
+        .map_err(|source| EtlError::Write { path: out_dir.to_path_buf(), source })?;
 
     let mut written = Vec::with_capacity(sessions.len());
     for session in &sessions {
         let doc = process_session(session);
         let json = serde_json::to_string_pretty(&doc)?;
         let out_path = out_dir.join(format!("{}.okf.json", sanitize(&session.id)));
-        std::fs::write(&out_path, json).map_err(|source| EtlError::Write {
-            path: out_path.clone(),
-            source,
-        })?;
+        std::fs::write(&out_path, json)
+            .map_err(|source| EtlError::Write { path: out_path.clone(), source })?;
         written.push(out_path);
     }
     Ok(written)
@@ -62,9 +56,7 @@ pub fn transform_file(jsonl_path: &Path, out_dir: &Path) -> Result<Vec<PathBuf>,
 
 /// Make a session id safe to use as a filename (path separators → `_`).
 fn sanitize(id: &str) -> String {
-    id.chars()
-        .map(|c| if matches!(c, '/' | '\\' | ':') { '_' } else { c })
-        .collect()
+    id.chars().map(|c| if matches!(c, '/' | '\\' | ':') { '_' } else { c }).collect()
 }
 
 #[cfg(test)]
@@ -82,10 +74,8 @@ mod tests {
         for i in 0..n {
             let mut s = Session::new(format!("sess-{i}"), Corpus::Forge);
             s.title = Some(format!("task {i}"));
-            s.messages
-                .push(Message::new(Role::User, "add pagination to the users endpoint"));
-            s.messages
-                .push(Message::new(Role::Assistant, "on it — adding a cursor param"));
+            s.messages.push(Message::new(Role::User, "add pagination to the users endpoint"));
+            s.messages.push(Message::new(Role::Assistant, "on it — adding a cursor param"));
             s.messages.push(Message::new(Role::User, "lgtm, ship it"));
             buf.push_str(&serde_json::to_string(&s).expect("serialize session"));
             buf.push('\n');
@@ -107,8 +97,7 @@ mod tests {
         for (i, path) in written.iter().enumerate() {
             assert!(path.exists(), "{path:?} should exist");
             let content = std::fs::read_to_string(path).expect("read okf");
-            let doc: serde_json::Value =
-                serde_json::from_str(&content).expect("okf is valid json");
+            let doc: serde_json::Value = serde_json::from_str(&content).expect("okf is valid json");
             assert_eq!(doc["source_id"], format!("sess-{i}"));
             assert_eq!(doc["provenance"]["corpus"], "forge");
         }

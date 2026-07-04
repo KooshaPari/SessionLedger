@@ -30,6 +30,7 @@ mod export;
 mod filter;
 mod http;
 mod tag;
+mod validation;
 mod watcher;
 
 use std::net::SocketAddr;
@@ -168,7 +169,18 @@ enum Command {
         /// Print all entities at once without any delay.
         #[arg(long)]
         no_stream: bool,
-    },
+    /// Validate an OKF bundle by sending it to the daemon's ingest endpoint.
+    ///
+    /// Reads the bundle file at `<data_dir>/<bundle_id>.okf.json`, re-packages
+    /// the metadata as a `PostBundle`, and calls `POST /api/ingest`.  Exits 0
+    /// when valid, 1 when invalid (errors printed to stdout as JSON), 2 on error.
+    Validate {
+        /// Bundle ID (filename stem, without `.okf.json`).
+        bundle_id: String,
+
+        /// Directory containing the `.okf.json` files.
+        #[arg(long, default_value = ".")]
+        data_dir: PathBuf,    },
 
     /// Search / filter bundles by date, model, token count, or tags.
     ///
@@ -276,7 +288,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Replay { bundle_id, speed, no_stream } => {
             run_replay(&args.url, &bundle_id, speed, no_stream).await;
-        }
+        Command::Validate { bundle_id, data_dir } => {
+            run_validate(&bundle_id, &data_dir);        }
         Command::Search { since, until, model, min_tokens, tags, limit, format, bundles } => {
             run_search(&args.url, since, until, model, min_tokens, tags, limit, &format, &bundles)
                 .await;
@@ -656,6 +669,96 @@ fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
             eprintln!("error: {e}");
             std::process::exit(2);
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// validate
+// ---------------------------------------------------------------------------
+
+fn run_validate(bundle_id: &str, data_dir: &Path) {
+    use validation::{PostBundle, PostMessage};
+
+    let path = data_dir.join(format!("{bundle_id}.okf.json"));
+    let text = match std::fs::read_to_string(&path) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("error: cannot read {}: {e}", path.display());
+            std::process::exit(2);
+        }
+    };
+
+    let value: serde_json::Value = match serde_json::from_str(&text) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("error: cannot parse {}: {e}", path.display());
+            std::process::exit(2);
+        }
+    };
+
+    // Re-package the on-disk OKF fields into a PostBundle for validation.
+    let get_str = |key: &str| {
+        value
+            .get(key)
+            .or_else(|| value.pointer(&format!("/metadata/{key}")))
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_owned()
+    };
+    let get_i64 = |key: &str| {
+        value
+            .get(key)
+            .or_else(|| value.pointer(&format!("/metadata/{key}")))
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0)
+    };
+
+    // Build PostMessages from the OKF entities array (label → content, type → role).
+    let messages: Vec<PostMessage> = value
+        .get("entities")
+        .and_then(|e| e.as_array())
+        .map(|arr| {
+            arr.iter()
+                .map(|ent| {
+                    let role =
+                        ent.get("type").and_then(|v| v.as_str()).unwrap_or("assistant").to_owned();
+                    let content =
+                        ent.get("label").and_then(|v| v.as_str()).unwrap_or_default().to_owned();
+                    PostMessage { role, content }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let bundle = PostBundle {
+        bundle_id: {
+            let id = get_str("source_id");
+            if id.is_empty() {
+                bundle_id.to_owned()
+            } else {
+                id
+            }
+        },
+        created_at: {
+            let ca = get_str("created_at");
+            // OKF documents may not carry created_at; fall back to a sentinel
+            // so the validator produces a useful diagnostic rather than silently
+            // accepting an empty string.
+            if ca.is_empty() {
+                String::new()
+            } else {
+                ca
+            }
+        },
+        messages,
+        token_count: get_i64("token_count"),
+    };
+
+    let result = validation::validate_okf_bundle(&bundle);
+    let json = serde_json::to_string_pretty(&result).unwrap_or_default();
+    println!("{json}");
+    if !result.valid {
+        std::process::exit(1);
     }
 }
 

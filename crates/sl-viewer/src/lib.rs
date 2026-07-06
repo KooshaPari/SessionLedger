@@ -21,6 +21,7 @@ pub mod mock_data;
 pub mod replay_view;
 pub mod search_view;
 pub mod session_list;
+pub mod theme;
 pub mod timeline;
 
 pub use app::App;

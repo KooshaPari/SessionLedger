@@ -24,8 +24,13 @@ test -f assets/icons/sessionledger.ico
 test -f assets/icons/sessionledger-256x256.png
 
 # 4. Brand palette present in SVG
-for hex in f6f8fa 1f2937 2563eb f59e0b 14b8a6; do
+for hex in f6f8fa 1f2937 2563eb f97316 14b8a6; do
   grep -qi "#$hex" assets/brand/sessionledger-icon.svg || echo "MISSING palette $hex"
+done
+
+# 4b. No MelosViz warn hex leaked (must NOT find f59e0b as a color)
+for forbidden in f59e0b; do
+  grep -qi "#$forbidden" assets/brand/sessionledger-icon.svg && echo "LEAKED $forbidden (was amber in original draft; swapped to f97316 to avoid MelosViz mv-warn collision)" || true
 done
 
 # 5. No Backbone-2 hex leaked into Lab-Coat mark

@@ -2,14 +2,14 @@
 
 Source of truth: [`sessionledger-icon.svg`](sessionledger-icon.svg) (1024×1024, Lab-Coat palette).
 
-## Palette (Lab-Coat, proposed 2026-07-06 by vision-pillar)
+## Palette (Lab-Coat, proposed 2026-07-06 by vision-pillar; amber hex revised 2026-07-06 per melosviz-3d overlap check)
 
 | Token | Hex | Role |
 |---|---|---|
 | lab-white | `#f6f8fa` | Background + panel (lab-coat) |
 | slate-900 | `#1f2937` | Panel/text base |
 | cobalt-blue | `#2563eb` | Primary accent — slide-stain blue, glassware blue |
-| amber-orange | `#f59e0b` | Hot-warning — lit Bunsen burner (live session indicator) |
+| orange-500 | `#f97316` | Live-session indicator — lit Bunsen burner (was `#f59e0b`; swapped to avoid MelosViz `--mv-warn` semantic divergence) |
 | teal-cool | `#14b8a6` | Secondary — growth-medium teal (bubbles) |
 
 ## Files

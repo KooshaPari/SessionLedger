@@ -103,13 +103,20 @@ pub fn LiveFeed() -> Element {
     let feed_entries = entries();
 
     rsx! {
-        div { class: "live-feed",
+        div {
+            class: "live-feed",
+            "data-testid": "live-feed-root",
             div { class: "live-feed-header",
                 span { class: "live-feed-title", "Live Feed" }
-                span { class: "{status_class}", "{status_label}" }
+                span {
+                    class: "{status_class}",
+                    "data-testid": "live-feed-status",
+                    "{status_label}"
+                }
                 if status_val == FeedStatus::Disconnected {
                     button {
                         class: "retry-btn",
+                        "data-testid": "live-feed-retry",
                         onclick: move |_| {
                             trigger_connect.with_mut(|v| *v += 1);
                         },
@@ -117,12 +124,21 @@ pub fn LiveFeed() -> Element {
                     }
                 }
             }
-            div { class: "live-feed-list",
+            div {
+                class: "live-feed-list",
+                "data-testid": "live-feed-list",
                 if feed_entries.is_empty() {
-                    div { class: "feed-empty", "Waiting for bundle events…" }
+                    div {
+                        class: "feed-empty",
+                        "data-testid": "live-feed-empty",
+                        "Waiting for bundle events…"
+                    }
                 }
                 for entry in feed_entries.iter().rev() {
-                    div { class: "feed-entry",
+                    div {
+                        class: "feed-entry",
+                        "data-testid": "live-feed-entry",
+                        "data-bundle-path": "{entry.path}",
                         span { class: "feed-ts", "{entry.timestamp}" }
                         span { class: "feed-path",
                             // Show only the filename for readability.

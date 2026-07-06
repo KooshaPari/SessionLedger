@@ -20,6 +20,7 @@ Source of truth: [`sessionledger-icon.svg`](sessionledger-icon.svg) (1024×1024,
 | `assets/icons/sessionledger.iconset/` | PNG 16/32/48/64/128/256/512/1024 + @2x | macOS `.icns` source |
 | `assets/icons/sessionledger.ico` | ICO multi-res 16/32/48/64/128/256 | Windows app icon |
 | `assets/icons/sessionledger-256x256.png` | PNG 256×256 | Linux app icon |
+| `assets/brand/sessionledger-icon-animated.svg` | SVG 1024×1024 (SMIL) | L101 motion variant — cobalt bubbles rising + amber meniscus pulse (no JS) |
 
 ## Mark
 
@@ -68,4 +69,16 @@ resources = []
 category = "DeveloperTool"
 short_description = "Session-bundle compiler + viewer"
 long_description = "Hexagonal session-bundle compiler with Dioxus viewer for OKF streams."
+
+## Motion variant (L101)
+
+`sessionledger-icon-animated.svg` ships a 4-second loop:
+
+- Three cobalt bubbles rise from the flask base to the meniscus, staggered by ~1.3s (clipped
+  to the flask interior so they stay inside the liquid).
+- The amber `#f97316` meniscus glow breathes (rx 48 → 72 → 48).
+- Loop is seamless: last frame == first frame.
+
+All animation is SVG-native SMIL — no JavaScript, no external CSS. Safe to inline in HTML, SVG
+`<img src>`, and README previews.
 ```

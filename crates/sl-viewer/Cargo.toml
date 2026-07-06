@@ -38,3 +38,14 @@ sqlite = [
 
 [lints.rust]
 unsafe_code = "forbid"
+
+[package.metadata.bundle]
+# Lab-Coat visual identity (proposed 2026-07-06 by vision-pillar).
+# Icon source of truth: ../../assets/brand/sessionledger-icon.svg.
+name = "SessionLedger"
+identifier = "ai.kooshapari.sessionledger"
+icon = ["../../assets/icons/sessionledger.iconset"]
+resources = []
+category = "DeveloperTool"
+short_description = "Session-bundle compiler + viewer"
+long_description = "Hexagonal session-bundle compiler with Dioxus viewer for OKF streams."

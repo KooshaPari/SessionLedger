@@ -4,7 +4,7 @@
   <a href="assets/brand/sessionledger-icon.svg"><img src="assets/brand/sessionledger-icon.svg" alt="SessionLedger" width="160" height="160"></a>
 </p>
 <p align="center"><em>OKF-native session compiler — capture, archive, replay AI agent sessions losslessly.</em></p>
-<p align="center"><sub>Lab-Coat palette · <a href="assets/brand/README.md">brand assets &amp; tokens</a> · OKF v1.0 spec</sub></p>
+<p align="center"><sub>Lab-Coat palette · <a href="assets/brand/README.md">brand assets &amp; tokens</a> · OKF v1.0 spec · <a href="docs/assets/identity/">visual identity demo</a></sub></p>
 
 ---
 

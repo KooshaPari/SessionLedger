@@ -170,6 +170,8 @@ enum Command {
         /// Print all entities at once without any delay.
         #[arg(long)]
         no_stream: bool,
+    },
+
     /// Validate an OKF bundle by sending it to the daemon's ingest endpoint.
     ///
     /// Reads the bundle file at `<data_dir>/<bundle_id>.okf.json`, re-packages
@@ -181,7 +183,8 @@ enum Command {
 
         /// Directory containing the `.okf.json` files.
         #[arg(long, default_value = ".")]
-        data_dir: PathBuf,    },
+        data_dir: PathBuf,
+    },
 
     /// Search / filter bundles by date, model, token count, or tags.
     ///
@@ -289,8 +292,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Replay { bundle_id, speed, no_stream } => {
             run_replay(&args.url, &bundle_id, speed, no_stream).await;
+        }
         Command::Validate { bundle_id, data_dir } => {
-            run_validate(&bundle_id, &data_dir);        }
+            run_validate(&bundle_id, &data_dir);
+        }
         Command::Search { since, until, model, min_tokens, tags, limit, format, bundles } => {
             run_search(&args.url, since, until, model, min_tokens, tags, limit, &format, &bundles)
                 .await;

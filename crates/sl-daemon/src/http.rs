@@ -3,6 +3,7 @@
 //! Exposes three endpoints:
 //!
 //! * `GET /healthz` — liveness probe; returns `200 ok`.
+//! * `GET /readyz` — readiness probe; returns `200` when `out_dir` is usable.
 //! * `GET /api/bundles` — reads all `*.okf.json` files currently in the output
 //!   directory and returns them as a JSON array. Each element is the parsed
 //!   document as a [`serde_json::Value`] so the response is decoupled from any
@@ -54,6 +55,7 @@ pub(crate) fn router(state: AppState) -> Router {
 
     Router::new()
         .route("/healthz", get(healthz))
+        .route("/readyz", get(readyz))
         .route("/api/bundles", get(list_bundles))
         .route("/api/search", get(search_bundles))
         .route("/api/stream", get(sse_stream))
@@ -84,6 +86,20 @@ pub async fn serve(
 /// `GET /healthz` — liveness probe.
 async fn healthz() -> Response {
     "ok".into_response()
+}
+
+/// `GET /readyz` — readiness probe (output directory must exist and be a dir).
+async fn readyz(State(state): State<AppState>) -> Response {
+    let path = state.out_dir.as_path();
+    if path.is_dir() {
+        "ready".into_response()
+    } else {
+        (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            format!("out_dir not ready: {}", path.display()),
+        )
+            .into_response()
+    }
 }
 
 /// `GET /api/bundles` — return all `*.okf.json` documents as a JSON array.

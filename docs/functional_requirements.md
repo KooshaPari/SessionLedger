@@ -24,7 +24,7 @@ Status: `done` = implemented and covered; `partial` = surface exists, gaps remai
 | FR-011 | Crash recovery / unfinished work surface | partial | DESIGN §5.1; `Worklog` / unfinished projection — domain present; end-to-end crash detector still P1 |
 | FR-012 | ContinuationBundle compile + inject gate | done | `src/domain/bundle.rs`; `src/distill`; Acceptance slice gate (DESIGN §2) |
 | FR-013 | OKF roundtrip smoke (JSONL→daemon→OKF→viewer contract) | done | `tests/okf_roundtrip.rs`; `docs/OKF-ROUNDTRIP.md`; fixtures under `tests/fixtures/okf/` |
-| FR-014 | Daemon liveness + local ops stack | done | `GET /healthz`; `process-compose.yaml`; `make dev`; `docs/ops/runbook.md` |
+| FR-014 | Daemon liveness + local ops stack | done | `GET /healthz + GET /readyz`; `process-compose.yaml`; `make dev`; `docs/ops/runbook.md` |
 | FR-015 | Observability stubs (metrics + future OTel) | partial | `/healthz`, `/api/metrics` live; OTel soft goal — `docs/ops/observability.md` |
 
 ---

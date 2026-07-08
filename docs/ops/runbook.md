@@ -42,6 +42,9 @@ cargo run -p sl-viewer
 
 ```bash
 curl -s http://127.0.0.1:8080/healthz
+# ok
+curl -s http://127.0.0.1:8080/readyz
+# ready (requires SL_DATA_DIR / out_dir to exist)
 # expect: ok  (HTTP 200)
 ```
 
@@ -63,7 +66,7 @@ Returns `total_bundles`, `total_tokens`, `avg_tokens`, `model_counts`,
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `process-compose: command not found` | CLI missing | Install process-compose; or run crates manually |
-| Viewer never starts | Daemon not healthy | Confirm `/healthz`; check port 8080 free; raise probe delay |
+| Viewer never starts | Daemon not healthy | Confirm `/readyz` (and `/healthz`); check port 8080 free; raise probe delay |
 | `Address already in use` | Stale daemon | Kill process on 8080; `make dev-down` |
 | Empty metrics / bundles | Wrong data dir | Set `SL_DATA_DIR`; ensure `*.okf.json` / `*.json` under out dir |
 | `cargo` / MSRV errors | Wrong toolchain | `rustup show`; use repo `rust-toolchain.toml` |

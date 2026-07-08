@@ -7,12 +7,24 @@ explicitly non-blocking for P0 product work.
 
 | Surface | Path | Purpose |
 |---------|------|---------|
-| Liveness | `GET /healthz` | Returns `200` + body `ok`. Used by process-compose readiness. |
+| Liveness | `GET /healthz` | Returns `200` + body `ok`. Process is up. |
+| Readiness | `GET /readyz` | Returns `200` + `ready` when `out_dir` exists; else `503`. Used by process-compose. |
 | Metrics | `GET /api/metrics` | Aggregated bundle stats: totals, avg tokens, model + daily histograms (`crates/sl-daemon/src/metrics.rs`). |
 | Live events | `GET /api/stream` | SSE of newly written `*.okf.json` paths (viewer LiveFeed). |
 | Replay | `GET /api/replay/:id` | SSE entity playback (not ops metrics; product replay). |
 
 Default bind: port **8080** (`SL_PORT`). See [`runbook.md`](runbook.md).
+
+## SLO stubs (intentional placeholders)
+
+| SLO | Target (stub) | Signal |
+|-----|---------------|--------|
+| Daemon availability | 99% local uptime during `make dev` | `/readyz` success |
+| Ingest success rate | ≥95% valid OKF posts | `/api/metrics` + logs |
+| Replay start latency | p95 &lt; 2s for fixture bundles | manual / future histogram |
+
+Error budget: treat local-dev SLO misses as friction-log entries, not pages.
+Alerting/dashboards remain soft goals (issue #65).
 
 There is **no** Prometheus scrape endpoint or OTLP exporter in-tree yet.
 `TraceSink` is a design port ([`docs/DESIGN.md`](../DESIGN.md) §6) composed with

@@ -1,5 +1,5 @@
 # P0 security + supply-chain checks for SessionLedger.
-# cargo-deny (deny.toml) + gitleaks. Keep green on PRs.
+# cargo-deny (deny.toml at repo root) + gitleaks. Keep green on PRs.
 
 name: Security
 
@@ -17,14 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@v2
+      # deny.toml at repo root is the default; do not pass --config as a
+      # global flag (cargo-deny-action places arguments before `check`).
+      - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
-          arguments: --config deny.toml
+          rust-version: "1.85.0"
 
   gitleaks:
     name: gitleaks
@@ -33,7 +31,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

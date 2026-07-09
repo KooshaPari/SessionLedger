@@ -1,0 +1,47 @@
+# SessionLedger — LLM / agent entry
+
+OKF-native session compiler: capture, archive, and replay AI agent sessions
+losslessly. Turns ephemeral tool sessions into durable ledgers and injectable
+**ContinuationBundle** artifacts.
+
+## Start here
+
+| Doc | Why |
+|-----|-----|
+| [`AGENTS.md`](AGENTS.md) | Worktrees, build/test/lint, forbidden ops |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Problem, bundle model, pipeline, roadmap |
+| [`docs/functional_requirements.md`](docs/functional_requirements.md) | FR-NNN catalog + acceptance refs |
+| [`PLAN.md`](PLAN.md) / [`WORK_DAG.md`](WORK_DAG.md) | Claimable tasks + dependency graph |
+| [`docs/reference/OKF-SPEC.md`](docs/reference/OKF-SPEC.md) | OKF v1.0 |
+| [`docs/OKF-ROUNDTRIP.md`](docs/OKF-ROUNDTRIP.md) | JSONL→daemon→OKF→viewer smoke |
+| [`docs/ops/runbook.md`](docs/ops/runbook.md) | Local `make dev` / healthz |
+| [`docs/ops/observability.md`](docs/ops/observability.md) | Metrics + OTel soft goal |
+
+## Key paths
+
+```
+crates/sl-daemon/     HTTP API + ETL watcher (ingest/search/replay/metrics)
+crates/sl-viewer/     Dioxus desktop: Timeline, Search, Replay, LiveFeed
+src/domain/           Session, bundle, dedup, intent FSM
+src/export/okf.rs     OKF exporter
+src/ports/            CorpusSource, MemoryStore, TraceSink, OkfExporter
+tests/okf_roundtrip.rs
+docs/functional_requirements.md
+```
+
+## Build / test
+
+```bash
+cargo build --all-targets --locked
+cargo test  --all-features --locked
+cargo test -p sl-daemon
+cargo test -p session-ledger --test okf_roundtrip
+cargo clippy --all-targets --all-features
+cargo fmt --all --check
+make dev          # process-compose: daemon :8080 + viewer
+```
+
+## API (daemon, default :8080)
+
+`GET /healthz` · `GET /api/bundles` · `GET /api/search` · `GET /api/stream` ·
+`GET /api/replay/:id` · `POST /api/ingest` · `GET /api/metrics`

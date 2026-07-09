@@ -31,6 +31,10 @@ Fast inner loop: `cargo test -p sl-daemon` / `cargo check -p sl-viewer`.
 |------|------|
 | `crates/sl-daemon` | watch → compile session bundles (the compiler daemon) |
 | `crates/sl-viewer` | Dioxus 0.6 desktop viewer (bundle/history/memory tabs) |
+| `docs/functional_requirements.md` | FR-NNN catalog + acceptance refs |
+| `PLAN.md` / `WORK_DAG.md` | claimable tasks + dependency graph |
+| `llms.txt` | LLM-friendly repo map + build/test commands |
+| `docs/ops/runbook.md` | `make dev`, healthz :8080, common failures |
 | `README.md` | overview + Releases link | `.github/workflows/release.yml` | per-OS viewer build |
 
 ## Forbidden

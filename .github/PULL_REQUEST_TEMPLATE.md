@@ -23,3 +23,7 @@
 ## Rollback
 
 <!-- How to revert safely. -->
+
+## Checklist
+
+- [ ] DCO: commits include `Signed-off-by:` (`git commit -s`); I agree to the [Developer Certificate of Origin](https://developercertificate.org/)

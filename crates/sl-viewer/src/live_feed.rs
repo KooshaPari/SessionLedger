@@ -5,6 +5,8 @@
 
 use dioxus::prelude::*;
 
+use crate::async_states::{ErrorState, LoadingState};
+
 const DAEMON_SSE_URL: &str = "http://localhost:9001/api/stream";
 const MAX_ENTRIES: usize = 20;
 
@@ -127,7 +129,17 @@ pub fn LiveFeed() -> Element {
             div {
                 class: "live-feed-list",
                 "data-testid": "live-feed-list",
-                if feed_entries.is_empty() {
+                if status_val == FeedStatus::Connecting {
+                    LoadingState { message: "Connecting to bundle feed…".to_string() }
+                } else if status_val == FeedStatus::Disconnected && feed_entries.is_empty() {
+                    ErrorState {
+                        message: "Live feed disconnected — daemon unreachable at localhost:9001.".to_string(),
+                        retryable: true,
+                        on_retry: move |_| {
+                            trigger_connect.with_mut(|v| *v += 1);
+                        },
+                    }
+                } else if feed_entries.is_empty() {
                     div {
                         class: "feed-empty",
                         "data-testid": "live-feed-empty",

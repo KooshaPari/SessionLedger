@@ -2,7 +2,7 @@
 //!
 //! This placement is intentional: it lets the test depend on the canonical
 //! `OkfDocument` type without pulling in the sl-viewer lib, which currently
-//! has pre-existing compile errors on origin/main (search_view.rs, theme.rs
+//! has pre-existing compile errors on origin/main (`search_view.rs`, `theme.rs`
 //! — out of scope for the roundtrip work).  When sl-viewer is fixed, this
 //! test moves to `crates/sl-viewer/tests/okf_roundtrip.rs` and the sl-viewer
 //! lib exercises the same contract through its own API surface.
@@ -189,7 +189,7 @@ fn conformance_fixture_auth_fix_validates_via_our_parser() {
         manifest_dir.join("tests/fixtures/okf/auth-fix-session-001.okf.json"),
     ];
     let fixture_path = candidates.iter().find(|p| p.exists()).unwrap_or_else(|| {
-        panic!("auth-fix-session-001.okf.json not found in any of: {:#?}", candidates)
+        panic!("auth-fix-session-001.okf.json not found in any of: {candidates:#?}")
     });
     let raw = std::fs::read_to_string(fixture_path).expect("read fixture");
     let doc: OkfDocument = serde_json::from_str(&raw).expect("parse fixture");

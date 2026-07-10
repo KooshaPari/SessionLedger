@@ -64,7 +64,7 @@ pub enum DaemonError {
 
 /// Determine whether a path has a `.jsonl` extension.
 pub(crate) fn is_jsonl(path: &Path) -> bool {
-    path.extension().map_or(false, |e| e == "jsonl")
+    path.extension().is_some_and(|e| e == "jsonl")
 }
 
 #[cfg(test)]

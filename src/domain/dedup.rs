@@ -41,7 +41,7 @@ mod tests {
 
     fn make_session(id: &str, cwd: Option<&str>) -> Session {
         let mut s = Session::new(id, Corpus::Forge);
-        s.cwd = cwd.map(|c| c.to_string());
+        s.cwd = cwd.map(std::string::ToString::to_string);
         s
     }
 

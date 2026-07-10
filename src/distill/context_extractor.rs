@@ -273,11 +273,21 @@ mod tests {
             "check package.json, Cargo.toml, src/main.rs, test.py, config.yaml",
         ));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".json")));
-        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".toml")));
-        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".rs")));
-        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".py")));
-        assert!(ctx.files_mentioned.iter().any(|f| f.ends_with(".yaml")));
+        assert!(ctx.files_mentioned.iter().any(|f| {
+            std::path::Path::new(f).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+        }));
+        assert!(ctx.files_mentioned.iter().any(|f| {
+            std::path::Path::new(f).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("toml"))
+        }));
+        assert!(ctx.files_mentioned.iter().any(|f| {
+            std::path::Path::new(f).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("rs"))
+        }));
+        assert!(ctx.files_mentioned.iter().any(|f| {
+            std::path::Path::new(f).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("py"))
+        }));
+        assert!(ctx.files_mentioned.iter().any(|f| {
+            std::path::Path::new(f).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("yaml"))
+        }));
     }
 
     #[test]
@@ -353,9 +363,9 @@ mod tests {
     fn all_decision_patterns_detected() {
         for pattern in DECISION_PATTERNS {
             let mut s = Session::new("test", Corpus::Forge);
-            s.messages.push(Message::new(Role::User, &format!("we {}", pattern)));
+            s.messages.push(Message::new(Role::User, format!("we {pattern}")));
             let ctx = HeuristicContextExtractor::extract_context(&s);
-            assert!(!ctx.key_decisions.is_empty(), "pattern '{}' should be detected", pattern);
+            assert!(!ctx.key_decisions.is_empty(), "pattern '{pattern}' should be detected");
         }
     }
 
@@ -391,9 +401,9 @@ mod tests {
     fn all_environment_patterns_detected() {
         for pattern in ENVIRONMENT_PATTERNS {
             let mut s = Session::new("test", Corpus::Forge);
-            s.messages.push(Message::new(Role::User, &format!("please {} the tool", pattern)));
+            s.messages.push(Message::new(Role::User, format!("please {pattern} the tool")));
             let ctx = HeuristicContextExtractor::extract_context(&s);
-            assert!(!ctx.environment_notes.is_empty(), "pattern '{}' should be detected", pattern);
+            assert!(!ctx.environment_notes.is_empty(), "pattern '{pattern}' should be detected");
         }
     }
 
@@ -442,7 +452,7 @@ mod tests {
     fn very_long_file_path() {
         let mut s = Session::new("test", Corpus::Forge);
         let long_path = "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/file.rs";
-        s.messages.push(Message::new(Role::User, &format!("update {}", long_path)));
+        s.messages.push(Message::new(Role::User, format!("update {long_path}")));
         let ctx = HeuristicContextExtractor::extract_context(&s);
         assert!(ctx.files_mentioned.iter().any(|f| f == long_path));
     }
@@ -568,11 +578,10 @@ mod tests {
         let full_msg = "We decided to use async/await for all I/O operations because it's cleaner";
         s.messages.push(Message::new(Role::User, full_msg));
         let ctx = HeuristicContextExtractor::extract_context(&s);
-        assert!(ctx.key_decisions.iter().any(|d| d
-            .rationale
-            .as_deref()
-            .map(|r| r.contains("async/await"))
-            .unwrap_or(false)));
+        assert!(ctx
+            .key_decisions
+            .iter()
+            .any(|d| d.rationale.as_deref().is_some_and(|r| r.contains("async/await"))));
     }
 
     #[test]
@@ -720,7 +729,7 @@ mod tests {
     // exactly one arm so neither arm can be "carried" by the other.
 
     /// LEFT = true  (clean contains "::"),  RIGHT = false (no "()" in token)
-    /// Token "std::collections" has "::" but no "()", so is_func_call = false.
+    /// Token "`std::collections`" has "::" but no "()", so `is_func_call` = false.
     /// With a correct `||` the symbol IS extracted; with `&&` it would not be.
     #[test]
     fn symbol_or_left_only_double_colon_no_parens() {
@@ -735,7 +744,7 @@ mod tests {
     }
 
     /// LEFT = false (no "::" in token),  RIGHT = true (token contains "()")
-    /// Token "launch()" has "()" but no "::".
+    /// Token "`launch()`" has "()" but no "::".
     /// With a correct `||` the symbol IS extracted; with `&&` it would not be.
     #[test]
     fn symbol_or_right_only_parens_no_double_colon() {
@@ -750,7 +759,7 @@ mod tests {
     }
 
     /// LEFT = false, RIGHT = false — plain identifier, no "::" or "()"
-    /// Should NOT appear in key_symbols under either `||` or `&&`.
+    /// Should NOT appear in `key_symbols` under either `||` or `&&`.
     #[test]
     fn symbol_or_both_false_no_extraction() {
         let mut s = Session::new("test-or-both-false", Corpus::Forge);

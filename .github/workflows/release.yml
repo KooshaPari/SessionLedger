@@ -10,9 +10,15 @@
 # The resulting Release will contain per-platform archives:
 #   sl-viewer-<version>-x86_64-unknown-linux-gnu.tar.gz
 #   sl-viewer-<version>-x86_64-apple-darwin.tar.gz
+#   sl-viewer-<version>-aarch64-apple-darwin.tar.gz
 #   sl-viewer-<version>-x86_64-pc-windows-msvc.zip
 #
+# Signing / notarization: DEFERRED (unsigned artifacts). Gatekeeper and
+# SmartScreen notes, data dirs, uninstall: docs/ops/distribution.md
+# Soft goals (cosign, Authenticode, notarytool): issue #66
+#
 # Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-viewer/README.md
+#      packaging/README.md  ·  docs/ops/distribution.md
 
 name: Release
 

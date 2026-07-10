@@ -21,7 +21,7 @@ jobs:
         run: cargo mutants --jobs 2 --timeout 60 --shard 0/4
       - name: Upload mutants report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mutants-out
           path: mutants.out/

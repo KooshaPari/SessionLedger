@@ -322,6 +322,12 @@ mod tests {
     use rusqlite::Connection;
 
     use super::*;
+    use crate::domain::session::Role;
+    use crate::ports::{CorpusSource, PortError};
+
+    /// Row fixture for `open_temp_db`: (id, title, cwd, `context_zstd`, context).
+    type ForgeRow<'a> =
+        (&'a str, Option<&'a str>, Option<&'a str>, Option<Vec<u8>>, Option<&'a str>);
 
     // ── fixture helpers ───────────────────────────────────────────────────────
 
@@ -343,9 +349,7 @@ mod tests {
     // We duplicate the `ingest_all` + `list`/`load` logic via the public API
     // by writing the DB to a temp file (in-memory DBs cannot be shared across
     // Connection handles in different structs).
-    fn open_temp_db(
-        rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)],
-    ) -> (ForgeDb, tempfile::TempPath) {
+    fn open_temp_db(rows: &[ForgeRow<'_>]) -> (ForgeDb, tempfile::TempPath) {
         let tmp = tempfile::NamedTempFile::new().expect("tempfile");
         let path = tmp.path().to_owned();
 
@@ -384,7 +388,7 @@ mod tests {
         let ctx = minimal_context_json();
         let blob = zstd_compress(&ctx);
 
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] =
+        let rows: &[ForgeRow<'_>] =
             &[("conv-001", Some("fix the bug"), Some("/home/user/proj"), Some(blob), None)];
         let (db, _tmp) = open_temp_db(rows);
 
@@ -409,7 +413,7 @@ mod tests {
     #[test]
     fn ingest_all_happy_path_plain_fallback() {
         let ctx = minimal_context_json();
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] = &[(
+        let rows: &[ForgeRow<'_>] = &[(
             "conv-002",
             Some("fallback test"),
             Some("/home/user/other"),
@@ -429,7 +433,7 @@ mod tests {
         let ctx = minimal_context_json();
         let blob = zstd_compress(&ctx);
 
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] = &[
+        let rows: &[ForgeRow<'_>] = &[
             ("c-1", Some("first"), Some("/a"), Some(blob.clone()), None),
             ("c-2", Some("second"), Some("/b"), Some(blob.clone()), None),
             ("c-3", Some("third"), Some("/c"), None, Some(ctx.as_str())),
@@ -450,7 +454,7 @@ mod tests {
         let ctx = minimal_context_json();
         let good_blob = zstd_compress(&ctx);
 
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] = &[
+        let rows: &[ForgeRow<'_>] = &[
             ("bad-row", None, None, Some(garbage), None),
             ("good-row", None, Some("/ok"), Some(good_blob), None),
         ];
@@ -475,7 +479,7 @@ mod tests {
 
     #[test]
     fn ingest_all_schema_mismatch_both_null_is_counted() {
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] = &[(
+        let rows: &[ForgeRow<'_>] = &[(
             "null-row", None, None, None, // no zstd
             None, // no plain
         )];
@@ -496,8 +500,7 @@ mod tests {
     fn ingest_all_invalid_json_is_counted() {
         // Valid zstd but the payload is not JSON.
         let not_json = zstd_compress("this is not json at all");
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] =
-            &[("bad-json", None, None, Some(not_json), None)];
+        let rows: &[ForgeRow<'_>] = &[("bad-json", None, None, Some(not_json), None)];
         let (db, _tmp) = open_temp_db(rows);
 
         let (sessions, report) = db.ingest_all().expect("ingest_all query");
@@ -514,8 +517,7 @@ mod tests {
     fn ingest_all_non_array_json_is_counted() {
         // Decompresses fine, valid JSON — but a map, not an array.
         let obj = zstd_compress(r#"{"role":"user","content":"oops"}"#);
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] =
-            &[("non-array", None, None, Some(obj), None)];
+        let rows: &[ForgeRow<'_>] = &[("non-array", None, None, Some(obj), None)];
         let (db, _tmp) = open_temp_db(rows);
 
         let (sessions, report) = db.ingest_all().expect("ingest_all query");
@@ -529,13 +531,12 @@ mod tests {
     fn corpus_source_list_returns_all_ids() {
         let ctx = minimal_context_json();
         let blob = zstd_compress(&ctx);
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] = &[
+        let rows: &[ForgeRow<'_>] = &[
             ("id-a", None, None, Some(blob.clone()), None),
             ("id-b", None, None, Some(blob), None),
         ];
         let (db, _tmp) = open_temp_db(rows);
 
-        use crate::ports::CorpusSource;
         let ids = db.list().expect("list");
         assert_eq!(ids.len(), 2);
         assert!(ids.contains(&"id-a".to_owned()));
@@ -546,11 +547,10 @@ mod tests {
     fn corpus_source_load_returns_session() {
         let ctx = minimal_context_json();
         let blob = zstd_compress(&ctx);
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] =
+        let rows: &[ForgeRow<'_>] =
             &[("load-me", Some("Load Test"), Some("/cwd"), Some(blob), None)];
         let (db, _tmp) = open_temp_db(rows);
 
-        use crate::ports::CorpusSource;
         let session = db.load("load-me").expect("load");
         assert_eq!(session.id, "load-me");
         assert_eq!(session.title.as_deref(), Some("Load Test"));
@@ -561,8 +561,6 @@ mod tests {
     fn corpus_source_load_missing_id_returns_not_found() {
         let (db, _tmp) = open_temp_db(&[]);
 
-        use crate::ports::CorpusSource;
-        use crate::ports::PortError;
         let err = db.load("no-such-id").expect_err("should be NotFound");
         assert!(matches!(err, PortError::NotFound(_)), "expected NotFound, got {err:?}");
     }
@@ -571,7 +569,6 @@ mod tests {
 
     #[test]
     fn role_mapping_covers_all_known_variants() {
-        use crate::domain::session::Role;
         assert_eq!(map_role("user"), Role::User);
         assert_eq!(map_role("assistant"), Role::Assistant);
         assert_eq!(map_role("system"), Role::System);
@@ -599,8 +596,7 @@ mod tests {
         ])
         .to_string();
         let blob = zstd_compress(&ctx);
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] =
-            &[("ts-alias", None, None, Some(blob), None)];
+        let rows: &[ForgeRow<'_>] = &[("ts-alias", None, None, Some(blob), None)];
         let (db, _tmp) = open_temp_db(rows);
         let (sessions, report) = db.ingest_all().expect("ingest_all");
         assert!(report.is_clean());
@@ -611,8 +607,7 @@ mod tests {
     fn ingest_empty_context_array_produces_empty_messages() {
         let ctx = "[]".to_owned();
         let blob = zstd_compress(&ctx);
-        let rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)] =
-            &[("empty-ctx", None, None, Some(blob), None)];
+        let rows: &[ForgeRow<'_>] = &[("empty-ctx", None, None, Some(blob), None)];
         let (db, _tmp) = open_temp_db(rows);
         let (sessions, report) = db.ingest_all().expect("ingest_all");
         assert!(report.is_clean());

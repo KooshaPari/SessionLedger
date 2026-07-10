@@ -2,7 +2,7 @@
 //! compile → OKF export pipeline, and writes results to an output directory.
 
 use crate::{DaemonError, is_jsonl};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::{mpsc::UnboundedReceiver, Mutex};
 
@@ -47,17 +47,14 @@ pub async fn run_worker_pool(
 
 /// Read a JSONL file, compile each session in it, export to OKF, and write
 /// each export as `{session_id}.okf.json` into `out_dir`.
-async fn process_session_file(
-    path: &PathBuf,
-    out_dir: &PathBuf,
-) -> Result<(), DaemonError> {
+async fn process_session_file(path: &Path, out_dir: &Path) -> Result<(), DaemonError> {
     // Reject non-JSONL files early.
     if !is_jsonl(path) {
         return Ok(());
     }
 
-    let path = path.clone();
-    let out = out_dir.clone();
+    let path = path.to_path_buf();
+    let out = out_dir.to_path_buf();
 
     tokio::task::spawn_blocking(move || -> Result<(), DaemonError> {
         let sessions = session_ledger::read_jsonl_sessions(&path)?;
@@ -73,5 +70,5 @@ async fn process_session_file(
         Ok(())
     })
     .await
-    .map_err(|join_err| std::io::Error::new(std::io::ErrorKind::Other, join_err))?
+    .map_err(std::io::Error::other)?
 }

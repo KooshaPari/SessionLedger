@@ -5,6 +5,9 @@
 //! configurable consumer pool runs the existing session-ledger compile → OKF
 //! export pipeline, writing `.okf.json` documents into an output directory.
 //!
+//! Worker tasks emit [`tracing`] spans (`worker` / `process_session`) so operators
+//! can follow ETL progress via `RUST_LOG` (see the `sl` binary subscriber).
+//!
 //! # Architecture
 //!
 //! ```text
@@ -18,17 +21,21 @@
 //! # Example
 //!
 //! ```no_run
-//! use std::path::PathBuf;
-//! use tokio::sync::mpsc;
+//! use std::path::{Path, PathBuf};
+//! use std::sync::Arc;
+//! use tokio::sync::{mpsc, Mutex};
 //! use sl_daemon::{spawn_fs_watcher, run_worker_pool, DaemonError};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), DaemonError> {
-//!     let (tx, rx) = mpsc::unbounded_channel();
-//!     let rx = std::sync::Arc::new(tokio::sync::Mutex::new(rx));
+//!     // Event-driven watcher uses a bounded channel.
+//!     let (tx, _rx) = mpsc::channel(64);
+//!     let _handle = spawn_fs_watcher(Path::new("./sessions"), tx)?;
 //!
-//!     let _handle = spawn_fs_watcher(PathBuf::from("./sessions"), tx)?;
-//!     run_worker_pool(rx, PathBuf::from("./out"), 4).await;
+//!     // Worker pool consumes an unbounded channel (wired separately in production).
+//!     let (_wtx, wrx) = mpsc::unbounded_channel();
+//!     let wrx = Arc::new(Mutex::new(wrx));
+//!     run_worker_pool(wrx, PathBuf::from("./out"), 4).await;
 //!     Ok(())
 //! }
 //! ```

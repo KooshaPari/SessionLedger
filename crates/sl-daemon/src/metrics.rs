@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct MetricsSummary {
@@ -12,6 +13,7 @@ pub struct MetricsSummary {
     pub daily_counts: HashMap<String, u64>,
 }
 
+#[tracing::instrument(skip_all, fields(out_dir = %out_dir.display()))]
 pub fn compute_metrics(out_dir: &Path) -> MetricsSummary {
     let mut s = MetricsSummary::default();
     let Ok(rd) = std::fs::read_dir(out_dir) else { return s };
@@ -28,6 +30,12 @@ pub fn compute_metrics(out_dir: &Path) -> MetricsSummary {
     if let Some(avg) = s.total_tokens.checked_div(s.total_bundles) {
         s.avg_tokens = avg;
     }
+    info!(
+        total_bundles = s.total_bundles,
+        total_tokens = s.total_tokens,
+        avg_tokens = s.avg_tokens,
+        "metrics computed"
+    );
     s
 }
 

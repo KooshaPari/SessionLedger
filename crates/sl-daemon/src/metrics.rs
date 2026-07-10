@@ -25,7 +25,9 @@ pub fn compute_metrics(out_dir: &Path) -> MetricsSummary {
         if let Some(m) = val.get("model").and_then(|v| v.as_str()) { *s.model_counts.entry(m.to_string()).or_default() += 1; }
         if let Some(d) = val.get("created_at").and_then(|v| v.as_str()) { *s.daily_counts.entry(d[..10.min(d.len())].to_string()).or_default() += 1; }
     }
-    if s.total_bundles > 0 { s.avg_tokens = s.total_tokens / s.total_bundles; }
+    if let Some(avg) = s.total_tokens.checked_div(s.total_bundles) {
+        s.avg_tokens = avg;
+    }
     s
 }
 

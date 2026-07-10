@@ -113,6 +113,11 @@ async fn list_bundles(State(state): State<AppState>) -> Response {
     }
 }
 
+/// `GET /api/metrics` — aggregate token/model stats over the output directory.
+async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
+    Json(compute_metrics(&state.out_dir))
+}
+
 /// `GET /api/stream` — SSE; one event per newly-written `*.okf.json` path.
 async fn sse_stream(
     State(state): State<AppState>,
@@ -467,8 +472,4 @@ mod tests {
         // 200 / 1000 = 0.2 → rounds to 0 → clamped to 1.
         assert!(delay_ms_for_speed(1000.0) >= 1);
     }
-}
-
-async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
-    Json(compute_metrics(&state.out_dir))
 }

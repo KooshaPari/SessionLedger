@@ -4,6 +4,8 @@
 
 use dioxus::prelude::*;
 
+use crate::async_states::{ErrorState, LoadingState};
+
 /// Default daemon base URL (configurable via `SL_DAEMON_URL` env at runtime).
 const DEFAULT_DAEMON: &str = "http://127.0.0.1:8080";
 
@@ -218,7 +220,7 @@ pub fn ReplayView() -> Element {
                     p { class: "status-idle", "Enter a bundle ID and press Play to start replay." }
                 },
                 ReplayState::Playing => rsx! {
-                    p { class: "status-idle", "Streaming events…" }
+                    LoadingState { message: "Streaming replay events…".to_string() }
                 },
                 ReplayState::Paused => rsx! {
                     p { class: "status-idle", "Paused." }
@@ -229,7 +231,7 @@ pub fn ReplayView() -> Element {
                 ReplayState::Error(msg) => {
                     let m = msg.clone();
                     rsx! {
-                        p { class: "status-error", "Error: {m}" }
+                        ErrorState { message: m }
                     }
                 },
             }

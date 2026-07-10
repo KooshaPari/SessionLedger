@@ -7,6 +7,8 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::async_states::{ErrorState, LoadingState};
+
 /// Slim bundle metadata returned by `GET /api/search`.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct SearchResult {
@@ -105,27 +107,19 @@ pub fn SearchView() -> Element {
     let mut loading = use_signal(|| false);
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
 
-    // Clone signals for the async block.
-    let since_val = since.clone();
-    let until_val = until.clone();
-    let model_val = model.clone();
-    let min_tokens_val = min_tokens.clone();
-    let tags_val = tags.clone();
-    let limit_val = limit.clone();
+    let mut search_tick: Signal<u32> = use_signal(|| 0u32);
 
-    let on_search = move |_| {
-        let qs = build_query(
-            &since_val(),
-            &until_val(),
-            &model_val(),
-            &min_tokens_val(),
-            &tags_val(),
-            &limit_val(),
-        );
+    // Shared Search / Retry path — bump `search_tick` to fire a fetch.
+    use_effect(move || {
+        let tick = search_tick();
+        if tick == 0 {
+            return;
+        }
+        let qs = build_query(&since(), &until(), &model(), &min_tokens(), &tags(), &limit());
         let url = format!("{DAEMON_BASE}/api/search?{qs}");
-        let mut results = results.clone();
-        let mut error = error.clone();
-        let mut loading = loading.clone();
+        let mut results = results;
+        let mut error = error;
+        let mut loading = loading;
 
         loading.set(true);
         error.set(None);
@@ -137,7 +131,6 @@ pub fn SearchView() -> Element {
             }
             #[cfg(not(feature = "web"))]
             {
-                // Desktop: use reqwest (bundled with dioxus-desktop via its deps).
                 match reqwest_search(&url).await {
                     Ok(data) => {
                         results.set(data);
@@ -150,7 +143,7 @@ pub fn SearchView() -> Element {
                 loading.set(false);
             }
         });
-    };
+    });
 
     let on_clear = move |_| {
         since.set(String::new());
@@ -222,7 +215,7 @@ pub fn SearchView() -> Element {
                 div { class: "search-actions",
                     button {
                         class: "search-btn search-btn-primary",
-                        onclick: on_search,
+                        onclick: move |_| search_tick.with_mut(|t| *t += 1),
                         if loading() { "Searching…" } else { "Search" }
                     }
                     button {
@@ -236,15 +229,18 @@ pub fn SearchView() -> Element {
             // ---- Results ----
             div { class: "search-results",
                 if let Some(ref msg) = error() {
-                    div { class: "search-error", "{msg}" }
+                    ErrorState {
+                        message: msg.clone(),
+                        retryable: true,
+                        on_retry: move |_| search_tick.with_mut(|t| *t += 1),
+                    }
                 }
-                if !results.is_empty() || loading() {
+                if loading() {
+                    LoadingState { message: "Searching bundles…".to_string() }
+                }
+                if !results.is_empty() && !loading() {
                     div { class: "session-count",
-                        if loading() {
-                            "Loading…"
-                        } else {
-                            "{result_count} result{plural}"
-                        }
+                        "{result_count} result{plural}"
                     }
                 }
                 for (idx, result) in results.iter().enumerate() {

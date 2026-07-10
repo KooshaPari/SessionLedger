@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 
+use crate::async_states::{ErrorState, LoadingState};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
@@ -11,10 +12,11 @@ use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
 use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
+use crate::theme::ThemeColors;
 use crate::timeline::TimelineView;
 
 /// Tab identifiers for the viewer.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tab {
     Bundles,
     History,
@@ -23,6 +25,62 @@ enum Tab {
     Search,
     Timeline,
     Replay,
+}
+
+impl Tab {
+    const ALL: [Tab; 7] = [
+        Tab::Bundles,
+        Tab::History,
+        Tab::Memory,
+        Tab::LiveFeed,
+        Tab::Search,
+        Tab::Timeline,
+        Tab::Replay,
+    ];
+
+    fn label(self) -> &'static str {
+        match self {
+            Tab::Bundles => "Bundles",
+            Tab::History => "History",
+            Tab::Memory => "Memory",
+            Tab::LiveFeed => "Live Feed",
+            Tab::Search => "Search",
+            Tab::Timeline => "Timeline",
+            Tab::Replay => "Replay",
+        }
+    }
+
+    fn id(self) -> &'static str {
+        match self {
+            Tab::Bundles => "tab-bundles",
+            Tab::History => "tab-history",
+            Tab::Memory => "tab-memory",
+            Tab::LiveFeed => "tab-live-feed",
+            Tab::Search => "tab-search",
+            Tab::Timeline => "tab-timeline",
+            Tab::Replay => "tab-replay",
+        }
+    }
+
+    fn panel_id(self) -> &'static str {
+        match self {
+            Tab::Bundles => "panel-bundles",
+            Tab::History => "panel-history",
+            Tab::Memory => "panel-memory",
+            Tab::LiveFeed => "panel-live-feed",
+            Tab::Search => "panel-search",
+            Tab::Timeline => "panel-timeline",
+            Tab::Replay => "panel-replay",
+        }
+    }
+
+    fn index(self) -> usize {
+        Self::ALL.iter().position(|&t| t == self).unwrap_or(0)
+    }
+
+    fn from_index(i: usize) -> Tab {
+        Self::ALL[i % Self::ALL.len()]
+    }
 }
 
 /// Shared session data provided at the root of the component tree.
@@ -59,24 +117,17 @@ fn resolve_data_source() -> DataSource {
 pub fn App() -> Element {
     // Load sessions once at the root; propagate via context.
     let source = resolve_data_source();
-    let sessions = match load_sessions(&source) {
-        Ok(s) => s,
+    let (sessions, corpus_error) = match load_sessions(&source) {
+        Ok(s) => (s, None),
         Err(e) => {
             eprintln!("[sl-viewer] failed to load corpus ({e}); falling back to mock data");
-            crate::mock_data::sample_sessions()
+            (crate::mock_data::sample_sessions(), Some(e))
         }
     };
     use_context_provider(|| SessionContext(sessions));
 
     let mut active_tab: Signal<Tab> = use_signal(|| Tab::Bundles);
-
-    let bundles_class = if active_tab() == Tab::Bundles { "tab active" } else { "tab" };
-    let history_class = if active_tab() == Tab::History { "tab active" } else { "tab" };
-    let memory_class = if active_tab() == Tab::Memory { "tab active" } else { "tab" };
-    let feed_class = if active_tab() == Tab::LiveFeed { "tab active" } else { "tab" };
-    let search_class = if active_tab() == Tab::Search { "tab active" } else { "tab" };
-    let timeline_class = if active_tab() == Tab::Timeline { "tab active" } else { "tab" };
-    let replay_class = if active_tab() == Tab::Replay { "tab active" } else { "tab" };
+    let colors = ThemeColors::dark();
 
     let tab_body = match active_tab() {
         Tab::Bundles => rsx! { BundlesTab {} },
@@ -86,6 +137,10 @@ pub fn App() -> Element {
         Tab::Search => rsx! { SearchView {} },
         Tab::Timeline => rsx! { TimelineView { bundles: sample_bundles() } },
         Tab::Replay => rsx! { ReplayView {} },
+    };
+
+    let activate = move |tab: Tab| {
+        active_tab.set(tab);
     };
 
     rsx! {
@@ -113,9 +168,13 @@ pub fn App() -> Element {
                 .detail-section li {{ font-size: 13px; line-height: 1.7; color: #a1a6b5; }}
                 .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: #5c5f6e; font-size: 14px; }}
                 .tab-bar {{ display: flex; border-bottom: 1px solid #2a2d35; background: #13151c; }}
-                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border-bottom: 2px solid transparent; transition: all 0.15s; }}
+                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border: none; border-bottom: 2px solid transparent; background: transparent; transition: all 0.15s; font-family: inherit; }}
                 .tab:hover {{ color: #8b8fa3; background: #1a1c26; }}
                 .tab.active {{ color: #6c8cff; border-bottom-color: #6c8cff; background: #161822; }}
+                .tab:focus {{ outline: none; }}
+                .tab:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; color: {colors.focus}; }}
+                .search-input:focus-visible, .search-btn:focus-visible, .retry-btn:focus-visible, .btn:focus-visible, .replay-input:focus-visible, .speed-input:focus-visible, .compare-btn:focus-visible, .sl-error-retry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .session-item:focus-visible, .feed-entry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; }}
                 .session-list {{ display: flex; flex-direction: column; height: 100%; }}
                 .search-input {{ width: 100%; padding: 10px 16px; background: #1c1f2b; border: 1px solid #2a2d35; border-radius: 6px; color: #e1e4ea; font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
                 .session-count {{ padding: 6px 20px; font-size: 11px; color: #5c5f6e; }}
@@ -176,48 +235,78 @@ pub fn App() -> Element {
                 .diff-col-b {{ color: #c8cdd6; overflow-wrap: break-word; }}
                 .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
                 .main-upper {{ flex: 1; overflow-y: auto; }}
+                .corpus-error-banner {{ padding: 0 8px; }}
             "#,
         }
         div { class: "app",
             div { class: "sidebar",
-                div { class: "tab-bar",
-                    div {
-                        class: "{bundles_class}",
-                        onclick: move |_| active_tab.set(Tab::Bundles),
-                        "Bundles"
-                    }
-                    div {
-                        class: "{history_class}",
-                        onclick: move |_| active_tab.set(Tab::History),
-                        "History"
-                    }
-                    div {
-                        class: "{memory_class}",
-                        onclick: move |_| active_tab.set(Tab::Memory),
-                        "Memory"
-                    }
-                    div {
-                        class: "{feed_class}",
-                        onclick: move |_| active_tab.set(Tab::LiveFeed),
-                        "Live Feed"
-                    }
-                    div {
-                        class: "{search_class}",
-                        onclick: move |_| active_tab.set(Tab::Search),
-                        "Search"
-                    }
-                    div {
-                        class: "{timeline_class}",
-                        onclick: move |_| active_tab.set(Tab::Timeline),
-                        "Timeline"
-                    }
-                    div {
-                        class: "{replay_class}",
-                        onclick: move |_| active_tab.set(Tab::Replay),
-                        "Replay"
+                div {
+                    class: "tab-bar",
+                    role: "tablist",
+                    "aria-label": "SessionLedger views",
+                    for tab in Tab::ALL {
+                        {
+                            let is_active = active_tab() == tab;
+                            let cls = if is_active { "tab active" } else { "tab" };
+                            let selected = if is_active { "true" } else { "false" };
+                            let tab_index = if is_active { "0" } else { "-1" };
+                            rsx! {
+                                button {
+                                    key: "{tab.id()}",
+                                    id: "{tab.id()}",
+                                    class: "{cls}",
+                                    role: "tab",
+                                    r#type: "button",
+                                    tabindex: "{tab_index}",
+                                    "aria-selected": "{selected}",
+                                    "aria-controls": "{tab.panel_id()}",
+                                    onclick: move |_| activate(tab),
+                                    onkeydown: move |evt: Event<KeyboardData>| {
+                                        let len = Tab::ALL.len();
+                                        let idx = tab.index();
+                                        match evt.key() {
+                                            Key::Enter | Key::Character(ref ch) if ch == " " => {
+                                                evt.prevent_default();
+                                                activate(tab);
+                                            }
+                                            Key::ArrowRight => {
+                                                evt.prevent_default();
+                                                activate(Tab::from_index(idx + 1));
+                                            }
+                                            Key::ArrowLeft => {
+                                                evt.prevent_default();
+                                                activate(Tab::from_index(idx + len - 1));
+                                            }
+                                            Key::Home => {
+                                                evt.prevent_default();
+                                                activate(Tab::Bundles);
+                                            }
+                                            Key::End => {
+                                                evt.prevent_default();
+                                                activate(Tab::Replay);
+                                            }
+                                            _ => {}
+                                        }
+                                    },
+                                    "{tab.label()}"
+                                }
+                            }
+                        }
                     }
                 }
-                {tab_body}
+                if let Some(ref err) = corpus_error {
+                    div { class: "corpus-error-banner",
+                        ErrorState {
+                            message: format!("Corpus load failed ({err}); showing mock sessions."),
+                        }
+                    }
+                }
+                div {
+                    id: "{active_tab().panel_id()}",
+                    role: "tabpanel",
+                    "aria-labelledby": "{active_tab().id()}",
+                    {tab_body}
+                }
             }
         }
     }
@@ -230,9 +319,45 @@ pub fn App() -> Element {
 /// The compiled-bundles tab — the original sidebar + detail panel.
 #[component]
 fn BundlesTab() -> Element {
-    let bundles = use_signal(sample_bundles);
+    let mut bundles = use_signal(Vec::new);
+    let mut loading = use_signal(|| true);
+    let mut load_error: Signal<Option<String>> = use_signal(|| None);
+    let mut load_gen: Signal<u32> = use_signal(|| 0u32);
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
+
+    // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
+    // Today this is synchronous sample data; the same signals work for a future
+    // daemon/HTTP loader without changing the chrome.
+    use_effect(move || {
+        let _ = load_gen();
+        loading.set(true);
+        load_error.set(None);
+        let loaded = sample_bundles();
+        if loaded.is_empty() {
+            load_error.set(Some("No bundles available to display.".into()));
+        } else {
+            bundles.set(loaded);
+        }
+        loading.set(false);
+    });
+
+    if loading() {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            LoadingState { message: "Loading bundles…".to_string() }
+        };
+    }
+    if let Some(err) = load_error() {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ErrorState {
+                message: err,
+                retryable: true,
+                on_retry: move |_| load_gen.with_mut(|g| *g += 1),
+            }
+        };
+    }
 
     let summaries: Vec<BundleSummary> = bundles.iter().map(|b| summarize(&b)).collect();
     let detail = selected_idx().and_then(|idx| bundles.get(idx)).map(|b| extract_detail(&b));

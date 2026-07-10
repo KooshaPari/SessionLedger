@@ -41,6 +41,7 @@ use std::sync::Arc;
 use clap::{Parser, Subcommand};
 use std::path::Path;
 use tokio::sync::{broadcast, mpsc};
+use tracing::{error, info, info_span, Instrument};
 
 /// Channel depth. Bounded so a slow consumer applies backpressure to the
 /// watcher instead of letting an unbounded queue grow without limit.
@@ -266,6 +267,7 @@ enum TagAction {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    init_tracing();
     let args = Args::parse();
 
     match args.command {
@@ -305,6 +307,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Install a `tracing` subscriber filtered by `RUST_LOG`.
+///
+/// Default when unset: `sl_daemon=info` (matches docs/ops/observability.md).
+fn init_tracing() {
+    use tracing_subscriber::EnvFilter;
+
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+
+    tracing_subscriber::fmt().with_env_filter(filter).with_target(true).init();
+}
+
 // ---------------------------------------------------------------------------
 // serve
 // ---------------------------------------------------------------------------
@@ -324,22 +338,36 @@ async fn run_serve(
 
     // Consumer: drain the channel, transforming each path.
     let bcast_for_consumer = bcast_tx.clone();
-    let consumer = tokio::spawn(async move {
-        let mut total = 0usize;
-        while let Some(path) = rx.recv().await {
-            match etl::transform_file(&path, &out_dir) {
-                Ok(written) => {
-                    total += written.len();
-                    for w in &written {
-                        let _ = bcast_for_consumer.send(w.clone());
+    let consumer = tokio::spawn(
+        async move {
+            let mut total = 0usize;
+            while let Some(path) = rx.recv().await {
+                let span = info_span!("etl.transform", path = %path.display());
+                async {
+                    match etl::transform_file(&path, &out_dir) {
+                        Ok(written) => {
+                            total += written.len();
+                            for w in &written {
+                                let _ = bcast_for_consumer.send(w.clone());
+                            }
+                            info!(
+                                path = %path.display(),
+                                okf_docs = written.len(),
+                                "ETL transform ok"
+                            );
+                        }
+                        Err(err) => {
+                            error!(path = %path.display(), error = %err, "ETL transform failed");
+                        }
                     }
-                    eprintln!("[sl-daemon] {} → {} OKF doc(s)", path.display(), written.len());
                 }
-                Err(err) => eprintln!("[sl-daemon] ERROR {err}"),
+                .instrument(span)
+                .await;
             }
+            total
         }
-        total
-    });
+        .instrument(info_span!("etl.consumer")),
+    );
 
     // HTTP server (optional).
     let http_handle = if http_bind.eq_ignore_ascii_case("off") {
@@ -357,19 +385,19 @@ async fn run_serve(
             })
             .await
             {
-                eprintln!("[sl-daemon] HTTP server error: {e}");
+                error!(error = %e, "HTTP server error");
             }
         });
-        eprintln!("[sl-daemon] HTTP server listening on http://{addr}");
+        info!(%addr, "HTTP server listening");
         Some((handle, shutdown_tx))
     };
 
     if once {
         let sent = watcher::scan_once(&watch, &tx).await?;
-        eprintln!("[sl-daemon] --once: enqueued {sent} file(s)");
+        info!(enqueued = sent, "once: scan complete");
         drop(tx);
         let total = consumer.await?;
-        eprintln!("[sl-daemon] --once: wrote {total} OKF doc(s)");
+        info!(okf_docs = total, "once: ETL complete");
         if let Some((handle, shutdown_tx)) = http_handle {
             let _ = shutdown_tx.send(());
             let _ = handle.await;
@@ -380,12 +408,12 @@ async fn run_serve(
     // Long-running mode.
     watcher::scan_once(&watch, &tx).await?;
     let _watcher = watcher::spawn_fs_watcher(&watch, tx.clone())?;
-    eprintln!("[sl-daemon] watching {} → {}", watch.display(), out.display());
+    info!(watch = %watch.display(), out = %out.display(), "watching for sessions");
 
     drop(tx);
 
     tokio::signal::ctrl_c().await?;
-    eprintln!("[sl-daemon] shutting down");
+    info!("shutting down");
     drop(_watcher);
 
     if let Some((handle, shutdown_tx)) = http_handle {
@@ -394,7 +422,7 @@ async fn run_serve(
     }
 
     let total = consumer.await?;
-    eprintln!("[sl-daemon] wrote {total} OKF doc(s) total");
+    info!(okf_docs = total, "ETL consumer finished");
     Ok(())
 }
 

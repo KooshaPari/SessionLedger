@@ -38,6 +38,7 @@ use crate::validation::{validate_okf_bundle, PostBundle};
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt as _;
 use tower_http::cors::{Any, CorsLayer};
+use tracing::{error, info, warn};
 
 /// Shared state threaded into every handler.
 #[derive(Clone)]
@@ -69,6 +70,7 @@ pub(crate) fn router(state: AppState) -> Router {
 /// Run the axum HTTP server on `addr` until `shutdown` resolves.
 ///
 /// Returns immediately if binding fails (caller logs the error).
+#[tracing::instrument(skip(state, shutdown), fields(addr = %addr))]
 pub async fn serve(
     addr: SocketAddr,
     state: AppState,
@@ -76,6 +78,7 @@ pub async fn serve(
 ) -> std::io::Result<()> {
     let app = router(state);
     let listener = tokio::net::TcpListener::bind(addr).await?;
+    info!(%addr, "HTTP server bound");
     axum::serve(listener, app).with_graceful_shutdown(shutdown).await.map_err(std::io::Error::other)
 }
 
@@ -84,16 +87,19 @@ pub async fn serve(
 // ---------------------------------------------------------------------------
 
 /// `GET /healthz` — liveness probe.
+#[tracing::instrument]
 async fn healthz() -> Response {
     "ok".into_response()
 }
 
 /// `GET /readyz` — readiness probe (output directory must exist and be a dir).
+#[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
 async fn readyz(State(state): State<AppState>) -> Response {
     let path = state.out_dir.as_path();
     if path.is_dir() {
         "ready".into_response()
     } else {
+        warn!(out_dir = %path.display(), "readyz: out_dir not ready");
         (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
             format!("out_dir not ready: {}", path.display()),
@@ -103,10 +109,15 @@ async fn readyz(State(state): State<AppState>) -> Response {
 }
 
 /// `GET /api/bundles` — return all `*.okf.json` documents as a JSON array.
+#[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
 async fn list_bundles(State(state): State<AppState>) -> Response {
     match read_all_bundles(&state.out_dir) {
-        Ok(values) => Json(values).into_response(),
+        Ok(values) => {
+            info!(count = values.len(), "list_bundles");
+            Json(values).into_response()
+        }
         Err(e) => {
+            error!(error = %e, "failed to read bundles");
             let msg = format!("failed to read bundles: {e}");
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, msg).into_response()
         }
@@ -114,14 +125,17 @@ async fn list_bundles(State(state): State<AppState>) -> Response {
 }
 
 /// `GET /api/metrics` — aggregate token/model stats over the output directory.
+#[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
 async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     Json(compute_metrics(&state.out_dir))
 }
 
 /// `GET /api/stream` — SSE; one event per newly-written `*.okf.json` path.
+#[tracing::instrument(skip(state))]
 async fn sse_stream(
     State(state): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    info!("SSE client subscribed");
     let rx = state.broadcast_tx.subscribe();
     let stream = BroadcastStream::new(rx).filter_map(|result| {
         result
@@ -198,6 +212,7 @@ pub(crate) fn params_to_spec(p: &SearchParams) -> FilterSpec {
 /// `GET /api/search` — filter bundles by date, model, tokens, and tags.
 ///
 /// Returns a JSON array of [`BundleMeta`] objects matching the query.
+#[tracing::instrument(skip(state, params), fields(out_dir = %state.out_dir.display(), limit = params.limit))]
 async fn search_bundles(
     State(state): State<AppState>,
     Query(params): Query<SearchParams>,
@@ -205,6 +220,7 @@ async fn search_bundles(
     let raw = match read_all_bundles(&state.out_dir) {
         Ok(v) => v,
         Err(e) => {
+            error!(error = %e, "failed to read bundles for search");
             let msg = format!("failed to read bundles: {e}");
             return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, msg).into_response();
         }
@@ -213,6 +229,7 @@ async fn search_bundles(
     let metas: Vec<BundleMeta> = raw.iter().map(BundleMeta::from_value).collect();
     let spec = params_to_spec(&params);
     let matched: Vec<BundleMeta> = apply_filters(&metas, &spec).into_iter().cloned().collect();
+    info!(matched = matched.len(), scanned = metas.len(), "search_bundles");
 
     Json(matched).into_response()
 }
@@ -224,11 +241,14 @@ async fn search_bundles(
 /// the same JSON body when one or more validation errors are found. This allows
 /// clients to distinguish a transport-level failure (4xx/5xx from the proxy or
 /// server) from a business-logic rejection (422 with actionable error details).
+#[tracing::instrument(skip(payload))]
 async fn ingest_bundle(Json(payload): Json<PostBundle>) -> Response {
     let result = validate_okf_bundle(&payload);
     if result.valid {
+        info!("ingest accepted");
         Json(&result).into_response()
     } else {
+        warn!("ingest rejected by validation");
         (axum::http::StatusCode::UNPROCESSABLE_ENTITY, Json(&result)).into_response()
     }
 }
@@ -313,6 +333,7 @@ pub(crate) fn delay_ms_for_speed(speed: f64) -> u64 {
 ///
 /// The optional `?speed=<f>` query parameter (default 1.0) controls how
 /// quickly entities are emitted: `speed=2.0` halves the inter-event delay.
+#[tracing::instrument(skip(state, params), fields(bundle_id = %bundle_id, speed = params.speed, out_dir = %state.out_dir.display()))]
 async fn replay_bundle(
     AxumPath(bundle_id): AxumPath<String>,
     Query(params): Query<ReplayParams>,
@@ -320,6 +341,7 @@ async fn replay_bundle(
 ) -> Response {
     // Sanitise the bundle_id: reject any path traversal.
     if bundle_id.contains('/') || bundle_id.contains('\\') || bundle_id.contains("..") {
+        warn!(%bundle_id, "invalid bundle_id");
         return (axum::http::StatusCode::BAD_REQUEST, "invalid bundle_id").into_response();
     }
 
@@ -362,6 +384,7 @@ async fn replay_bundle(
 
     let delay = delay_ms_for_speed(params.speed);
     let total = entities.len();
+    info!(entities = total, delay_ms = delay, "replay starting");
 
     let stream = async_stream::stream! {
         for (idx, entity) in entities.into_iter().enumerate() {

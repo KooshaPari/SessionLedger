@@ -6,8 +6,8 @@
 #
 # Spectrum categories exercised (when PR #198 lands on phenotype-tooling):
 #   - sast:  semgrep config=auto (Rust + Python ruleset)
-#   - sbom:  cyclonedx-rust-cargo generates target/sbom.cdx.json;
-#            consumed via the existing per-crate *.cdx.json files
+#   - sbom:  cargo-cyclonedx generates target/sbom.cdx.json + per-crate
+#            *.cdx.json; uploaded as the sbom-cyclonedx workflow artifact
 
 name: qgate
 
@@ -53,6 +53,27 @@ jobs:
           name: coverage-lcov
           path: coverage/lcov.info
           retention-days: 14
+
+      - name: Install cargo-cyclonedx
+        run: cargo install cargo-cyclonedx --locked
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          cargo cyclonedx --format json
+          mkdir -p target
+          cp session-ledger.cdx.json target/sbom.cdx.json
+          echo "SBOM files:"
+          find . -name '*.cdx.json' -print
+
+      - name: Upload CycloneDX SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-cyclonedx
+          path: |
+            target/sbom.cdx.json
+            **/*.cdx.json
+          if-no-files-found: error
+          retention-days: 30
 
       # qgate reusable workflow — runs the gate, emits JSON report.
       - name: qgate quality gate

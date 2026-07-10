@@ -25,6 +25,9 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 tokio-util = { version = "0.7", features = ["io"] }
 futures-util = "0.3"
 async-stream = "0.3"
+# Structured logging / spans (RUST_LOG env filter)
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 [dev-dependencies]
 tempfile = "3"

@@ -15,8 +15,8 @@ Please **do not** open a public GitHub issue for security reports.
 
 Preferred channels (in order):
 
-1. **GitHub Security Advisories** — [Report a vulnerability](https://github.com/KooshaPari/SessionLedger/security/advisories/new) on this repository.
-2. **Email** — contact maintainer **KooshaPari** via the address listed on their [GitHub profile](https://github.com/KooshaPari) (placeholder until a dedicated security inbox is published).
+1. **GitHub Security Advisories** ΓÇö [Report a vulnerability](https://github.com/KooshaPari/SessionLedger/security/advisories/new) on this repository.
+2. **Email** ΓÇö contact maintainer **KooshaPari** via the address listed on their [GitHub profile](https://github.com/KooshaPari) (placeholder until a dedicated security inbox is published).
 
 Include:
 
@@ -43,3 +43,7 @@ Critical supply-chain or remote-code issues may be accelerated at maintainer dis
 - Dependency policy is enforced by [`deny.toml`](deny.toml) via `cargo deny check` (see [`.github/workflows/security.yml`](.github/workflows/security.yml)).
 - Secret scanning runs with gitleaks in the same workflow.
 - CycloneDX SBOMs are produced in the qgate path as `target/sbom.cdx.json` and per-crate `*.cdx.json` artifacts (see [`.github/workflows/qgate.yml`](.github/workflows/qgate.yml) header comments). Packaging notes: [`packaging/README.md`](packaging/README.md).
+
+- Advisory scanning: `cargo audit` job in .github/workflows/security.yml.
+- SBOM upload: qgate uploads `sbom-cyclonedx` artifact from `target/sbom.cdx.json`.
+

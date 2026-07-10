@@ -1,5 +1,5 @@
 # P0 security + supply-chain checks for SessionLedger.
-# cargo-deny (deny.toml at repo root) + gitleaks. Keep green on PRs.
+# cargo-deny (deny.toml at repo root) + cargo-audit + gitleaks. Keep green on PRs.
 
 name: Security
 
@@ -23,6 +23,17 @@ jobs:
         with:
           command: check
           rust-version: "1.85.0"
+
+  cargo-audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: cargo audit
+        run: cargo audit
 
   gitleaks:
     name: gitleaks

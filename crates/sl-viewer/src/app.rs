@@ -242,6 +242,8 @@ pub fn App() -> Element {
                 .diff-col-b {{ color: #c8cdd6; overflow-wrap: break-word; }}
                 .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
                 .main-upper {{ flex: 1; overflow-y: auto; }}
+                .bundles-view {{ display: contents; }}
+                .viewer-main {{ flex: 1; min-width: 0; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
                 @media (prefers-reduced-motion: reduce) {{
                     *, *::before, *::after {{
@@ -323,11 +325,14 @@ pub fn App() -> Element {
                         }
                     }
                 }
-                div {
-                    id: "{active_tab().panel_id()}",
-                    role: "tabpanel",
-                    "aria-labelledby": "{active_tab().id()}",
-                    {tab_body}
+                main {
+                    class: "viewer-main",
+                    div {
+                        id: "{active_tab().panel_id()}",
+                        role: "tabpanel",
+                        "aria-labelledby": "{active_tab().id()}",
+                        {tab_body}
+                    }
                 }
             }
         }
@@ -393,35 +398,44 @@ fn BundlesTab() -> Element {
         });
 
     rsx! {
-        h2 { "Compiled Bundles" }
-        SessionListWithCompare {
-            items: summaries,
-            selected_idx: selected_idx(),
-            compare_idx: compare_idx(),
-            on_select: move |idx| selected_idx.set(Some(idx)),
-            on_compare: move |idx| {
-                // Toggle: clicking same row again clears compare slot.
-                if compare_idx() == Some(idx) {
+        div {
+            class: "bundles-view",
+            onkeydown: move |evt: Event<KeyboardData>| {
+                if evt.key() == Key::Escape && compare_idx().is_some() {
+                    evt.prevent_default();
                     compare_idx.set(None);
-                } else {
-                    compare_idx.set(Some(idx));
                 }
             },
-        }
-        div { class: "main-content",
-            div { class: "main-upper",
-                match detail {
-                    Some(d) => rsx! { DetailView { detail: d.clone() } },
-                    None => rsx! {
-                        div { class: "empty-state", "Select a bundle from the list to view details" }
-                    },
-                }
+            h2 { "Compiled Bundles" }
+            SessionListWithCompare {
+                items: summaries,
+                selected_idx: selected_idx(),
+                compare_idx: compare_idx(),
+                on_select: move |idx| selected_idx.set(Some(idx)),
+                on_compare: move |idx| {
+                    // Toggle: clicking same row again clears compare slot.
+                    if compare_idx() == Some(idx) {
+                        compare_idx.set(None);
+                    } else {
+                        compare_idx.set(Some(idx));
+                    }
+                },
             }
-            if let Some((a, b)) = diff_pair {
-                BundleDiff {
-                    bundle_a: a,
-                    bundle_b: b,
-                    on_close: move |_| compare_idx.set(None),
+            div { class: "main-content",
+                div { class: "main-upper",
+                    match detail {
+                        Some(d) => rsx! { DetailView { detail: d.clone() } },
+                        None => rsx! {
+                            div { class: "empty-state", "Select a bundle from the list to view details" }
+                        },
+                    }
+                }
+                if let Some((a, b)) = diff_pair {
+                    BundleDiff {
+                        bundle_a: a,
+                        bundle_b: b,
+                        on_close: move |_| compare_idx.set(None),
+                    }
                 }
             }
         }

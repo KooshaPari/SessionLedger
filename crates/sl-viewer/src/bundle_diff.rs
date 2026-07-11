@@ -144,7 +144,14 @@ pub fn BundleDiff(props: BundleDiffProps) -> Element {
     let diff_count = diffs.iter().filter(|d| d.differs).count();
 
     rsx! {
-        div { class: "diff-panel",
+        div {
+            class: "diff-panel",
+            onkeydown: move |evt: Event<KeyboardData>| {
+                if evt.key() == Key::Escape {
+                    evt.prevent_default();
+                    props.on_close.call(());
+                }
+            },
             div { class: "diff-header",
                 span { class: "diff-title",
                     "Comparing bundles"
@@ -154,8 +161,11 @@ pub fn BundleDiff(props: BundleDiffProps) -> Element {
                         span { class: "diff-badge diff-badge-same", " identical" }
                     }
                 }
-                div {
+                button {
                     class: "diff-close",
+                    r#type: "button",
+                    "aria-label": "Close bundle comparison",
+                    style: "border:0;background:transparent;",
                     onclick: move |_| props.on_close.call(()),
                     "✕"
                 }

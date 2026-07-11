@@ -115,7 +115,16 @@ pub fn ReplayView() -> Element {
             "#
         }
 
-        div { class: "replay-view",
+        div {
+            class: "replay-view",
+            onkeydown: move |evt: Event<KeyboardData>| {
+                if evt.key() == Key::Escape {
+                    evt.prevent_default();
+                    entries.set(vec![]);
+                    progress.set((0, 0));
+                    state.set(ReplayState::Idle);
+                }
+            },
             // Controls bar
             div { class: "replay-controls",
                 input {

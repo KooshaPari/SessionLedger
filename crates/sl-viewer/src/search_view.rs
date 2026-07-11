@@ -161,7 +161,22 @@ pub fn SearchView() -> Element {
     let plural = if result_count == 1 { "" } else { "s" };
 
     rsx! {
-        div { class: "search-view",
+        div {
+            class: "search-view",
+            onkeydown: move |evt: Event<KeyboardData>| {
+                if evt.key() == Key::Escape {
+                    evt.prevent_default();
+                    since.set(String::new());
+                    until.set(String::new());
+                    model.set(String::new());
+                    min_tokens.set(String::new());
+                    tags.set(String::new());
+                    limit.set("50".to_string());
+                    results.set(Vec::new());
+                    error.set(None);
+                    selected_idx.set(None);
+                }
+            },
             // ---- Filter form ----
             div { class: "search-form",
                 h2 { style: "padding: 16px 20px; margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8b8fa3; border-bottom: 1px solid #2a2d35;",

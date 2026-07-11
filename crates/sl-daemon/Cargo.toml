@@ -28,6 +28,10 @@ async-stream = "0.3"
 # Structured logging / spans (RUST_LOG env filter)
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+opentelemetry = { version = "0.32.0", default-features = false, features = ["trace"], optional = true }
+opentelemetry_sdk = { version = "0.32.1", default-features = false, features = ["trace"], optional = true }
+tracing-opentelemetry = { version = "0.33.0", default-features = false, optional = true }
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["trace", "grpc-tonic"], optional = true }
 
 [dev-dependencies]
 tempfile = "3"
@@ -42,3 +46,12 @@ unsafe_code = "forbid"
 # into sl-viewer's platform-specific graph. The `session-ledger` path dep above
 # still resolves via its relative path.
 [workspace]
+
+[features]
+default = []
+otel = [
+    "dep:opentelemetry",
+    "dep:opentelemetry_sdk",
+    "dep:opentelemetry-otlp",
+    "dep:tracing-opentelemetry",
+]

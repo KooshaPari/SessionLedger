@@ -33,6 +33,7 @@ Do not claim a task already marked `done`. Prefer worktrees per `AGENTS.md`.
 | T-025 | FR-gap / traceability note in CI docs | — | S | done | `docs/ops/runbook.md` |
 | T-024 | Crash-detector MVP → unfinished Worklog projection | FR-011 | M | done | `src/domain/worklog.rs`; #90 |
 | T-030 | Contract / Dedup compilers + token estimator | FR-012 | M | done | `src/distill/{contract,dedup}_compiler.rs`; #92 |
+| T-031 | Bundle inject renderer (prompt form) | FR-012 | M | done | `src/inject.rs`; #95 |
 
 ---
 
@@ -40,7 +41,6 @@ Do not claim a task already marked `done`. Prefer worktrees per `AGENTS.md`.
 
 | ID | Task | FR | Effort | Status | Depends |
 |----|------|----|--------|--------|---------|
-| T-031 | Bundle inject renderer (prompt form) | FR-012 | M | todo | T-030 |
 | T-032 | rusqlite forge adapter (zstd, classify) | FR-001 | L | todo | T-005 |
 | T-033 | Codex / Claude / Cursor JSONL adapters | FR-001 | L | todo | T-005 |
 | T-034 | MemoryStore + Compressor + TraceSink adapters | FR-015 | L | todo | T-032 |

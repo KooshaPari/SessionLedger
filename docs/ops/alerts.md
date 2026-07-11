@@ -1,13 +1,108 @@
-# Alert stubs — SessionLedger (C05)
+# Alert queries — SessionLedger (C05)
 
-**Status:** placeholders only. No Alertmanager / PagerDuty / Grafana rules are
-shipped. The daemon now exposes baseline HTTP RED counters at `/metrics`;
-endpoint-specific ingest and replay signals remain future work.
+**Status:** copy-paste PromQL examples; no Alertmanager or pager routing is
+enabled by this repository. The daemon exposes aggregate HTTP RED counters at
+`/metrics`, and an importable Grafana dashboard is available in
+[`dashboards/`](dashboards/). Endpoint-specific ingest and replay signals
+remain future work.
 
 Canonical severity + routing table: [`observability.md`](observability.md#alert-stubs).
 Operator triage: [`runbook.md`](runbook.md).
 
-## Stub rule sketches
+## PromQL for shipped RED metrics
+
+The Wave-6 metrics have no `route`, `method`, or `status` labels. These queries
+are intentionally service-wide. They aggregate across replicas selected by the
+`job="sl-daemon"` label and use `rate`, which safely handles counter resets.
+
+| Signal | PromQL |
+|--------|--------|
+| Request rate | `sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m]))` |
+| Error rate | `sum(rate(sl_http_errors_total{job="sl-daemon"}[5m]))` |
+| Error ratio | `sum(rate(sl_http_errors_total{job="sl-daemon"}[5m])) / clamp_min(sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m])), 1e-9)` |
+| Mean duration | `sum(rate(sl_http_request_duration_seconds_sum{job="sl-daemon"}[5m])) / clamp_min(sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m])), 1e-9)` |
+| Started requests | `sum(rate(sl_http_requests_total{job="sl-daemon"}[5m]))` |
+
+`sl_http_requests_total` increments when a request starts, while
+`sl_http_request_duration_seconds_count` increments when it completes. Use the
+completed count as the denominator for both error ratio and mean duration.
+Their difference can help identify in-flight or interrupted requests, but is
+not a stable concurrency gauge.
+
+The exporter exposes only `_sum` and `_count` for duration. Do not use
+`histogram_quantile` with this metric: p95/p99 require future `_bucket` series.
+
+## Rules using shipped metrics
+
+These examples can be placed under a Prometheus rule group's `rules` array.
+Tune thresholds and `for` durations against observed traffic before paging.
+
+### `SL-HTTP-HIGH-ERROR-RATIO` (P2)
+
+```yaml
+alert: SL-HTTP-HIGH-ERROR-RATIO
+expr: |
+  (
+    sum(rate(sl_http_errors_total{job="sl-daemon"}[15m]))
+      /
+    clamp_min(
+      sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[15m])),
+      1e-9
+    )
+  ) > 0.05
+  and
+  sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[15m])) > 0
+for: 15m
+labels:
+  severity: ticket
+annotations:
+  summary: "sl-daemon HTTP error ratio exceeded 5%"
+  runbook: docs/ops/runbook.md#common-failures
+```
+
+### `SL-HTTP-HIGH-MEAN-LATENCY` (P3)
+
+```yaml
+alert: SL-HTTP-HIGH-MEAN-LATENCY
+expr: |
+  (
+    sum(rate(sl_http_request_duration_seconds_sum{job="sl-daemon"}[15m]))
+      /
+    clamp_min(
+      sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[15m])),
+      1e-9
+    )
+  ) > 1
+  and
+  sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[15m])) > 0
+for: 15m
+labels:
+  severity: info
+annotations:
+  summary: "sl-daemon mean HTTP latency exceeded 1 second"
+  runbook: docs/ops/runbook.md#common-failures
+```
+
+### `SL-RED-METRICS-MISSING` (P2)
+
+This distinguishes a reachable scrape target from an exporter that no longer
+publishes the expected application series.
+
+```yaml
+alert: SL-RED-METRICS-MISSING
+expr: |
+  up{job="sl-daemon"} == 1
+  unless
+  sl_http_requests_total{job="sl-daemon"}
+for: 5m
+labels:
+  severity: ticket
+annotations:
+  summary: "sl-daemon scrape succeeds but RED metrics are missing"
+  runbook: docs/ops/runbook.md#metrics
+```
+
+## Future-signal rule sketches
 
 ### `SL-HEALTHZ-DOWN` (P1)
 
@@ -69,9 +164,11 @@ annotations:
 ### `SL-METRICS-STALE` (P3)
 
 ```yaml
-# STUB
 alert: SL-METRICS-STALE
-expr: up{job="sl-daemon"} == 0 or probe_success{path="/metrics"} == 0
+expr: |
+  max(up{job="sl-daemon"}) == 0
+  or
+  absent(up{job="sl-daemon"})
 for: 5m
 labels:
   severity: info
@@ -82,9 +179,13 @@ annotations:
 
 ## Promotion checklist
 
-1. Scrape the RED names from [`observability.md`](observability.md#red-metrics-mapping).
-2. Add route-labelled ingest/replay counters before enabling their alert stubs.
-3. Replace `probe_*` stubs with real blackbox metrics.
-4. Fill Slack / PagerDuty route IDs in observability alert table.
-5. Close remaining #65 exporter items; keep these files as the source of truth
+1. Import the RED dashboard and validate the queries against each deployed
+   replica.
+2. Tune aggregate error-ratio and mean-latency thresholds from production
+   baselines.
+3. Add route-labelled ingest/replay counters before enabling their alert
+   stubs.
+4. Replace `probe_*` stubs with real blackbox metrics.
+5. Fill Slack / PagerDuty route IDs in the observability alert table.
+6. Close remaining #65 exporter items; keep these files as the source of truth
    for rule intent.

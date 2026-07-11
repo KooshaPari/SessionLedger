@@ -72,3 +72,45 @@ fn rich_auth_contract_matches_golden() {
 
     assert_golden("auth", &session);
 }
+
+#[test]
+fn claude_code_tool_assisted_change_matches_golden() {
+    let mut session = Session::new("golden-claude-tool", Corpus::ClaudeCode);
+    session.cwd = Some("/workspace/payments".into());
+    session.title = Some("Webhook retry hardening".into());
+    session.messages = vec![
+        Message::new(
+            Role::User,
+            "Add bounded webhook retries in src/webhooks.rs; do not change the event schema.",
+        ),
+        Message::new(Role::Assistant, "I will inspect the retry path and preserve compatibility."),
+        Message::new(Role::Tool, "cargo test webhooks: 18 passed"),
+        Message::new(
+            Role::User,
+            "Tests pass. Verify duplicate events remain idempotent, then ship it.",
+        ),
+    ];
+
+    assert_golden("claude-tool", &session);
+}
+
+#[test]
+fn factory_droid_delegated_refactor_matches_golden() {
+    let mut session = Session::new("golden-factory-droid", Corpus::FactoryDroid);
+    session.cwd = Some("C:\\work\\ledger".into());
+    session.title = Some("Parser allocation cleanup".into());
+    session.messages = vec![
+        Message::new(
+            Role::User,
+            "Refactor src/parser.rs to reduce allocations, but preserve parse_record behavior.",
+        ),
+        Message::new(Role::Subagent, "Measured the hot loop and proposed borrowing input slices."),
+        Message::new(
+            Role::Assistant,
+            "Applied the borrowing refactor without changing parse_record.",
+        ),
+        Message::new(Role::User, "Looks good; cargo test passes and the benchmark improved."),
+    ];
+
+    assert_golden("factory-droid", &session);
+}

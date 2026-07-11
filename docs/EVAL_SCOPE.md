@@ -17,10 +17,36 @@ work that belongs here is limited to:
 | OKF conformance corpus | Hand-vetted `.okf.json` fixtures for parsers / validators / renderers | [`docs/reference/conformance/fixtures/`](reference/conformance/fixtures/) |
 | Spec + examples | Structural rules and worked shapes | [`OKF-SPEC.md`](reference/OKF-SPEC.md), [`OKF-EXAMPLES.md`](reference/OKF-EXAMPLES.md) |
 | Round-trip / unit tests | Compile and parse assertions against fixtures | `tests/`, crate unit tests |
+| Pipeline performance | Criterion measurements for distill compile, OKF export, and injection rendering | `benches/pipeline.rs` |
 | Quality gates | Coverage / lint / mutation as configured | `.qgate.toml`, CI |
 
 These surfaces verify that SessionLedger emits and consumes valid OKF. They
 are **not** multi-environment agent benchmarks.
+
+---
+
+## Running the pipeline benchmarks
+
+Run the release-mode Criterion suite from the repository root:
+
+```sh
+cargo bench --bench pipeline
+```
+
+The suite uses a deterministic 200-message session and measures the three
+I/O-free stages independently: distill compile, OKF export from a precompiled
+bundle, and injection rendering from that same bundle. Compare results on the
+same host and toolchain; machine load and power management can materially
+affect timings.
+
+Benchmarks are intentionally not a blocking CI threshold. Shared GitHub
+runner timing is noisy, and this repository does not yet carry a stable
+hardware-specific baseline. CI still compiles the bench target through
+`cargo build --all-targets --locked`; maintainers run the command above when
+changing a measured path.
+
+These product-local pipeline benchmarks do not change the boundary below:
+Harbor and multi-environment agent evaluation remain **N/A**.
 
 ---
 

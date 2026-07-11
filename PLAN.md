@@ -34,6 +34,8 @@ Do not claim a task already marked `done`. Prefer worktrees per `AGENTS.md`.
 | T-024 | Crash-detector MVP → unfinished Worklog projection | FR-011 | M | done | `src/domain/worklog.rs`; #90 |
 | T-030 | Contract / Dedup compilers + token estimator | FR-012 | M | done | `src/distill/{contract,dedup}_compiler.rs`; #92 |
 | T-031 | Bundle inject renderer (prompt form) | FR-012 | M | done | `src/inject.rs`; #95 |
+| T-036 | Viewer unfinished / in-progress section | FR-011 | M | done | unfinished tab; #97 |
+| T-037 | Golden OKF corpus + snapshot tests | FR-013 | M | done | golden corpus; #98 |
 
 ---
 
@@ -45,8 +47,6 @@ Do not claim a task already marked `done`. Prefer worktrees per `AGENTS.md`.
 | T-033 | Codex / Claude / Cursor JSONL adapters | FR-001 | L | todo | T-005 |
 | T-034 | MemoryStore + Compressor + TraceSink adapters | FR-015 | L | todo | T-032 |
 | T-035 | Dedup merge executor + lost-work localizer E2E | FR-011 | L | todo | T-024, T-030 |
-| T-036 | Viewer unfinished / in-progress section | FR-011 | M | todo | T-024 |
-| T-037 | Golden OKF corpus + snapshot tests | FR-013 | M | todo | T-003 |
 | T-038 | Coverage ratchet toward DESIGN 85% gate | — | L | todo | T-032 |
 
 ---

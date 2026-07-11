@@ -11,6 +11,7 @@ P0 product work. Remaining deep-obs work tracks [issue #65](https://github.com/K
 | Liveness | `GET /healthz` | Returns `200` + body `ok`. Process is up. |
 | Readiness | `GET /readyz` | Returns `200` + `ready` when `out_dir` exists; else `503`. Used by process-compose. |
 | Metrics | `GET /api/metrics` | Aggregated bundle stats: totals, avg tokens, model + daily histograms (`crates/sl-daemon/src/metrics.rs`). |
+| Prometheus RED metrics | `GET /metrics` | Process-local request count, HTTP errors, and request-duration sum/count. |
 | Live events | `GET /api/stream` | SSE of newly written `*.okf.json` paths (viewer LiveFeed). |
 | Replay | `GET /api/replay/:id` | SSE entity playback (not ops metrics; product replay). |
 
@@ -43,7 +44,7 @@ Local-dev / single-operator SLOs. Not production SLAs.
 | Daemon availability | Fraction of successful `/readyz` probes | ≥99% during `make dev` sessions | Per session | `/readyz` HTTP status |
 | Ingest success rate | Valid OKF posts accepted / total posts | ≥95% | Rolling 24h (manual) | Logs + future RED counter; `/api/metrics` for volume |
 | Replay start latency | Time to first SSE event on `/api/replay/:id` | p95 &lt; 2s for fixture bundles | Per fixture run | Manual stopwatch / future histogram |
-| Metrics endpoint availability | `/api/metrics` returns `200` | ≥99% when daemon ready | Per session | curl / future scrape |
+| Metrics endpoint availability | `/api/metrics` and `/metrics` return `200` | ≥99% when daemon ready | Per session | curl / Prometheus scrape |
 
 ### Error budget (stub policy)
 
@@ -58,24 +59,25 @@ Error budget: treat local-dev SLO misses as friction-log entries, not pages.
 Alerting/dashboards remain soft goals — see [Alert stubs](#alert-stubs) and
 issue #65 (OTLP + remaining C05 depth).
 
-There is **no** Prometheus scrape endpoint in-tree. A feature-gated OTLP trace
-export sketch is available as described below. `TraceSink` is a design port
+The lightweight `/metrics` endpoint requires no collector or extra feature and
+exports process-lifetime HTTP RED counters. A feature-gated OTLP trace export
+sketch is also available as described below. `TraceSink` is a design port
 ([`docs/DESIGN.md`](../DESIGN.md) §6) composed with external Phenotype
 observability systems.
 
 ## RED metrics mapping
 
 [RED](https://www.weave.works/blog/the-red-method-key-metrics-for-microservices-architecture/)
-(Rate, Errors, Duration) mapped to SessionLedger surfaces. Columns marked
-*stub* are not emitted yet — placeholders for exporters under issue #65.
+(Rate, Errors, Duration) mapped to SessionLedger surfaces.
 
-| RED | Meaning | Current signal | Intended metric (stub name) | Export path (future) |
-|-----|---------|----------------|-----------------------------|----------------------|
-| **R**ate | Ingest / HTTP request volume | `/api/metrics` `total_bundles`; access logs (none yet) | `sl_ingest_requests_total` | OTLP counter / Prometheus |
+| RED | Meaning | Current signal | Metric | Export path |
+|-----|---------|----------------|--------|-------------|
+| **R**ate | HTTP request volume | Process-local counter | `sl_http_requests_total` | `/metrics` |
 | **R**ate | Replay / stream consumers | SSE connect count (not counted) | `sl_sse_clients` | OTLP up-down counter |
-| **E**rrors | Failed ingest / 4xx–5xx | Process logs (`error`/`warn`) | `sl_ingest_errors_total{reason}` | OTLP counter |
+| **E**rrors | HTTP 4xx–5xx responses | Process-local counter | `sl_http_errors_total` | `/metrics` |
 | **E**rrors | Readiness failures | `/readyz` → `503` | `sl_readyz_failures_total` | OTLP counter |
-| **D**uration | Ingest → compile → write | Not timed | `sl_ingest_duration_seconds` | OTLP histogram |
+| **D**uration | HTTP request time | Process-local summary sum/count | `sl_http_request_duration_seconds` | `/metrics` |
+| **D**uration | Ingest → compile → write | Not timed | `sl_ingest_duration_seconds` | OTLP histogram (future) |
 | **D**uration | Replay time-to-first-byte | Manual | `sl_replay_ttfb_seconds` | OTLP histogram |
 | **D**uration | `/api/metrics` compute | Not timed | `sl_metrics_handler_duration_seconds` | OTLP histogram |
 
@@ -93,7 +95,7 @@ land; until then, operators use the runbook triage table.
 | `SL-HEALTHZ-DOWN` | `/healthz` unreachable for &gt; 1m | P1 | PagerDuty service TBD | [`runbook.md`](runbook.md) — Common failures |
 | `SL-INGEST-ERROR-BUDGET` | Ingest error rate &gt; 5% over 15m | P2 | Slack (TBD) | friction-log + validate OKF |
 | `SL-REPLAY-LATENCY` | Replay TTFB p95 &gt; 2s (fixtures) | P3 | None (friction-log) | Manual fixture replay |
-| `SL-METRICS-STALE` | `/api/metrics` 5xx or timeout &gt; 5m | P3 | Slack (TBD) | [`runbook.md`](runbook.md) — Metrics |
+| `SL-METRICS-STALE` | `/metrics` unavailable for &gt; 5m | P3 | Slack (TBD) | [`runbook.md`](runbook.md) — Metrics |
 
 See also [`alerts.md`](alerts.md) for copy-paste stub definitions.
 
@@ -108,9 +110,10 @@ are addressed here; **remaining code work**:
 | `GET /readyz` distinct from liveness | **Done** (daemon + process-compose) | Documented above |
 | SLO / error-budget stubs in this doc | **Done** (stubs) | This file |
 | `tracing` subscriber + env log discipline | **Done** | fmt subscriber + `RUST_LOG` |
+| Optional production JSON logs | **Done** | `json-logs` feature + `SL_LOG_FORMAT=json` |
 | Soft-goal OTLP export sketch | **Feature-gated sketch** | `otel` Cargo feature; traces only |
-| W3C `traceparent` propagation | **Not done** | `T-034` / TraceSink adapters |
-| Prometheus / OTLP RED exporters | **Not done** | Parallel to `/api/metrics` |
+| W3C `traceparent` propagation | **HTTP sketch** | Valid v00 context parsed, attached to request span, echoed on response |
+| Prometheus / OTLP RED exporters | **Prometheus HTTP RED subset done** | `/metrics`, parallel to `/api/metrics` |
 
 Build the optional exporter without changing the default dependency graph:
 
@@ -127,12 +130,33 @@ neither variable is set, the daemon keeps its normal fmt subscriber and
 
 Remaining future work:
 
-1. Propagate W3C `traceparent` across ingest → compile → export when adapters land.
-2. Emit RED counters/histograms (table above) via OTLP or a dedicated scrape path —
-   without breaking the current `/api/metrics` JSON summary.
+1. Continue W3C context across ingest → compile → export when adapters land.
+2. Add endpoint labels and histogram buckets, or bridge the RED signals to OTLP.
 
 Operators without the `otel` feature continue to rely on `/healthz`, `/readyz`,
-`/api/metrics`, and process logs.
+`/api/metrics`, `/metrics`, and process logs.
+
+## HTTP trace-context sketch
+
+Every HTTP route accepts a W3C `traceparent` header in the common
+`00-<trace-id>-<parent-id>-<flags>` form. Valid lowercase contexts are attached
+to the `http.request` tracing span as `trace_id`, `parent_span_id`, and
+`trace_flags`, then echoed on the response. Invalid headers are ignored. This
+is deliberately a propagation sketch: it does not create a replacement trace
+ID and does not yet connect context to ETL adapter spans.
+
+## Production log format
+
+The default build and output remain the human-readable fmt subscriber. For
+newline-delimited JSON suitable for log collectors:
+
+```bash
+cargo build -p sl-daemon --features json-logs
+SL_LOG_FORMAT=json RUST_LOG=sl_daemon=info ./target/debug/sl serve ...
+```
+
+Setting `SL_LOG_FORMAT=json` without the `json-logs` feature has no effect.
+The feature composes with `otel` (`--features json-logs,otel`).
 
 ## Log level discipline
 

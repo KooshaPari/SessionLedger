@@ -20,8 +20,12 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Instant;
 
+use axum::extract::Request;
 use axum::extract::{Path as AxumPath, Query, State};
+use axum::http::{header::CONTENT_TYPE, HeaderValue};
+use axum::middleware::{self, Next};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -32,13 +36,13 @@ use serde_json::Value;
 use tokio::sync::broadcast;
 
 use crate::export::BundleMeta;
-use crate::metrics::compute_metrics;
 use crate::filter::{apply_filters, FilterSpec};
+use crate::metrics::{compute_metrics, HttpMetrics};
 use crate::validation::{validate_okf_bundle, PostBundle};
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt as _;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::{error, info, warn};
+use tracing::{error, info, warn, Instrument as _};
 
 /// Shared state threaded into every handler.
 #[derive(Clone)]
@@ -48,11 +52,14 @@ pub(crate) struct AppState {
     /// Broadcast receiver factory: each SSE connection subscribes to a fresh
     /// receiver. The sender lives in the ETL consumer task.
     pub broadcast_tx: broadcast::Sender<PathBuf>,
+    /// Process-local RED counters for the Prometheus scrape endpoint.
+    pub http_metrics: Arc<HttpMetrics>,
 }
 
 /// Build the axum [`Router`].
 pub(crate) fn router(state: AppState) -> Router {
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
+    let http_metrics = state.http_metrics.clone();
 
     Router::new()
         .route("/healthz", get(healthz))
@@ -63,7 +70,9 @@ pub(crate) fn router(state: AppState) -> Router {
         .route("/api/replay/{bundle_id}", get(replay_bundle))
         .route("/api/ingest", post(ingest_bundle))
         .route("/api/metrics", get(metrics_handler))
+        .route("/metrics", get(prometheus_metrics))
         .with_state(state)
+        .layer(middleware::from_fn_with_state(http_metrics, observe_request))
         .layer(cors)
 }
 
@@ -128,6 +137,96 @@ async fn list_bundles(State(state): State<AppState>) -> Response {
 #[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
 async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     Json(compute_metrics(&state.out_dir))
+}
+
+/// `GET /metrics` — process-local HTTP RED metrics in Prometheus text format.
+async fn prometheus_metrics(State(state): State<AppState>) -> Response {
+    (
+        [(CONTENT_TYPE, HeaderValue::from_static("text/plain; version=0.0.4; charset=utf-8"))],
+        state.http_metrics.render_prometheus(),
+    )
+        .into_response()
+}
+
+const TRACEPARENT: &str = "traceparent";
+
+#[derive(Debug, PartialEq, Eq)]
+struct TraceParent {
+    trace_id: String,
+    parent_id: String,
+    flags: String,
+}
+
+/// Parse the commonly deployed W3C trace-context version (`00`).
+fn parse_traceparent(value: &str) -> Option<TraceParent> {
+    if value.len() != 55 || !value.is_ascii() {
+        return None;
+    }
+    let bytes = value.as_bytes();
+    if &bytes[0..3] != b"00-" || bytes[35] != b'-' || bytes[52] != b'-' {
+        return None;
+    }
+    let trace_id = &value[3..35];
+    let parent_id = &value[36..52];
+    let flags = &value[53..55];
+    let is_lower_hex = |part: &str| {
+        part.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    };
+    if !is_lower_hex(trace_id)
+        || !is_lower_hex(parent_id)
+        || !is_lower_hex(flags)
+        || trace_id.bytes().all(|byte| byte == b'0')
+        || parent_id.bytes().all(|byte| byte == b'0')
+    {
+        return None;
+    }
+    Some(TraceParent {
+        trace_id: trace_id.to_owned(),
+        parent_id: parent_id.to_owned(),
+        flags: flags.to_owned(),
+    })
+}
+
+/// Count and trace every HTTP request while preserving valid upstream context.
+async fn observe_request(
+    State(metrics): State<Arc<HttpMetrics>>,
+    request: Request,
+    next: Next,
+) -> Response {
+    metrics.request_started();
+    let started = Instant::now();
+    let method = request.method().clone();
+    let path = request.uri().path().to_owned();
+    let propagated = request
+        .headers()
+        .get(TRACEPARENT)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| parse_traceparent(value).map(|parsed| (value.to_owned(), parsed)));
+    let (traceparent, trace_id, parent_span_id, trace_flags) =
+        propagated.as_ref().map_or((None, "", "", ""), |(value, parsed)| {
+            (
+                Some(value.clone()),
+                parsed.trace_id.as_str(),
+                parsed.parent_id.as_str(),
+                parsed.flags.as_str(),
+            )
+        });
+    let span = tracing::info_span!(
+        "http.request",
+        http.method = %method,
+        http.route = %path,
+        trace_id = %trace_id,
+        parent_span_id = %parent_span_id,
+        trace_flags = %trace_flags,
+    );
+    let mut response = next.run(request).instrument(span).await;
+    if let Some(value) = traceparent.and_then(|value| HeaderValue::from_str(&value).ok()) {
+        response.headers_mut().insert(TRACEPARENT, value);
+    }
+    let is_error = response.status().is_client_error() || response.status().is_server_error();
+    let elapsed = started.elapsed().as_micros().try_into().unwrap_or(u64::MAX);
+    metrics.request_completed(is_error, elapsed);
+    response
 }
 
 /// `GET /api/stream` — SSE; one event per newly-written `*.okf.json` path.
@@ -494,5 +593,58 @@ mod tests {
     fn delay_very_high_speed_at_least_1ms() {
         // 200 / 1000 = 0.2 → rounds to 0 → clamped to 1.
         assert!(delay_ms_for_speed(1000.0) >= 1);
+    }
+
+    #[test]
+    fn parses_valid_traceparent() {
+        let parsed =
+            parse_traceparent("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01").unwrap();
+        assert_eq!(parsed.trace_id, "4bf92f3577b34da6a3ce929d0e0e4736");
+        assert_eq!(parsed.parent_id, "00f067aa0ba902b7");
+        assert_eq!(parsed.flags, "01");
+    }
+
+    #[test]
+    fn rejects_malformed_or_zero_traceparent() {
+        assert!(parse_traceparent("not-a-traceparent").is_none());
+        assert!(
+            parse_traceparent("00-00000000000000000000000000000000-00f067aa0ba902b7-01").is_none()
+        );
+        assert!(
+            parse_traceparent("00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01").is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn http_observability_middleware_propagates_and_counts() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (broadcast_tx, _) = broadcast::channel(1);
+        let state = AppState {
+            out_dir: Arc::new(out_dir.path().to_owned()),
+            broadcast_tx,
+            http_metrics: Arc::new(HttpMetrics::default()),
+        };
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, router(state)).await.unwrap();
+        });
+        let base_url = format!("http://{addr}");
+        let traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+        let client = reqwest::Client::new();
+
+        let health = client
+            .get(format!("{base_url}/healthz"))
+            .header(TRACEPARENT, traceparent)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(health.headers().get(TRACEPARENT).unwrap(), traceparent);
+
+        let metrics =
+            client.get(format!("{base_url}/metrics")).send().await.unwrap().text().await.unwrap();
+        assert!(metrics.contains("sl_http_requests_total 2"));
+        assert!(metrics.contains("sl_http_errors_total 0"));
+        server.abort();
     }
 }

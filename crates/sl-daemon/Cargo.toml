@@ -49,6 +49,7 @@ unsafe_code = "forbid"
 
 [features]
 default = []
+json-logs = ["tracing-subscriber/json"]
 otel = [
     "dep:opentelemetry",
     "dep:opentelemetry_sdk",

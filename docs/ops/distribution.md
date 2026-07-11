@@ -16,9 +16,10 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Channel | Status | Notes |
 |---------|--------|-------|
 | GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS`, and attempts keyless cosign signing |
-| Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` |
-| brew / crates.io / MSI / DMG / AppImage | Deferred | Soft goals; not required for Wave-2 C11 lift |
-| Tray / menubar / auto-update | Soft / N-A | Product remains daemon + desktop viewer |
+| Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
+| Installer script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS GitHub Release artifacts |
+| brew / crates.io / MSI / DMG / AppImage | Deferred | Soft distribution goals |
+| Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 
 ### Release matrix (CI)
 
@@ -46,11 +47,12 @@ SHA256SUMS.sigstore.json
 cosign installation, signing, or Release upload is unavailable. Its absence
 does not fail or retract the otherwise valid unsigned Release.
 
-**Windows matrix status:** release CI already produces an unsigned
-`x86_64-pc-windows-msvc` zip. The local `packaging/Makefile` scaffold covers
-macOS `.app` + Linux binary only — there is no `package-windows` Make target
-yet. Day-to-day `ci.yml` remains Linux-only (Phenotype billing policy); Windows
-coverage is release-tag scoped, not PR CI.
+**Windows matrix status:** release CI produces an unsigned
+`x86_64-pc-windows-msvc` zip. On a Windows host, the local
+`package-windows` target produces an equivalent versioned portable ZIP via
+`scripts/package-windows.ps1`. Day-to-day `ci.yml` remains Linux-only
+(Phenotype billing policy); Windows coverage is release-tag scoped, not PR CI.
+An MSI/NSIS installer and Authenticode signing remain explicitly deferred.
 
 ---
 
@@ -146,9 +148,27 @@ Until then, treat `SL_DATA_DIR` (and `--out` / `--data-dir`) as the SSOT.
 ```bash
 make -C packaging package-macos   # → packaging/dist/SessionLedger.app
 make -C packaging package-linux   # → packaging/dist/linux/SessionLedger
+# On Windows:
+make -C packaging package-windows # → packaging/dist/sl-viewer-v<version>-x86_64-pc-windows-msvc.zip
 ```
 
 See [`packaging/README.md`](../../packaging/README.md).
+
+### Installer script draft (Linux / macOS)
+
+The repository includes a documented but unpublished install-channel stub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scripts/install.sh | sh
+```
+
+It resolves the latest GitHub Release, downloads the matching archive and
+`SHA256SUMS`, verifies the archive, and installs `sl-viewer` to
+`~/.local/bin`. Set `SL_VERSION=v0.1.0` to pin a release or `SL_INSTALL_DIR`
+to change the destination. Review the script before piping it to a shell.
+
+This is not a Homebrew formula or hosted installer service, and it does not
+enable automatic updates.
 
 ---
 

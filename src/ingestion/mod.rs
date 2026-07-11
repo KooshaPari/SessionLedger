@@ -62,3 +62,71 @@ pub fn read_jsonl_sessions<P: AsRef<Path>>(path: P) -> Result<Vec<Session>, Inge
     let file = std::fs::File::open(path)?;
     parse_jsonl_sessions(file)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::session::{Corpus, Message, Role};
+    use std::io::Write as _;
+
+    #[test]
+    fn adapter_markers_report_their_source_corpus() {
+        assert_eq!(claude_code::ClaudeCodeAdapter.corpus(), Corpus::ClaudeCode);
+        assert_eq!(codex::CodexAdapter.corpus(), Corpus::Codex);
+        assert_eq!(cursor::CursorAdapter.corpus(), Corpus::Cursor);
+        assert_eq!(forge::ForgeAdapter.corpus(), Corpus::Forge);
+    }
+
+    #[test]
+    fn parser_ignores_blank_lines_and_preserves_session_order() {
+        let mut first = Session::new("first", Corpus::Codex);
+        first.messages.push(Message::new(Role::User, "one"));
+        let second = Session::new("second", Corpus::Cursor);
+        let input = format!(
+            "\n{}\n \t\n{}\n",
+            serde_json::to_string(&first).expect("serialize first session"),
+            serde_json::to_string(&second).expect("serialize second session")
+        );
+
+        let sessions = parse_jsonl_sessions(input.as_bytes()).expect("parse valid JSONL");
+
+        assert_eq!(sessions, vec![first, second]);
+    }
+
+    #[test]
+    fn parser_reports_the_physical_line_for_malformed_json() {
+        let valid = serde_json::to_string(&Session::new("valid", Corpus::Forge))
+            .expect("serialize valid session");
+        let input = format!("\n{valid}\n{{not-json}}\n");
+
+        let error = parse_jsonl_sessions(input.as_bytes()).expect_err("line three is malformed");
+
+        match error {
+            IngestionError::Json { line, msg } => {
+                assert_eq!(line, 3);
+                assert!(!msg.is_empty());
+            }
+            IngestionError::Io(error) => panic!("expected JSON error, got {error}"),
+        }
+    }
+
+    #[test]
+    fn file_reader_parses_jsonl_from_disk() {
+        let session = Session::new("from-file", Corpus::ClaudeCode);
+        let mut file = tempfile::NamedTempFile::new().expect("create temporary JSONL");
+        writeln!(file, "{}", serde_json::to_string(&session).expect("serialize session"))
+            .expect("write JSONL fixture");
+
+        let sessions = read_jsonl_sessions(file.path()).expect("read JSONL fixture");
+
+        assert_eq!(sessions, vec![session]);
+    }
+
+    #[test]
+    fn file_reader_surfaces_missing_file_as_io_error() {
+        let directory = tempfile::tempdir().expect("create temporary directory");
+        let missing = directory.path().join("missing.jsonl");
+
+        assert!(matches!(read_jsonl_sessions(missing), Err(IngestionError::Io(_))));
+    }
+}

@@ -236,4 +236,36 @@ mod tests {
         assert!(prompt.contains("line one\\n## fake section"));
         assert_eq!(prompt.matches("\n## ").count(), 0);
     }
+
+    #[test]
+    fn standalone_renderer_labels_every_bundle_kind() {
+        let cases = [
+            (BundleKind::Acceptance, "ACCEPTANCE", "acceptance"),
+            (BundleKind::Contract, "CONTRACT", "contract"),
+            (BundleKind::Context, "CONTEXT", "context"),
+            (BundleKind::Intent, "INTENT", "intent"),
+            (BundleKind::Provenance, "PROVENANCE", "provenance"),
+            (BundleKind::Worklog, "WORKLOG", "worklog"),
+            (BundleKind::Dedup, "DEDUP", "dedup"),
+        ];
+
+        for (kind, label, name) in cases {
+            let prompt =
+                render_slice_prompt(&slice(kind, 2, json!({"kind": name}))).expect("render slice");
+            assert!(prompt.starts_with(&format!("## {label} SLICE")));
+            assert!(prompt.contains(&format!("kind: {name}")));
+            assert!(prompt.contains("estimated_tokens: 2"));
+        }
+    }
+
+    #[test]
+    fn default_bundle_renderer_uses_the_acceptance_gate() {
+        let mut bundle = ContinuationBundle::new("wrapper");
+        bundle.push(slice(BundleKind::Acceptance, 1, json!({"ready": true})));
+
+        let prompt = render_prompt(&bundle).expect("acceptance makes bundle injectable");
+
+        assert!(prompt.contains("source_id: \"wrapper\""));
+        assert!(prompt.contains("## ACCEPTANCE SLICE"));
+    }
 }

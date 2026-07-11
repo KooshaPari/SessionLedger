@@ -26,10 +26,10 @@ flowchart TD
     T024[T-024 crash detector]
     T025[T-025 FR-gap CI note]
     T030[T-030 Contract/Dedup]
+    T031[T-031 inject renderer]
   end
 
   subgraph p1 [P1 todo]
-    T031[T-031 inject renderer]
     T032[T-032 forge sqlite]
     T033[T-033 other corpora]
     T034[T-034 memory/trace adapters]
@@ -74,4 +74,4 @@ flowchart TD
 - **Foundation (done):** T-001 → T-005 → {T-006…T-012}; T-002 → T-003; T-004, T-013, T-014 parallel docs/brand.
 - **P0 obs (done):** T-014 → {T-020, T-023, T-025}; T-005 → T-021 → T-022.
 - **P0 recovery (done):** T-005+T-001 → T-024.
-- **P1 depth:** T-030 done → T-031; T-005 → {T-032, T-033}; T-032 → T-034 / T-038; T-024+T-030 → T-035; T-024 → T-036; T-003 → T-037.
+- **P1 depth:** T-030/T-031 done → T-032+; T-005 → {T-032, T-033}; T-032 → T-034 / T-038; T-024+T-030 → T-035; T-024 → T-036; T-003 → T-037.

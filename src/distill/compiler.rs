@@ -30,6 +30,8 @@
 //! assert!(!text.is_empty());
 //! ```
 
+use crate::distill::contract_compiler::ContractCompiler;
+use crate::distill::token_estimator::{CharCountTokenEstimator, TokenEstimator};
 use crate::domain::acceptance::Acceptance;
 use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 use crate::domain::context::Context;
@@ -40,6 +42,11 @@ use crate::ports::{
     AcceptanceExtractor, ContextExtractor, ContractExtractor, IntentExtractor, PortError,
 };
 use serde_json::json;
+
+fn sized_bundle(kind: BundleKind, body: serde_json::Value) -> Bundle {
+    let token_estimate = CharCountTokenEstimator.estimate_json(&body);
+    Bundle { kind, token_estimate, body }
+}
 
 /// Compilation error.
 #[derive(Debug, thiserror::Error)]
@@ -99,7 +106,7 @@ where
         // Check if session appears ready for injection.
         let ready = acceptance.satisfaction_score > 0 || !session.messages.is_empty();
 
-        bundle.push(Bundle::new(
+        bundle.push(sized_bundle(
             BundleKind::Acceptance,
             json!({
                 "ready": ready,
@@ -111,7 +118,7 @@ where
                 "satisfaction_score": acceptance.satisfaction_score,
             }),
         ));
-        bundle.push(Bundle::new(
+        bundle.push(sized_bundle(
             BundleKind::Intent,
             json!({
                 "goal": intent.goal,
@@ -120,7 +127,7 @@ where
                 "user_turn_count": intent.user_turn_count,
             }),
         ));
-        bundle.push(Bundle::new(
+        bundle.push(sized_bundle(
             BundleKind::Context,
             json!({
                 "cwd": context.cwd,
@@ -131,16 +138,8 @@ where
                 "environment_notes": context.environment_notes,
             }),
         ));
-        bundle.push(Bundle::new(
-            BundleKind::Contract,
-            json!({
-                "success_criteria": contract.success_criteria,
-                "tests_or_verifications": contract.tests_or_verifications,
-                "constraints": contract.constraints,
-                "do_not_touch": contract.do_not_touch,
-            }),
-        ));
-        bundle.push(Bundle::new(
+        bundle.push(ContractCompiler::new(CharCountTokenEstimator).compile(&contract));
+        bundle.push(sized_bundle(
             BundleKind::Provenance,
             json!({ "corpus": session.corpus, "source_id": session.id }),
         ));
@@ -278,6 +277,7 @@ mod tests {
         // Should NOT include Worklog or Dedup (not in the 4-extractor compiler).
         assert!(!bundle.has(BundleKind::Worklog));
         assert!(!bundle.has(BundleKind::Dedup));
+        assert!(bundle.bundles.iter().all(|slice| slice.token_estimate > 0));
     }
 
     #[test]

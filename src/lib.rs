@@ -25,10 +25,14 @@ pub mod ingestion;
 pub mod ports;
 pub mod viewer;
 
+pub use distill::contract_compiler::ContractCompiler;
+pub use distill::dedup_compiler::{DedupCompileError, DedupCompiler};
+pub use distill::token_estimator::{CharCountTokenEstimator, TokenEstimator};
 pub use domain::acceptance::Acceptance;
 pub use domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 pub use domain::context::{Context, Decision};
 pub use domain::contract::Contract;
+pub use domain::dedup::{DedupKey, DedupManifest, DedupMember};
 pub use domain::intent::{Intent, IntentState};
 pub use domain::session::{Message, Role, Session};
 pub use domain::worklog::{

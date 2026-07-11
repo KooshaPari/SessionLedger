@@ -35,7 +35,10 @@ pub use domain::context::{Context, Decision};
 pub use domain::contract::Contract;
 pub use domain::dedup::{DedupKey, DedupManifest, DedupMember};
 pub use domain::intent::{Intent, IntentState};
-pub use domain::session::{Message, Role, Session};
+pub use domain::merge::{
+    LostWorkError, LostWorkLocalizer, MergeError, MergeExecutor, MergeMessageOrder, MergeResult,
+};
+pub use domain::session::{Corpus, Message, Role, Session};
 pub use domain::worklog::{
     detect_unfinished, project_unfinished_work, UnfinishedReason, UnfinishedWorkItem,
     WorklogProjection,

@@ -16,7 +16,7 @@ thiserror = "2"
 flate2 = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
 # HTTP server (axum-based SSE bridge)
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.8", features = ["macros"] }
 tower-http = { version = "0.6", features = ["cors"] }
 futures-core = "0.3"
 tokio-stream = { version = "0.1", features = ["sync"] }

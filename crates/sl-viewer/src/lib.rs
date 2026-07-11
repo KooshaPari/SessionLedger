@@ -3,6 +3,7 @@
 //! Three tabs:
 //! - **Bundles** — browse compiled continuation bundles
 //! - **History** — session history timeline
+//! - **Unfinished** — work that may need to be resumed
 //! - **Memory** — wiki/docs view of distilled memories
 //!
 //! Compiled for both desktop (`dioxus-desktop`) and web (`dioxus-web`) via
@@ -24,6 +25,7 @@ pub mod search_view;
 pub mod session_list;
 pub mod theme;
 pub mod timeline;
+pub mod unfinished_tab;
 
 pub use app::App;
 pub use async_states::{ErrorState, LoadingState};

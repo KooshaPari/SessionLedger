@@ -31,6 +31,10 @@ pub use domain::context::{Context, Decision};
 pub use domain::contract::Contract;
 pub use domain::intent::{Intent, IntentState};
 pub use domain::session::{Message, Role, Session};
+pub use domain::worklog::{
+    detect_unfinished, project_unfinished_work, UnfinishedReason, UnfinishedWorkItem,
+    WorklogProjection,
+};
 pub use export::okf::export_to_okf;
 pub use ingestion::{parse_jsonl_sessions, read_jsonl_sessions, IngestionError};
 pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};

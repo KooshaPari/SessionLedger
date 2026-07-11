@@ -20,6 +20,7 @@ pub mod extractor;
 
 use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 use crate::domain::session::Session;
+use crate::domain::worklog::WorklogProjection;
 use serde_json::json;
 
 /// Compile a normalized session into a continuation bundle.
@@ -78,10 +79,38 @@ pub fn compile(session: &Session) -> ContinuationBundle {
         BundleKind::Provenance,
         json!({ "corpus": session.corpus, "source_id": session.id }),
     ));
+    let worklog = WorklogProjection::from_session(session);
     bundle.push(Bundle::new(
         BundleKind::Worklog,
-        json!({ "message_count": session.messages.len(), "unfinished": [] }),
+        json!({
+            "message_count": worklog.message_count,
+            "unfinished": worklog.unfinished,
+        }),
     ));
 
     bundle
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::session::{Corpus, Message, Role};
+
+    #[test]
+    fn compile_populates_serializable_unfinished_worklog() {
+        let mut session = Session::new("crashed-session", Corpus::Codex);
+        session.messages.push(Message::new(Role::User, "Finish the parser"));
+
+        let bundle = compile(&session);
+        let worklog = bundle
+            .bundles
+            .iter()
+            .find(|slice| slice.kind == BundleKind::Worklog)
+            .expect("compiled bundle should contain a worklog");
+        let projection: WorklogProjection =
+            serde_json::from_value(worklog.body.clone()).expect("worklog body should deserialize");
+
+        assert_eq!(projection.unfinished.len(), 1);
+        assert_eq!(projection.unfinished[0].session_id, "crashed-session");
+    }
 }

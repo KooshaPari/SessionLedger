@@ -7,3 +7,4 @@ pub mod contract;
 pub mod dedup;
 pub mod intent;
 pub mod session;
+pub mod worklog;

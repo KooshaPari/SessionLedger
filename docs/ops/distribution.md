@@ -15,7 +15,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 
 | Channel | Status | Notes |
 |---------|--------|-------|
-| GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS`, and attempts keyless cosign signing |
+| GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
 | Installer script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS GitHub Release artifacts |
 | brew / crates.io / MSI / DMG / AppImage | Deferred | Soft distribution goals |
@@ -40,12 +40,14 @@ sl-viewer-<tag>-x86_64-apple-darwin.tar.gz
 sl-viewer-<tag>-aarch64-apple-darwin.tar.gz
 sl-viewer-<tag>-x86_64-pc-windows-msvc.zip
 SHA256SUMS
+session-ledger.cdx.json
 SHA256SUMS.sigstore.json
 ```
 
-`SHA256SUMS.sigstore.json` is best-effort and may be absent when GitHub OIDC,
-cosign installation, signing, or Release upload is unavailable. Its absence
-does not fail or retract the otherwise valid unsigned Release.
+`session-ledger.cdx.json` is the CycloneDX SBOM and is required for the Release
+job to succeed. GitHub build provenance and `SHA256SUMS.sigstore.json` are
+best-effort. OIDC, attestation, cosign installation, signing, or upload failures
+do not fail or retract the otherwise valid unsigned Release.
 
 **Windows matrix status:** release CI produces an unsigned
 `x86_64-pc-windows-msvc` zip. On a Windows host, the local
@@ -235,6 +237,28 @@ entry in `SHA256SUMS` after cosign verifies the checksums file.
 
 Cosign proves the checksums file was signed by this repository's tag workflow;
 the checksum comparison then binds the downloaded archive to that signed file.
+
+### Verify GitHub build provenance
+
+Install and authenticate [GitHub CLI](https://cli.github.com/), then download
+the archive you intend to run. Verify that GitHub's attestation store contains
+provenance issued by this repository:
+
+```bash
+gh attestation verify \
+  sl-viewer-<tag>-x86_64-unknown-linux-gnu.tar.gz \
+  --repo KooshaPari/SessionLedger
+```
+
+Substitute the exact downloaded archive name on macOS or Windows. A successful
+result verifies the artifact digest and its GitHub Actions provenance. It does
+not replace the cosign + `SHA256SUMS` checks above, platform code signing, or
+review of the source.
+
+Provenance is intentionally fail-soft during this rollout. If
+`gh attestation verify` reports that no attestation exists, treat provenance as
+unavailable for that Release and rely on cosign/checksum verification; do not
+interpret the absence as a successful provenance check.
 
 ## Platform code-signing & notarization — DEFERRED
 

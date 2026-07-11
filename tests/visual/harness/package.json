@@ -4,9 +4,11 @@
   "type": "module",
   "scripts": {
     "check:contract": "pwsh -NoProfile -File ./validate.ps1",
-    "test:visual": "playwright test"
+    "test:a11y": "playwright test a11y.spec.js",
+    "test:visual": "playwright test visual.spec.js"
   },
   "devDependencies": {
+    "@axe-core/playwright": "latest",
     "@playwright/test": "latest"
   }
 }

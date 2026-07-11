@@ -66,7 +66,24 @@ Run the headless contract check from the repository root (no GUI or Node install
 pwsh -NoProfile -File tests/visual/harness/validate.ps1
 ```
 
-The optional Playwright stub compares the default Bundles empty state with
+The viewer supports a Dioxus web build, but that build requires the separate
+`dx` toolchain and a WASM compilation. CI therefore uses
+`harness/fixtures/a11y.html`, a deterministic page that mirrors the viewer's
+Lab-Coat tokens, landmarks, ARIA tabs, focus order, and Escape-to-clear
+behavior. The automated suite runs axe-core WCAG AA (including contrast) at
+375, 768, and 1280 CSS pixels, plus keyboard interaction assertions:
+
+```powershell
+cd tests/visual/harness
+npm ci
+npx playwright install chromium
+npm run test:a11y
+```
+
+`.github/workflows/a11y.yml` runs both `validate.ps1` and this Playwright suite
+on Ubuntu as a blocking pull-request check.
+
+The optional Playwright visual spec compares the default Bundles empty state with
 `golden/e1-bundle-empty.png`. Start the web viewer, then:
 
 ```powershell
@@ -92,6 +109,8 @@ tests/visual/
     l1-search-loading.png
     r1-search-error.png
   harness/
+    fixtures/a11y.html ← deterministic Lab-Coat/ARIA CI fixture
+    a11y.spec.js       ← axe, landmark, tabs, focus, viewport evidence
     validate.ps1     ← headless VISUAL_SPEC contract check
     visual.spec.js   ← optional Playwright golden comparison stub
 ```

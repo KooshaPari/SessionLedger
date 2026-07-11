@@ -1,7 +1,7 @@
 # Visual golden checklist (SessionLedger)
 
 Manual acceptance for [`docs/VISUAL_SPEC.md`](../../docs/VISUAL_SPEC.md) (Lab-Coat / L99–L107).  
-Automated screenshot harness is **optional**; until it lands, run this checklist before merging viewer visual changes.
+The contract validator is CI-safe and the Playwright screenshot comparison is an optional/manual stub. Run this checklist before merging viewer visual changes.
 
 ## Prerequisites
 
@@ -58,9 +58,28 @@ Capture or eyeball each surface (store under `tests/visual/golden/` if saving PN
 
 Emulate in Chromium DevTools → Rendering → Emulate CSS media feature `prefers-reduced-motion: reduce`.
 
-## Optional screenshot harness
+## Harness
 
-When adding automation, prefer Playwright (or similar) against a fixed fixture URL:
+Run the headless contract check from the repository root (no GUI or Node install required):
+
+```powershell
+pwsh -NoProfile -File tests/visual/harness/validate.ps1
+```
+
+The optional Playwright stub compares the default Bundles empty state with
+`golden/e1-bundle-empty.png`. Start the web viewer, then:
+
+```powershell
+cd tests/visual/harness
+npm install
+$env:VISUAL_BASE_URL = "http://127.0.0.1:8080"
+npx playwright install chromium
+npm run test:visual
+```
+
+The test is skipped when `VISUAL_BASE_URL` is unset, so installing the stub does not create a false CI failure. To intentionally create or refresh an approved baseline, run `npm run test:visual -- --update-snapshots`, inspect the image, and commit it.
+
+Harness layout:
 
 ```text
 tests/visual/
@@ -72,12 +91,14 @@ tests/visual/
     e4-search-empty.png
     l1-search-loading.png
     r1-search-error.png
-  harness/           ← optional scripts (not required for Wave-1)
+  harness/
+    validate.ps1     ← headless VISUAL_SPEC contract check
+    visual.spec.js   ← optional Playwright golden comparison stub
 ```
 
 Suggested compare tolerance: ≤ 0.1% pixel diff on non-AA regions; ignore OS window chrome.
 
-Stub directory `golden/` is reserved for baselines; commit PNGs only when a harness exists and CI can refresh them intentionally.
+Stub directory `golden/` is reserved for baselines; commit PNGs only after intentional refresh and review.
 
 ## Related checklists
 

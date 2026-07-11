@@ -206,7 +206,20 @@ Implement with a global guard:
 
 ---
 
-## 7. Acceptance (L107)
+## 7. Keyboard map (viewer)
+
+The primary view selector follows the ARIA tabs keyboard pattern:
+
+| Key | Action |
+|-----|--------|
+| `Tab` / `Shift+Tab` | Move focus into or out of the active tab and through controls in the current panel |
+| `Left Arrow` / `Right Arrow` | Select the previous / next primary view, wrapping at either end |
+| `Home` / `End` | Select the first / last primary view |
+| `Enter` / `Space` | Activate the focused tab or focused button |
+
+---
+
+## 8. Acceptance (L107)
 
 A change is visually accepted when:
 

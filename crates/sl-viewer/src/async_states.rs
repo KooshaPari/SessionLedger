@@ -71,7 +71,10 @@ pub fn ErrorState(
                     style: "padding:6px 14px;font-size:12px;font-weight:600;border-radius:5px;cursor:pointer;border:1px solid {c.border};background:{c.bg};color:{c.focus};",
                     onclick: move |_| on_retry.call(()),
                     onkeydown: move |evt: Event<KeyboardData>| {
-                        if matches!(evt.key(), Key::Enter | Key::Character(ref ch) if ch == " ") {
+                        let key = evt.key();
+                        if key == Key::Enter
+                            || matches!(key, Key::Character(ref ch) if ch == " ")
+                        {
                             evt.prevent_default();
                             on_retry.call(());
                         }

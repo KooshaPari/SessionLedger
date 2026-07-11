@@ -44,6 +44,7 @@ pub fn SessionList(props: SessionListProps) -> Element {
         div { class: "session-list",
             input {
                 class: "search-input",
+                "aria-label": "Filter sessions",
                 placeholder: "Filter sessions...",
                 value: "{query}",
                 oninput: move |e| query.set(e.value()),

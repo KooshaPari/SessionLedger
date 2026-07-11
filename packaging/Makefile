@@ -1,11 +1,12 @@
 # SessionLedger desktop packaging
-# Usage: make package-macos | make package-linux | make package-all
+# Usage: make package-macos | make package-linux | make package-windows
 
 APP_NAME := SessionLedger
 VERSION  := $(shell cargo metadata --no-deps --format-version 1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])" 2>/dev/null || echo "0.1.0")
 DIST_DIR := dist
+POWERSHELL ?= powershell
 
-.PHONY: package-macos package-linux package-all clean
+.PHONY: package-macos package-linux package-windows package-all clean
 
 package-macos: $(DIST_DIR)
 	@echo "Packaging $(APP_NAME) $(VERSION) for macOS..."
@@ -23,6 +24,11 @@ package-linux: $(DIST_DIR)
 	cp target/release/sl-viewer $(DIST_DIR)/linux/$(APP_NAME) 2>/dev/null || true
 	@echo "Linux binary: $(DIST_DIR)/linux/$(APP_NAME)"
 
+package-windows:
+	$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File ../scripts/package-windows.ps1
+
+# The Unix targets are host-local scaffolds; Windows packaging runs separately
+# on a Windows host (or in release CI).
 package-all: package-macos package-linux
 
 $(DIST_DIR):

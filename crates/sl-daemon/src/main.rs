@@ -269,7 +269,10 @@ enum TagAction {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _otel_provider = init_tracing();
+    #[cfg(feature = "otel")]
+    let otel_provider = init_tracing();
+    #[cfg(not(feature = "otel"))]
+    init_tracing();
     let args = Args::parse();
 
     match args.command {
@@ -307,7 +310,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     #[cfg(feature = "otel")]
-    if let Some(provider) = _otel_provider {
+    if let Some(provider) = otel_provider {
         let _ = provider.shutdown();
     }
 
@@ -324,7 +327,18 @@ fn init_tracing() {
     let filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
 
+    #[cfg(feature = "json-logs")]
+    if json_logs_requested() {
+        tracing_subscriber::fmt().json().with_env_filter(filter.clone()).with_target(true).init();
+        return;
+    }
+
     tracing_subscriber::fmt().with_env_filter(filter).with_target(true).init();
+}
+
+#[cfg(feature = "json-logs")]
+fn json_logs_requested() -> bool {
+    std::env::var("SL_LOG_FORMAT").is_ok_and(|value| value.eq_ignore_ascii_case("json"))
 }
 
 /// Install the formatting subscriber and, when configured, OTLP trace export.
@@ -344,7 +358,11 @@ fn init_tracing() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
         });
 
     if let Some(endpoint) = endpoint {
-        match otel::init(filter, &endpoint) {
+        #[cfg(feature = "json-logs")]
+        let json_logs = json_logs_requested();
+        #[cfg(not(feature = "json-logs"))]
+        let json_logs = false;
+        match otel::init(filter, &endpoint, json_logs) {
             Ok(provider) => return Some(provider),
             Err(error) => {
                 eprintln!(
@@ -357,6 +375,12 @@ fn init_tracing() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
 
     let filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+    #[cfg(feature = "json-logs")]
+    if json_logs_requested() {
+        tracing_subscriber::fmt().json().with_env_filter(filter.clone()).with_target(true).init();
+        return None;
+    }
+
     tracing_subscriber::fmt().with_env_filter(filter).with_target(true).init();
     None
 }
@@ -418,8 +442,11 @@ async fn run_serve(
         let addr: SocketAddr = http_bind
             .parse()
             .map_err(|e| format!("invalid --http-bind address {http_bind:?}: {e}"))?;
-        let state =
-            http::AppState { out_dir: Arc::new(out.clone()), broadcast_tx: bcast_tx.clone() };
+        let state = http::AppState {
+            out_dir: Arc::new(out.clone()),
+            broadcast_tx: bcast_tx.clone(),
+            http_metrics: Arc::new(metrics::HttpMetrics::default()),
+        };
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
         let handle = tokio::spawn(async move {
             if let Err(e) = http::serve(addr, state, async move {

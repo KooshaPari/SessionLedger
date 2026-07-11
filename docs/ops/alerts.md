@@ -1,8 +1,8 @@
 # Alert stubs — SessionLedger (C05)
 
 **Status:** placeholders only. No Alertmanager / PagerDuty / Grafana rules are
-shipped. Wire exporters first ([issue #65](https://github.com/KooshaPari/SessionLedger/issues/65)
-OTLP + RED metrics), then promote these stubs to real rules.
+shipped. The daemon now exposes baseline HTTP RED counters at `/metrics`;
+endpoint-specific ingest and replay signals remain future work.
 
 Canonical severity + routing table: [`observability.md`](observability.md#alert-stubs).
 Operator triage: [`runbook.md`](runbook.md).
@@ -40,7 +40,7 @@ annotations:
 ### `SL-INGEST-ERROR-BUDGET` (P2)
 
 ```yaml
-# STUB — requires future RED counter sl_ingest_errors_total
+# STUB — requires endpoint-specific ingest counters (not the aggregate HTTP counters)
 alert: SL-INGEST-ERROR-BUDGET
 expr: |
   rate(sl_ingest_errors_total[15m])
@@ -71,19 +71,20 @@ annotations:
 ```yaml
 # STUB
 alert: SL-METRICS-STALE
-expr: probe_success{path="/api/metrics"} == 0
+expr: up{job="sl-daemon"} == 0 or probe_success{path="/metrics"} == 0
 for: 5m
 labels:
   severity: info
 annotations:
-  summary: "/api/metrics unavailable while daemon expected up"
+  summary: "Prometheus /metrics unavailable while daemon expected up"
   runbook: docs/ops/runbook.md#metrics
 ```
 
-## Promotion checklist (when OTLP lands)
+## Promotion checklist
 
-1. Emit RED names from [`observability.md`](observability.md#red-metrics-mapping).
-2. Replace `probe_*` stubs with real blackbox or in-process metrics.
-3. Fill Slack / PagerDuty route IDs in observability alert table.
-4. Close remaining #65 exporter items; keep these files as the source of truth
+1. Scrape the RED names from [`observability.md`](observability.md#red-metrics-mapping).
+2. Add route-labelled ingest/replay counters before enabling their alert stubs.
+3. Replace `probe_*` stubs with real blackbox metrics.
+4. Fill Slack / PagerDuty route IDs in observability alert table.
+5. Close remaining #65 exporter items; keep these files as the source of truth
    for rule intent.

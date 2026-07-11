@@ -14,12 +14,14 @@ use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
 use crate::theme::ThemeColors;
 use crate::timeline::TimelineView;
+use crate::unfinished_tab::UnfinishedWork;
 
 /// Tab identifiers for the viewer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tab {
     Bundles,
     History,
+    Unfinished,
     Memory,
     LiveFeed,
     Search,
@@ -28,9 +30,10 @@ enum Tab {
 }
 
 impl Tab {
-    const ALL: [Tab; 7] = [
+    const ALL: [Tab; 8] = [
         Tab::Bundles,
         Tab::History,
+        Tab::Unfinished,
         Tab::Memory,
         Tab::LiveFeed,
         Tab::Search,
@@ -42,6 +45,7 @@ impl Tab {
         match self {
             Tab::Bundles => "Bundles",
             Tab::History => "History",
+            Tab::Unfinished => "Unfinished",
             Tab::Memory => "Memory",
             Tab::LiveFeed => "Live Feed",
             Tab::Search => "Search",
@@ -54,6 +58,7 @@ impl Tab {
         match self {
             Tab::Bundles => "tab-bundles",
             Tab::History => "tab-history",
+            Tab::Unfinished => "tab-unfinished",
             Tab::Memory => "tab-memory",
             Tab::LiveFeed => "tab-live-feed",
             Tab::Search => "tab-search",
@@ -66,6 +71,7 @@ impl Tab {
         match self {
             Tab::Bundles => "panel-bundles",
             Tab::History => "panel-history",
+            Tab::Unfinished => "panel-unfinished",
             Tab::Memory => "panel-memory",
             Tab::LiveFeed => "panel-live-feed",
             Tab::Search => "panel-search",
@@ -132,6 +138,7 @@ pub fn App() -> Element {
     let tab_body = match active_tab() {
         Tab::Bundles => rsx! { BundlesTab {} },
         Tab::History => rsx! { HistoryTimeline {} },
+        Tab::Unfinished => rsx! { UnfinishedWork {} },
         Tab::Memory => rsx! { MemoryWiki {} },
         Tab::LiveFeed => rsx! { LiveFeed {} },
         Tab::Search => rsx! { SearchView {} },
@@ -167,7 +174,7 @@ pub fn App() -> Element {
                 .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; }}
                 .detail-section li {{ font-size: 13px; line-height: 1.7; color: #a1a6b5; }}
                 .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: #5c5f6e; font-size: 14px; }}
-                .tab-bar {{ display: flex; border-bottom: 1px solid #2a2d35; background: #13151c; }}
+                .tab-bar {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid #2a2d35; background: #13151c; }}
                 .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border: none; border-bottom: 2px solid transparent; background: transparent; transition: all 0.15s; font-family: inherit; }}
                 .tab:hover {{ color: #8b8fa3; background: #1a1c26; }}
                 .tab.active {{ color: #6c8cff; border-bottom-color: #6c8cff; background: #161822; }}

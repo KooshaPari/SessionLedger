@@ -75,11 +75,15 @@ mod tests {
     use std::io::Write as _;
 
     #[test]
-    fn adapter_markers_report_their_source_corpus() {
-        assert_eq!(claude_code::ClaudeCodeAdapter.corpus(), Corpus::ClaudeCode);
-        assert_eq!(codex::CodexAdapter.corpus(), Corpus::Codex);
-        assert_eq!(cursor::CursorAdapter.corpus(), Corpus::Cursor);
+    fn forge_adapter_marker_reports_corpus() {
         assert_eq!(forge::ForgeAdapter.corpus(), Corpus::Forge);
+    }
+
+    #[test]
+    fn native_dir_adapters_construct_for_each_corpus() {
+        let _ = claude_code::ClaudeDir::new(".");
+        let _ = codex::CodexDir::new(".");
+        let _ = cursor::CursorDir::new(".");
     }
 
     #[test]

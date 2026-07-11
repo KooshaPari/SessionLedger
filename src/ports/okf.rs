@@ -173,3 +173,60 @@ pub trait OkfExporter {
     /// Returns [`super::PortError::Backend`] if the export cannot be produced.
     fn export(&self, bundle: &ContinuationBundle) -> Result<Self::Output, super::PortError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Error, Write};
+
+    #[test]
+    fn new_document_copies_source_provenance_and_starts_empty() {
+        let bundle = ContinuationBundle::new("session-42");
+
+        let document = OkfDocument::new(&bundle, "cursor");
+
+        assert_eq!(document.okf, "1.0");
+        assert_eq!(document.source_id, "session-42");
+        assert_eq!(document.provenance.corpus, "cursor");
+        assert_eq!(document.provenance.source_id, "session-42");
+        assert!(document.entities.is_empty());
+        assert!(document.relations.is_empty());
+        assert!(document.tags.is_empty());
+    }
+
+    #[test]
+    fn pretty_json_omits_empty_optional_collections() {
+        let bundle = ContinuationBundle::new("session-42");
+        let document = OkfDocument::new(&bundle, "codex");
+        let mut output = Vec::new();
+
+        document.to_json_pretty(&mut output).expect("serialize OKF document");
+        let value: serde_json::Value =
+            serde_json::from_slice(&output).expect("parse serialized document");
+
+        assert_eq!(value["source_id"], "session-42");
+        assert_eq!(value["provenance"]["corpus"], "codex");
+        assert!(value.get("relations").is_none());
+        assert!(value.get("tags").is_none());
+    }
+
+    #[test]
+    fn pretty_json_surfaces_writer_failures() {
+        struct FailingWriter;
+
+        impl Write for FailingWriter {
+            fn write(&mut self, _buffer: &[u8]) -> std::io::Result<usize> {
+                Err(Error::other("fixture writer failure"))
+            }
+
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+
+        let bundle = ContinuationBundle::new("session-42");
+        let document = OkfDocument::new(&bundle, "forge");
+
+        assert!(document.to_json_pretty(FailingWriter).is_err());
+    }
+}

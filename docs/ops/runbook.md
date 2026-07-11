@@ -96,6 +96,16 @@ belongs in the linked tests. CI changes should preserve that FR → task → tes
 chain; record intentional gaps in the FR catalog or PLAN rather than silently
 dropping coverage.
 
+### Coverage ratchet
+
+The blocking CI job runs `cargo llvm-cov --all-features --fail-under-lines 85`,
+which is the DESIGN line-coverage target. The latest successful `main` baseline
+before the T-038 increment (commit `8733051`) was **98.00% lines**; the portable
+default-feature baseline was **98.17% lines**. The gate remains at 85% because it
+already matches the DESIGN target; future increments should add branch-relevant
+tests and must not lower this floor. The per-module qgate remains non-blocking
+until each module reaches 85%.
+
 ## Related
 
 - [`observability.md`](observability.md) — SLO stubs, RED map, `/healthz` vs `/readyz`, OTel/#65

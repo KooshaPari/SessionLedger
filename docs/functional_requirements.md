@@ -21,7 +21,7 @@ Status: `done` = implemented and covered; `partial` = surface exists, gaps remai
 | FR-008 | Viewer Search | done | `crates/sl-viewer/src/search_view.rs` → `GET /api/search` |
 | FR-009 | Viewer Replay | done | `crates/sl-viewer/src/replay_view.rs` → `GET /api/replay/:id` |
 | FR-010 | Viewer LiveFeed | done | `crates/sl-viewer/src/live_feed.rs` → `GET /api/stream`; `docs/OKF-ROUNDTRIP.md` |
-| FR-011 | Crash recovery / unfinished work surface | partial | DESIGN §5.1; `Worklog` / unfinished projection — domain present; end-to-end crash detector still P1 |
+| FR-011 | Crash recovery / unfinished work surface | partial | DESIGN §5.1; T-024 detector + serializable projection in `src/domain/worklog.rs`; viewer integration remains T-036 |
 | FR-012 | ContinuationBundle compile + inject gate | done | `src/domain/bundle.rs`; `src/distill`; Acceptance slice gate (DESIGN §2) |
 | FR-013 | OKF roundtrip smoke (JSONL→daemon→OKF→viewer contract) | done | `tests/okf_roundtrip.rs`; `docs/OKF-ROUNDTRIP.md`; fixtures under `tests/fixtures/okf/` |
 | FR-014 | Daemon liveness + local ops stack | done | `GET /healthz + GET /readyz`; `process-compose.yaml`; `make dev`; `docs/ops/runbook.md` |
@@ -45,7 +45,9 @@ Default listen: `SL_PORT=8080` (see `process-compose.yaml`).
 
 ## Notes
 
-- FR-011 remains partial until P5 merge/recovery flows (DESIGN §7) land an
-  automated crash detector + unfinished section end-to-end.
+- FR-011's T-024 MVP is complete: normalized sessions are conservatively
+  classified from transcript completion signals and projected into serialized
+  `WorklogProjection` items. The FR remains partial until T-036 displays those
+  items in the viewer's unfinished section.
 - FR-015 documents current HTTP metrics; OpenTelemetry is an intentional soft
   goal, not a P0 blocker.

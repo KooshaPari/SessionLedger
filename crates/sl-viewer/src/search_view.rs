@@ -104,7 +104,7 @@ pub fn SearchView() -> Element {
 
     let mut results: Signal<Vec<SearchResult>> = use_signal(Vec::new);
     let mut error: Signal<Option<String>> = use_signal(|| None);
-    let mut loading = use_signal(|| false);
+    let loading = use_signal(|| false);
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
 
     let mut search_tick: Signal<u32> = use_signal(|| 0u32);

@@ -25,6 +25,7 @@ struct ReplayEntry {
 }
 
 impl ReplayEntry {
+    #[allow(dead_code)] // reserved for desktop SSE JSON decode path
     fn from_json(v: &serde_json::Value) -> Option<Self> {
         let idx = v.get("event_index")?.as_u64()? as usize;
         let total = v.get("total_events")?.as_u64()? as usize;
@@ -206,7 +207,7 @@ pub fn ReplayView() -> Element {
             // Progress bar
             {
                 let (done, total) = *progress.read();
-                let pct = if total > 0 { (done * 100 / total).min(100) } else { 0 };
+                let pct = (done * 100).checked_div(total).unwrap_or(0).min(100);
                 rsx! {
                     div { class: "progress-bar-wrap",
                         div { class: "progress-bar-fill", style: "width: {pct}%;" }

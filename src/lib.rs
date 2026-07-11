@@ -43,6 +43,11 @@ pub use domain::worklog::{
 pub use export::okf::export_to_okf;
 pub use ingestion::{parse_jsonl_sessions, read_jsonl_sessions, IngestionError};
 pub use inject::{render_prompt, render_slice_prompt, InjectRenderError, PromptRenderer};
+#[cfg(feature = "compress")]
+pub use ports::adapters::ZstdCompressor;
+pub use ports::adapters::{
+    InMemoryMemoryStore, NoopTraceSink, PassthroughCompressor, TracingTraceSink,
+};
 pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};
 
 /// Process a single session through the entire ingest→distill→export pipeline.

@@ -181,6 +181,13 @@ Effort in agent terms (tool-call batches / parallel subagents), aggressive bound
 | **P5 Merge/recovery flows** | dedup merge executor; crash detector; lost-work localizer end-to-end | P3, P4 | cross-stack, 8–15 calls |
 | **P6 Hardening** | 85–100% coverage, property tests on FSM/dedup, fuzz adapters, perf on 12.9k corpus | all | major, 15–30 calls |
 
+**Phase-3 progress:** the deterministic distill path now writes Intent, Contract,
+and Context slices as session-scoped EPISODIC facts through `MemoryStore`.
+`DistillMemoryWriter` supports optional `TraceSink` notifications, while
+`distill::compile_and_store` exposes the compile-and-persist path. The heuristic
+intent adapter also recognizes explicit goal and constraint labels; an
+LLM-backed adapter can still replace it behind `IntentExtractor`.
+
 ```
 P0 ──┬─▶ P1 ─┐
      └─▶ P2 ─┼─▶ P3 ─┬─▶ P4 ─┐

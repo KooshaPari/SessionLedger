@@ -22,6 +22,7 @@ pub mod distill;
 pub mod domain;
 pub mod export;
 pub mod ingestion;
+pub mod inject;
 pub mod ports;
 pub mod viewer;
 
@@ -41,6 +42,7 @@ pub use domain::worklog::{
 };
 pub use export::okf::export_to_okf;
 pub use ingestion::{parse_jsonl_sessions, read_jsonl_sessions, IngestionError};
+pub use inject::{render_prompt, render_slice_prompt, InjectRenderError, PromptRenderer};
 pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};
 
 /// Process a single session through the entire ingest→distill→export pipeline.

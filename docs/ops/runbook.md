@@ -75,6 +75,34 @@ Returns `total_bundles`, `total_tokens`, `avg_tokens`, `model_counts`,
 `daily_counts` over JSON bundles in the data/out directory. See
 [`observability.md`](observability.md) for RED mapping and SLO stubs.
 
+## Headless load smoke
+
+Start `sl-daemon` with a valid data directory, then run the PowerShell 7 load
+smoke from another terminal. No viewer or GUI is required.
+
+```powershell
+New-Item -ItemType Directory -Force .sl-watch, .sl-data | Out-Null
+cargo run --manifest-path crates/sl-daemon/Cargo.toml -- `
+  serve --watch .sl-watch --out .sl-data
+```
+
+```powershell
+pwsh ./scripts/load-smoke.ps1 `
+  -BaseUrl http://127.0.0.1:8080 `
+  -Requests 400 `
+  -Concurrency 20 `
+  -MinSuccessRate 99 `
+  -MaxP95Ms 500
+```
+
+The request count is distributed evenly across `/healthz`, `/readyz`,
+`/api/metrics`, and `/metrics`. The script prints per-endpoint results and an
+overall success rate and p95 latency. It exits non-zero if the success rate is
+below `MinSuccessRate` or p95 exceeds `MaxP95Ms`, so the same command can be
+used as a non-blocking nightly or pre-release smoke check. A `503` from
+`/readyz` counts as a failure; ensure the directory passed to `--out` exists
+before testing.
+
 ## Common failures
 
 | Symptom | Likely cause | Fix |

@@ -1,14 +1,19 @@
 //! Ingestion adapters — one per corpus. Each normalizes a raw transcript into a
 //! [`crate::domain::session::Session`] and implements [`crate::ports::CorpusSource`].
 //!
-//! Phase 1 ships the corpus enumeration + the forge adapter contract; the
-//! remaining adapters (codex/claude-code/cursor) follow the same trait. See
-//! `docs/DESIGN.md` for each corpus's on-disk shape.
+//! [`codex::CodexDir`], [`claude_code::ClaudeDir`], and [`cursor::CursorDir`]
+//! accept either one transcript file or a directory to scan recursively. They
+//! parse each tool's native JSONL/JSON records, including nested text content
+//! blocks, while [`parse_jsonl_sessions`] remains the strict helper for already
+//! normalized `Session` JSONL.
 
 pub mod claude_code;
 pub mod codex;
 pub mod cursor;
 pub mod forge;
+mod json_source;
+
+pub use json_source::JsonIngestionReport;
 
 use crate::domain::session::Session;
 use std::io::BufRead;

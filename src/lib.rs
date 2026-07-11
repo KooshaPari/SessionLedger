@@ -44,7 +44,10 @@ pub use domain::worklog::{
     WorklogProjection,
 };
 pub use export::okf::export_to_okf;
-pub use ingestion::{parse_jsonl_sessions, read_jsonl_sessions, IngestionError};
+pub use ingestion::{
+    claude_code::ClaudeDir, codex::CodexDir, cursor::CursorDir, parse_jsonl_sessions,
+    read_jsonl_sessions, IngestionError, JsonIngestionReport,
+};
 pub use inject::{render_prompt, render_slice_prompt, InjectRenderError, PromptRenderer};
 #[cfg(feature = "compress")]
 pub use ports::adapters::ZstdCompressor;

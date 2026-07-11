@@ -1,5 +1,8 @@
 //! Integration tests for the HTTP SSE bridge (`http.rs`).
 //!
+//! Traceability: the liveness HTTP assertion is acceptance evidence for
+//! FR-014; the bundle/SSE assertions cover adjacent daemon HTTP contracts.
+//!
 //! Each test binds on an ephemeral port (`:0`), starts the axum server, then
 //! uses `reqwest` to verify the endpoints. No sleeps: a tiny poll loop with a
 //! 5-second wall-clock bound is used where ordering matters.

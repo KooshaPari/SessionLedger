@@ -88,6 +88,14 @@ Returns `total_bundles`, `total_tokens`, `avg_tokens`, `model_counts`,
 | Viewer build fails (webkit) | Platform GTK deps | Prefer `cargo test -p sl-daemon` isolation; see `crates/sl-daemon/README.md` |
 | Ingest 4xx | Invalid OKF payload | Run `sl validate`; see `validation.rs` / FR-002 |
 
+## CI traceability
+
+Requirements live in [`functional_requirements.md`](../functional_requirements.md),
+claimable work maps them in [`PLAN.md`](../../PLAN.md), and acceptance evidence
+belongs in the linked tests. CI changes should preserve that FR → task → test
+chain; record intentional gaps in the FR catalog or PLAN rather than silently
+dropping coverage.
+
 ## Related
 
 - [`observability.md`](observability.md) — SLO stubs, RED map, `/healthz` vs `/readyz`, OTel/#65

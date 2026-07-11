@@ -15,13 +15,23 @@
 pub mod acceptance_extractor;
 pub mod compiler;
 pub mod context_extractor;
+pub mod contract_compiler;
 pub mod contract_extractor;
+pub mod dedup_compiler;
 pub mod extractor;
+pub mod token_estimator;
 
+use crate::distill::contract_compiler::ContractCompiler;
+use crate::distill::token_estimator::{CharCountTokenEstimator, TokenEstimator};
 use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 use crate::domain::session::Session;
 use crate::domain::worklog::WorklogProjection;
 use serde_json::json;
+
+fn sized_bundle(kind: BundleKind, body: serde_json::Value) -> Bundle {
+    let token_estimate = CharCountTokenEstimator.estimate_json(&body);
+    Bundle { kind, token_estimate, body }
+}
 
 /// Compile a normalized session into a continuation bundle.
 ///
@@ -38,7 +48,7 @@ pub fn compile(session: &Session) -> ContinuationBundle {
     let context = context_extractor::HeuristicContextExtractor::extract_context(session);
     let contract = contract_extractor::HeuristicContractExtractor::extract_contract(session);
 
-    bundle.push(Bundle::new(
+    bundle.push(sized_bundle(
         BundleKind::Acceptance,
         json!({
             "ready": !session.messages.is_empty(),
@@ -46,7 +56,7 @@ pub fn compile(session: &Session) -> ContinuationBundle {
             "user_turns": user_turns,
         }),
     ));
-    bundle.push(Bundle::new(
+    bundle.push(sized_bundle(
         BundleKind::Intent,
         json!({
             "goal": intent.goal,
@@ -55,7 +65,7 @@ pub fn compile(session: &Session) -> ContinuationBundle {
             "user_turn_count": intent.user_turn_count,
         }),
     ));
-    bundle.push(Bundle::new(
+    bundle.push(sized_bundle(
         BundleKind::Context,
         json!({
             "cwd": context.cwd,
@@ -66,21 +76,13 @@ pub fn compile(session: &Session) -> ContinuationBundle {
             "environment_notes": context.environment_notes,
         }),
     ));
-    bundle.push(Bundle::new(
-        BundleKind::Contract,
-        json!({
-            "success_criteria": contract.success_criteria,
-            "tests_or_verifications": contract.tests_or_verifications,
-            "constraints": contract.constraints,
-            "do_not_touch": contract.do_not_touch,
-        }),
-    ));
-    bundle.push(Bundle::new(
+    bundle.push(ContractCompiler::new(CharCountTokenEstimator).compile(&contract));
+    bundle.push(sized_bundle(
         BundleKind::Provenance,
         json!({ "corpus": session.corpus, "source_id": session.id }),
     ));
     let worklog = WorklogProjection::from_session(session);
-    bundle.push(Bundle::new(
+    bundle.push(sized_bundle(
         BundleKind::Worklog,
         json!({
             "message_count": worklog.message_count,
@@ -112,5 +114,19 @@ mod tests {
 
         assert_eq!(projection.unfinished.len(), 1);
         assert_eq!(projection.unfinished[0].session_id, "crashed-session");
+    }
+
+    #[test]
+    fn compile_sizes_every_structured_slice() {
+        let mut session = Session::new("sized-session", Corpus::Cursor);
+        session.messages.push(Message::new(Role::User, "Run cargo test"));
+
+        let bundle = compile(&session);
+
+        assert!(bundle.bundles.iter().all(|slice| slice.token_estimate > 0));
+        assert_eq!(
+            bundle.total_token_estimate(),
+            bundle.bundles.iter().map(|slice| slice.token_estimate).sum::<u32>()
+        );
     }
 }

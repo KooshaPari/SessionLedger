@@ -139,7 +139,7 @@ pub fn App() -> Element {
         Tab::Replay => rsx! { ReplayView {} },
     };
 
-    let activate = move |tab: Tab| {
+    let mut activate = move |tab: Tab| {
         active_tab.set(tab);
     };
 
@@ -236,59 +236,74 @@ pub fn App() -> Element {
                 .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
                 .main-upper {{ flex: 1; overflow-y: auto; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
+                @media (prefers-reduced-motion: reduce) {{
+                    *, *::before, *::after {{
+                        animation-duration: 0.01ms !important;
+                        animation-iteration-count: 1 !important;
+                        transition-duration: 0.01ms !important;
+                        scroll-behavior: auto !important;
+                    }}
+                }}
             "#,
         }
         div { class: "app",
             div { class: "sidebar",
-                div {
-                    class: "tab-bar",
-                    role: "tablist",
-                    "aria-label": "SessionLedger views",
-                    for tab in Tab::ALL {
-                        {
-                            let is_active = active_tab() == tab;
-                            let cls = if is_active { "tab active" } else { "tab" };
-                            let selected = if is_active { "true" } else { "false" };
-                            let tab_index = if is_active { "0" } else { "-1" };
-                            rsx! {
-                                button {
-                                    key: "{tab.id()}",
-                                    id: "{tab.id()}",
-                                    class: "{cls}",
-                                    role: "tab",
-                                    r#type: "button",
-                                    tabindex: "{tab_index}",
-                                    "aria-selected": "{selected}",
-                                    "aria-controls": "{tab.panel_id()}",
-                                    onclick: move |_| activate(tab),
-                                    onkeydown: move |evt: Event<KeyboardData>| {
-                                        let len = Tab::ALL.len();
-                                        let idx = tab.index();
-                                        match evt.key() {
-                                            Key::Enter | Key::Character(ref ch) if ch == " " => {
-                                                evt.prevent_default();
-                                                activate(tab);
+                nav {
+                    "aria-label": "Primary viewer navigation",
+                    div {
+                        class: "tab-bar",
+                        role: "tablist",
+                        "aria-label": "SessionLedger views",
+                        for tab in Tab::ALL {
+                            {
+                                let is_active = active_tab() == tab;
+                                let cls = if is_active { "tab active" } else { "tab" };
+                                let selected = if is_active { "true" } else { "false" };
+                                let tab_index = if is_active { "0" } else { "-1" };
+                                rsx! {
+                                    button {
+                                        key: "{tab.id()}",
+                                        id: "{tab.id()}",
+                                        class: "{cls}",
+                                        role: "tab",
+                                        r#type: "button",
+                                        tabindex: "{tab_index}",
+                                        "aria-selected": "{selected}",
+                                        "aria-controls": "{tab.panel_id()}",
+                                        onclick: move |_| activate(tab),
+                                        onkeydown: move |evt: Event<KeyboardData>| {
+                                            let len = Tab::ALL.len();
+                                            let idx = tab.index();
+                                            match evt.key() {
+                                                Key::Enter => {
+                                                    evt.prevent_default();
+                                                    activate(tab);
+                                                }
+                                                Key::Character(ref ch) if ch == " " => {
+                                                    evt.prevent_default();
+                                                    activate(tab);
+                                                }
+                                                Key::ArrowRight => {
+                                                    evt.prevent_default();
+                                                    activate(Tab::from_index(idx + 1));
+                                                }
+                                                Key::ArrowLeft => {
+                                                    evt.prevent_default();
+                                                    activate(Tab::from_index(idx + len - 1));
+                                                }
+                                                Key::Home => {
+                                                    evt.prevent_default();
+                                                    activate(Tab::Bundles);
+                                                }
+                                                Key::End => {
+                                                    evt.prevent_default();
+                                                    activate(Tab::Replay);
+                                                }
+                                                _ => {}
                                             }
-                                            Key::ArrowRight => {
-                                                evt.prevent_default();
-                                                activate(Tab::from_index(idx + 1));
-                                            }
-                                            Key::ArrowLeft => {
-                                                evt.prevent_default();
-                                                activate(Tab::from_index(idx + len - 1));
-                                            }
-                                            Key::Home => {
-                                                evt.prevent_default();
-                                                activate(Tab::Bundles);
-                                            }
-                                            Key::End => {
-                                                evt.prevent_default();
-                                                activate(Tab::Replay);
-                                            }
-                                            _ => {}
-                                        }
-                                    },
-                                    "{tab.label()}"
+                                        },
+                                        "{tab.label()}"
+                                    }
                                 }
                             }
                         }

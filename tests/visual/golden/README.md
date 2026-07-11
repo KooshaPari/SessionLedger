@@ -1,7 +1,8 @@
 # Golden screenshot baselines (optional)
 
-Place approved PNGs here when a visual harness exists.  
-Wave-1 ships the checklist only — see [`../README.md`](../README.md).
+Place approved PNGs here for the optional Playwright harness. The first
+comparison is wired to `e1-bundle-empty.png`; generate it intentionally with
+the update command in [`../README.md`](../README.md), inspect it, then commit it.
 
 Reserved names:
 

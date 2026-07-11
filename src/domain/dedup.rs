@@ -43,7 +43,8 @@ impl DedupKey {
         hasher.update(scope.as_bytes());
         hasher.update([0u8]);
         hasher.update(topic.as_bytes());
-        Self(format!("{:x}", hasher.finalize()))
+        let digest = hasher.finalize();
+        Self(digest.iter().map(|b| format!("{b:02x}")).collect())
     }
 
     #[must_use]

@@ -1,7 +1,8 @@
 # Distribution — SessionLedger
 
 How SessionLedger is packaged, where data lives, how to uninstall cleanly, and
-what is **deferred** for code-signing / notarization. Complements
+how release integrity signing works, and what remains **deferred** for
+platform code-signing / notarization. Complements
 [`packaging/README.md`](../../packaging/README.md) and the tag-driven release
 workflow [`.github/workflows/release.yml`](../../.github/workflows/release.yml).
 
@@ -14,7 +15,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 
 | Channel | Status | Notes |
 |---------|--------|-------|
-| GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives and attaches them via `softprops/action-gh-release` |
+| GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS`, and attempts keyless cosign signing |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` |
 | brew / crates.io / MSI / DMG / AppImage | Deferred | Soft goals; not required for Wave-2 C11 lift |
 | Tray / menubar / auto-update | Soft / N-A | Product remains daemon + desktop viewer |
@@ -37,7 +38,13 @@ sl-viewer-<tag>-x86_64-unknown-linux-gnu.tar.gz
 sl-viewer-<tag>-x86_64-apple-darwin.tar.gz
 sl-viewer-<tag>-aarch64-apple-darwin.tar.gz
 sl-viewer-<tag>-x86_64-pc-windows-msvc.zip
+SHA256SUMS
+SHA256SUMS.sigstore.json
 ```
+
+`SHA256SUMS.sigstore.json` is best-effort and may be absent when GitHub OIDC,
+cosign installation, signing, or Release upload is unavailable. Its absence
+does not fail or retract the otherwise valid unsigned Release.
 
 **Windows matrix status:** release CI already produces an unsigned
 `x86_64-pc-windows-msvc` zip. The local `packaging/Makefile` scaffold covers
@@ -175,18 +182,47 @@ prefer a single `SL_DATA_DIR` outside the repo when testing long-lived data.
 
 ---
 
-## Code-signing & notarization — DEFERRED
+## Release integrity signing (cosign)
 
-**Status:** explicitly deferred (C11 L112). Release and packaging scaffolds ship
-**unsigned** binaries / `.app` bundles. No `codesign`, `notarytool`,
-`signtool`, Authenticode, or cosign steps run in CI today.
+On a `v*` tag, release CI publishes `SHA256SUMS`, then a dependent best-effort
+job requests a short-lived GitHub OIDC identity and runs cosign keyless
+`sign-blob`. When successful, the same Release gains
+`SHA256SUMS.sigstore.json`, which contains the signature, certificate, and
+transparency-log verification material.
 
-### Soft goals (tracked in #66)
+The signing job has `id-token: write` and `contents: write`, but each external
+operation fails soft. A cosign installation, OIDC permission, signing, or
+upload failure emits a workflow notice while leaving the unsigned archives and
+checksums available.
 
-- CI Apple Developer ID signing + notarization + staple for macOS archives / `.app`
+### Verify a Release
+
+Download the archive, `SHA256SUMS`, and `SHA256SUMS.sigstore.json` into one
+directory. Replace `<tag>` with the exact Release tag:
+
+```bash
+cosign verify-blob \
+  --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity "https://github.com/KooshaPari/SessionLedger/.github/workflows/release.yml@refs/tags/<tag>" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  SHA256SUMS
+
+sha256sum --check SHA256SUMS
+```
+
+On Windows, use `Get-FileHash -Algorithm SHA256` to compare an archive with its
+entry in `SHA256SUMS` after cosign verifies the checksums file.
+
+Cosign proves the checksums file was signed by this repository's tag workflow;
+the checksum comparison then binds the downloaded archive to that signed file.
+
+## Platform code-signing & notarization — DEFERRED
+
+Release and packaging scaffolds still ship **unsigned binaries / `.app`
+bundles**. The following platform trust paths remain deferred under #66:
+
+- Apple Developer ID signing, `notarytool` notarization, and stapling
 - Windows Authenticode (`signtool`) for `sl-viewer.exe`
-- Optional cosign / Sigstore attestation of Release assets (checksums in the
-  Release body are the interim integrity signal)
 
 ### macOS Gatekeeper notes (unsigned builds)
 

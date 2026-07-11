@@ -13,9 +13,10 @@
 #   sl-viewer-<version>-aarch64-apple-darwin.tar.gz
 #   sl-viewer-<version>-x86_64-pc-windows-msvc.zip
 #
-# Signing / notarization: DEFERRED (unsigned artifacts). Gatekeeper and
+# Platform signing / notarization: DEFERRED (unsigned binaries). Release
+# checksums are signed with cosign keyless signing on a best-effort basis;
+# signing failures do not block an otherwise valid release. Gatekeeper and
 # SmartScreen notes, data dirs, uninstall: docs/ops/distribution.md
-# Soft goals (cosign, Authenticode, notarytool): issue #66
 #
 # Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-viewer/README.md
 #      packaging/README.md  ·  docs/ops/distribution.md
@@ -116,6 +117,10 @@ jobs:
       - name: list assets
         run: ls -lh artifacts/
 
+      - name: create checksums
+        working-directory: artifacts
+        run: sha256sum sl-viewer-* > SHA256SUMS
+
       - name: create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -145,7 +150,58 @@ jobs:
             | `sl-viewer-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz`  | macOS (Apple Silicon) |
             | `sl-viewer-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip`   | Windows (x86_64) |
 
+            Verify archive hashes with `SHA256SUMS`. CI also attempts to publish
+            `SHA256SUMS.sigstore.json`, a best-effort cosign keyless signature bundle.
+
             See [`crates/sl-viewer/README.md`](https://github.com/KooshaPari/SessionLedger/tree/main/crates/sl-viewer) for build instructions.
           draft: false
           prerelease: false
           files: artifacts/*
+
+  sign-checksums:
+    name: sign checksums · keyless (best effort)
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: download published checksums
+        id: download
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ github.ref_name }}" --pattern SHA256SUMS
+
+      - name: install cosign
+        id: cosign
+        if: steps.download.outcome == 'success'
+        continue-on-error: true
+        uses: sigstore/cosign-installer@v3
+
+      - name: sign checksums with GitHub OIDC
+        id: sign
+        if: steps.cosign.outcome == 'success'
+        continue-on-error: true
+        run: cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
+
+      - name: publish Sigstore bundle
+        id: publish
+        if: steps.sign.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" SHA256SUMS.sigstore.json --clobber
+
+      - name: report signing status
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.publish.outcome }}" = "success" ]; then
+            echo "::notice::Published SHA256SUMS.sigstore.json (cosign keyless signature)."
+            echo "### Cosign signing: published" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::notice::Cosign signing was skipped or failed; the unsigned release remains valid. download=${{ steps.download.outcome }}, install=${{ steps.cosign.outcome }}, sign=${{ steps.sign.outcome }}, publish=${{ steps.publish.outcome }}"
+            echo "### Cosign signing: skipped or unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
+          fi

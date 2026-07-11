@@ -26,6 +26,11 @@ Do not claim a task already marked `done`. Prefer worktrees per `AGENTS.md`.
 | T-012 | process-compose + Makefile `dev` | FR-014 | S | done | #46 / #39 |
 | T-013 | Agent entrypoint AGENTS.md + friction log | — | S | done | #40 |
 | T-014 | FR catalog + PLAN/WORK_DAG + llms.txt + ops stubs | FR-015 | M | done | this lane (agent-obs) |
+| T-020 | Link FR-IDs in key tests (smoke + daemon HTTP) | FR-013, FR-002, FR-014 | S | done | `tests/okf_roundtrip.rs`; `crates/sl-daemon` tests |
+| T-021 | Structured tracing (`tracing` subscriber) in sl-daemon | FR-015 | M | done | `crates/sl-daemon`; `docs/ops/observability.md` |
+| T-022 | Document + enforce log-level discipline (env) | FR-015 | S | done | `RUST_LOG`; `docs/ops/observability.md` |
+| T-023 | Soft-goal OTel sketch (no SDK required yet) | FR-015 | S | done | optional `otel` feature in `crates/sl-daemon`; `docs/ops/observability.md` |
+| T-025 | FR-gap / traceability note in CI docs | — | S | done | `docs/ops/runbook.md` |
 
 ---
 
@@ -33,12 +38,7 @@ Do not claim a task already marked `done`. Prefer worktrees per `AGENTS.md`.
 
 | ID | Task | FR | Effort | Status | Depends |
 |----|------|----|--------|--------|---------|
-| T-020 | Link FR-IDs in key tests (smoke + daemon HTTP) | FR-013, FR-002 | S | todo | T-014 |
-| T-021 | Structured tracing (`tracing` subscriber) in sl-daemon | FR-015 | M | todo | T-005 |
-| T-022 | Document + enforce log-level discipline (env) | FR-015 | S | todo | T-021 |
-| T-023 | Soft-goal OTel sketch (no SDK required yet) | FR-015 | S | todo | T-014 |
 | T-024 | Crash-detector MVP → unfinished Worklog projection | FR-011 | M | todo | T-005, T-001 |
-| T-025 | FR-gap / traceability note in CI docs | — | S | todo | T-014 |
 
 ---
 

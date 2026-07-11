@@ -1,5 +1,8 @@
 //! OKF roundtrip smoke test (lives in the session-ledger root crate).
 //!
+//! Traceability: these smoke tests are the primary acceptance evidence for
+//! FR-013 (JSONL → daemon contract → OKF → viewer contract).
+//!
 //! This placement is intentional: it lets the test depend on the canonical
 //! `OkfDocument` type without pulling in the sl-viewer lib, which currently
 //! has pre-existing compile errors on origin/main (`search_view.rs`, `theme.rs`

@@ -28,7 +28,9 @@ pub mod viewer;
 
 pub use distill::contract_compiler::ContractCompiler;
 pub use distill::dedup_compiler::{DedupCompileError, DedupCompiler};
+pub use distill::memory_writer::{DistillMemoryWriter, DistilledMemory};
 pub use distill::token_estimator::{CharCountTokenEstimator, TokenEstimator};
+pub use distill::{compile_and_store, DistillOutput};
 pub use domain::acceptance::Acceptance;
 pub use domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 pub use domain::context::{Context, Decision};

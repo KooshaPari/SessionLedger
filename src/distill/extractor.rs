@@ -4,7 +4,7 @@
 //! acceptance signals, and constraints from a session's message stream. It is
 //! the P1 replacement for forgecode's `NoopIntentExtractor`.
 //!
-//! Phase 3 will supersede this with an LLM-backed extractor behind the same
+//! Phase 3 may supplement this with an LLM-backed extractor behind the same
 //! [`IntentExtractor`] trait — see `docs/DESIGN.md` §7.
 
 use crate::domain::intent::Intent;
@@ -14,12 +14,14 @@ use crate::ports::{IntentExtractor, PortError};
 /// Heuristic-based intent extractor.
 ///
 /// Uses lightweight text heuristics on user messages to infer:
-/// - **Goal**: the first substantial user message (or latest if more specific).
+/// - **Goal**: an explicit `Goal:`, `Objective:`, or `Task:` value, falling back
+///   to the first substantial user message.
 /// - **Acceptance signals**: phrases like "looks good", "works", "done", "fixed".
-/// - **Constraints**: phrases like "don't change", "must not", "keep".
+/// - **Constraints**: explicit labeled values and boundary phrases such as
+///   "don't change", "must not", and "keep".
 ///
-/// This is intentionally simple. The LLM-backed extractor (Phase 3) will
-/// replace it behind the same trait.
+/// This is intentionally simple. An LLM-backed extractor can replace it behind
+/// the same trait.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct HeuristicIntentExtractor;
 
@@ -66,6 +68,9 @@ const CONSTRAINT_PATTERNS: &[&str] = &[
     "leave as is",
 ];
 
+const GOAL_LABELS: &[&str] = &["goal", "objective", "task"];
+const CONSTRAINT_LABELS: &[&str] = &["constraint", "requirement", "boundary"];
+
 impl HeuristicIntentExtractor {
     #[must_use]
     pub fn new() -> Self {
@@ -88,12 +93,18 @@ impl HeuristicIntentExtractor {
 
         let user_turn_count = user_messages.len();
 
-        // Goal: first substantial user message (>20 chars) or the very first one.
+        // Prefer explicit structured labels, then retain the original fallback.
         let goal = user_messages
             .iter()
-            .find(|msg| msg.len() > 20)
-            .or_else(|| user_messages.first())
-            .map(|msg| (*msg).to_string());
+            .flat_map(|message| message.lines())
+            .find_map(|line| labeled_value(line, GOAL_LABELS))
+            .or_else(|| {
+                user_messages
+                    .iter()
+                    .find(|msg| msg.len() > 20)
+                    .or_else(|| user_messages.first())
+                    .map(|msg| (*msg).to_string())
+            });
 
         // Acceptance signals: collect matched patterns found in user messages.
         let mut acceptance_signals: Vec<String> = Vec::new();
@@ -102,6 +113,13 @@ impl HeuristicIntentExtractor {
 
         for msg in &user_messages {
             let lower = msg.to_lowercase();
+            for line in msg.lines() {
+                if let Some(constraint) = labeled_value(line, CONSTRAINT_LABELS) {
+                    if !constraints.contains(&constraint) {
+                        constraints.push(constraint);
+                    }
+                }
+            }
             for pat in ACCEPTANCE_PATTERNS {
                 if lower.contains(pat) {
                     let signal = pat.to_string();
@@ -122,6 +140,15 @@ impl HeuristicIntentExtractor {
 
         Intent { goal, acceptance_signals, constraints, user_turn_count }
     }
+}
+
+fn labeled_value(line: &str, labels: &[&str]) -> Option<String> {
+    let line = line.trim().trim_start_matches(['-', '*']).trim();
+    let (label, value) = line.split_once(':')?;
+    let value = value.trim();
+    (!value.is_empty()
+        && labels.iter().any(|candidate| label.trim().eq_ignore_ascii_case(candidate)))
+    .then(|| value.to_owned())
 }
 
 impl IntentExtractor for HeuristicIntentExtractor {
@@ -217,5 +244,29 @@ mod tests {
         let session = fixture_session(&["refactor the database layer"]);
         let intent = extractor.extract(&session).expect("extraction should succeed");
         assert_eq!(intent.goal.as_deref(), Some("refactor the database layer"));
+    }
+
+    #[test]
+    fn prefers_an_explicit_goal_over_request_preamble() {
+        let session = fixture_session(&[
+            "Please use the following implementation brief.",
+            "Goal: Add session-scoped episodic memory writes\nRun the existing tests.",
+        ]);
+
+        let intent = HeuristicIntentExtractor::extract_intent(&session);
+
+        assert_eq!(intent.goal.as_deref(), Some("Add session-scoped episodic memory writes"));
+    }
+
+    #[test]
+    fn extracts_complete_labeled_constraints() {
+        let session = fixture_session(&[
+            "Task: improve the extractor\nConstraint: Preserve the existing public API\nRequirement: no new dependencies",
+        ]);
+
+        let intent = HeuristicIntentExtractor::extract_intent(&session);
+
+        assert!(intent.constraints.contains(&"Preserve the existing public API".to_owned()));
+        assert!(intent.constraints.contains(&"no new dependencies".to_owned()));
     }
 }

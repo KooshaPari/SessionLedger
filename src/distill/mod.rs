@@ -3,8 +3,8 @@
 //!
 //! Phase 1 ships the deterministic compiler skeleton: it assembles the bundle
 //! envelope (Acceptance + Intent + Context + Provenance + Worklog) from a
-//! session. LLM-backed intent extraction and memory write-through arrive in
-//! Phase 3 behind the [`crate::ports`] traits.
+//! session. Phase 3 adds episodic memory write-through behind the
+//! [`crate::ports`] traits.
 //!
 //! The P1 [`extractor`] module provides the heuristic intent extractor adapter.
 //! The P2 [`context_extractor`] and [`contract_extractor`] modules add heuristic
@@ -19,6 +19,7 @@ pub mod contract_compiler;
 pub mod contract_extractor;
 pub mod dedup_compiler;
 pub mod extractor;
+pub mod memory_writer;
 pub mod token_estimator;
 
 use crate::distill::contract_compiler::ContractCompiler;
@@ -26,7 +27,17 @@ use crate::distill::token_estimator::{CharCountTokenEstimator, TokenEstimator};
 use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 use crate::domain::session::Session;
 use crate::domain::worklog::WorklogProjection;
+use crate::ports::{MemoryStore, PortError};
 use serde_json::json;
+
+pub use memory_writer::{DistillMemoryWriter, DistilledMemory};
+
+/// Result of compiling a session and persisting its episodic facts.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DistillOutput {
+    pub bundle: ContinuationBundle,
+    pub memories: Vec<DistilledMemory>,
+}
 
 fn sized_bundle(kind: BundleKind, body: serde_json::Value) -> Bundle {
     let token_estimate = CharCountTokenEstimator.estimate_json(&body);
@@ -93,10 +104,26 @@ pub fn compile(session: &Session) -> ContinuationBundle {
     bundle
 }
 
+/// Compile a session and write its intent, contract, and context to memory.
+///
+/// # Errors
+///
+/// Returns [`PortError::Backend`] if an episodic fact cannot be serialized or
+/// persisted. Writes completed before an error remain persisted.
+pub fn compile_and_store(
+    session: &Session,
+    memory_store: &dyn MemoryStore,
+) -> Result<DistillOutput, PortError> {
+    let bundle = compile(session);
+    let memories = DistillMemoryWriter::new(memory_store).write(&bundle)?;
+    Ok(DistillOutput { bundle, memories })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::domain::session::{Corpus, Message, Role};
+    use crate::ports::adapters::InMemoryMemoryStore;
 
     #[test]
     fn compile_populates_serializable_unfinished_worklog() {
@@ -127,6 +154,25 @@ mod tests {
         assert_eq!(
             bundle.total_token_estimate(),
             bundle.bundles.iter().map(|slice| slice.token_estimate).sum::<u32>()
+        );
+    }
+
+    #[test]
+    fn compile_and_store_exposes_the_end_to_end_distill_path() {
+        let mut session = Session::new("stored-session", Corpus::Cursor);
+        session.messages.push(Message::new(
+            Role::User,
+            "Goal: improve intent extraction\nConstraint: preserve public APIs",
+        ));
+        let store = InMemoryMemoryStore::default();
+
+        let output = compile_and_store(&session, &store).expect("compile and store");
+
+        assert!(output.bundle.is_injectable());
+        assert_eq!(output.memories.len(), 3);
+        assert_eq!(
+            store.recall("session/stored-session/episodic", 10).expect("recall stored facts").len(),
+            3
         );
     }
 }

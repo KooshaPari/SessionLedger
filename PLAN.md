@@ -36,18 +36,20 @@ Do not claim a task already marked `done`. Prefer worktrees per `AGENTS.md`.
 | T-031 | Bundle inject renderer (prompt form) | FR-012 | M | done | `src/inject.rs`; #95 |
 | T-036 | Viewer unfinished / in-progress section | FR-011 | M | done | unfinished tab; #97 |
 | T-037 | Golden OKF corpus + snapshot tests | FR-013 | M | done | golden corpus; #98 |
+| T-032 | rusqlite forge adapter (zstd, classify) | FR-001 | L | done | `src/ingestion/forge.rs` + bundled sqlite; #101 |
+| T-033 | Codex / Claude / Cursor JSONL adapters | FR-001 | L | done | `CodexDir`/`ClaudeDir`/`CursorDir`; #102 |
+| T-034 | MemoryStore + Compressor + TraceSink adapters | FR-015 | L | done | `src/ports/adapters.rs`; #101 |
+| T-035 | Dedup merge executor + lost-work localizer E2E | FR-011 | L | done | `src/domain/merge.rs`; #100 |
+| T-038 | Coverage ratchet toward DESIGN 85% gate | — | L | done | tests + runbook baseline; #103 |
+
 
 ---
 
 ## Todo — P1 (product depth from DESIGN)
 
-| ID | Task | FR | Effort | Status | Depends |
-|----|------|----|--------|--------|---------|
-| T-032 | rusqlite forge adapter (zstd, classify) | FR-001 | L | todo | T-005 |
-| T-033 | Codex / Claude / Cursor JSONL adapters | FR-001 | L | todo | T-005 |
-| T-034 | MemoryStore + Compressor + TraceSink adapters | FR-015 | L | todo | T-032 |
-| T-035 | Dedup merge executor + lost-work localizer E2E | FR-011 | L | todo | T-024, T-030 |
-| T-038 | Coverage ratchet toward DESIGN 85% gate | — | L | todo | T-032 |
+_All P1 PLAN tasks through T-038 are done. Next work is product polish / audit ≥B / DESIGN Phase 3+ beyond PLAN._
+
+----|------|----|--------|--------|---------|
 
 ---
 

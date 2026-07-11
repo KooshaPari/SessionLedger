@@ -29,14 +29,12 @@ flowchart TD
     T031[T-031 inject renderer]
   end
 
-  subgraph p1 [P1 todo]
+  subgraph p1 [P1 done]
     T032[T-032 forge sqlite]
-    T033[T-033 other corpora]
-    T034[T-034 memory/trace adapters]
-    T035[T-035 merge/recovery E2E]
-    T036[T-036 unfinished UI]
-    T037[T-037 golden corpus]
-    T038[T-038 coverage ratchet]
+    T033[T-033 JSONL adapters]
+    T034[T-034 port adapters]
+    T035[T-035 merge/recovery]
+    T038[T-038 coverage]
   end
 
   T001 --> T005
@@ -74,4 +72,4 @@ flowchart TD
 - **Foundation (done):** T-001 → T-005 → {T-006…T-012}; T-002 → T-003; T-004, T-013, T-014 parallel docs/brand.
 - **P0 obs (done):** T-014 → {T-020, T-023, T-025}; T-005 → T-021 → T-022.
 - **P0 recovery (done):** T-005+T-001 → T-024.
-- **P1 depth:** T-030/T-031 done → T-032+; T-005 → {T-032, T-033}; T-032 → T-034 / T-038; T-024+T-030 → T-035; T-024 → T-036; T-003 → T-037.
+- **P1 depth (done):** T-032…T-038 landed Wave-5 (#100–#103).

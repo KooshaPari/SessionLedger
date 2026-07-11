@@ -43,7 +43,12 @@ impl DedupKey {
         hasher.update(scope.as_bytes());
         hasher.update([0u8]);
         hasher.update(topic.as_bytes());
-        Self(format!("{:x}", hasher.finalize()))
+        let digest = hasher.finalize();
+        Self(digest.iter().fold(String::with_capacity(64), |mut s, b| {
+            use std::fmt::Write;
+            let _ = write!(s, "{b:02x}");
+            s
+        }))
     }
 
     #[must_use]

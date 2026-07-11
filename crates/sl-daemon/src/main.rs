@@ -29,9 +29,11 @@ mod etl;
 mod export;
 mod filter;
 mod http;
+mod metrics;
+#[cfg(feature = "otel")]
+mod otel;
 mod tag;
 mod validation;
-mod metrics;
 mod watcher;
 
 use std::net::SocketAddr;
@@ -267,7 +269,7 @@ enum TagAction {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    init_tracing();
+    let _otel_provider = init_tracing();
     let args = Args::parse();
 
     match args.command {
@@ -304,19 +306,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    #[cfg(feature = "otel")]
+    if let Some(provider) = _otel_provider {
+        let _ = provider.shutdown();
+    }
+
     Ok(())
 }
 
 /// Install a `tracing` subscriber filtered by `RUST_LOG`.
 ///
 /// Default when unset: `sl_daemon=info` (matches docs/ops/observability.md).
+#[cfg(not(feature = "otel"))]
 fn init_tracing() {
     use tracing_subscriber::EnvFilter;
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
 
     tracing_subscriber::fmt().with_env_filter(filter).with_target(true).init();
+}
+
+/// Install the formatting subscriber and, when configured, OTLP trace export.
+#[cfg(feature = "otel")]
+fn init_tracing() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
+    use tracing_subscriber::EnvFilter;
+
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+    let endpoint = std::env::var("SL_OTLP_ENDPOINT")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| {
+            std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+        });
+
+    if let Some(endpoint) = endpoint {
+        match otel::init(filter, &endpoint) {
+            Ok(provider) => return Some(provider),
+            Err(error) => {
+                eprintln!(
+                    "warning: failed to initialize OTLP export for {endpoint:?}: {error}; \
+                     continuing with local logs"
+                );
+            }
+        }
+    }
+
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+    tracing_subscriber::fmt().with_env_filter(filter).with_target(true).init();
+    None
 }
 
 // ---------------------------------------------------------------------------

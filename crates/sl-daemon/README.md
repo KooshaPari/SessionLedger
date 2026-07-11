@@ -19,6 +19,18 @@ cargo run  -p sl-daemon -- --watch ~/.forge/sessions --out ./okf-out
 cargo run  -p sl-daemon -- --watch ./sessions --out ./okf-out --once   # single sweep
 ```
 
+Optional OTLP/gRPC trace export is feature-gated, so normal builds do not need
+a collector or the OpenTelemetry exporter dependencies:
+
+```bash
+cargo build -p sl-daemon --features otel
+SL_OTLP_ENDPOINT=http://localhost:4317 cargo run -p sl-daemon --features otel -- serve --watch ./sessions --out ./okf-out
+```
+
+`OTEL_EXPORTER_OTLP_ENDPOINT` is also accepted when `SL_OTLP_ENDPOINT` is not
+set. If neither variable is set, the feature-enabled binary uses the same local
+fmt logs and `RUST_LOG` filtering as the default build.
+
 ## Run options
 
 ### 1. Native process-compose (preferred for local dev — no container)

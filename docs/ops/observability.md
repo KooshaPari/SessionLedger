@@ -58,9 +58,10 @@ Error budget: treat local-dev SLO misses as friction-log entries, not pages.
 Alerting/dashboards remain soft goals — see [Alert stubs](#alert-stubs) and
 issue #65 (OTLP + remaining C05 depth).
 
-There is **no** Prometheus scrape endpoint or OTLP exporter in-tree yet.
-`TraceSink` is a design port ([`docs/DESIGN.md`](../DESIGN.md) §6) composed with
-external Phenotype observability systems.
+There is **no** Prometheus scrape endpoint in-tree. A feature-gated OTLP trace
+export sketch is available as described below. `TraceSink` is a design port
+([`docs/DESIGN.md`](../DESIGN.md) §6) composed with external Phenotype
+observability systems.
 
 ## RED metrics mapping
 
@@ -96,7 +97,7 @@ land; until then, operators use the runbook triage table.
 
 See also [`alerts.md`](alerts.md) for copy-paste stub definitions.
 
-## Intended OpenTelemetry (soft goal — issue #65)
+## OpenTelemetry (feature-gated sketch — issue #65)
 
 Tracked under [issue #65](https://github.com/KooshaPari/SessionLedger/issues/65)
 (v38 P1: OTel + `/readyz` + SLO stubs). Docs/SLO/readyz portions of that issue
@@ -106,20 +107,32 @@ are addressed here; **remaining code work**:
 |----------|----------------|--------------|
 | `GET /readyz` distinct from liveness | **Done** (daemon + process-compose) | Documented above |
 | SLO / error-budget stubs in this doc | **Done** (stubs) | This file |
-| `tracing` subscriber + env log discipline | **Not done** | `T-021`, `T-022` |
-| Soft-goal OTLP export sketch | **Doc only** | `T-023`; SDK/exporter still absent |
+| `tracing` subscriber + env log discipline | **Done** | fmt subscriber + `RUST_LOG` |
+| Soft-goal OTLP export sketch | **Feature-gated sketch** | `otel` Cargo feature; traces only |
 | W3C `traceparent` propagation | **Not done** | `T-034` / TraceSink adapters |
 | Prometheus / OTLP RED exporters | **Not done** | Parallel to `/api/metrics` |
 
-Future implementation sketch (PLAN `T-023` / `T-021` / `T-034`):
+Build the optional exporter without changing the default dependency graph:
 
-1. `tracing` subscriber in `sl-daemon` with request/span IDs on HTTP + ETL stages.
-2. Optional OTLP export behind a feature flag (no hard dependency on collector).
-3. Propagate W3C `traceparent` across ingest → compile → export when adapters land.
-4. Emit RED counters/histograms (table above) via OTLP or a dedicated scrape path —
+```bash
+cargo build -p sl-daemon --features otel
+```
+
+With that feature enabled, set `SL_OTLP_ENDPOINT` to the collector's OTLP/gRPC
+endpoint (for example, `http://localhost:4317`). The standard
+`OTEL_EXPORTER_OTLP_ENDPOINT` is used as a fallback when the SessionLedger
+variable is absent. `SL_OTLP_ENDPOINT` takes precedence when both are set. If
+neither variable is set, the daemon keeps its normal fmt subscriber and
+`RUST_LOG` filtering and does not create an exporter or require a collector.
+
+Remaining future work:
+
+1. Propagate W3C `traceparent` across ingest → compile → export when adapters land.
+2. Emit RED counters/histograms (table above) via OTLP or a dedicated scrape path —
    without breaking the current `/api/metrics` JSON summary.
 
-Until then, operators rely on `/healthz`, `/readyz`, `/api/metrics`, and process logs.
+Operators without the `otel` feature continue to rely on `/healthz`, `/readyz`,
+`/api/metrics`, and process logs.
 
 ## Log level discipline
 
@@ -131,7 +144,7 @@ Until then, operators rely on `/healthz`, `/readyz`, `/api/metrics`, and process
 | `debug` | Per-file watch events, filter match details |
 | `trace` | Payload dumps — **never** default in production |
 
-Preferred env (once `tracing` lands): `RUST_LOG=sl_daemon=info,tower_http=warn`.
+Preferred env: `RUST_LOG=sl_daemon=info,tower_http=warn`.
 Avoid logging full session transcripts at `info` or above (PII / token bloat).
 
 ## FR mapping

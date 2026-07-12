@@ -75,7 +75,7 @@ pub fn MemoryWiki() -> Element {
                 font-size: 14px; font-weight: 600; color: #e1e4ea;
             }}
             .wiki-entry .wiki-id {{
-                font-size: 11px; color: #5c5f6e; font-family: monospace; margin-top: 2px;
+                font-size: 11px; color: #8b8fa3; font-family: monospace; margin-top: 2px;
             }}
             .wiki-entry .wiki-tags {{
                 margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;
@@ -124,7 +124,7 @@ pub fn MemoryWiki() -> Element {
             }}
             .wiki-empty {{
                 flex: 1; display: flex; align-items: center; justify-content: center;
-                color: #5c5f6e; font-size: 14px;
+                color: #8b8fa3; font-size: 14px;
             }}
         "# }
         div { class: "sidebar",

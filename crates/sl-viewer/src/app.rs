@@ -121,6 +121,11 @@ fn resolve_data_source() -> DataSource {
 /// so every child component can access it without prop-drilling.
 #[component]
 pub fn App() -> Element {
+    #[cfg(feature = "web")]
+    use_effect(|| {
+        let _ = document::eval("document.documentElement.lang = 'en';");
+    });
+
     // Load sessions once at the root; propagate via context.
     let source = resolve_data_source();
     let (sessions, corpus_error) = match load_sessions(&source) {
@@ -148,6 +153,7 @@ pub fn App() -> Element {
 
     let mut activate = move |tab: Tab| {
         active_tab.set(tab);
+        let _ = document::eval(&format!("document.getElementById('{}')?.focus();", tab.id()));
     };
 
     rsx! {
@@ -162,7 +168,7 @@ pub fn App() -> Element {
                 .bundle-entry.selected {{ background: #252836; border-left: 3px solid #6c8cff; }}
                 .bundle-entry .source {{ font-size: 13px; font-weight: 600; color: #c8cdd6; }}
                 .bundle-entry .goal {{ font-size: 12px; color: #8b8fa3; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-                .bundle-entry .meta {{ font-size: 11px; color: #5c5f6e; margin-top: 6px; display: flex; gap: 8px; }}
+                .bundle-entry .meta {{ font-size: 11px; color: #8b8fa3; margin-top: 6px; display: flex; gap: 8px; }}
                 .bundle-entry .badge {{ display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }}
                 .badge-acceptance {{ background: #1a3a2a; color: #4ade80; }}
                 .badge-contract {{ background: #2a1a3a; color: #c084fc; }}
@@ -173,9 +179,9 @@ pub fn App() -> Element {
                 .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: #c8cdd6; }}
                 .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; }}
                 .detail-section li {{ font-size: 13px; line-height: 1.7; color: #a1a6b5; }}
-                .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: #5c5f6e; font-size: 14px; }}
+                .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: #8b8fa3; font-size: 14px; }}
                 .tab-bar {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid #2a2d35; background: #13151c; }}
-                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border: none; border-bottom: 2px solid transparent; background: transparent; transition: all 0.15s; font-family: inherit; }}
+                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #8b8fa3; border: none; border-bottom: 2px solid transparent; background: transparent; transition: all 0.15s; font-family: inherit; }}
                 .tab:hover {{ color: #8b8fa3; background: #1a1c26; }}
                 .tab.active {{ color: #6c8cff; border-bottom-color: #6c8cff; background: #161822; }}
                 .tab:focus {{ outline: none; }}
@@ -184,13 +190,13 @@ pub fn App() -> Element {
                 .session-item:focus-visible, .feed-entry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; }}
                 .session-list {{ display: flex; flex-direction: column; height: 100%; }}
                 .search-input {{ width: 100%; padding: 10px 16px; background: #1c1f2b; border: 1px solid #2a2d35; border-radius: 6px; color: #e1e4ea; font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
-                .session-count {{ padding: 6px 20px; font-size: 11px; color: #5c5f6e; }}
+                .session-count {{ padding: 6px 20px; font-size: 11px; color: #8b8fa3; }}
                 .session-item {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #1e2029; transition: background 0.15s; }}
                 .session-item:hover {{ background: #1c1f2b; }}
                 .session-item.selected {{ background: #252836; border-left: 3px solid #6c8cff; }}
                 .session-source {{ font-size: 13px; font-weight: 600; color: #c8cdd6; }}
                 .session-goal {{ font-size: 12px; color: #8b8fa3; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-                .session-meta {{ font-size: 11px; color: #5c5f6e; margin-top: 6px; display: flex; gap: 8px; align-items: center; }}
+                .session-meta {{ font-size: 11px; color: #8b8fa3; margin-top: 6px; display: flex; gap: 8px; align-items: center; }}
                 .meta-bundles {{ color: #6c8cff; }}
                 .badge {{ display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }}
                 .badge-ok {{ background: #1a3a2a; color: #4ade80; }}
@@ -198,7 +204,7 @@ pub fn App() -> Element {
                 .search-view {{ display: flex; flex-direction: column; height: 100%; overflow-y: auto; }}
                 .search-form {{ padding: 0 0 8px 0; border-bottom: 1px solid #2a2d35; }}
                 .search-fields {{ display: flex; flex-direction: column; gap: 4px; padding: 10px 16px; }}
-                .search-label {{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; }}
+                .search-label {{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #8b8fa3; }}
                 .search-actions {{ display: flex; gap: 8px; padding: 8px 16px 10px; }}
                 .search-btn {{ padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; border: 1px solid #2a2d35; background: #252836; color: #8b8fa3; }}
                 .search-btn:hover {{ background: #2f3244; color: #c8cdd6; }}
@@ -216,10 +222,10 @@ pub fn App() -> Element {
                 .retry-btn {{ padding: 3px 10px; font-size: 11px; font-weight: 600; background: #252836; border: 1px solid #2a2d35; border-radius: 4px; color: #8b8fa3; cursor: pointer; }}
                 .retry-btn:hover {{ background: #2f3244; color: #c8cdd6; }}
                 .live-feed-list {{ flex: 1; overflow-y: auto; padding: 8px 0; }}
-                .feed-empty {{ padding: 16px 20px; font-size: 13px; color: #5c5f6e; }}
+                .feed-empty {{ padding: 16px 20px; font-size: 13px; color: #8b8fa3; }}
                 .feed-entry {{ display: flex; gap: 10px; align-items: baseline; padding: 6px 16px; border-bottom: 1px solid #1e2029; font-family: monospace; }}
                 .feed-entry:hover {{ background: #1c1f2b; }}
-                .feed-ts {{ font-size: 11px; color: #5c5f6e; white-space: nowrap; }}
+                .feed-ts {{ font-size: 11px; color: #8b8fa3; white-space: nowrap; }}
                 .feed-path {{ font-size: 12px; color: #a1b4ff; word-break: break-all; }}
                 .compare-btn {{ padding: 2px 8px; font-size: 10px; font-weight: 600; background: #1e2435; border: 1px solid #2a2d35; border-radius: 4px; color: #8b8fa3; cursor: pointer; margin-left: 6px; }}
                 .compare-btn:hover {{ background: #2a2d45; color: #c8cdd6; }}
@@ -229,9 +235,9 @@ pub fn App() -> Element {
                 .diff-title {{ flex: 1; font-size: 13px; font-weight: 600; color: #c8cdd6; }}
                 .diff-badge {{ display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; background: #2a1a1a; color: #f87171; }}
                 .diff-badge-same {{ background: #1a3a2a; color: #4ade80; }}
-                .diff-close {{ cursor: pointer; font-size: 14px; color: #5c5f6e; padding: 2px 6px; border-radius: 4px; }}
+                .diff-close {{ cursor: pointer; font-size: 14px; color: #8b8fa3; padding: 2px 6px; border-radius: 4px; }}
                 .diff-close:hover {{ background: #252836; color: #c8cdd6; }}
-                .diff-col-headers {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border-bottom: 1px solid #2a2d35; background: #13151c; }}
+                .diff-col-headers {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #8b8fa3; border-bottom: 1px solid #2a2d35; background: #13151c; }}
                 .diff-rows {{ display: flex; flex-direction: column; }}
                 .diff-row {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 12px; border-bottom: 1px solid #1e2029; font-family: monospace; align-items: start; }}
                 .diff-row-changed {{ background: #1a1520; }}

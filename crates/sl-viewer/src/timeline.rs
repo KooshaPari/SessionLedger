@@ -180,7 +180,7 @@ pub fn TimelineView(bundles: Vec<ContinuationBundle>) -> Element {
                 .timeline-day-group {{ margin-bottom: 24px; }}
                 .timeline-day-label {{
                     font-size: 11px; font-weight: 700; text-transform: uppercase;
-                    letter-spacing: 0.6px; color: #5c5f6e; margin-bottom: 10px;
+                    letter-spacing: 0.6px; color: #8b8fa3; margin-bottom: 10px;
                     padding-bottom: 4px; border-bottom: 1px solid #2a2d35;
                 }}
                 .timeline-lane {{ display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; }}
@@ -197,14 +197,14 @@ pub fn TimelineView(bundles: Vec<ContinuationBundle>) -> Element {
                 }}
                 .tt-source {{ font-size: 14px; font-weight: 600; color: #c8cdd6; margin-bottom: 6px; }}
                 .tt-goal {{ font-size: 13px; color: #8b8fa3; margin-bottom: 10px; line-height: 1.5; }}
-                .tt-meta {{ display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: #5c5f6e; }}
+                .tt-meta {{ display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: #8b8fa3; }}
                 .tt-meta span {{ display: flex; gap: 4px; align-items: center; }}
                 .tt-dot {{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }}
                 .badge {{ display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }}
                 .badge-ok {{ background: #1a3a2a; color: #4ade80; }}
                 .badge-contract {{ background: #2a1a3a; color: #c084fc; }}
                 .tt-empty {{ display: flex; align-items: center; justify-content: center;
-                    height: 120px; color: #5c5f6e; font-size: 13px; }}
+                    height: 120px; color: #8b8fa3; font-size: 13px; }}
             "#,
         }
         div { class: "timeline-root",

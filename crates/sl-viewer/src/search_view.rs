@@ -125,23 +125,16 @@ pub fn SearchView() -> Element {
         error.set(None);
 
         spawn(async move {
-            #[cfg(feature = "web")]
-            {
-                use_web_fetch(url, results, error, loading).await;
-            }
-            #[cfg(not(feature = "web"))]
-            {
-                match reqwest_search(&url).await {
-                    Ok(data) => {
-                        results.set(data);
-                        error.set(None);
-                    }
-                    Err(e) => {
-                        error.set(Some(e));
-                    }
+            match reqwest_search(&url).await {
+                Ok(data) => {
+                    results.set(data);
+                    error.set(None);
                 }
-                loading.set(false);
+                Err(e) => {
+                    error.set(Some(e));
+                }
             }
+            loading.set(false);
         });
     });
 
@@ -183,44 +176,50 @@ pub fn SearchView() -> Element {
                     "Search Bundles"
                 }
                 div { class: "search-fields",
-                    label { class: "search-label", "Since (YYYY-MM-DD)" }
+                    label { class: "search-label", r#for: "search-since", "Since (YYYY-MM-DD)" }
                     input {
+                        id: "search-since",
                         class: "search-input",
                         placeholder: "2024-01-01",
                         value: "{since}",
                         oninput: move |e| since.set(e.value()),
                     }
-                    label { class: "search-label", "Until (YYYY-MM-DD)" }
+                    label { class: "search-label", r#for: "search-until", "Until (YYYY-MM-DD)" }
                     input {
+                        id: "search-until",
                         class: "search-input",
                         placeholder: "2024-12-31",
                         value: "{until}",
                         oninput: move |e| until.set(e.value()),
                     }
-                    label { class: "search-label", "Model (substring)" }
+                    label { class: "search-label", r#for: "search-model", "Model (substring)" }
                     input {
+                        id: "search-model",
                         class: "search-input",
                         placeholder: "claude",
                         value: "{model}",
                         oninput: move |e| model.set(e.value()),
                     }
-                    label { class: "search-label", "Min Tokens" }
+                    label { class: "search-label", r#for: "search-min-tokens", "Min Tokens" }
                     input {
+                        id: "search-min-tokens",
                         class: "search-input",
                         r#type: "number",
                         placeholder: "1000",
                         value: "{min_tokens}",
                         oninput: move |e| min_tokens.set(e.value()),
                     }
-                    label { class: "search-label", "Tags (comma-separated)" }
+                    label { class: "search-label", r#for: "search-tags", "Tags (comma-separated)" }
                     input {
+                        id: "search-tags",
                         class: "search-input",
                         placeholder: "rust, ml",
                         value: "{tags}",
                         oninput: move |e| tags.set(e.value()),
                     }
-                    label { class: "search-label", "Limit" }
+                    label { class: "search-label", r#for: "search-limit", "Limit" }
                     input {
+                        id: "search-limit",
                         class: "search-input",
                         r#type: "number",
                         value: "{limit}",
@@ -287,12 +286,10 @@ pub fn SearchView() -> Element {
     }
 }
 
-/// Desktop HTTP fetch via a simple blocking-in-spawn call.
+/// Cross-platform HTTP fetch used by the desktop and WASM renderers.
 ///
 /// Returns the parsed results or an error string.
-#[cfg(not(feature = "web"))]
 async fn reqwest_search(url: &str) -> Result<Vec<SearchResult>, String> {
-    // Dioxus desktop bundles tokio; we can do async HTTP directly.
     let client = reqwest::Client::new();
     let resp = client.get(url).send().await.map_err(|e| format!("daemon not reachable: {e}"))?;
 

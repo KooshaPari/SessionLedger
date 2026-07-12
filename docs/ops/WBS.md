@@ -45,8 +45,8 @@ are not recomputed here.
 | WBS-7.5 | Wave-6 observability, eval, packaging, and a11y uplift | done | machine | `docs/ops/dashboards/`; `scripts/load-smoke.ps1`; `tests/visual/`; `docs/ops/distribution.md` | C05, C08, C09, C11 |
 | WBS-7.6 | Wave-7 supply-chain provenance and scorecard refresh | done | machine | `.github/workflows/release.yml`; `audit/SCORECARD.md` | C01, C04, C06; 268/402 |
 | WBS-8.1 | Wave-8 machine traceability and in-document status governance | done | machine | `docs/ops/WBS.md`; `docs/ops/GAP_QA_MATRIX.md`; `docs/ops/TRACEABILITY.json`; `docs/ops/traceability_lint.ps1` | C03; FR-001..FR-015; PLAN |
-| WBS-8.2 | Wave-8 close evidence-backed gaps to at least B (>=75%) | todo | machine | `docs/ops/GAP_QA_MATRIX.md`; future re-audit evidence | C00-C11; 33 raw points needed at Wave-7 baseline |
-| WBS-8.3 | Wave-8 independent re-audit and scorecard refresh | blocked | human | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; blocked on WBS-8.2 and independent auditor |
+| WBS-8.2 | Wave-8 close evidence-backed gaps to at least B (>=75%) | todo | machine | `docs/ops/GAP_QA_MATRIX.md`; Wave-8 re-audit evidence | C00-C11; 29 raw points still needed after Wave-8 |
+| WBS-8.3 | Wave-8 independent re-audit and scorecard refresh | done | human | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 273/402 (68% C) |
 
 ## Organization-level control plane
 

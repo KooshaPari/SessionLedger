@@ -12,17 +12,17 @@ package, and the JSON mirror in the same change.
 | ID | Current score / status | Gap | Acceptance test / evidence | Next action | status_updated |
 |---|---|---|---|---|---|
 | C00 | 22/30 · partial | OpenAPI/idempotency, cancellation, durable schema, profiling/race/RSS gates | `audit/.lane-c00/C00.md`; architecture tests and new gates pass | Prioritize API contract and P6 hardening evidence | 2026-07-12 |
-| C01 | 22/30 · partial | Mutable auxiliary actions, no CI concurrency, uneven error/CLI/a11y polish | `audit/.lane-c01/C01.md`; all workflow actions SHA-pinned; built-viewer a11y | Pin remaining actions and scan the built viewer | 2026-07-12 |
+| C01 | 23/30 · partial | Mutable auxiliary actions, no CI concurrency, uneven error/CLI polish | `audit/.lane-c01/C01.md`; all workflow actions SHA-pinned; built-viewer a11y | Pin remaining actions and add CI concurrency | 2026-07-12 |
 | C02 | 18/30 · partial | No auth/admission limits or append-only actor/action audit trail | `audit/.lane-c02/C02.md`; localhost/auth policy test; structured audit-event test | Enforce local trust boundary and add ingest limits/audit events | 2026-07-12 |
-| C03 | 31/36 · partial | Role-form FR stories, journey catalog, hermetic env sample, measured feedback budget | `audit/.lane-c03/C03.md`; traceability lint; journey-to-test mapping | Keep trace artifacts current; add named user journeys | 2026-07-12 |
+| C03 | 32/36 · partial | Role-form FR stories, journey catalog, hermetic env sample, measured feedback budget | `audit/.lane-c03/C03.md`; traceability lint; journey-to-test mapping | Keep trace artifacts current; add named user journeys | 2026-07-12 |
 | C04 | 22/30 · partial | Maintainer 2FA is unproven; commit signing and secret-policy evidence incomplete | `audit/.lane-c04/C04.md`; org settings evidence; signed release verification | Human records 2FA; tighten local secret checks | 2026-07-12 |
 | C05 | 21/30 · partial | Trace continuity, profiling, live alert routing, provisioned dashboards, scheduled chaos/load remain | `audit/.lane-c05/C05.md`; OTLP integration test; provisioned dashboard/alert proof | Add endpoint labels/histograms and scheduled operational tests | 2026-07-12 |
 | C06 | 18/30 · partial | Reproducible/hermetic/SLSA-L3 and container provenance are incomplete | `audit/.lane-c06/C06.md`; two-build digest match; verified provenance policy | Make releases reproducible and provenance blocking | 2026-07-12 |
 | C07 | 18/30 · partial | Property/fuzz/flake gates absent; PR cross-platform coverage incomplete | `audit/.lane-c07/C07.md`; proptest/fuzz corpus; repeated-test and OS matrix evidence | Implement WBS-6.2 | 2026-07-12 |
 | C08 | 19/30 · partial | No per-PR perf regression gate; compression/token and reproducibility evidence shallow | `audit/.lane-c08/C08.md`; checked baseline + threshold gate | Add stable benchmark baseline and regression policy | 2026-07-12 |
-| C09 | 27/45 · partial | Axe scans a mirror fixture; responsive, cognitive, help, and efficiency coverage incomplete | `audit/.lane-c09/C09.md`; WCAG suite against built viewer | Point browser harness at built viewer and retain keyboard assertions | 2026-07-12 |
+| C09 | 30/45 · partial | Native WebView/live-data, responsive, cognitive, help, and efficiency coverage remain incomplete | `audit/.lane-c09/C09.md`; WCAG suite against all built-viewer tabs at three widths | Add responsive overflow/touch assertions and native integration evidence | 2026-07-12 |
 | C10 | 25/36 · partial | Typography/theme/splash and automated golden coverage remain incomplete | `audit/.lane-c10/C10.md`; deterministic screenshots pass against visual spec | Automate viewer golden captures and theme checks | 2026-07-12 |
-| C11 | 25/45 · partial | Native installers, platform signing, channels, parity, mobile decision remain | `audit/.lane-c11/C11.md`; install/launch/uninstall smoke on target OS | Ship installers/channels, record human signing and mobile decisions | 2026-07-12 |
+| C11 | 25/45 · partial | Native-format scaffolds are unvalidated/unpublished; platform signing, channels, parity, mobile decision remain | `audit/.lane-c11/C11.md`; clean-host install/launch/uninstall smoke on target OS | Validate and ship installers/channels; record signing and mobile decisions | 2026-07-12 |
 
 ## Functional requirements
 
@@ -53,6 +53,6 @@ These are residual themes only; they do not create new PLAN T-IDs.
 | PLAN-P3 | partial | LLM-backed intent extraction and `curate.py` convergence remain | `docs/DESIGN.md` §6-7; adapter contract tests with provenance | Claim WBS-3.2 after cross-repo destination approval | 2026-07-12 |
 | PLAN-P4 | partial | context-mode FTS recall and explicit TUI scope decision remain | `docs/DESIGN.md` §3, §7; recall E2E or accepted `na` decision | Human decides TUI; machine implements approved recall boundary | 2026-07-12 |
 | PLAN-P6 | partial | Coverage gate landed; property, fuzz, race, and perf-budget gates remain | CI runs proptest/fuzz smoke and enforces a checked benchmark budget | Execute WBS-6.2 | 2026-07-12 |
-| PLAN-W8-B | todo | Wave-7 baseline is 268/402 (67% C), 33 raw points below B | Independent audit-v38 result is at least 302/402 and >=75% | Close highest-value C06/C07/C09/C11 evidence gaps, then re-audit | 2026-07-12 |
+| PLAN-W8-B | todo | Wave-8 result is 273/402 (68% C), 29 raw points below the 302-point B threshold | Independent audit-v38 result is at least 302/402 and >=75% | Close highest-value C06/C07/C09/C11 evidence gaps, then re-audit | 2026-07-12 |
 | PLAN-ORG | partial | Registry spine and governance-policy conformance require cross-repo/human evidence | Registry entry links SessionLedger; policy checklist and org controls are recorded | Human owns WBS-9.1..WBS-9.3 | 2026-07-12 |
 

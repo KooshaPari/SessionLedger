@@ -3,3 +3,4 @@
 *.pdb
 .DS_Store
 /*.forge.db
+/agileplus.db

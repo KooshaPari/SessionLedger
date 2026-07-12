@@ -5,7 +5,8 @@ $visualSpec = Join-Path $repoRoot "docs\VISUAL_SPEC.md"
 $visualReadme = Join-Path $repoRoot "tests\visual\README.md"
 $goldenDir = Join-Path $repoRoot "tests\visual\golden"
 $a11ySpec = Join-Path $repoRoot "tests\visual\harness\a11y.spec.js"
-$a11yFixture = Join-Path $repoRoot "tests\visual\harness\fixtures\a11y.html"
+$viewerServer = Join-Path $repoRoot "tests\visual\harness\serve-viewer.mjs"
+$viewerConfig = Join-Path $repoRoot "crates\sl-viewer\Dioxus.toml"
 
 $requiredSections = @(
     "## 1. Lab-Coat palette",
@@ -33,8 +34,11 @@ if (-not (Test-Path -Path $goldenDir -PathType Container)) {
 if (-not (Test-Path -Path $a11ySpec -PathType Leaf)) {
     $missing += "tests/visual/harness/a11y.spec.js"
 }
-if (-not (Test-Path -Path $a11yFixture -PathType Leaf)) {
-    $missing += "tests/visual/harness/fixtures/a11y.html"
+if (-not (Test-Path -Path $viewerServer -PathType Leaf)) {
+    $missing += "tests/visual/harness/serve-viewer.mjs"
+}
+if (-not (Test-Path -Path $viewerConfig -PathType Leaf)) {
+    $missing += "crates/sl-viewer/Dioxus.toml"
 }
 
 if ($missing.Count -gt 0) {

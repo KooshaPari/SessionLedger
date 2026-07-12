@@ -18,7 +18,8 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
 | Installer script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS GitHub Release artifacts |
-| brew / crates.io / MSI / DMG / AppImage | Deferred | Soft distribution goals |
+| Native installer scaffolds | **Partial** | Installable Windows ZIP + WiX MSI source; Linux AppImage/`.deb` developer scripts; none published |
+| brew / crates.io / DMG | Deferred | Soft distribution goals |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 
 ### Release matrix (CI)
@@ -54,7 +55,24 @@ do not fail or retract the otherwise valid unsigned Release.
 `package-windows` target produces an equivalent versioned portable ZIP via
 `scripts/package-windows.ps1`. Day-to-day `ci.yml` remains Linux-only
 (Phenotype billing policy); Windows coverage is release-tag scoped, not PR CI.
-An MSI/NSIS installer and Authenticode signing remain explicitly deferred.
+The installable ZIP, WiX MSI source, and Linux package scripts are **partial**
+developer scaffolds and are not release-CI outputs. MSI publication and
+Authenticode signing remain explicitly deferred.
+
+### Installer matrix
+
+| Platform / format | Status | Current capability |
+|-------------------|--------|--------------------|
+| Windows installable ZIP | **Partial** | Per-user LocalAppData install, Start Menu shortcut, uninstall registration |
+| Windows MSI / WiX v4 | **Partial** | Build notes and `Product.wxs`; local evaluation only |
+| Linux AppImage | **Partial** | Local `appimagetool` build script |
+| Linux Debian package | **Partial** | Local `dpkg-deb` build script |
+| macOS `.app` | **Partial** | Unsigned host-local bundle; no DMG/notarization |
+
+These candidates use the same existing
+[checksum, cosign, and GitHub attestation path](#release-integrity-signing-cosign)
+when distributed as release assets. Platform-native signing is separate and
+remains deferred.
 
 ---
 
@@ -152,9 +170,16 @@ make -C packaging package-macos   # → packaging/dist/SessionLedger.app
 make -C packaging package-linux   # → packaging/dist/linux/SessionLedger
 # On Windows:
 make -C packaging package-windows # → packaging/dist/sl-viewer-v<version>-x86_64-pc-windows-msvc.zip
+
+# Optional Linux installer scaffolds:
+./packaging/linux/package-appimage.sh
+./packaging/linux/package-deb.sh
 ```
 
-See [`packaging/README.md`](../../packaging/README.md).
+The Windows ZIP can run portably or invoke `Install.ps1` for a per-user install.
+WiX MSI evaluation is documented in
+[`scripts/package-msi.md`](../../scripts/package-msi.md). See
+[`packaging/README.md`](../../packaging/README.md) for scaffold status.
 
 ### Installer script draft (Linux / macOS)
 
@@ -176,7 +201,10 @@ enable automatic updates.
 
 ## Uninstall / cleanliness
 
-There is no MSI/pkg uninstaller yet. Manual cleanup:
+The installable Windows ZIP registers `Uninstall.ps1` in Windows Installed Apps;
+it removes the application and shortcut but deliberately preserves user data.
+The WiX MSI remains a scaffold. For portable and source installations, use
+manual cleanup:
 
 1. **Stop processes** — `make dev-down` or kill `sl-daemon` / `sl-viewer`.
 2. **Remove binaries** — delete extracted Release folders, `packaging/dist/`,
@@ -262,11 +290,11 @@ interpret the absence as a successful provenance check.
 
 ## Platform code-signing & notarization — DEFERRED
 
-Release and packaging scaffolds still ship **unsigned binaries / `.app`
-bundles**. The following platform trust paths remain deferred under #66:
+Release and packaging scaffolds still ship **unsigned binaries, installers, and
+`.app` bundles**. The following platform trust paths remain deferred under #66:
 
 - Apple Developer ID signing, `notarytool` notarization, and stapling
-- Windows Authenticode (`signtool`) for `sl-viewer.exe`
+- Windows Authenticode (`signtool`) for `sl-viewer.exe` and future MSI artifacts
 
 ### macOS Gatekeeper notes (unsigned builds)
 

@@ -47,6 +47,7 @@ $tagVersion = if ($Version.StartsWith("v")) { $Version } else { "v$Version" }
 $packageName = "sl-viewer-$tagVersion-$Target"
 $layoutDir = Join-Path $DistDir $packageName
 $archivePath = Join-Path $DistDir "$packageName.zip"
+$windowsScaffold = Join-Path $ProjectRoot "packaging\windows"
 
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue -LiteralPath $layoutDir
@@ -56,15 +57,26 @@ New-Item -ItemType Directory -Path $layoutDir | Out-Null
 Copy-Item -LiteralPath $BinaryPath -Destination (Join-Path $layoutDir "sl-viewer.exe")
 Copy-Item -LiteralPath (Join-Path $ProjectRoot "LICENSE-MIT") -Destination $layoutDir
 Copy-Item -LiteralPath (Join-Path $ProjectRoot "LICENSE-APACHE") -Destination $layoutDir
+Copy-Item -LiteralPath (Join-Path $windowsScaffold "Install.ps1") -Destination $layoutDir
+Copy-Item -LiteralPath (Join-Path $windowsScaffold "Uninstall.ps1") -Destination $layoutDir
 
 @"
 SessionLedger viewer $tagVersion
 
-Run sl-viewer.exe from this directory.
+Portable use:
+  Run sl-viewer.exe from this directory.
 
-This is a portable, unsigned build. It is not an MSI installer and does not
-register an uninstaller or automatic updates. Windows SmartScreen may warn
-before first launch. See docs/ops/distribution.md in the source repository.
+Per-user install:
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
+
+The installer script copies the application to LocalAppData, creates a Start
+Menu shortcut, and registers an uninstall entry. Use Uninstall.ps1 or Windows
+Installed Apps to remove it.
+
+This is an unsigned installer scaffold, not an MSI and not intended for public
+distribution. Windows SmartScreen may warn before first launch. Authenticode
+remains deferred; verify the release checksum/cosign provenance as documented
+in docs/ops/distribution.md in the source repository.
 "@ | Set-Content -LiteralPath (Join-Path $layoutDir "README.txt") -Encoding utf8
 
 Compress-Archive -LiteralPath $layoutDir -DestinationPath $archivePath -CompressionLevel Optimal

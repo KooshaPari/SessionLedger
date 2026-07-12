@@ -1,0 +1,58 @@
+# Gap audit / QA matrix
+
+This matrix is the human-readable QA view of
+[`TRACEABILITY.json`](TRACEABILITY.json). Status values are limited to `done`,
+`partial`, `todo`, `blocked`, and `na`. Scores are copied from
+[`audit/SCORECARD.md`](../../audit/SCORECARD.md) and MUST NOT be changed without
+a re-audit. Agents changing a row must update `status_updated`, the linked WBS
+package, and the JSON mirror in the same change.
+
+## audit-v38 clusters
+
+| ID | Current score / status | Gap | Acceptance test / evidence | Next action | status_updated |
+|---|---|---|---|---|---|
+| C00 | 22/30 · partial | OpenAPI/idempotency, cancellation, durable schema, profiling/race/RSS gates | `audit/.lane-c00/C00.md`; architecture tests and new gates pass | Prioritize API contract and P6 hardening evidence | 2026-07-12 |
+| C01 | 22/30 · partial | Mutable auxiliary actions, no CI concurrency, uneven error/CLI/a11y polish | `audit/.lane-c01/C01.md`; all workflow actions SHA-pinned; built-viewer a11y | Pin remaining actions and scan the built viewer | 2026-07-12 |
+| C02 | 18/30 · partial | No auth/admission limits or append-only actor/action audit trail | `audit/.lane-c02/C02.md`; localhost/auth policy test; structured audit-event test | Enforce local trust boundary and add ingest limits/audit events | 2026-07-12 |
+| C03 | 31/36 · partial | Role-form FR stories, journey catalog, hermetic env sample, measured feedback budget | `audit/.lane-c03/C03.md`; traceability lint; journey-to-test mapping | Keep trace artifacts current; add named user journeys | 2026-07-12 |
+| C04 | 22/30 · partial | Maintainer 2FA is unproven; commit signing and secret-policy evidence incomplete | `audit/.lane-c04/C04.md`; org settings evidence; signed release verification | Human records 2FA; tighten local secret checks | 2026-07-12 |
+| C05 | 21/30 · partial | Trace continuity, profiling, live alert routing, provisioned dashboards, scheduled chaos/load remain | `audit/.lane-c05/C05.md`; OTLP integration test; provisioned dashboard/alert proof | Add endpoint labels/histograms and scheduled operational tests | 2026-07-12 |
+| C06 | 18/30 · partial | Reproducible/hermetic/SLSA-L3 and container provenance are incomplete | `audit/.lane-c06/C06.md`; two-build digest match; verified provenance policy | Make releases reproducible and provenance blocking | 2026-07-12 |
+| C07 | 18/30 · partial | Property/fuzz/flake gates absent; PR cross-platform coverage incomplete | `audit/.lane-c07/C07.md`; proptest/fuzz corpus; repeated-test and OS matrix evidence | Implement WBS-6.2 | 2026-07-12 |
+| C08 | 19/30 · partial | No per-PR perf regression gate; compression/token and reproducibility evidence shallow | `audit/.lane-c08/C08.md`; checked baseline + threshold gate | Add stable benchmark baseline and regression policy | 2026-07-12 |
+| C09 | 27/45 · partial | Axe scans a mirror fixture; responsive, cognitive, help, and efficiency coverage incomplete | `audit/.lane-c09/C09.md`; WCAG suite against built viewer | Point browser harness at built viewer and retain keyboard assertions | 2026-07-12 |
+| C10 | 25/36 · partial | Typography/theme/splash and automated golden coverage remain incomplete | `audit/.lane-c10/C10.md`; deterministic screenshots pass against visual spec | Automate viewer golden captures and theme checks | 2026-07-12 |
+| C11 | 25/45 · partial | Native installers, platform signing, channels, parity, mobile decision remain | `audit/.lane-c11/C11.md`; install/launch/uninstall smoke on target OS | Ship installers/channels, record human signing and mobile decisions | 2026-07-12 |
+
+## Functional requirements
+
+| ID | Current score / status | Gap | Acceptance test / evidence | Next action | status_updated |
+|---|---|---|---|---|---|
+| FR-001 | done | None in FR scope | `crates/sl-daemon/src/etl.rs`; `src/ingestion/`; pipeline tests | Preserve adapter fixtures when formats change | 2026-07-12 |
+| FR-002 | done | None in FR scope | `crates/sl-daemon/src/validation.rs`; `POST /api/ingest`; `sl validate` | Keep conformance corpus synchronized | 2026-07-12 |
+| FR-003 | done | None in FR scope | `GET /api/bundles`; `GET /api/search`; filter/tag tests | Preserve query compatibility | 2026-07-12 |
+| FR-004 | done | None in FR scope | `GET /api/replay/:id`; `crates/sl-daemon/tests/sse_bridge.rs` | Preserve SSE contract | 2026-07-12 |
+| FR-005 | done | None in FR scope | `GET /api/metrics`; metrics unit tests | Preserve product metrics contract beside RED metrics | 2026-07-12 |
+| FR-006 | done | None in FR scope | `sl archive`; `sl restore`; `crates/sl-daemon/src/archive.rs` | Retain gzip roundtrip tests | 2026-07-12 |
+| FR-007 | done | None in FR scope | `crates/sl-viewer/src/timeline.rs` | Keep viewer smoke coverage | 2026-07-12 |
+| FR-008 | done | None in FR scope | `crates/sl-viewer/src/search_view.rs`; `GET /api/search` | Keep search UI/API mapping | 2026-07-12 |
+| FR-009 | done | None in FR scope | `crates/sl-viewer/src/replay_view.rs`; replay SSE tests | Keep replay UI/API mapping | 2026-07-12 |
+| FR-010 | done | None in FR scope | `crates/sl-viewer/src/live_feed.rs`; `GET /api/stream` | Retain reconnect and roundtrip evidence | 2026-07-12 |
+| FR-011 | done | None: unfinished tab shipped in #97 | `src/domain/worklog.rs`; `crates/sl-viewer/src/unfinished_tab.rs`; T-024, T-036 | Preserve detector/projection/view tests | 2026-07-12 |
+| FR-012 | done | None in FR scope | `src/domain/bundle.rs`; `src/distill/`; `src/inject.rs` | Preserve acceptance-slice injection gate | 2026-07-12 |
+| FR-013 | done | None in FR scope | `tests/okf_roundtrip.rs`; `tests/okf_golden.rs`; conformance fixtures | Add fixtures for every new corpus shape | 2026-07-12 |
+| FR-014 | done | None in FR scope | `/healthz`; `/readyz`; `process-compose.yaml`; `docs/ops/runbook.md` | Keep liveness/readiness semantics distinct | 2026-07-12 |
+| FR-015 | done | FR scope is observability surfaces; deeper C05 operationalization remains | `crates/sl-daemon/src/otel.rs`; `GET /metrics`; `docs/ops/dashboards/sessionledger-red.json`; `docs/ops/observability.md` | Track provisioning/routing gaps under C05, not by reopening this FR | 2026-07-12 |
+
+## PLAN and roadmap residual themes
+
+These are residual themes only; they do not create new PLAN T-IDs.
+
+| ID | Current score / status | Gap | Acceptance test / evidence | Next action | status_updated |
+|---|---|---|---|---|---|
+| PLAN-P3 | partial | LLM-backed intent extraction and `curate.py` convergence remain | `docs/DESIGN.md` §6-7; adapter contract tests with provenance | Claim WBS-3.2 after cross-repo destination approval | 2026-07-12 |
+| PLAN-P4 | partial | context-mode FTS recall and explicit TUI scope decision remain | `docs/DESIGN.md` §3, §7; recall E2E or accepted `na` decision | Human decides TUI; machine implements approved recall boundary | 2026-07-12 |
+| PLAN-P6 | partial | Coverage gate landed; property, fuzz, race, and perf-budget gates remain | CI runs proptest/fuzz smoke and enforces a checked benchmark budget | Execute WBS-6.2 | 2026-07-12 |
+| PLAN-W8-B | todo | Wave-7 baseline is 268/402 (67% C), 33 raw points below B | Independent audit-v38 result is at least 302/402 and >=75% | Close highest-value C06/C07/C09/C11 evidence gaps, then re-audit | 2026-07-12 |
+| PLAN-ORG | partial | Registry spine and governance-policy conformance require cross-repo/human evidence | Registry entry links SessionLedger; policy checklist and org controls are recorded | Human owns WBS-9.1..WBS-9.3 | 2026-07-12 |
+

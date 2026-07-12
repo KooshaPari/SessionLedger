@@ -119,10 +119,23 @@ before testing.
 ## CI traceability
 
 Requirements live in [`functional_requirements.md`](../functional_requirements.md),
-claimable work maps them in [`PLAN.md`](../../PLAN.md), and acceptance evidence
-belongs in the linked tests. CI changes should preserve that FR → task → test
-chain; record intentional gaps in the FR catalog or PLAN rather than silently
-dropping coverage.
+claimable work maps them in [`PLAN.md`](../../PLAN.md), phased delivery and
+organization controls live in [`WBS.md`](WBS.md), and audit acceptance gaps live
+in [`GAP_QA_MATRIX.md`](GAP_QA_MATRIX.md). The machine-readable SSOT is
+[`TRACEABILITY.json`](TRACEABILITY.json).
+
+Agents changing an FR, PLAN task, WBS package, or cluster status must update the
+affected in-document status and `TRACEABILITY.json` in the same change. Run:
+
+```powershell
+pwsh ./docs/ops/traceability_lint.ps1
+```
+
+The dedicated CI `traceability` job runs this command and fails when the schema
+is missing, an FR is absent from JSON, FR catalog and JSON statuses disagree, or
+any tracked status is outside `done|partial|todo|blocked|na`. Acceptance
+evidence belongs in the linked tests and paths; record intentional gaps in the
+matrix instead of silently dropping coverage.
 
 ### Coverage ratchet
 
@@ -138,5 +151,8 @@ until each module reaches 85%.
 
 - [`observability.md`](observability.md) — SLO stubs, RED map, `/healthz` vs `/readyz`, OTel/#65
 - [`alerts.md`](alerts.md) — alert rule stubs (not wired)
+- [`WBS.md`](WBS.md) — phased project and organization work packages
+- [`GAP_QA_MATRIX.md`](GAP_QA_MATRIX.md) — current audit and acceptance gaps
+- [`TRACEABILITY.json`](TRACEABILITY.json) — machine-readable status SSOT
 - [`../functional_requirements.md`](../functional_requirements.md) — FR-014
 - [`../../AGENTS.md`](../../AGENTS.md) — agent build/test norms

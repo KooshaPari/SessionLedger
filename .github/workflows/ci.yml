@@ -10,6 +10,15 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
+  traceability:
+    name: traceability SSOT
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: lint traceability
+        shell: pwsh
+        run: ./docs/ops/traceability_lint.ps1
+
   build-test:
     name: build · test · lint
     runs-on: ubuntu-latest # Linux only — Phenotype CI billing policy

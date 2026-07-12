@@ -5,6 +5,10 @@ Claimable tasks for autonomous agents. Reference FR-IDs from
 **S** ≤ ~1 session, **M** ~1–2 sessions, **L** multi-session / multi-crate.
 
 Do not claim a task already marked `done`. Prefer worktrees per `AGENTS.md`.
+Phased residual work and audit waves are tracked in
+[`docs/ops/WBS.md`](docs/ops/WBS.md); machine status mirrors live in
+[`docs/ops/TRACEABILITY.json`](docs/ops/TRACEABILITY.json). Status changes must
+update both the source document and JSON mirror in the same change.
 
 ---
 

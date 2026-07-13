@@ -46,6 +46,16 @@ jobs:
         shell: pwsh
         run: ./scripts/openapi-drift-check.ps1
 
+  schema-migrate:
+    name: durable schema migration scaffold
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - name: apply schema migrations in sqlite tests
+        run: cargo test --features sqlite schema --locked
+
   reproducible-build:
     name: reproducible build · sl-daemon
     runs-on: ubuntu-latest

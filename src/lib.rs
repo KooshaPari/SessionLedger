@@ -24,6 +24,7 @@ pub mod export;
 pub mod ingestion;
 pub mod inject;
 pub mod ports;
+pub mod schema;
 pub mod viewer;
 
 pub use distill::contract_compiler::ContractCompiler;

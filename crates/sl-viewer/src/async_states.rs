@@ -7,6 +7,68 @@ use dioxus::prelude::*;
 
 use crate::theme::ThemeColors;
 
+/// Layout preset for content-shaped skeleton blocks (VISUAL_SPEC §3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SkeletonLayout {
+    /// Sidebar list rows + detail title and prose lines.
+    #[default]
+    Bundles,
+    /// Single-column list rows (search / history panes).
+    ListDetail,
+}
+
+/// Content-shaped loading placeholder that preserves final layout (no CLS).
+#[component]
+pub fn ContentSkeleton(
+    #[props(default)] layout: SkeletonLayout,
+    #[props(default = 4_usize)] list_rows: usize,
+) -> Element {
+    let rows = list_rows.clamp(3, 6);
+    let list_blocks = (0..rows).map(|index| {
+        rsx! {
+            div {
+                key: "{index}",
+                class: "sl-skeleton-row",
+                div { class: "sl-skeleton-block sl-skeleton-block-title" }
+                div { class: "sl-skeleton-block sl-skeleton-block-subtitle" }
+                div { class: "sl-skeleton-block sl-skeleton-block-meta" }
+            }
+        }
+    });
+
+    match layout {
+        SkeletonLayout::Bundles => rsx! {
+            div {
+                class: "sl-content-skeleton sl-content-skeleton-bundles",
+                role: "status",
+                "aria-live": "polite",
+                "aria-busy": "true",
+                "aria-label": "Loading content",
+                "data-testid": "content-skeleton",
+                div { class: "sl-skeleton-list", {list_blocks} }
+                div {
+                    class: "sl-skeleton-detail",
+                    div { class: "sl-skeleton-block sl-skeleton-block-heading" }
+                    div { class: "sl-skeleton-block sl-skeleton-block-line" }
+                    div { class: "sl-skeleton-block sl-skeleton-block-line sl-skeleton-block-line-short" }
+                    div { class: "sl-skeleton-block sl-skeleton-block-line" }
+                }
+            }
+        },
+        SkeletonLayout::ListDetail => rsx! {
+            div {
+                class: "sl-content-skeleton sl-content-skeleton-list",
+                role: "status",
+                "aria-live": "polite",
+                "aria-busy": "true",
+                "aria-label": "Loading content",
+                "data-testid": "content-skeleton",
+                div { class: "sl-skeleton-list", {list_blocks} }
+            }
+        },
+    }
+}
+
 /// Full-panel loading indicator for in-flight bundle / search loads.
 #[component]
 pub fn LoadingState(

@@ -7,7 +7,7 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::async_states::{ErrorState, LoadingState};
+use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
 
 /// Slim bundle metadata returned by `GET /api/search`.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -250,7 +250,7 @@ pub fn SearchView() -> Element {
                     }
                 }
                 if loading() {
-                    LoadingState { message: "Searching bundles…".to_string() }
+                    ContentSkeleton { layout: SkeletonLayout::ListDetail, list_rows: 5 }
                 }
                 if !results.is_empty() && !loading() {
                     div { class: "session-count",

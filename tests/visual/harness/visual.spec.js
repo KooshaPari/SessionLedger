@@ -104,6 +104,27 @@ test("launch splash is present then dismisses", async ({ page }) => {
   await expect(splash).toHaveCount(0, { timeout: 5000 });
 });
 
+test("content skeleton fixture exposes tokens and stable layout", async ({ page }) => {
+  await page.goto("/?fixture=skeleton");
+  await expect(page.getByTestId("content-skeleton")).toBeVisible();
+
+  const tokens = await page.evaluate(() => {
+    const styles = getComputedStyle(document.documentElement);
+    return {
+      skeletonBase: styles.getPropertyValue("--sl-skeleton-base").trim(),
+      skeletonHighlight: styles.getPropertyValue("--sl-skeleton-highlight").trim(),
+    };
+  });
+
+  expect(tokens.skeletonBase).toBe("#2b3544");
+  expect(tokens.skeletonHighlight).toBe("rgba(147, 197, 253, 0.14)");
+
+  await expect(page).toHaveScreenshot("l1-content-skeleton.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
+});
+
 test("viewer exposes spacing and motion tokens", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();

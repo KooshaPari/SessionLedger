@@ -11,5 +11,5 @@ Reserved names:
 - `e2-history-empty.png`
 - `e3-timeline-zero.png`
 - `e4-search-empty.png`
-- `l1-search-loading.png`
+- `l1-content-skeleton.png`
 - `r1-search-error.png`

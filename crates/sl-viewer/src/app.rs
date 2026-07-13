@@ -1,11 +1,12 @@
 use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 
-use crate::async_states::{ErrorState, LoadingState};
+use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
+use crate::fixture::query_fixture_active;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
@@ -217,6 +218,8 @@ pub fn App() -> Element {
                     --sl-motion-slow: 1.8s;
                     --sl-ease-out: ease-out;
                     --sl-ease-in-out: ease-in-out;
+                    --sl-skeleton-base: #e8ecf2;
+                    --sl-skeleton-highlight: rgba(37, 99, 235, 0.14);
                 }}
                 :root[data-theme="dark"] {{
                     color-scheme: dark;
@@ -247,6 +250,8 @@ pub fn App() -> Element {
                     --sl-motion-slow: 1.8s;
                     --sl-ease-out: ease-out;
                     --sl-ease-in-out: ease-in-out;
+                    --sl-skeleton-base: #2b3544;
+                    --sl-skeleton-highlight: rgba(147, 197, 253, 0.14);
                 }}
                 html, body {{ margin: 0; max-width: 100%; overflow-x: clip; }}
                 body {{ font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
@@ -322,6 +327,28 @@ pub fn App() -> Element {
                     to {{ opacity: 0; visibility: hidden; pointer-events: none; }}
                 }}
                 .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sl-text-muted); font-size: 14px; }}
+                .sl-content-skeleton {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
+                .sl-content-skeleton-bundles {{ flex-direction: row; }}
+                .sl-content-skeleton-list {{ flex-direction: column; }}
+                .sl-skeleton-list {{ width: 340px; min-width: 340px; max-width: 340px; border-right: 1px solid var(--sl-border); padding: var(--sl-space-sm) 0; box-sizing: border-box; }}
+                .sl-skeleton-row {{ padding: var(--sl-space-md) var(--sl-space-xl); border-bottom: 1px solid var(--sl-border); min-height: 72px; box-sizing: border-box; }}
+                .sl-skeleton-block {{ border-radius: var(--sl-radius-sm); background: linear-gradient(90deg, var(--sl-skeleton-base) 0%, var(--sl-skeleton-highlight) 50%, var(--sl-skeleton-base) 100%); background-size: 200% 100%; animation: sl-skeleton-shimmer var(--sl-motion-slow) var(--sl-ease-in-out) infinite; }}
+                .sl-skeleton-block-title {{ height: 13px; width: 62%; margin-bottom: var(--sl-space-sm); }}
+                .sl-skeleton-block-subtitle {{ height: 12px; width: 84%; margin-bottom: var(--sl-space-sm); }}
+                .sl-skeleton-block-meta {{ height: 10px; width: 38%; }}
+                .sl-skeleton-detail {{ flex: 1; padding: var(--sl-space-2xl) 40px; box-sizing: border-box; }}
+                .sl-skeleton-block-heading {{ height: 18px; width: 48%; margin-bottom: var(--sl-space-xl); }}
+                .sl-skeleton-block-line {{ height: 14px; width: 100%; max-width: var(--sl-measure-max); margin-bottom: var(--sl-space-md); }}
+                .sl-skeleton-block-line-short {{ width: 72%; }}
+                @keyframes sl-skeleton-shimmer {{
+                    0% {{ background-position: 100% 0; }}
+                    100% {{ background-position: -100% 0; }}
+                }}
+                @media (max-width: 600px) {{
+                    .sl-skeleton-list {{ width: 100%; min-width: 0; max-width: 100%; border-right: none; }}
+                    .sl-content-skeleton-bundles {{ flex-direction: column; }}
+                    .sl-skeleton-detail {{ padding: var(--sl-space-lg); }}
+                }}
                 .tab-bar {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--sl-border); background: var(--sl-surface-muted); }}
                 .tab {{ flex: 1; padding: var(--sl-space-md) var(--sl-space-md); text-align: center; cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); border: none; border-bottom: 2px solid transparent; background: transparent; transition: all var(--sl-motion-fast) var(--sl-ease-out); }}
                 .tab:hover {{ color: var(--sl-text); background: color-mix(in srgb, var(--sl-accent) 8%, transparent); }}
@@ -595,10 +622,10 @@ fn BundlesTab() -> Element {
         loading.set(false);
     });
 
-    if loading() {
+    if loading() || query_fixture_active("skeleton") {
         return rsx! {
             h2 { "Compiled Bundles" }
-            LoadingState { message: "Loading bundles…".to_string() }
+            ContentSkeleton { layout: SkeletonLayout::Bundles }
         };
     }
     if let Some(err) = load_error() {

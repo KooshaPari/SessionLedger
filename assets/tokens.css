@@ -87,6 +87,10 @@
   --lc-ease-in-out:      ease-in-out;
   --lc-ease-in:          ease-in;
 
+  /* Lab-Coat content skeleton shimmer (VISUAL_SPEC §3). */
+  --lc-skeleton-base:      #e5e7eb;
+  --lc-skeleton-highlight: rgba(37, 99, 235, 0.12);
+
   /* ────────────────────────────────────────────────────────────
    * TERMINAL-FORGE — forgecode (terminal family)
    * Decision: vision-pillar proposed, 2026-07-06
@@ -171,6 +175,8 @@
   --sl-font-size-caption: var(--lc-font-size-caption);
   --sl-line-height-caption: var(--lc-line-height-caption);
   --sl-measure-max: var(--lc-measure-max);
+  --sl-skeleton-base: var(--lc-skeleton-base);
+  --sl-skeleton-highlight: var(--lc-skeleton-highlight);
 }
 
 :root,
@@ -187,6 +193,8 @@
   --sl-accent-warning: var(--lc-orange);
   --sl-danger: #b91c1c;
   --sl-danger-surface: #fef2f2;
+  --sl-skeleton-base: #e8ecf2;
+  --sl-skeleton-highlight: rgba(37, 99, 235, 0.14);
 }
 
 :root[data-theme="dark"],
@@ -202,6 +210,8 @@
   --sl-accent-warning: var(--lc-orange);
   --sl-danger: #f87171;
   --sl-danger-surface: #2a1a1a;
+  --sl-skeleton-base: #2b3544;
+  --sl-skeleton-highlight: rgba(147, 197, 253, 0.14);
 }
 
 .family-terminal-forge {

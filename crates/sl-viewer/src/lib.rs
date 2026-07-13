@@ -16,6 +16,7 @@ pub mod bundle_diff;
 pub mod bundle_list;
 pub mod corpus_loader;
 pub mod detail_pane;
+pub mod fixture;
 pub mod history_tab;
 pub mod live_feed;
 pub mod memory_tab;
@@ -28,6 +29,6 @@ pub mod timeline;
 pub mod unfinished_tab;
 
 pub use app::App;
-pub use async_states::{ErrorState, LoadingState};
+pub use async_states::{ContentSkeleton, ErrorState, LoadingState, SkeletonLayout};
 pub use corpus_loader::{load_sessions, DataSource};
 pub use session_list::SessionList;

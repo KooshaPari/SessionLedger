@@ -18,6 +18,7 @@ work that belongs here is limited to:
 | Spec + examples | Structural rules and worked shapes | [`OKF-SPEC.md`](reference/OKF-SPEC.md), [`OKF-EXAMPLES.md`](reference/OKF-EXAMPLES.md) |
 | Round-trip / unit tests | Compile and parse assertions against fixtures | `tests/`, crate unit tests |
 | Pipeline performance | Criterion measurements for distill compile, OKF export, and injection rendering | `benches/pipeline.rs` |
+| Eval reproducibility | Lockfile SHA, fixture count, MSRV, and bench policy anchors | `docs/ops/eval-manifest.json`; `scripts/eval-repro-check.ps1` |
 | Quality gates | Coverage / lint / mutation as configured | `.qgate.toml`, CI |
 
 These surfaces verify that SessionLedger emits and consumes valid OKF. They
@@ -39,11 +40,11 @@ bundle, and injection rendering from that same bundle. Compare results on the
 same host and toolchain; machine load and power management can materially
 affect timings.
 
-Benchmarks are intentionally not a blocking CI threshold. Shared GitHub
-runner timing is noisy, and this repository does not yet carry a stable
-hardware-specific baseline. CI still compiles the bench target through
-`cargo build --all-targets --locked`; maintainers run the command above when
-changing a measured path.
+Benchmarks are gated per pull request through
+[`bench-gate.yml`](../../.github/workflows/bench-gate.yml) and
+[`perf-baseline.json`](perf-baseline.json). Reproducibility anchors live in
+[`eval-manifest.json`](eval-manifest.json); run `./scripts/eval-repro-check.ps1`
+before refreshing baselines or adding fixtures.
 
 These product-local pipeline benchmarks do not change the boundary below:
 Harbor and multi-environment agent evaluation remain **N/A**.

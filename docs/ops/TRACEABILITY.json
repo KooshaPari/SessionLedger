@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "311/402",
-    "pct": 77,
+    "score": "316/402",
+    "pct": 79,
     "grade": "B",
-    "commit": "fcd1e3b",
-    "wave": "Wave-14"
+    "commit": "da347b3",
+    "wave": "Wave-15"
   },
   "fr": [
     {
@@ -462,13 +462,35 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.16",
+      "status": "done",
+      "evidence": [
+        "docs/api/openapi.yaml",
+        "crates/sl-daemon/src/http.rs",
+        ".pre-commit-config.yaml",
+        "assets/tokens.css",
+        "crates/sl-viewer/src/theme.rs"
+      ]
+    },
+    {
+      "id": "WBS-8.17",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
     {
       "id": "C00",
-      "score": "22/30",
-      "status": "partial"
+      "score": "23/30",
+      "status": "partial",
+      "evidence": [
+        "docs/api/openapi.yaml",
+        "crates/sl-daemon/src/http.rs"
+      ]
     },
     {
       "id": "C01",
@@ -492,8 +514,12 @@
     },
     {
       "id": "C04",
-      "score": "22/30",
-      "status": "partial"
+      "score": "23/30",
+      "status": "partial",
+      "evidence": [
+        ".pre-commit-config.yaml",
+        "CONTRIBUTING.md"
+      ]
     },
     {
       "id": "C05",
@@ -534,8 +560,13 @@
     },
     {
       "id": "C10",
-      "score": "26/36",
-      "status": "partial"
+      "score": "29/36",
+      "status": "partial",
+      "evidence": [
+        "assets/tokens.css",
+        "crates/sl-viewer/src/theme.rs",
+        "docs/VISUAL_SPEC.md"
+      ]
     },
     {
       "id": "C11",

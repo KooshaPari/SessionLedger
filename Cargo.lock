@@ -5100,6 +5100,8 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-util",
+ "wasm-bindgen",
+ "web-sys",
  "zstd",
 ]
 

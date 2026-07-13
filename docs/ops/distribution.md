@@ -23,7 +23,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` installs the daemon/CLI from a checkout |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
 | Installer script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS GitHub Release artifacts |
-| Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local |
+| Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked on Release; PR CI on `windows-latest` runs unsigned Install.ps1 → `--version` → Uninstall.ps1 lifecycle smoke via `scripts/installer-lifecycle-smoke.ps1 -WindowsInstallLifecycle`; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local |
 | Scoop / brew / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, formula, crate publication, DMG, or update automation exists yet |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 | Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
@@ -150,7 +150,9 @@ mkdir -p "$SL_WATCH_DIR" "$SL_OUT_DIR"
 | `/data/sessions` | `$HOME/.forge/sessions` (ro) |
 | `/data/out` | `$PWD/okf-out` or a named volume |
 
-Volumes are owned by non-root user `sl` (uid `10001`).
+Volumes are owned by non-root user `sl` (uid `10001`). The canonical daemon
+image defines an OCI `HEALTHCHECK` that probes `GET /healthz` on
+`127.0.0.1:8080` while `sl-daemon serve` is running.
 
 ### Future XDG / AppData (not implemented)
 
@@ -196,8 +198,12 @@ See [`packaging/channels.md`](../../packaging/channels.md) for the current
 cargo install path, GitHub Release archive channel, draft install script, and
 future Scoop/Homebrew placeholders.
 Run [`scripts/installer-lifecycle-smoke.ps1`](../../scripts/installer-lifecycle-smoke.ps1)
-for machine-checkable scaffold and lifecycle-documentation assertions; it does
-not perform a clean-host MSI install.
+for machine-checkable scaffold and lifecycle-documentation assertions. On
+`windows-latest` CI, pass `-WindowsInstallLifecycle` to exercise the unsigned
+Windows ZIP install path end-to-end with a stub `sl-viewer.exe` (package →
+Install.ps1 → `--version` → Uninstall.ps1 + cleanup). That smoke validates
+installer wiring only; platform Authenticode signing and MSI publication remain
+human/deferred steps under #66. It does not perform a clean-host MSI install.
 
 ### Installer script draft (Linux / macOS)
 

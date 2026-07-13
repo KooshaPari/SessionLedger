@@ -60,3 +60,9 @@ container run --rm \
 | `--watch <dir>` | Directory of `*.jsonl` transcripts to watch (required) |
 | `--out <dir>`   | Where `<id>.okf.json` files are written (auto-created) |
 | `--once`        | Single deterministic sweep, then exit (CI / cron) |
+
+The HTTP listener is local-only: `--http-bind` must use `127.0.0.0/8` or `::1`.
+Ingest admission is configured with `SL_INGEST_MAX_BODY_BYTES` (default
+`1048576`) and `SL_INGEST_MAX_CONCURRENCY` (default `8`). See
+[`docs/ops/local-trust-boundary.md`](../../docs/ops/local-trust-boundary.md) for
+the error envelope, audit fields, and operational boundary.

@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 
+use axum::body::to_bytes;
 use axum::extract::Request;
 use axum::extract::{Path as AxumPath, Query, State};
 use axum::http::{header::CONTENT_TYPE, HeaderValue};
@@ -31,9 +32,9 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use futures_core::Stream;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Semaphore};
 
 use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
@@ -43,6 +44,55 @@ use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt as _;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info, warn, Instrument as _};
+
+const DEFAULT_INGEST_MAX_BODY_BYTES: usize = 1_048_576;
+const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
+
+/// Process-local admission controls for `POST /api/ingest`.
+#[derive(Clone)]
+pub(crate) struct IngestAdmission {
+    max_body_bytes: usize,
+    semaphore: Arc<Semaphore>,
+}
+
+impl IngestAdmission {
+    pub(crate) fn from_env() -> Result<Self, String> {
+        Self::from_values(
+            std::env::var("SL_INGEST_MAX_BODY_BYTES").ok(),
+            std::env::var("SL_INGEST_MAX_CONCURRENCY").ok(),
+        )
+    }
+
+    fn from_values(
+        max_body_bytes: Option<String>,
+        max_concurrency: Option<String>,
+    ) -> Result<Self, String> {
+        let max_body_bytes = parse_positive_limit(
+            "SL_INGEST_MAX_BODY_BYTES",
+            max_body_bytes.as_deref(),
+            DEFAULT_INGEST_MAX_BODY_BYTES,
+        )?;
+        let max_concurrency = parse_positive_limit(
+            "SL_INGEST_MAX_CONCURRENCY",
+            max_concurrency.as_deref(),
+            DEFAULT_INGEST_MAX_CONCURRENCY,
+        )?;
+        Ok(Self { max_body_bytes, semaphore: Arc::new(Semaphore::new(max_concurrency)) })
+    }
+}
+
+fn parse_positive_limit(name: &str, value: Option<&str>, default: usize) -> Result<usize, String> {
+    let Some(value) = value else {
+        return Ok(default);
+    };
+    let parsed = value
+        .parse::<usize>()
+        .map_err(|_| format!("{name} must be a positive integer, got {value:?}"))?;
+    if parsed == 0 {
+        return Err(format!("{name} must be greater than zero"));
+    }
+    Ok(parsed)
+}
 
 /// Shared state threaded into every handler.
 #[derive(Clone)]
@@ -54,6 +104,8 @@ pub(crate) struct AppState {
     pub broadcast_tx: broadcast::Sender<PathBuf>,
     /// Process-local RED counters for the Prometheus scrape endpoint.
     pub http_metrics: Arc<HttpMetrics>,
+    /// Body-size and in-flight request limits for ingest.
+    pub ingest_admission: IngestAdmission,
 }
 
 /// Build the axum [`Router`].
@@ -71,6 +123,7 @@ pub(crate) fn router(state: AppState) -> Router {
         .route("/api/ingest", post(ingest_bundle))
         .route("/api/metrics", get(metrics_handler))
         .route("/metrics", get(prometheus_metrics))
+        .fallback(not_found)
         .with_state(state)
         .layer(middleware::from_fn_with_state(http_metrics, observe_request))
         .layer(cors)
@@ -109,11 +162,11 @@ async fn readyz(State(state): State<AppState>) -> Response {
         "ready".into_response()
     } else {
         warn!(out_dir = %path.display(), "readyz: out_dir not ready");
-        (
+        api_error(
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "not_ready",
             format!("out_dir not ready: {}", path.display()),
         )
-            .into_response()
     }
 }
 
@@ -127,8 +180,11 @@ async fn list_bundles(State(state): State<AppState>) -> Response {
         }
         Err(e) => {
             error!(error = %e, "failed to read bundles");
-            let msg = format!("failed to read bundles: {e}");
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, msg).into_response()
+            api_error(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "bundle_read_failed",
+                format!("failed to read bundles: {e}"),
+            )
         }
     }
 }
@@ -320,8 +376,11 @@ async fn search_bundles(
         Ok(v) => v,
         Err(e) => {
             error!(error = %e, "failed to read bundles for search");
-            let msg = format!("failed to read bundles: {e}");
-            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, msg).into_response();
+            return api_error(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "bundle_read_failed",
+                format!("failed to read bundles: {e}"),
+            );
         }
     };
 
@@ -340,14 +399,44 @@ async fn search_bundles(
 /// the same JSON body when one or more validation errors are found. This allows
 /// clients to distinguish a transport-level failure (4xx/5xx from the proxy or
 /// server) from a business-logic rejection (422 with actionable error details).
-#[tracing::instrument(skip(payload))]
-async fn ingest_bundle(Json(payload): Json<PostBundle>) -> Response {
+#[tracing::instrument(skip(state, request))]
+async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Response {
+    let Ok(_permit) = state.ingest_admission.semaphore.clone().try_acquire_owned() else {
+        audit_event("ingest", "rejected", "concurrency_limit");
+        return api_error(
+            axum::http::StatusCode::TOO_MANY_REQUESTS,
+            "ingest_busy",
+            "too many concurrent ingest requests",
+        );
+    };
+    let bytes = match to_bytes(request.into_body(), state.ingest_admission.max_body_bytes).await {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            audit_event("ingest", "rejected", "body_too_large");
+            return api_error(
+                axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+                "payload_too_large",
+                format!("ingest payload exceeds {} bytes", state.ingest_admission.max_body_bytes),
+            );
+        }
+    };
+    let payload: PostBundle = match serde_json::from_slice(&bytes) {
+        Ok(payload) => payload,
+        Err(error) => {
+            audit_event("ingest", "rejected", "invalid_json");
+            return api_error(
+                axum::http::StatusCode::BAD_REQUEST,
+                "invalid_json",
+                format!("invalid JSON payload: {error}"),
+            );
+        }
+    };
     let result = validate_okf_bundle(&payload);
     if result.valid {
-        info!("ingest accepted");
+        audit_event("ingest", "accepted", "validation");
         Json(&result).into_response()
     } else {
-        warn!("ingest rejected by validation");
+        audit_event("ingest", "rejected", "validation");
         (axum::http::StatusCode::UNPROCESSABLE_ENTITY, Json(&result)).into_response()
     }
 }
@@ -385,6 +474,42 @@ fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
     }
 
     Ok(results)
+}
+
+#[derive(Serialize)]
+struct ApiErrorEnvelope {
+    error: ApiError,
+}
+
+#[derive(Serialize)]
+struct ApiError {
+    code: &'static str,
+    message: String,
+}
+
+fn api_error(
+    status: axum::http::StatusCode,
+    code: &'static str,
+    message: impl Into<String>,
+) -> Response {
+    (status, Json(ApiErrorEnvelope { error: ApiError { code, message: message.into() } }))
+        .into_response()
+}
+
+async fn not_found() -> Response {
+    api_error(axum::http::StatusCode::NOT_FOUND, "not_found", "route not found")
+}
+
+fn audit_event(action: &'static str, outcome: &'static str, reason: &'static str) {
+    info!(
+        target: "sl_daemon::audit",
+        event_kind = "audit",
+        actor = "local",
+        action,
+        outcome,
+        reason,
+        "local operation"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -441,7 +566,11 @@ async fn replay_bundle(
     // Sanitise the bundle_id: reject any path traversal.
     if bundle_id.contains('/') || bundle_id.contains('\\') || bundle_id.contains("..") {
         warn!(%bundle_id, "invalid bundle_id");
-        return (axum::http::StatusCode::BAD_REQUEST, "invalid bundle_id").into_response();
+        return api_error(
+            axum::http::StatusCode::BAD_REQUEST,
+            "invalid_bundle_id",
+            "invalid bundle_id",
+        );
     }
 
     let filename = if bundle_id.ends_with(".okf.json") {
@@ -454,26 +583,29 @@ async fn replay_bundle(
     let contents = match std::fs::read_to_string(&path) {
         Ok(c) => c,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return (axum::http::StatusCode::NOT_FOUND, format!("bundle {bundle_id:?} not found"))
-                .into_response();
+            return api_error(
+                axum::http::StatusCode::NOT_FOUND,
+                "bundle_not_found",
+                format!("bundle {bundle_id:?} not found"),
+            );
         }
         Err(e) => {
-            return (
+            return api_error(
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "bundle_read_failed",
                 format!("failed to read bundle: {e}"),
-            )
-                .into_response();
+            );
         }
     };
 
     let doc: serde_json::Value = match serde_json::from_str(&contents) {
         Ok(v) => v,
         Err(e) => {
-            return (
+            return api_error(
                 axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+                "invalid_bundle_json",
                 format!("invalid OKF JSON: {e}"),
-            )
-                .into_response();
+            );
         }
     };
 
@@ -512,6 +644,26 @@ async fn replay_bundle(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tracing_test::traced_test;
+
+    fn test_state(out_dir: &Path) -> AppState {
+        let (broadcast_tx, _) = broadcast::channel(1);
+        AppState {
+            out_dir: Arc::new(out_dir.to_owned()),
+            broadcast_tx,
+            http_metrics: Arc::new(HttpMetrics::default()),
+            ingest_admission: IngestAdmission::from_values(None, None).unwrap(),
+        }
+    }
+
+    async fn start_test_server(state: AppState) -> (SocketAddr, tokio::task::JoinHandle<()>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, router(state)).await.unwrap();
+        });
+        (addr, server)
+    }
 
     #[test]
     fn default_params_produce_default_spec() {
@@ -615,20 +767,73 @@ mod tests {
         );
     }
 
+    #[test]
+    fn ingest_admission_defaults_and_rejects_invalid_values() {
+        let defaults = IngestAdmission::from_values(None, None).unwrap();
+        assert_eq!(defaults.max_body_bytes, DEFAULT_INGEST_MAX_BODY_BYTES);
+        assert_eq!(defaults.semaphore.available_permits(), DEFAULT_INGEST_MAX_CONCURRENCY);
+        assert!(IngestAdmission::from_values(Some("0".into()), None).is_err());
+        assert!(IngestAdmission::from_values(None, Some("many".into())).is_err());
+    }
+
+    #[test]
+    #[traced_test]
+    fn audit_event_contains_actor_action_and_outcome() {
+        audit_event("ingest", "accepted", "validation");
+        assert!(logs_contain("actor=\"local\""));
+        assert!(logs_contain("action=\"ingest\""));
+        assert!(logs_contain("outcome=\"accepted\""));
+    }
+
+    #[tokio::test]
+    async fn oversized_ingest_returns_json_error_envelope() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let mut state = test_state(out_dir.path());
+        state.ingest_admission = IngestAdmission::from_values(Some("16".into()), None).unwrap();
+        let (addr, server) = start_test_server(state).await;
+
+        let response = reqwest::Client::new()
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .body(r#"{"payload":"this is larger than sixteen bytes"}"#)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::PAYLOAD_TOO_LARGE);
+        let body: Value = response.json().await.unwrap();
+        assert_eq!(body["error"]["code"], "payload_too_large");
+        assert!(body["error"]["message"].as_str().unwrap().contains("16 bytes"));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn saturated_ingest_returns_json_too_many_requests() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let mut state = test_state(out_dir.path());
+        state.ingest_admission = IngestAdmission {
+            max_body_bytes: DEFAULT_INGEST_MAX_BODY_BYTES,
+            semaphore: Arc::new(Semaphore::new(0)),
+        };
+        let (addr, server) = start_test_server(state).await;
+
+        let response = reqwest::Client::new()
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .body("{}")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::TOO_MANY_REQUESTS);
+        let body: Value = response.json().await.unwrap();
+        assert_eq!(body["error"]["code"], "ingest_busy");
+        server.abort();
+    }
+
     #[tokio::test]
     async fn http_observability_middleware_propagates_and_counts() {
         let out_dir = tempfile::TempDir::new().unwrap();
-        let (broadcast_tx, _) = broadcast::channel(1);
-        let state = AppState {
-            out_dir: Arc::new(out_dir.path().to_owned()),
-            broadcast_tx,
-            http_metrics: Arc::new(HttpMetrics::default()),
-        };
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let server = tokio::spawn(async move {
-            axum::serve(listener, router(state)).await.unwrap();
-        });
+        let state = test_state(out_dir.path());
+        let (addr, server) = start_test_server(state).await;
         let base_url = format!("http://{addr}");
         let traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
         let client = reqwest::Client::new();

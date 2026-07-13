@@ -385,6 +385,29 @@ fn init_tracing() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
     None
 }
 
+fn parse_local_http_addr(value: &str) -> Result<SocketAddr, String> {
+    let addr: SocketAddr =
+        value.parse().map_err(|error| format!("invalid --http-bind address {value:?}: {error}"))?;
+    if !addr.ip().is_loopback() {
+        return Err(format!(
+            "--http-bind must use a loopback address (127.0.0.0/8 or ::1), got {addr}"
+        ));
+    }
+    Ok(addr)
+}
+
+fn audit_event(action: &'static str, outcome: &'static str, resource: &dyn std::fmt::Display) {
+    info!(
+        target: "sl_daemon::audit",
+        event_kind = "audit",
+        actor = "local",
+        action,
+        outcome,
+        resource = %resource,
+        "local operation"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // serve
 // ---------------------------------------------------------------------------
@@ -415,6 +438,7 @@ async fn run_serve(
                             total += written.len();
                             for w in &written {
                                 let _ = bcast_for_consumer.send(w.clone());
+                                audit_event("export", "succeeded", &w.display());
                             }
                             info!(
                                 path = %path.display(),
@@ -423,6 +447,7 @@ async fn run_serve(
                             );
                         }
                         Err(err) => {
+                            audit_event("export", "failed", &path.display());
                             error!(path = %path.display(), error = %err, "ETL transform failed");
                         }
                     }
@@ -439,13 +464,13 @@ async fn run_serve(
     let http_handle = if http_bind.eq_ignore_ascii_case("off") {
         None
     } else {
-        let addr: SocketAddr = http_bind
-            .parse()
-            .map_err(|e| format!("invalid --http-bind address {http_bind:?}: {e}"))?;
+        let addr = parse_local_http_addr(&http_bind)?;
+        let ingest_admission = http::IngestAdmission::from_env()?;
         let state = http::AppState {
             out_dir: Arc::new(out.clone()),
             broadcast_tx: bcast_tx.clone(),
             http_metrics: Arc::new(metrics::HttpMetrics::default()),
+            ingest_admission,
         };
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
         let handle = tokio::spawn(async move {
@@ -734,6 +759,11 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
 
     match archive::archive_bundles(data_dir, before, dry_run) {
         Ok(stats) => {
+            audit_event(
+                "archive",
+                if dry_run { "dry_run" } else { "succeeded" },
+                &stats.archive_dir.display(),
+            );
             let mb_saved = stats.bytes_saved as f64 / 1_048_576.0;
             println!(
                 "Archived {} bundle(s), saved {:.2} MB  (archive: {})",
@@ -743,6 +773,7 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
             );
         }
         Err(e) => {
+            audit_event("archive", "failed", &data_dir.display());
             eprintln!("error: {e}");
             std::process::exit(2);
         }
@@ -766,9 +797,11 @@ fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
     let output_dir = out.unwrap_or(data_dir);
     match archive::restore_bundle(&archive_path, output_dir) {
         Ok(restored) => {
+            audit_event("restore", "succeeded", &restored.display());
             println!("Restored: {}", restored.display());
         }
         Err(e) => {
+            audit_event("restore", "failed", &archive_path.display());
             eprintln!("error: {e}");
             std::process::exit(2);
         }
@@ -1084,5 +1117,13 @@ mod tests {
         let line = format_entity_line(&entity, 5);
         assert!(line.starts_with("[00:00:05]"));
         assert!(line.contains("unknown/?"));
+    }
+
+    #[test]
+    fn http_bind_accepts_only_loopback_addresses() {
+        assert!(parse_local_http_addr("127.0.0.1:8080").is_ok());
+        assert!(parse_local_http_addr("[::1]:8080").is_ok());
+        assert!(parse_local_http_addr("0.0.0.0:8080").is_err());
+        assert!(parse_local_http_addr("[::]:8080").is_err());
     }
 }

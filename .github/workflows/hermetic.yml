@@ -23,3 +23,26 @@ jobs:
       - name: cargo fetch then offline build
         shell: pwsh
         run: ./scripts/hermetic-check.ps1
+
+  sl-daemon-offline-container:
+    name: sl-daemon · pinned builder image offline build
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.87-slim@sha256:437507c3e719e4f968033b88d851ffa9f5aceeb2dcc2482cc6cb7647811a55eb
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: verify builder pin file matches container digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='sha256:437507c3e719e4f968033b88d851ffa9f5aceeb2dcc2482cc6cb7647811a55eb'
+          actual="$(sed -n 's/.*"builder_image_digest": "\([^"]*\)".*/\1/p' docs/ops/hermetic-builder.json)"
+          test -n "$actual"
+          test "$actual" = "$expected"
+      - name: cargo fetch then offline build in pinned image
+        shell: bash
+        working-directory: crates/sl-daemon
+        run: |
+          set -euo pipefail
+          cargo fetch --locked
+          cargo build --locked --offline

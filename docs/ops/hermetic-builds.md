@@ -24,6 +24,11 @@ access during the build phase.
 requests. It is a dependency-offline gate, not a claim that release builds are
 fully hermetic across every host and target.
 
+A second job rebuilds `sl-daemon` inside the digest-pinned builder image recorded
+in [`hermetic-builder.json`](hermetic-builder.json). The image digest must match
+the `container.image` reference in the workflow; bump both together when the
+builder stage changes.
+
 The optional root-package check can be run locally with:
 
 ```powershell
@@ -47,3 +52,9 @@ This policy does not meet SLSA Build Level 3. Remaining gaps include:
 
 Treat this as stronger offline evidence for `sl-daemon` and as a prerequisite
 for future hermetic release work, not as a SLSA L3 attestation.
+
+## Builder pin
+
+[`hermetic-builder.json`](hermetic-builder.json) records the MSRV, immutable
+`rust:1.87-slim` digest, and offline target path. `scripts/hermetic-check.ps1`
+asserts the host `rustc` meets the pinned MSRV before running the offline build.

@@ -6,6 +6,26 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $daemonDir = Join-Path $repoRoot "crates/sl-daemon"
+$builderPinPath = Join-Path $repoRoot "docs/ops/hermetic-builder.json"
+
+function Assert-BuilderPin {
+    if (-not (Test-Path -LiteralPath $builderPinPath -PathType Leaf)) {
+        throw "Hermetic builder pin not found at '$builderPinPath'."
+    }
+
+    $pin = Get-Content -LiteralPath $builderPinPath -Raw | ConvertFrom-Json
+    $rustcVersion = (& rustc --version) -replace '^rustc ', ''
+    $rustcSemver = ($rustcVersion -split '\s+', 2)[0]
+    $msrv = [version]$pin.msrv
+
+    if ([version]$rustcSemver -lt $msrv) {
+        throw "rustc $rustcSemver is below pinned MSRV $($pin.msrv) from hermetic-builder.json."
+    }
+
+    Write-Host "Hermetic builder pin: MSRV=$($pin.msrv) image=$($pin.builder_image)@$($pin.builder_image_digest)"
+}
+
+Assert-BuilderPin
 
 function Invoke-CargoStep {
     param(

@@ -48,9 +48,11 @@
    * ──────────────────────────────────────────────────────────── */
   --lc-lab-white:        #f6f8fa;  /* primary background (lab-coat) */
   --lc-slate:            #1f2937;  /* panel/text base */
-  --lc-cobalt:           #2563eb;  /* primary accent — slide-stain blue */
+  --lc-cobalt:           #2563eb;  /* primary accent — slide-stain blue (light / solid fills) */
+  --lc-cobalt-on-dark:   #93c5fd;  /* text/chrome accent on slate + mixes — WCAG AA ≥4.5:1 */
   --lc-orange:           #f97316;  /* live-session — lit Bunsen burner */
-  --lc-teal:             #14b8a6;  /* secondary — growth-medium teal */
+  --lc-teal:             #14b8a6;  /* secondary — growth-medium teal (light) */
+  --lc-teal-on-dark:     #2dd4bf;  /* secondary text/chrome on dark mixes — WCAG AA */
 
   /* ────────────────────────────────────────────────────────────
    * TERMINAL-FORGE — forgecode (terminal family)
@@ -139,8 +141,8 @@
   --sl-border: #374151;
   --sl-text: #f3f4f6;
   --sl-text-muted: #b6bfcc;
-  --sl-accent: var(--lc-cobalt);
-  --sl-accent-secondary: var(--lc-teal);
+  --sl-accent: var(--lc-cobalt-on-dark);
+  --sl-accent-secondary: var(--lc-teal-on-dark);
   --sl-accent-warning: var(--lc-orange);
   --sl-danger: #f87171;
   --sl-danger-surface: #2a1a1a;

@@ -195,6 +195,10 @@ pub fn App() -> Element {
                     --sl-border: #374151;
                     --sl-text: #f3f4f6;
                     --sl-text-muted: #b6bfcc;
+                    /* On-dark cobalt: AA ≥4.5:1 on slate + accent color-mix chrome. */
+                    --sl-accent: #93c5fd;
+                    --sl-accent-secondary: #2dd4bf;
+                    --sl-accent-warning: #f97316;
                     --sl-danger: #f87171;
                     --sl-danger-surface: #2a1a1a;
                 }}
@@ -365,23 +369,6 @@ pub fn App() -> Element {
                             }
                         }
                     }
-                    button {
-                        class: "theme-toggle",
-                        r#type: "button",
-                        "aria-label": "Toggle light and dark theme",
-                        onclick: move |_| {
-                            let _ = document::eval(
-                                r#"
-                                const root = document.documentElement;
-                                const current = root.dataset.theme === 'light' ? 'light' : 'dark';
-                                const next = current === 'light' ? 'dark' : 'light';
-                                root.dataset.theme = next;
-                                window.localStorage.setItem('sl-viewer-theme', next);
-                                "#,
-                            );
-                        },
-                        "Toggle Theme"
-                    }
                 }
                 if let Some(ref err) = corpus_error {
                     div { class: "corpus-error-banner",
@@ -398,6 +385,24 @@ pub fn App() -> Element {
                         "aria-labelledby": "{active_tab().id()}",
                         {tab_body}
                     }
+                }
+                // After tabpanel so Tab from the active tab reaches panel controls first.
+                button {
+                    class: "theme-toggle",
+                    r#type: "button",
+                    "aria-label": "Toggle light and dark theme",
+                    onclick: move |_| {
+                        let _ = document::eval(
+                            r#"
+                            const root = document.documentElement;
+                            const current = root.dataset.theme === 'light' ? 'light' : 'dark';
+                            const next = current === 'light' ? 'dark' : 'light';
+                            root.dataset.theme = next;
+                            window.localStorage.setItem('sl-viewer-theme', next);
+                            "#,
+                        );
+                    },
+                    "Toggle Theme"
                 }
             }
         }

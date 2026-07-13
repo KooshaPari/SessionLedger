@@ -32,7 +32,7 @@ test("viewer exposes type tokens and persists theme preference", async ({ page }
   expect(tokens.body).toContain("system-ui");
   expect(tokens.mono).toContain("monospace");
   expect(tokens.ui).toContain("system-ui");
-  expect(tokens.accent.toLowerCase()).toBe("#2563eb");
+  expect(tokens.accent.toLowerCase()).toBe("#93c5fd");
 
   await page.getByRole("button", { name: "Toggle light and dark theme" }).click();
   await expect
@@ -41,6 +41,13 @@ test("viewer exposes type tokens and persists theme preference", async ({ page }
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("sl-viewer-theme")))
     .toBe("light");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--sl-accent").trim().toLowerCase()
+      )
+    )
+    .toBe("#2563eb");
 
   await page.reload();
   await expect

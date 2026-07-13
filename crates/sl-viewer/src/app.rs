@@ -123,7 +123,17 @@ fn resolve_data_source() -> DataSource {
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
-        let _ = document::eval("document.documentElement.lang = 'en';");
+        let _ = document::eval(
+            r#"
+            document.documentElement.lang = 'en';
+            const stored = window.localStorage.getItem('sl-viewer-theme');
+            const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
+            const theme = stored === 'light' || stored === 'dark'
+                ? stored
+                : (prefersLight ? 'light' : 'dark');
+            document.documentElement.dataset.theme = theme;
+            "#,
+        );
     });
 
     // Load sessions once at the root; propagate via context.
@@ -159,59 +169,91 @@ pub fn App() -> Element {
     rsx! {
         style {
             r#"
-                body {{ margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e1e4ea; }}
+                :root {{
+                    color-scheme: light;
+                    --font-display: ui-serif, Georgia, "Times New Roman", serif;
+                    --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+                    --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                    --sl-bg: #f6f8fa;
+                    --sl-surface: #ffffff;
+                    --sl-surface-muted: #eef2f7;
+                    --sl-border: #d8dee8;
+                    --sl-text: #1f2937;
+                    --sl-text-muted: #5c5f6e;
+                    --sl-accent: #2563eb;
+                    --sl-accent-secondary: #14b8a6;
+                    --sl-accent-warning: #f97316;
+                    --sl-danger: #b91c1c;
+                    --sl-danger-surface: #fef2f2;
+                }}
+                :root[data-theme="dark"] {{
+                    color-scheme: dark;
+                    --sl-bg: #111827;
+                    --sl-surface: #1f2937;
+                    --sl-surface-muted: #243244;
+                    --sl-border: #374151;
+                    --sl-text: #f3f4f6;
+                    --sl-text-muted: #b6bfcc;
+                    --sl-danger: #f87171;
+                    --sl-danger-surface: #2a1a1a;
+                }}
+                body {{ margin: 0; font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
                 .app {{ display: flex; height: 100vh; }}
-                .sidebar {{ width: 340px; min-width: 340px; border-right: 1px solid #2a2d35; overflow-y: auto; background: #161822; }}
-                .sidebar h2 {{ padding: 16px 20px; margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8b8fa3; border-bottom: 1px solid #2a2d35; }}
-                .bundle-entry {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #1e2029; transition: background 0.15s; }}
-                .bundle-entry:hover {{ background: #1c1f2b; }}
-                .bundle-entry.selected {{ background: #252836; border-left: 3px solid #6c8cff; }}
-                .bundle-entry .source {{ font-size: 13px; font-weight: 600; color: #c8cdd6; }}
-                .bundle-entry .goal {{ font-size: 12px; color: #8b8fa3; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-                .bundle-entry .meta {{ font-size: 11px; color: #8b8fa3; margin-top: 6px; display: flex; gap: 8px; }}
+                .sidebar {{ width: 340px; min-width: 340px; border-right: 1px solid var(--sl-border); overflow-y: auto; background: var(--sl-surface); }}
+                .sidebar h2 {{ padding: 16px 20px; margin: 0; font-family: var(--font-ui); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-text-muted); border-bottom: 1px solid var(--sl-border); }}
+                .bundle-entry {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background 0.15s; }}
+                .bundle-entry:hover {{ background: var(--sl-surface-muted); }}
+                .bundle-entry.selected {{ background: var(--sl-surface-muted); border-left: 3px solid var(--sl-accent); }}
+                .bundle-entry .source {{ font-size: 13px; font-weight: 600; color: var(--sl-text); }}
+                .bundle-entry .goal {{ font-size: 12px; color: var(--sl-text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+                .bundle-entry .meta {{ font-size: 11px; color: var(--sl-text-muted); margin-top: 6px; display: flex; gap: 8px; }}
                 .bundle-entry .badge {{ display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }}
-                .badge-acceptance {{ background: #1a3a2a; color: #4ade80; }}
-                .badge-contract {{ background: #2a1a3a; color: #c084fc; }}
+                .badge-acceptance {{ background: color-mix(in srgb, var(--sl-accent-secondary) 18%, transparent); color: var(--sl-accent-secondary); }}
+                .badge-contract {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); }}
                 .detail {{ flex: 1; overflow-y: auto; padding: 32px 40px; }}
-                .detail h1 {{ font-size: 18px; font-weight: 600; margin: 0 0 24px 0; color: #e1e4ea; }}
+                .detail h1 {{ font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0 0 24px 0; color: var(--sl-text); }}
                 .detail-section {{ margin-bottom: 24px; }}
-                .detail-section h3 {{ font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6c8cff; margin: 0 0 8px 0; }}
-                .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: #c8cdd6; }}
+                .detail-section h3 {{ font-family: var(--font-ui); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-accent); margin: 0 0 8px 0; }}
+                .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: var(--sl-text); }}
                 .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; }}
-                .detail-section li {{ font-size: 13px; line-height: 1.7; color: #a1a6b5; }}
-                .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: #8b8fa3; font-size: 14px; }}
-                .tab-bar {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid #2a2d35; background: #13151c; }}
-                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #8b8fa3; border: none; border-bottom: 2px solid transparent; background: transparent; transition: all 0.15s; font-family: inherit; }}
-                .tab:hover {{ color: #8b8fa3; background: #1a1c26; }}
-                .tab.active {{ color: #6c8cff; border-bottom-color: #6c8cff; background: #161822; }}
+                .detail-section li {{ font-size: 13px; line-height: 1.7; color: var(--sl-text-muted); }}
+                .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sl-text-muted); font-size: 14px; }}
+                .tab-bar {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--sl-border); background: var(--sl-surface-muted); }}
+                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); border: none; border-bottom: 2px solid transparent; background: transparent; transition: all 0.15s; }}
+                .tab:hover {{ color: var(--sl-text); background: color-mix(in srgb, var(--sl-accent) 8%, transparent); }}
+                .tab.active {{ color: var(--sl-accent); border-bottom-color: var(--sl-accent); background: var(--sl-surface); }}
                 .tab:focus {{ outline: none; }}
                 .tab:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; color: {colors.focus}; }}
+                .theme-toggle {{ width: calc(100% - 32px); margin: 10px 16px; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
+                .theme-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
+                .theme-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
                 .search-input:focus-visible, .search-btn:focus-visible, .retry-btn:focus-visible, .btn:focus-visible, .replay-input:focus-visible, .speed-input:focus-visible, .compare-btn:focus-visible, .sl-error-retry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
                 .session-item:focus-visible, .feed-entry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; }}
                 .session-list {{ display: flex; flex-direction: column; height: 100%; }}
-                .search-input {{ width: 100%; padding: 10px 16px; background: #1c1f2b; border: 1px solid #2a2d35; border-radius: 6px; color: #e1e4ea; font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
-                .session-count {{ padding: 6px 20px; font-size: 11px; color: #8b8fa3; }}
-                .session-item {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #1e2029; transition: background 0.15s; }}
-                .session-item:hover {{ background: #1c1f2b; }}
-                .session-item.selected {{ background: #252836; border-left: 3px solid #6c8cff; }}
-                .session-source {{ font-size: 13px; font-weight: 600; color: #c8cdd6; }}
-                .session-goal {{ font-size: 12px; color: #8b8fa3; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-                .session-meta {{ font-size: 11px; color: #8b8fa3; margin-top: 6px; display: flex; gap: 8px; align-items: center; }}
-                .meta-bundles {{ color: #6c8cff; }}
+                .search-input {{ width: 100%; padding: 10px 16px; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: 6px; color: var(--sl-text); font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
+                .session-count {{ padding: 6px 20px; font-size: 11px; color: var(--sl-text-muted); }}
+                .session-item {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background 0.15s; }}
+                .session-item:hover {{ background: var(--sl-surface-muted); }}
+                .session-item.selected {{ background: var(--sl-surface-muted); border-left: 3px solid var(--sl-accent); }}
+                .session-source {{ font-size: 13px; font-weight: 600; color: var(--sl-text); }}
+                .session-goal {{ font-size: 12px; color: var(--sl-text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+                .session-meta {{ font-size: 11px; color: var(--sl-text-muted); margin-top: 6px; display: flex; gap: 8px; align-items: center; }}
+                .meta-bundles {{ color: var(--sl-accent); }}
                 .badge {{ display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }}
-                .badge-ok {{ background: #1a3a2a; color: #4ade80; }}
-                .badge-contract {{ background: #2a1a3a; color: #c084fc; }}
+                .badge-ok {{ background: color-mix(in srgb, var(--sl-accent-secondary) 18%, transparent); color: var(--sl-accent-secondary); }}
+                .badge-contract {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); }}
                 .search-view {{ display: flex; flex-direction: column; height: 100%; overflow-y: auto; }}
-                .search-form {{ padding: 0 0 8px 0; border-bottom: 1px solid #2a2d35; }}
+                .search-form {{ padding: 0 0 8px 0; border-bottom: 1px solid var(--sl-border); }}
                 .search-fields {{ display: flex; flex-direction: column; gap: 4px; padding: 10px 16px; }}
-                .search-label {{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #8b8fa3; }}
+                .search-label {{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); }}
                 .search-actions {{ display: flex; gap: 8px; padding: 8px 16px 10px; }}
-                .search-btn {{ padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; border: 1px solid #2a2d35; background: #252836; color: #8b8fa3; }}
-                .search-btn:hover {{ background: #2f3244; color: #c8cdd6; }}
-                .search-btn-primary {{ background: #1e2a4a; color: #6c8cff; border-color: #2a3a6a; }}
-                .search-btn-primary:hover {{ background: #263460; color: #a0b4ff; }}
+                .search-btn {{ padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; border: 1px solid var(--sl-border); background: var(--sl-surface-muted); color: var(--sl-text-muted); }}
+                .search-btn:hover {{ background: color-mix(in srgb, var(--sl-accent) 8%, transparent); color: var(--sl-text); }}
+                .search-btn-primary {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); border-color: var(--sl-accent); }}
+                .search-btn-primary:hover {{ background: color-mix(in srgb, var(--sl-accent) 24%, transparent); color: var(--sl-accent); }}
                 .search-results {{ flex: 1; overflow-y: auto; }}
-                .search-error {{ padding: 10px 16px; font-size: 13px; color: #f87171; background: #2a1a1a; border-bottom: 1px solid #3a2020; }}
+                .search-error {{ padding: 10px 16px; font-size: 13px; color: var(--sl-danger); background: var(--sl-danger-surface); border-bottom: 1px solid var(--sl-border); }}
                 .live-feed {{ display: flex; flex-direction: column; height: 100%; }}
                 .live-feed-header {{ display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #2a2d35; background: #13151c; }}
                 .live-feed-title {{ font-size: 13px; font-weight: 600; color: #c8cdd6; flex: 1; }}
@@ -322,6 +364,23 @@ pub fn App() -> Element {
                                 }
                             }
                         }
+                    }
+                    button {
+                        class: "theme-toggle",
+                        r#type: "button",
+                        "aria-label": "Toggle light and dark theme",
+                        onclick: move |_| {
+                            let _ = document::eval(
+                                r#"
+                                const root = document.documentElement;
+                                const current = root.dataset.theme === 'light' ? 'light' : 'dark';
+                                const next = current === 'light' ? 'dark' : 'light';
+                                root.dataset.theme = next;
+                                window.localStorage.setItem('sl-viewer-theme', next);
+                                "#,
+                            );
+                        },
+                        "Toggle Theme"
                     }
                 }
                 if let Some(ref err) = corpus_error {

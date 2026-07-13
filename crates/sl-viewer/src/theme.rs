@@ -23,28 +23,28 @@ pub struct ThemeColors {
 impl ThemeColors {
     pub fn dark() -> Self {
         Self {
-            bg: "#0f172a",
-            surface: "#1e293b",
-            text: "#e2e8f0",
-            accent: "#7c3aed",
-            secondary: "#06b6d4",
-            border: "#334155",
+            bg: "#111827",
+            surface: "#1f2937",
+            text: "#f3f4f6",
+            accent: "#2563eb",
+            secondary: "#14b8a6",
+            border: "#374151",
             focus: "#2563eb",
             danger: "#f87171",
-            muted: "#94a3b8",
+            muted: "#b6bfcc",
         }
     }
     pub fn light() -> Self {
         Self {
-            bg: "#f8fafc",
+            bg: "#f6f8fa",
             surface: "#ffffff",
-            text: "#0f172a",
-            accent: "#7c3aed",
-            secondary: "#0891b2",
-            border: "#e2e8f0",
+            text: "#1f2937",
+            accent: "#2563eb",
+            secondary: "#14b8a6",
+            border: "#d8dee8",
             focus: "#2563eb",
-            danger: "#dc2626",
-            muted: "#64748b",
+            danger: "#b91c1c",
+            muted: "#5c5f6e",
         }
     }
     pub fn for_theme(t: Theme) -> Self {
@@ -58,8 +58,8 @@ impl ThemeColors {
 mod tests {
     use super::*;
     #[test]
-    fn dark_accent() {
-        assert_eq!(ThemeColors::dark().accent, "#7c3aed");
+    fn dark_accent_is_lab_coat_cobalt() {
+        assert_eq!(ThemeColors::dark().accent, "#2563eb");
     }
     #[test]
     fn light_bg() {
@@ -74,8 +74,9 @@ mod tests {
         assert_eq!(ThemeColors::for_theme(Theme::Light).bg, ThemeColors::light().bg);
     }
     #[test]
-    fn secondary_differs() {
-        assert_ne!(ThemeColors::dark().secondary, ThemeColors::light().secondary);
+    fn secondary_stays_lab_coat_teal() {
+        assert_eq!(ThemeColors::dark().secondary, "#14b8a6");
+        assert_eq!(ThemeColors::light().secondary, "#14b8a6");
     }
     #[test]
     fn focus_is_lab_coat_cobalt() {

@@ -22,6 +22,12 @@
  */
 
 :root {
+  /* Type-role tokens shared by viewer chrome and docs demos. */
+  --font-display: ui-serif, Georgia, "Times New Roman", serif;
+  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
   /* ────────────────────────────────────────────────────────────
    * BACKBONE-2 — sharecli + substrate (infra family)
    * Decision: substrate-mesh, 2026-07-06
@@ -100,6 +106,44 @@
   --accent-primary: var(--lc-cobalt);
   --accent-secondary: var(--lc-teal);
   --accent-warning: var(--lc-orange);
+}
+
+/**
+ * SessionLedger viewer theme contract.
+ *
+ * The viewer toggles `data-theme="light|dark"` on the document root and
+ * persists the choice in localStorage. Accent tokens stay Lab-Coat in both
+ * modes; only neutral surfaces and text invert.
+ */
+:root,
+:root[data-theme="light"],
+.family-lab-coat[data-theme="light"] {
+  --sl-bg: var(--lc-lab-white);
+  --sl-surface: #ffffff;
+  --sl-surface-muted: #eef2f7;
+  --sl-border: #d8dee8;
+  --sl-text: var(--lc-slate);
+  --sl-text-muted: #5c5f6e;
+  --sl-accent: var(--lc-cobalt);
+  --sl-accent-secondary: var(--lc-teal);
+  --sl-accent-warning: var(--lc-orange);
+  --sl-danger: #b91c1c;
+  --sl-danger-surface: #fef2f2;
+}
+
+:root[data-theme="dark"],
+.family-lab-coat[data-theme="dark"] {
+  --sl-bg: #111827;
+  --sl-surface: var(--lc-slate);
+  --sl-surface-muted: #243244;
+  --sl-border: #374151;
+  --sl-text: #f3f4f6;
+  --sl-text-muted: #b6bfcc;
+  --sl-accent: var(--lc-cobalt);
+  --sl-accent-secondary: var(--lc-teal);
+  --sl-accent-warning: var(--lc-orange);
+  --sl-danger: #f87171;
+  --sl-danger-surface: #2a1a1a;
 }
 
 .family-terminal-forge {

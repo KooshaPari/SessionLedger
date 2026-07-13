@@ -7,12 +7,15 @@ use dioxus::prelude::*;
 
 use crate::async_states::{ErrorState, LoadingState};
 
+#[cfg_attr(any(target_arch = "wasm32", not(feature = "desktop")), allow(dead_code))]
 const DAEMON_SSE_URL: &str = "http://localhost:9001/api/stream";
+#[cfg_attr(any(target_arch = "wasm32", not(feature = "desktop")), allow(dead_code))]
 const MAX_ENTRIES: usize = 20;
 
 /// Connection status for the SSE feed.
 #[derive(Debug, Clone, PartialEq)]
 enum FeedStatus {
+    #[cfg_attr(any(target_arch = "wasm32", not(feature = "desktop")), allow(dead_code))]
     Live,
     Disconnected,
     Connecting,
@@ -33,6 +36,7 @@ struct FeedEntry {
 /// `sl-daemon`, plus a status badge and a retry button when disconnected.
 #[component]
 pub fn LiveFeed() -> Element {
+    #[allow(unused_mut)]
     let mut entries: Signal<Vec<FeedEntry>> = use_signal(Vec::new);
     let mut status: Signal<FeedStatus> = use_signal(|| FeedStatus::Disconnected);
     let mut trigger_connect: Signal<u32> = use_signal(|| 0u32);
@@ -44,7 +48,7 @@ pub fn LiveFeed() -> Element {
         async move {
             status.set(FeedStatus::Connecting);
 
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
             {
                 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -85,10 +89,10 @@ pub fn LiveFeed() -> Element {
                 status.set(FeedStatus::Disconnected);
             }
 
-            #[cfg(target_arch = "wasm32")]
+            #[cfg(any(target_arch = "wasm32", not(feature = "desktop")))]
             {
-                // Web: use browser EventSource via gloo-net or web-sys.
-                // For now, mark as disconnected with a note.
+                // Web/no-native builds: use browser EventSource via gloo-net or
+                // web-sys once wired. For now, mark as disconnected.
                 let _ = entries;
                 status.set(FeedStatus::Disconnected);
             }

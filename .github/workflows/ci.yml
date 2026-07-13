@@ -67,7 +67,6 @@ jobs:
     env:
       RUSTFLAGS: ""
       RUSTUP_TOOLCHAIN: nightly
-      CARGO_BUILD_TARGET: ""
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # nightly for fuzz

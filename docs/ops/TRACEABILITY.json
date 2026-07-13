@@ -9,132 +9,298 @@
     "na"
   ],
   "overall_audit": {
-    "score": "280/402",
-    "pct": 70,
+    "score": "285/402",
+    "pct": 71,
     "grade": "C",
-    "commit": "fe9e26b",
-    "wave": "Wave-9"
+    "commit": "dcde091",
+    "wave": "Wave-10"
   },
   "fr": [
     {
       "id": "FR-001",
       "status": "done",
-      "evidence": ["crates/sl-daemon/src/etl.rs", "src/ingestion/"]
+      "evidence": [
+        "crates/sl-daemon/src/etl.rs",
+        "src/ingestion/"
+      ]
     },
     {
       "id": "FR-002",
       "status": "done",
-      "evidence": ["crates/sl-daemon/src/validation.rs", "docs/reference/OKF-SPEC.md"]
+      "evidence": [
+        "crates/sl-daemon/src/validation.rs",
+        "docs/reference/OKF-SPEC.md"
+      ]
     },
     {
       "id": "FR-003",
       "status": "done",
-      "evidence": ["crates/sl-daemon/src/filter.rs", "crates/sl-daemon/src/tag.rs"]
+      "evidence": [
+        "crates/sl-daemon/src/filter.rs",
+        "crates/sl-daemon/src/tag.rs"
+      ]
     },
     {
       "id": "FR-004",
       "status": "done",
-      "evidence": ["crates/sl-daemon/tests/sse_bridge.rs", "crates/sl-viewer/src/replay_view.rs"]
+      "evidence": [
+        "crates/sl-daemon/tests/sse_bridge.rs",
+        "crates/sl-viewer/src/replay_view.rs"
+      ]
     },
     {
       "id": "FR-005",
       "status": "done",
-      "evidence": ["crates/sl-daemon/src/metrics.rs"]
+      "evidence": [
+        "crates/sl-daemon/src/metrics.rs"
+      ]
     },
     {
       "id": "FR-006",
       "status": "done",
-      "evidence": ["crates/sl-daemon/src/archive.rs"]
+      "evidence": [
+        "crates/sl-daemon/src/archive.rs"
+      ]
     },
     {
       "id": "FR-007",
       "status": "done",
-      "evidence": ["crates/sl-viewer/src/timeline.rs"]
+      "evidence": [
+        "crates/sl-viewer/src/timeline.rs"
+      ]
     },
     {
       "id": "FR-008",
       "status": "done",
-      "evidence": ["crates/sl-viewer/src/search_view.rs"]
+      "evidence": [
+        "crates/sl-viewer/src/search_view.rs"
+      ]
     },
     {
       "id": "FR-009",
       "status": "done",
-      "evidence": ["crates/sl-viewer/src/replay_view.rs"]
+      "evidence": [
+        "crates/sl-viewer/src/replay_view.rs"
+      ]
     },
     {
       "id": "FR-010",
       "status": "done",
-      "evidence": ["crates/sl-viewer/src/live_feed.rs", "docs/OKF-ROUNDTRIP.md"]
+      "evidence": [
+        "crates/sl-viewer/src/live_feed.rs",
+        "docs/OKF-ROUNDTRIP.md"
+      ]
     },
     {
       "id": "FR-011",
       "status": "done",
-      "evidence": ["src/domain/worklog.rs", "crates/sl-viewer/src/unfinished_tab.rs", "tests/merge_recovery.rs"]
+      "evidence": [
+        "src/domain/worklog.rs",
+        "crates/sl-viewer/src/unfinished_tab.rs",
+        "tests/merge_recovery.rs"
+      ]
     },
     {
       "id": "FR-012",
       "status": "done",
-      "evidence": ["src/domain/bundle.rs", "src/distill/", "src/inject.rs"]
+      "evidence": [
+        "src/domain/bundle.rs",
+        "src/distill/",
+        "src/inject.rs"
+      ]
     },
     {
       "id": "FR-013",
       "status": "done",
-      "evidence": ["tests/okf_roundtrip.rs", "tests/okf_golden.rs", "tests/fixtures/okf/"]
+      "evidence": [
+        "tests/okf_roundtrip.rs",
+        "tests/okf_golden.rs",
+        "tests/fixtures/okf/"
+      ]
     },
     {
       "id": "FR-014",
       "status": "done",
-      "evidence": ["crates/sl-daemon/src/http.rs", "process-compose.yaml", "docs/ops/runbook.md"]
+      "evidence": [
+        "crates/sl-daemon/src/http.rs",
+        "process-compose.yaml",
+        "docs/ops/runbook.md"
+      ]
     },
     {
       "id": "FR-015",
       "status": "done",
-      "evidence": ["crates/sl-daemon/src/otel.rs", "crates/sl-daemon/src/metrics.rs", "docs/ops/dashboards/sessionledger-red.json", "docs/ops/observability.md"]
+      "evidence": [
+        "crates/sl-daemon/src/otel.rs",
+        "crates/sl-daemon/src/metrics.rs",
+        "docs/ops/dashboards/sessionledger-red.json",
+        "docs/ops/observability.md"
+      ]
     }
   ],
   "plan": [
-    {"id": "T-001", "status": "done"},
-    {"id": "T-002", "status": "done"},
-    {"id": "T-003", "status": "done"},
-    {"id": "T-004", "status": "done"},
-    {"id": "T-005", "status": "done"},
-    {"id": "T-006", "status": "done"},
-    {"id": "T-007", "status": "done"},
-    {"id": "T-008", "status": "done"},
-    {"id": "T-009", "status": "done"},
-    {"id": "T-010", "status": "done"},
-    {"id": "T-011", "status": "done"},
-    {"id": "T-012", "status": "done"},
-    {"id": "T-013", "status": "done"},
-    {"id": "T-014", "status": "done"},
-    {"id": "T-020", "status": "done"},
-    {"id": "T-021", "status": "done"},
-    {"id": "T-022", "status": "done"},
-    {"id": "T-023", "status": "done"},
-    {"id": "T-024", "status": "done"},
-    {"id": "T-025", "status": "done"},
-    {"id": "T-030", "status": "done"},
-    {"id": "T-031", "status": "done"},
-    {"id": "T-032", "status": "done"},
-    {"id": "T-033", "status": "done"},
-    {"id": "T-034", "status": "done"},
-    {"id": "T-035", "status": "done"},
-    {"id": "T-036", "status": "done"},
-    {"id": "T-037", "status": "done"},
-    {"id": "T-038", "status": "done"}
+    {
+      "id": "T-001",
+      "status": "done"
+    },
+    {
+      "id": "T-002",
+      "status": "done"
+    },
+    {
+      "id": "T-003",
+      "status": "done"
+    },
+    {
+      "id": "T-004",
+      "status": "done"
+    },
+    {
+      "id": "T-005",
+      "status": "done"
+    },
+    {
+      "id": "T-006",
+      "status": "done"
+    },
+    {
+      "id": "T-007",
+      "status": "done"
+    },
+    {
+      "id": "T-008",
+      "status": "done"
+    },
+    {
+      "id": "T-009",
+      "status": "done"
+    },
+    {
+      "id": "T-010",
+      "status": "done"
+    },
+    {
+      "id": "T-011",
+      "status": "done"
+    },
+    {
+      "id": "T-012",
+      "status": "done"
+    },
+    {
+      "id": "T-013",
+      "status": "done"
+    },
+    {
+      "id": "T-014",
+      "status": "done"
+    },
+    {
+      "id": "T-020",
+      "status": "done"
+    },
+    {
+      "id": "T-021",
+      "status": "done"
+    },
+    {
+      "id": "T-022",
+      "status": "done"
+    },
+    {
+      "id": "T-023",
+      "status": "done"
+    },
+    {
+      "id": "T-024",
+      "status": "done"
+    },
+    {
+      "id": "T-025",
+      "status": "done"
+    },
+    {
+      "id": "T-030",
+      "status": "done"
+    },
+    {
+      "id": "T-031",
+      "status": "done"
+    },
+    {
+      "id": "T-032",
+      "status": "done"
+    },
+    {
+      "id": "T-033",
+      "status": "done"
+    },
+    {
+      "id": "T-034",
+      "status": "done"
+    },
+    {
+      "id": "T-035",
+      "status": "done"
+    },
+    {
+      "id": "T-036",
+      "status": "done"
+    },
+    {
+      "id": "T-037",
+      "status": "done"
+    },
+    {
+      "id": "T-038",
+      "status": "done"
+    }
   ],
   "wbs": [
-    {"id": "WBS-0.1", "status": "done"},
-    {"id": "WBS-0.2", "status": "done"},
-    {"id": "WBS-1.1", "status": "done"},
-    {"id": "WBS-2.1", "status": "done"},
-    {"id": "WBS-2.2", "status": "done"},
-    {"id": "WBS-3.1", "status": "done"},
-    {"id": "WBS-3.2", "status": "todo"},
-    {"id": "WBS-4.1", "status": "done"},
-    {"id": "WBS-4.2", "status": "partial"},
-    {"id": "WBS-5.1", "status": "done"},
-    {"id": "WBS-6.1", "status": "done"},
+    {
+      "id": "WBS-0.1",
+      "status": "done"
+    },
+    {
+      "id": "WBS-0.2",
+      "status": "done"
+    },
+    {
+      "id": "WBS-1.1",
+      "status": "done"
+    },
+    {
+      "id": "WBS-2.1",
+      "status": "done"
+    },
+    {
+      "id": "WBS-2.2",
+      "status": "done"
+    },
+    {
+      "id": "WBS-3.1",
+      "status": "done"
+    },
+    {
+      "id": "WBS-3.2",
+      "status": "todo"
+    },
+    {
+      "id": "WBS-4.1",
+      "status": "done"
+    },
+    {
+      "id": "WBS-4.2",
+      "status": "partial"
+    },
+    {
+      "id": "WBS-5.1",
+      "status": "done"
+    },
+    {
+      "id": "WBS-6.1",
+      "status": "done"
+    },
     {
       "id": "WBS-6.2",
       "status": "partial",
@@ -145,15 +311,42 @@
         "CONTRIBUTING.md"
       ]
     },
-    {"id": "WBS-7.1", "status": "done"},
-    {"id": "WBS-7.2", "status": "done"},
-    {"id": "WBS-7.3", "status": "done"},
-    {"id": "WBS-7.4", "status": "done"},
-    {"id": "WBS-7.5", "status": "done"},
-    {"id": "WBS-7.6", "status": "done"},
-    {"id": "WBS-8.1", "status": "done"},
-    {"id": "WBS-8.2", "status": "partial"},
-    {"id": "WBS-8.3", "status": "done"},
+    {
+      "id": "WBS-7.1",
+      "status": "done"
+    },
+    {
+      "id": "WBS-7.2",
+      "status": "done"
+    },
+    {
+      "id": "WBS-7.3",
+      "status": "done"
+    },
+    {
+      "id": "WBS-7.4",
+      "status": "done"
+    },
+    {
+      "id": "WBS-7.5",
+      "status": "done"
+    },
+    {
+      "id": "WBS-7.6",
+      "status": "done"
+    },
+    {
+      "id": "WBS-8.1",
+      "status": "done"
+    },
+    {
+      "id": "WBS-8.2",
+      "status": "partial"
+    },
+    {
+      "id": "WBS-8.3",
+      "status": "done"
+    },
     {
       "id": "WBS-8.4",
       "status": "done",
@@ -168,15 +361,52 @@
     {
       "id": "WBS-8.5",
       "status": "done",
-      "evidence": ["audit/SCORECARD.md"]
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     },
-    {"id": "WBS-9.1", "status": "partial"},
-    {"id": "WBS-9.2", "status": "todo"},
-    {"id": "WBS-9.3", "status": "partial"}
+    {
+      "id": "WBS-9.1",
+      "status": "partial"
+    },
+    {
+      "id": "WBS-9.2",
+      "status": "todo"
+    },
+    {
+      "id": "WBS-9.3",
+      "status": "partial"
+    },
+    {
+      "id": "WBS-8.6",
+      "status": "done",
+      "evidence": [
+        ".github/workflows/a11y.yml",
+        ".github/workflows/ops-load.yml",
+        ".github/workflows/bench-gate.yml",
+        "docs/USER_JOURNEYS.md",
+        ".env.example"
+      ]
+    },
+    {
+      "id": "WBS-8.7",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
+    }
   ],
   "clusters": [
-    {"id": "C00", "score": "22/30", "status": "partial"},
-    {"id": "C01", "score": "23/30", "status": "partial"},
+    {
+      "id": "C00",
+      "score": "22/30",
+      "status": "partial"
+    },
+    {
+      "id": "C01",
+      "score": "24/30",
+      "status": "partial"
+    },
     {
       "id": "C02",
       "score": "21/30",
@@ -187,10 +417,22 @@
         "docs/ops/local-trust-boundary.md"
       ]
     },
-    {"id": "C03", "score": "32/36", "status": "partial"},
-    {"id": "C04", "score": "22/30", "status": "partial"},
-    {"id": "C05", "score": "21/30", "status": "partial"},
-{
+    {
+      "id": "C03",
+      "score": "34/36",
+      "status": "partial"
+    },
+    {
+      "id": "C04",
+      "score": "22/30",
+      "status": "partial"
+    },
+    {
+      "id": "C05",
+      "score": "22/30",
+      "status": "partial"
+    },
+    {
       "id": "C06",
       "score": "19/30",
       "status": "partial",
@@ -212,9 +454,25 @@
         "CONTRIBUTING.md"
       ]
     },
-    {"id": "C08", "score": "19/30", "status": "partial"},
-    {"id": "C09", "score": "30/45", "status": "partial"},
-    {"id": "C10", "score": "25/36", "status": "partial"},
-    {"id": "C11", "score": "25/45", "status": "partial"}
+    {
+      "id": "C08",
+      "score": "20/30",
+      "status": "partial"
+    },
+    {
+      "id": "C09",
+      "score": "30/45",
+      "status": "partial"
+    },
+    {
+      "id": "C10",
+      "score": "25/36",
+      "status": "partial"
+    },
+    {
+      "id": "C11",
+      "score": "25/45",
+      "status": "partial"
+    }
   ]
 }

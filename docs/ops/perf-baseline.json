@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "suite": "benches/pipeline.rs",
+  "criterion_baseline": "current",
+  "units": "nanoseconds",
+  "policy": {
+    "threshold_percent": 25.0,
+    "sample_size": 10,
+    "warm_up_seconds": 1.0,
+    "measurement_seconds": 2.0,
+    "update_command": "./scripts/bench-gate.ps1 -UpdateBaseline"
+  },
+  "benchmarks": {
+    "pipeline/distill_compile_200_messages": {
+      "mean_ns": 1081439.87
+    },
+    "pipeline/okf_export_200_messages": {
+      "mean_ns": 6607.678
+    },
+    "pipeline/inject_render_200_messages": {
+      "mean_ns": 13362.599
+    }
+  }
+}

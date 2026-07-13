@@ -49,6 +49,29 @@ jobs:
         run: cargo build --all-targets --locked
       - name: test
         run: cargo test --all-features --locked
+      - name: property and flake smoke (3 repeats)
+        env:
+          PROPTEST_CASES: 64
+        run: |
+          for run in 1 2 3; do
+            echo "property test repeat ${run}/3"
+            cargo test --test properties --locked
+          done
+
+  fuzz-smoke:
+    name: fuzz smoke (10 seconds)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          toolchain: nightly
+      - name: install cargo-fuzz
+        uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # cargo-fuzz
+        with:
+          tool: cargo-fuzz
+      - name: fuzz OKF parse and roundtrip
+        run: cargo fuzz run okf_roundtrip -- -max_total_time=10
 
   coverage:
     name: coverage (85% gate)

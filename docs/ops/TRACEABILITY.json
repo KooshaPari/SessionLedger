@@ -133,7 +133,16 @@
     {"id": "WBS-4.2", "status": "partial"},
     {"id": "WBS-5.1", "status": "done"},
     {"id": "WBS-6.1", "status": "done"},
-    {"id": "WBS-6.2", "status": "todo"},
+    {
+      "id": "WBS-6.2",
+      "status": "partial",
+      "evidence": [
+        "tests/properties.rs",
+        "fuzz/fuzz_targets/okf_roundtrip.rs",
+        ".github/workflows/ci.yml",
+        "CONTRIBUTING.md"
+      ]
+    },
     {"id": "WBS-7.1", "status": "done"},
     {"id": "WBS-7.2", "status": "done"},
     {"id": "WBS-7.3", "status": "done"},
@@ -163,7 +172,7 @@
     {"id": "C03", "score": "32/36", "status": "partial"},
     {"id": "C04", "score": "22/30", "status": "partial"},
     {"id": "C05", "score": "21/30", "status": "partial"},
-    {
+{
       "id": "C06",
       "score": "18/30",
       "status": "partial",
@@ -174,7 +183,17 @@
       ],
       "remaining": "Hermetic/offline builders, cross-host and Windows proof, SLSA L3, blocking per-build provenance, and container provenance"
     },
-    {"id": "C07", "score": "18/30", "status": "partial"},
+    {
+      "id": "C07",
+      "score": "18/30",
+      "status": "partial",
+      "evidence": [
+        "tests/properties.rs",
+        "fuzz/",
+        ".github/workflows/ci.yml",
+        "CONTRIBUTING.md"
+      ]
+    },
     {"id": "C08", "score": "19/30", "status": "partial"},
     {"id": "C09", "score": "30/45", "status": "partial"},
     {"id": "C10", "score": "25/36", "status": "partial"},

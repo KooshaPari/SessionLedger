@@ -348,6 +348,9 @@ interpret the absence as a successful provenance check.
 
 ## Platform code-signing & notarization — DEFERRED
 
+See [`docs/adr/0003-platform-code-signing.md`](../adr/0003-platform-code-signing.md)
+for the accepted deferral decision, portable trust model, and reconsider triggers.
+
 Release and packaging scaffolds still ship **unsigned binaries, installers, and
 `.app` bundles**. The following platform trust paths remain deferred under #66:
 

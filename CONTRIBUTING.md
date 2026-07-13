@@ -26,6 +26,8 @@ A failed test is not retried to turn CI green. Preserve the proptest seed or
 regression case from the failure output, open an issue for any confirmed flake,
 and quarantine a test only with an owner, linked issue, and removal deadline.
 The CI repeat is a short detection signal; it does not replace a root-cause fix.
+Use the [flake tracker](docs/ops/flake-tracker.md) to record confirmed flakes
+and any temporary quarantine.
 
 The `fuzz-smoke` CI job runs the committed OKF corpus for 10 seconds. Longer
 local campaigns use `cargo fuzz run okf_roundtrip`.

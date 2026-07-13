@@ -1,4 +1,4 @@
-//! Apply forward-only schema migrations to a SQLite connection.
+//! Apply forward-only schema migrations to a `SQLite` connection.
 
 use rusqlite::{params, Connection};
 
@@ -7,7 +7,7 @@ use super::{migrations, Migration};
 /// Error while reading or applying schema migrations.
 #[derive(Debug, thiserror::Error)]
 pub enum MigrateError {
-    /// SQLite returned an error.
+    /// `SQLite` returned an error.
     #[error(transparent)]
     Sqlite(#[from] rusqlite::Error),
     /// A bundled migration failed to apply.
@@ -17,7 +17,7 @@ pub enum MigrateError {
         version: u32,
         /// Migration name.
         name: &'static str,
-        /// Underlying SQLite error.
+        /// Underlying `SQLite` error.
         source: rusqlite::Error,
     },
 }
@@ -48,7 +48,7 @@ pub fn applied_version(conn: &Connection) -> Result<u32, MigrateError> {
 ///
 /// # Errors
 ///
-/// Returns [`MigrateError`] when SQLite fails or a migration cannot be applied.
+/// Returns [`MigrateError`] when `SQLite` fails or a migration cannot be applied.
 pub fn apply_all(conn: &Connection) -> Result<u32, MigrateError> {
     let current = applied_version(conn)?;
     let mut version = current;
@@ -104,7 +104,7 @@ mod tests {
         let count: i64 = conn
             .query_row("SELECT COUNT(*) FROM schema_migrations", [], |row| row.get(0))
             .expect("count migrations");
-        assert_eq!(count, migrations().len() as i64);
+        assert_eq!(usize::try_from(count).expect("count fits usize"), migrations().len());
     }
 
     #[test]

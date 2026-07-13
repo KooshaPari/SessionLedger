@@ -16,7 +16,7 @@ pub const CURRENT_VERSION: u32 = 1;
 pub struct Migration {
     /// Monotonic schema version (1-based).
     pub version: u32,
-    /// Stable migration name (snake_case).
+    /// Stable migration name (`snake_case`).
     pub name: &'static str,
     /// SQL executed when upgrading to this version.
     pub sql: &'static str,

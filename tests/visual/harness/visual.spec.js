@@ -77,6 +77,33 @@ test("prefers-reduced-motion flattens transition durations", async ({ page }) =>
   expect(duration).toMatch(/^0(\.0\d*)?ms$|^0s$|^1e-0[45]s$/);
 });
 
+test("viewer exposes caption and measure typography tokens", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();
+
+  const tokens = await page.evaluate(() => {
+    const styles = getComputedStyle(document.documentElement);
+    return {
+      captionFont: styles.getPropertyValue("--sl-font-caption").trim(),
+      captionSize: styles.getPropertyValue("--sl-font-size-caption").trim(),
+      captionLine: styles.getPropertyValue("--sl-line-height-caption").trim(),
+      measureMax: styles.getPropertyValue("--sl-measure-max").trim(),
+    };
+  });
+
+  expect(tokens.captionFont).toContain("system-ui");
+  expect(tokens.captionSize).toBe("0.75rem");
+  expect(tokens.captionLine).toBe("1.35");
+  expect(tokens.measureMax).toBe("65ch");
+});
+
+test("launch splash is present then dismisses", async ({ page }) => {
+  await page.goto("/");
+  const splash = page.locator(".launch-splash");
+  await expect(splash).toBeVisible();
+  await expect(splash).toHaveCount(0, { timeout: 5000 });
+});
+
 test("viewer exposes spacing and motion tokens", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();

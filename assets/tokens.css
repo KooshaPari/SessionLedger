@@ -27,6 +27,12 @@
   --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-caption: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Lab-Coat caption scale and prose measure (VISUAL_SPEC §1). */
+  --lc-font-size-caption: 0.75rem;
+  --lc-line-height-caption: 1.35;
+  --lc-measure-max: 65ch;
 
   /* ────────────────────────────────────────────────────────────
    * BACKBONE-2 — sharecli + substrate (infra family)
@@ -161,6 +167,10 @@
   --sl-motion-slow: var(--lc-motion-slow);
   --sl-ease-out: var(--lc-ease-out);
   --sl-ease-in-out: var(--lc-ease-in-out);
+  --sl-font-caption: var(--font-caption);
+  --sl-font-size-caption: var(--lc-font-size-caption);
+  --sl-line-height-caption: var(--lc-line-height-caption);
+  --sl-measure-max: var(--lc-measure-max);
 }
 
 :root,

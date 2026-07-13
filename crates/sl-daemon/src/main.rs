@@ -25,6 +25,7 @@
 
 mod archive;
 mod audit;
+mod banner;
 mod cli;
 mod etl;
 mod export;
@@ -475,6 +476,10 @@ async fn run_serve(
     once: bool,
     http_bind: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let version = env!("CARGO_PKG_VERSION");
+    banner::emit_interactive_banner(version);
+    info!(banner = %banner::plain_banner(version), "startup");
+
     // Broadcast channel: ETL consumer publishes every written path; HTTP SSE
     // handler subscribes one receiver per connected client.
     let (bcast_tx, _bcast_rx) = broadcast::channel::<PathBuf>(BROADCAST_CAPACITY);

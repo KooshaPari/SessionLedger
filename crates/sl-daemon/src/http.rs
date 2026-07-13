@@ -196,7 +196,7 @@ async fn healthz() -> Response {
 
 /// `GET /readyz` — readiness probe (output directory must exist and be a dir).
 #[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
-async fn readyz(State(state): State<AppState>) -> Response {
+async fn readyz(headers: HeaderMap, State(state): State<AppState>) -> Response {
     let path = state.out_dir.as_path();
     if path.is_dir() {
         "ready".into_response()
@@ -206,13 +206,14 @@ async fn readyz(State(state): State<AppState>) -> Response {
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
             "not_ready",
             format!("out_dir not ready: {}", path.display()),
+            request_id_from_headers(&headers),
         )
     }
 }
 
 /// `GET /api/bundles` — return all `*.okf.json` documents as a JSON array.
 #[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
-async fn list_bundles(State(state): State<AppState>) -> Response {
+async fn list_bundles(headers: HeaderMap, State(state): State<AppState>) -> Response {
     match read_all_bundles(&state.out_dir) {
         Ok(values) => {
             info!(count = values.len(), "list_bundles");
@@ -224,6 +225,7 @@ async fn list_bundles(State(state): State<AppState>) -> Response {
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 "bundle_read_failed",
                 format!("failed to read bundles: {e}"),
+                request_id_from_headers(&headers),
             )
         }
     }
@@ -457,6 +459,7 @@ pub(crate) fn params_to_spec(p: &SearchParams) -> FilterSpec {
 /// Returns a JSON array of [`BundleMeta`] objects matching the query.
 #[tracing::instrument(skip(state, params), fields(out_dir = %state.out_dir.display(), limit = params.limit))]
 async fn search_bundles(
+    headers: HeaderMap,
     State(state): State<AppState>,
     Query(params): Query<SearchParams>,
 ) -> Response {
@@ -468,6 +471,7 @@ async fn search_bundles(
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 "bundle_read_failed",
                 format!("failed to read bundles: {e}"),
+                request_id_from_headers(&headers),
             );
         }
     };
@@ -496,6 +500,7 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
             axum::http::StatusCode::UNAUTHORIZED,
             "unauthorized",
             "missing or invalid API key",
+            &request_id,
         );
     }
     let Ok(_permit) = state.ingest_admission.semaphore.clone().try_acquire_owned() else {
@@ -504,6 +509,7 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
             axum::http::StatusCode::TOO_MANY_REQUESTS,
             "ingest_busy",
             "too many concurrent ingest requests",
+            &request_id,
         );
     };
     let bytes = match to_bytes(request.into_body(), state.ingest_admission.max_body_bytes).await {
@@ -514,6 +520,7 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
                 axum::http::StatusCode::PAYLOAD_TOO_LARGE,
                 "payload_too_large",
                 format!("ingest payload exceeds {} bytes", state.ingest_admission.max_body_bytes),
+                &request_id,
             );
         }
     };
@@ -525,6 +532,7 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
                 axum::http::StatusCode::BAD_REQUEST,
                 "invalid_json",
                 format!("invalid JSON payload: {error}"),
+                &request_id,
             );
         }
     };
@@ -590,11 +598,14 @@ fn x_api_key_matches(headers: &HeaderMap, expected: &str) -> bool {
 
 #[derive(Serialize)]
 struct ApiErrorEnvelope {
+    request_id: String,
     error: ApiError,
 }
 
 #[derive(Serialize)]
 struct ApiError {
+    #[serde(rename = "type")]
+    error_type: &'static str,
     code: &'static str,
     message: String,
 }
@@ -603,13 +614,29 @@ fn api_error(
     status: axum::http::StatusCode,
     code: &'static str,
     message: impl Into<String>,
+    request_id: impl Into<String>,
 ) -> Response {
-    (status, Json(ApiErrorEnvelope { error: ApiError { code, message: message.into() } }))
+    (
+        status,
+        Json(ApiErrorEnvelope {
+            request_id: request_id.into(),
+            error: ApiError {
+                error_type: "sessionledger.http_error",
+                code,
+                message: message.into(),
+            },
+        }),
+    )
         .into_response()
 }
 
-async fn not_found() -> Response {
-    api_error(axum::http::StatusCode::NOT_FOUND, "not_found", "route not found")
+async fn not_found(headers: HeaderMap) -> Response {
+    api_error(
+        axum::http::StatusCode::NOT_FOUND,
+        "not_found",
+        "route not found",
+        request_id_from_headers(&headers),
+    )
 }
 
 fn audit_event(
@@ -690,6 +717,7 @@ pub(crate) fn delay_ms_for_speed(speed: f64) -> u64 {
 /// quickly entities are emitted: `speed=2.0` halves the inter-event delay.
 #[tracing::instrument(skip(state, params), fields(bundle_id = %bundle_id, speed = params.speed, out_dir = %state.out_dir.display()))]
 async fn replay_bundle(
+    headers: HeaderMap,
     AxumPath(bundle_id): AxumPath<String>,
     Query(params): Query<ReplayParams>,
     State(state): State<AppState>,
@@ -701,6 +729,7 @@ async fn replay_bundle(
             axum::http::StatusCode::BAD_REQUEST,
             "invalid_bundle_id",
             "invalid bundle_id",
+            request_id_from_headers(&headers),
         );
     }
 
@@ -718,6 +747,7 @@ async fn replay_bundle(
                 axum::http::StatusCode::NOT_FOUND,
                 "bundle_not_found",
                 format!("bundle {bundle_id:?} not found"),
+                request_id_from_headers(&headers),
             );
         }
         Err(e) => {
@@ -725,6 +755,7 @@ async fn replay_bundle(
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 "bundle_read_failed",
                 format!("failed to read bundle: {e}"),
+                request_id_from_headers(&headers),
             );
         }
     };
@@ -736,6 +767,7 @@ async fn replay_bundle(
                 axum::http::StatusCode::UNPROCESSABLE_ENTITY,
                 "invalid_bundle_json",
                 format!("invalid OKF JSON: {e}"),
+                request_id_from_headers(&headers),
             );
         }
     };
@@ -1046,12 +1078,15 @@ mod tests {
         let response = reqwest::Client::new()
             .post(format!("http://{addr}/api/ingest"))
             .header(CONTENT_TYPE, "application/json")
+            .header(X_REQUEST_ID, "req-oversized")
             .body(r#"{"payload":"this is larger than sixteen bytes"}"#)
             .send()
             .await
             .unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::PAYLOAD_TOO_LARGE);
         let body: Value = response.json().await.unwrap();
+        assert_eq!(body["request_id"], "req-oversized");
+        assert_eq!(body["error"]["type"], "sessionledger.http_error");
         assert_eq!(body["error"]["code"], "payload_too_large");
         assert!(body["error"]["message"].as_str().unwrap().contains("16 bytes"));
         server.abort();

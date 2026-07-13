@@ -15,8 +15,8 @@ because `sl-viewer` pulls `webkit2gtk-sys`, which does not resolve on macOS:
 
 ```bash
 cargo test -p sl-daemon
-cargo run  -p sl-daemon -- --watch ~/.forge/sessions --out ./okf-out
-cargo run  -p sl-daemon -- --watch ./sessions --out ./okf-out --once   # single sweep
+cargo run  -p sl-daemon -- serve --watch ~/.forge/sessions --out ./okf-out
+cargo run  -p sl-daemon -- serve --watch ./sessions --out ./okf-out --once   # single sweep
 ```
 
 Optional OTLP/gRPC trace export is feature-gated, so normal builds do not need
@@ -50,7 +50,7 @@ container build -t sl-daemon:latest -f crates/sl-daemon/Containerfile .
 container run --rm \
   -v "$HOME/.forge/sessions:/data/sessions:ro" \
   -v "$PWD/okf-out:/data/out" \
-  sl-daemon:latest --watch /data/sessions --out /data/out
+  sl-daemon:latest serve --watch /data/sessions --out /data/out
 ```
 
 ## Flags
@@ -66,3 +66,15 @@ Ingest admission is configured with `SL_INGEST_MAX_BODY_BYTES` (default
 `1048576`) and `SL_INGEST_MAX_CONCURRENCY` (default `8`). See
 [`docs/ops/local-trust-boundary.md`](../../docs/ops/local-trust-boundary.md) for
 the error envelope, audit fields, and operational boundary.
+
+## Shell completions
+
+Generate shell completions with the `completions` subcommand and install them
+using your shell's normal completion path:
+
+```bash
+cargo run -p sl-daemon -- completions bash > sl-daemon.bash
+cargo run -p sl-daemon -- completions zsh > _sl-daemon
+cargo run -p sl-daemon -- completions fish > sl-daemon.fish
+cargo run -p sl-daemon -- completions powershell > sl-daemon.ps1
+```

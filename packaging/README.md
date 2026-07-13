@@ -64,7 +64,7 @@ Tag push (`v*`) builds via [`.github/workflows/release.yml`](../.github/workflow
 
 | Platform / format | Status | Scope |
 |-------------------|--------|-------|
-| Windows installable ZIP | **Partial, CI-smoked** | Release CI downloads, extracts, and executes `sl-viewer.exe --version`; `package-windows.ps1` adds per-user install/uninstall scripts and a Start Menu shortcut locally |
+| Windows installable ZIP | **Partial, CI-smoked** | Release CI downloads, extracts, and executes `sl-viewer.exe --version`; PR CI on `windows-latest` runs `scripts/installer-lifecycle-smoke.ps1 -WindowsInstallLifecycle` against an unsigned stub binary packaged by `package-windows.ps1` (Install.ps1 → `--version` → Uninstall.ps1 + cleanup); `package-windows.ps1` adds per-user install/uninstall scripts and a Start Menu shortcut locally |
 | Windows MSI (WiX v4) | **Partial, scaffold published** | Release CI publishes `Product.wxs` and [`scripts/package-msi.md`](../scripts/package-msi.md) as a source/documentation archive, not an MSI |
 | Linux AppImage | **Partial** | `packaging/linux/package-appimage.sh` builds a local candidate with `appimagetool` |
 | Linux `.deb` | **Partial** | `packaging/linux/package-deb.sh` builds a local candidate with `dpkg-deb` |
@@ -76,8 +76,13 @@ non-installable scaffold archive. `Install.ps1` can copy the local Windows
 package below LocalAppData, register an uninstall entry, and create a Start
 Menu shortcut. No MSI, AppImage, or `.deb` is a supported release target.
 `scripts/installer-lifecycle-smoke.ps1` dry-runs scaffold and lifecycle-doc
-assertions on any host with PowerShell; a full clean-host MSI install/uninstall
-test still requires Windows plus WiX tooling.
+assertions on any host with PowerShell. On `windows-latest` CI it can also run
+`-WindowsInstallLifecycle`, which packages an unsigned stub `sl-viewer.exe`,
+executes Install.ps1 → `--version` → Uninstall.ps1, and verifies cleanup; that
+path proves installer wiring only and does **not** replace platform Authenticode
+signing, which remains a human/deferred step (see
+[`docs/ops/distribution.md`](../docs/ops/distribution.md)). A full clean-host
+MSI install/uninstall test still requires Windows plus WiX tooling.
 Linux details and limitations are in
 [`packaging/linux/README.md`](linux/README.md).
 

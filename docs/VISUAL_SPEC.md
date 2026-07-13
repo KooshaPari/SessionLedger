@@ -62,7 +62,7 @@ Family: **Lab-Coat** (R&D). Light lab-bench base; cool cobalt primary; orange li
 | `--sl-text` | Slate primary text | Near-white primary text |
 | `--sl-text-muted` | Muted helper text | Muted helper text |
 | `--sl-accent` | Lab-Coat cobalt `#2563eb` | Lab-Coat on-dark cobalt `#93c5fd` |
-| `--sl-accent-secondary` | Lab-Coat teal | Lab-Coat teal |
+| `--sl-accent-secondary` | Lab-Coat teal `#14b8a6` | Lab-Coat on-dark teal `#2dd4bf` |
 | `--sl-accent-warning` | Lab-Coat orange | Lab-Coat orange |
 | `--sl-danger` / `--sl-danger-surface` | Error foreground/surface | Error foreground/surface |
 

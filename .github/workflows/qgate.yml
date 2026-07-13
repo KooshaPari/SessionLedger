@@ -75,7 +75,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # qgate reusable workflow — runs the gate, emits JSON report.
+      # qgate reusable workflow — org-owned reusable workflow intentionally
+      # floats on main so repository gates receive centralized updates.
       - name: qgate quality gate
         uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@main
         with:

@@ -1,7 +1,7 @@
 # Visual golden checklist (SessionLedger)
 
 Manual acceptance for [`docs/VISUAL_SPEC.md`](../../docs/VISUAL_SPEC.md) (Lab-Coat / L99–L107).  
-The contract validator is CI-safe and the Playwright screenshot comparison is an optional/manual stub. Run this checklist before merging viewer visual changes.
+The contract validator is CI-safe and the Playwright screenshot comparison asserts committed PNG baselines under `tests/visual/golden/`. Run this checklist before merging viewer visual changes.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ The contract validator is CI-safe and the Playwright screenshot comparison is an
 
 ## Empty states
 
-Capture or eyeball each surface (store under `tests/visual/golden/` if saving PNGs):
+Capture or eyeball each surface (store approved PNGs under `tests/visual/golden/`):
 
 | ID | Surface | Expect |
 |----|---------|--------|
@@ -108,25 +108,25 @@ npm run test:a11y
 `.github/workflows/a11y.yml` runs both `validate.ps1` and this Playwright suite
 on Ubuntu as a blocking pull-request check.
 
-The optional Playwright visual spec compares the default Bundles empty state with
-`golden/e1-bundle-empty.png`. Start the web viewer, then:
+The Playwright visual spec compares the default Bundles empty state with
+`golden/e1-bundle-empty.png`. Build the web viewer, then:
 
 ```powershell
 cd tests/visual/harness
-npm install
-$env:VISUAL_BASE_URL = "http://127.0.0.1:8080"
+npm ci
 npx playwright install chromium
 npm run test:visual
 ```
 
-The test is skipped when `VISUAL_BASE_URL` is unset, so installing the stub does not create a false CI failure. To intentionally create or refresh an approved baseline, run `npm run test:visual -- --update-snapshots`, inspect the image, and commit it.
+The harness starts its static server automatically unless `VISUAL_BASE_URL` points at an already-running viewer. To intentionally create or refresh an approved baseline, run `npm run test:visual -- --update-snapshots`, inspect the image, record it in [`PROVENANCE.md`](PROVENANCE.md), and commit it.
 
 Harness layout:
 
 ```text
 tests/visual/
   README.md          ← this file
-  golden/            ← baseline PNGs (optional)
+  PROVENANCE.md      ← golden filename to screen mapping
+  golden/            ← approved baseline PNGs
     e1-bundle-empty.png
     e2-history-empty.png
     e3-timeline-zero.png
@@ -136,13 +136,13 @@ tests/visual/
   harness/
     a11y.spec.js       ← axe across every built viewer tab + keyboard evidence
     serve-viewer.mjs   ← static server for the Dioxus web build
-    validate.ps1     ← headless VISUAL_SPEC contract check
-    visual.spec.js   ← optional Playwright golden comparison stub
+    validate.ps1      ← headless VISUAL_SPEC contract check
+    visual.spec.js   ← Playwright golden comparison
 ```
 
 Suggested compare tolerance: ≤ 0.1% pixel diff on non-AA regions; ignore OS window chrome.
 
-Stub directory `golden/` is reserved for baselines; commit PNGs only after intentional refresh and review.
+Directory `golden/` stores approved baselines; commit PNGs only after intentional refresh and review.
 
 ## Related checklists
 

@@ -141,7 +141,7 @@
     {"id": "WBS-7.5", "status": "done"},
     {"id": "WBS-7.6", "status": "done"},
     {"id": "WBS-8.1", "status": "done"},
-    {"id": "WBS-8.2", "status": "todo"},
+    {"id": "WBS-8.2", "status": "partial"},
     {"id": "WBS-8.3", "status": "done"},
     {"id": "WBS-9.1", "status": "partial"},
     {"id": "WBS-9.2", "status": "todo"},

@@ -14,6 +14,20 @@ const VIEWER_TITLE: &str = "Session Ledger Viewer";
 fn main() {
     use dioxus::desktop::{Config, WindowBuilder};
 
+    if let Some(argument) = std::env::args().nth(1) {
+        match argument.as_str() {
+            "--version" | "-V" => {
+                println!("sl-viewer {}", env!("CARGO_PKG_VERSION"));
+                return;
+            }
+            "--help" | "-h" => {
+                println!("SessionLedger desktop viewer\n\nUsage: sl-viewer [--help] [--version]");
+                return;
+            }
+            _ => {}
+        }
+    }
+
     dioxus::LaunchBuilder::desktop()
         .with_cfg(Config::new().with_window(WindowBuilder::new().with_title(VIEWER_TITLE)))
         .launch(App);

@@ -22,7 +22,7 @@ package, and the JSON mirror in the same change.
 | C08 | 19/30 · partial | No per-PR perf regression gate; compression/token and reproducibility evidence shallow | `audit/.lane-c08/C08.md`; checked baseline + threshold gate | Add stable benchmark baseline and regression policy | 2026-07-12 |
 | C09 | 30/45 · partial | Native WebView/live-data, responsive, cognitive, help, and efficiency coverage remain incomplete | `audit/.lane-c09/C09.md`; WCAG suite against all built-viewer tabs at three widths | Add responsive overflow/touch assertions and native integration evidence | 2026-07-12 |
 | C10 | 25/36 · partial | Typography/theme/splash and automated golden coverage remain incomplete | `audit/.lane-c10/C10.md`; deterministic screenshots pass against visual spec | Automate viewer golden captures and theme checks | 2026-07-12 |
-| C11 | 25/45 · partial | Native-format scaffolds are unvalidated/unpublished; platform signing, channels, parity, mobile decision remain | `audit/.lane-c11/C11.md`; clean-host install/launch/uninstall smoke on target OS | Validate and ship installers/channels; record signing and mobile decisions | 2026-07-12 |
+| C11 | 25/45 · partial | Portable Windows/Linux archives now have release-gating launch smoke and WiX source/docs are published; native installer install/uninstall, signing, channels, parity, and mobile decision remain | `audit/.lane-c11/C11.md`; `.github/workflows/release.yml`; `packaging/README.md`; `docs/ops/distribution.md` | Add clean-host native installer install/launch/uninstall evidence; record signing and mobile decisions | 2026-07-12 |
 
 ## Functional requirements
 

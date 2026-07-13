@@ -47,28 +47,31 @@ make -C packaging package-all
 
 Tag push (`v*`) builds via [`.github/workflows/release.yml`](../.github/workflows/release.yml):
 
-| Target | Archive | Local Make? |
-|--------|---------|-------------|
-| Linux `x86_64-unknown-linux-gnu` | `.tar.gz` | `package-linux` |
-| macOS Intel `x86_64-apple-darwin` | `.tar.gz` | `package-macos` |
-| macOS ARM `aarch64-apple-darwin` | `.tar.gz` | `package-macos` (on Apple Silicon host) |
-| Windows `x86_64-pc-windows-msvc` | `.zip` (`sl-viewer.exe`) | `package-windows` (on Windows) |
+| Target | Archive | CI validation | Local Make? |
+|--------|---------|---------------|-------------|
+| Linux `x86_64-unknown-linux-gnu` | `.tar.gz` | Download, extract, binary `--version` smoke on `ubuntu-latest` | `package-linux` |
+| macOS Intel `x86_64-apple-darwin` | `.tar.gz` | Build/archive only | `package-macos` |
+| macOS ARM `aarch64-apple-darwin` | `.tar.gz` | Build/archive only | `package-macos` (on Apple Silicon host) |
+| Windows `x86_64-pc-windows-msvc` | `.zip` (`sl-viewer.exe`) | Download, extract, binary `--version` smoke on `windows-latest` | `package-windows` (on Windows) |
+| Windows MSI scaffold | `.zip` (`Product.wxs` + build notes; no MSI) | Archive presence enforced by release build | WiX v4 developer build |
 
 ## Installer status matrix
 
 | Platform / format | Status | Scope |
 |-------------------|--------|-------|
-| Windows installable ZIP | **Partial** | `package-windows.ps1` emits portable files plus per-user install/uninstall scripts and a Start Menu shortcut |
-| Windows MSI (WiX v4) | **Partial** | `packaging/windows/Product.wxs` and [`scripts/package-msi.md`](../scripts/package-msi.md) are local-build scaffolds |
+| Windows installable ZIP | **Partial, CI-smoked** | Release CI downloads, extracts, and executes `sl-viewer.exe --version`; `package-windows.ps1` adds per-user install/uninstall scripts and a Start Menu shortcut locally |
+| Windows MSI (WiX v4) | **Partial, scaffold published** | Release CI publishes `Product.wxs` and [`scripts/package-msi.md`](../scripts/package-msi.md) as a source/documentation archive, not an MSI |
 | Linux AppImage | **Partial** | `packaging/linux/package-appimage.sh` builds a local candidate with `appimagetool` |
 | Linux `.deb` | **Partial** | `packaging/linux/package-deb.sh` builds a local candidate with `dpkg-deb` |
 | macOS `.app` | **Partial** | Host-local unsigned app bundle; DMG/notarization deferred |
 
-None of these installer formats is published by release CI. The Windows ZIP
-remains usable portably, or `Install.ps1` can copy it below LocalAppData,
-register an uninstall entry, and create a Start Menu shortcut. The WiX source is
-an MSI starting point, not a supported release target. Linux details and
-limitations are in [`packaging/linux/README.md`](linux/README.md).
+Release CI publishes and smoke-tests the portable Windows ZIP and Linux
+`.tar.gz`. It also publishes the WiX source and build notes as an explicitly
+non-installable scaffold archive. `Install.ps1` can copy the local Windows
+package below LocalAppData, register an uninstall entry, and create a Start
+Menu shortcut. No MSI, AppImage, or `.deb` is a supported release target.
+Linux details and limitations are in
+[`packaging/linux/README.md`](linux/README.md).
 
 ## Installer script draft (not published)
 

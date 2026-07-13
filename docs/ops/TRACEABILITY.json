@@ -150,7 +150,16 @@
   "clusters": [
     {"id": "C00", "score": "22/30", "status": "partial"},
     {"id": "C01", "score": "23/30", "status": "partial"},
-    {"id": "C02", "score": "18/30", "status": "partial"},
+    {
+      "id": "C02",
+      "score": "18/30",
+      "status": "partial",
+      "evidence": [
+        "crates/sl-daemon/src/http.rs",
+        "crates/sl-daemon/src/main.rs",
+        "docs/ops/local-trust-boundary.md"
+      ]
+    },
     {"id": "C03", "score": "32/36", "status": "partial"},
     {"id": "C04", "score": "22/30", "status": "partial"},
     {"id": "C05", "score": "21/30", "status": "partial"},

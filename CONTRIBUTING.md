@@ -32,6 +32,29 @@ and any temporary quarantine.
 The `fuzz-smoke` CI job runs the committed OKF corpus for 10 seconds. Longer
 local campaigns use `cargo fuzz run okf_roundtrip`.
 
+## Inclusive Language Checks
+
+Run the lightweight seed gate before documentation-heavy changes:
+
+```powershell
+pwsh -NoProfile -File scripts/inclusive-language-check.ps1
+```
+
+The script scans Markdown under `docs/` plus `CONTRIBUTING.md` for a small
+deny-list. It is intentionally dependency-free so CI can add it as a warning or
+blocking check later.
+
+Vale is also configured as a warning-level style for the same scope. After
+installing Vale locally, run:
+
+```powershell
+vale docs CONTRIBUTING.md
+```
+
+Use the PowerShell script as the seed gate today. Upgrade the Vale style over
+time with project-specific substitutions, then wire `vale docs CONTRIBUTING.md`
+into CI as an optional warning before making it blocking.
+
 ## Branch Discipline
 - Always create feature branches off main
 - Never commit directly to main

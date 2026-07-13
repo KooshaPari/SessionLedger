@@ -70,7 +70,8 @@ The accessibility suite builds the production `sl-viewer` Dioxus web target,
 serves the generated WASM application over HTTP, and runs axe-core WCAG AA
 (including contrast) on every viewer tab at 375, 768, and 1280 CSS pixels. It
 also exercises the production ARIA tab state, focus order, and Escape-to-clear
-behavior. The responsive overflow suite visits the same built viewer tabs at
+behavior documented in [`docs/viewer-hotkeys.md`](../../docs/viewer-hotkeys.md).
+The responsive overflow suite visits the same built viewer tabs at
 360, 768, and 1280 CSS pixels and asserts the document and body scroll widths
 do not exceed their client widths. Install the `wasm32-unknown-unknown` target
 and Dioxus CLI 0.7.9, then run:

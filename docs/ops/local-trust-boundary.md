@@ -36,6 +36,13 @@ Requests above the body limit return `413`. Requests arriving while all ingest
 permits are occupied return `429`. These are admission controls, not tenant
 quotas or distributed rate limits.
 
+Clients may send `Idempotency-Key` on `POST /api/ingest` to safely retry a
+successful request while the daemon process is still running. The daemon stores
+the key, raw-body hash, and success response in memory only: same key plus same
+body returns the prior `200` validation response, while same key plus different
+body returns `409` with the API error envelope. The cache is not persisted,
+shared across processes, or retained after restart.
+
 API transport errors use this small JSON envelope where the endpoint can adopt
 it without changing successful response contracts:
 

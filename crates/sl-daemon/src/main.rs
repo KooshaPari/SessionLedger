@@ -544,6 +544,7 @@ async fn run_serve(
             ingest_admission,
             api_key_auth,
             audit_sink: audit_sink.clone(),
+            idempotency_cache: http::IngestIdempotencyCache::default(),
         };
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
         let handle = tokio::spawn(async move {

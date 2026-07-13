@@ -16,10 +16,13 @@
 //! CORS is enabled with a permissive policy so WASM-based viewers (e.g. Dioxus)
 //! running on a different origin can call these endpoints.
 
+use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::convert::Infallible;
+use std::hash::{Hash, Hasher};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use axum::body::to_bytes;
@@ -40,7 +43,7 @@ use crate::audit::{self, AuditSink};
 use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
 use crate::metrics::{compute_metrics, HttpMetrics};
-use crate::validation::{validate_okf_bundle, PostBundle};
+use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 #[cfg(feature = "otel")]
 use opentelemetry::trace::{
     SpanContext, SpanId, TraceContextExt as _, TraceFlags, TraceId, TraceState,
@@ -57,6 +60,7 @@ const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
 const SL_API_KEY: &str = "SL_API_KEY";
 const SL_ENABLE_PPROF: &str = "SL_ENABLE_PPROF";
 const X_API_KEY: &str = "x-api-key";
+const IDEMPOTENCY_KEY: &str = "idempotency-key";
 
 /// Optional shared-secret authentication for mutating HTTP routes.
 #[derive(Clone, Debug, Default)]
@@ -118,6 +122,42 @@ impl IngestAdmission {
     }
 }
 
+/// Process-local replay cache for successful `POST /api/ingest` idempotency keys.
+#[derive(Clone, Default)]
+pub(crate) struct IngestIdempotencyCache {
+    entries: Arc<Mutex<HashMap<String, IdempotentIngest>>>,
+}
+
+#[derive(Clone)]
+struct IdempotentIngest {
+    body_hash: u64,
+    response: ValidationResult,
+}
+
+impl IngestIdempotencyCache {
+    fn get(&self, key: &str) -> Option<IdempotentIngest> {
+        self.entries.lock().expect("idempotency cache poisoned").get(key).cloned()
+    }
+
+    fn record_success(
+        &self,
+        key: String,
+        body_hash: u64,
+        response: ValidationResult,
+    ) -> Result<ValidationResult, ()> {
+        let mut entries = self.entries.lock().expect("idempotency cache poisoned");
+        if let Some(previous) = entries.get(&key) {
+            return if previous.body_hash == body_hash {
+                Ok(previous.response.clone())
+            } else {
+                Err(())
+            };
+        }
+        entries.insert(key, IdempotentIngest { body_hash, response: response.clone() });
+        Ok(response)
+    }
+}
+
 fn parse_positive_limit(name: &str, value: Option<&str>, default: usize) -> Result<usize, String> {
     let Some(value) = value else {
         return Ok(default);
@@ -147,6 +187,8 @@ pub(crate) struct AppState {
     pub api_key_auth: ApiKeyAuth,
     /// Durable local audit sink for structured actor/action events.
     pub audit_sink: Arc<AuditSink>,
+    /// Successful ingest responses keyed by process-local Idempotency-Key values.
+    pub idempotency_cache: IngestIdempotencyCache,
 }
 
 /// Build the axum [`Router`].
@@ -348,6 +390,21 @@ fn request_id_from_headers(headers: &HeaderMap) -> String {
         .unwrap_or_else(audit::local_request_id)
 }
 
+fn idempotency_key_from_headers(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(IDEMPOTENCY_KEY)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+}
+
+fn hash_body(bytes: &[u8]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    hasher.finish()
+}
+
 #[cfg(feature = "otel")]
 fn remote_parent_context(
     headers: &HeaderMap,
@@ -537,6 +594,7 @@ async fn search_bundles(
 #[tracing::instrument(skip(state, request))]
 async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Response {
     let request_id = request_id_from_headers(request.headers());
+    let idempotency_key = idempotency_key_from_headers(request.headers());
     if !state.api_key_auth.allows(request.headers()) {
         audit_event(&state.audit_sink, "ingest", "rejected", "unauthorized", &request_id);
         return api_error(
@@ -567,6 +625,34 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
             );
         }
     };
+    let body_hash = hash_body(&bytes);
+    if let Some(key) = idempotency_key.as_deref() {
+        if let Some(previous) = state.idempotency_cache.get(key) {
+            if previous.body_hash == body_hash {
+                audit_event(
+                    &state.audit_sink,
+                    "ingest",
+                    "accepted",
+                    "idempotent_replay",
+                    &request_id,
+                );
+                return Json(previous.response).into_response();
+            }
+            audit_event(
+                &state.audit_sink,
+                "ingest",
+                "rejected",
+                "idempotency_conflict",
+                &request_id,
+            );
+            return api_error(
+                axum::http::StatusCode::CONFLICT,
+                "idempotency_conflict",
+                "Idempotency-Key was already used with a different request body",
+                &request_id,
+            );
+        }
+    }
     let payload: PostBundle = match serde_json::from_slice(&bytes) {
         Ok(payload) => payload,
         Err(error) => {
@@ -582,6 +668,27 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
     let result = validate_okf_bundle(&payload);
     if result.valid {
         audit_event(&state.audit_sink, "ingest", "accepted", "validation", &request_id);
+        if let Some(key) = idempotency_key {
+            let result = match state.idempotency_cache.record_success(key, body_hash, result) {
+                Ok(result) => result,
+                Err(()) => {
+                    audit_event(
+                        &state.audit_sink,
+                        "ingest",
+                        "rejected",
+                        "idempotency_conflict",
+                        &request_id,
+                    );
+                    return api_error(
+                        axum::http::StatusCode::CONFLICT,
+                        "idempotency_conflict",
+                        "Idempotency-Key was already used with a different request body",
+                        &request_id,
+                    );
+                }
+            };
+            return Json(result).into_response();
+        }
         Json(&result).into_response()
     } else {
         audit_event(&state.audit_sink, "ingest", "rejected", "validation", &request_id);
@@ -861,6 +968,7 @@ mod tests {
             ingest_admission: IngestAdmission::from_values(None, None).unwrap(),
             api_key_auth: ApiKeyAuth::default(),
             audit_sink: Arc::new(AuditSink::new(out_dir)),
+            idempotency_cache: IngestIdempotencyCache::default(),
         }
     }
 
@@ -1059,6 +1167,79 @@ mod tests {
         assert_eq!(response.status(), axum::http::StatusCode::OK);
         let body: Value = response.json().await.unwrap();
         assert_eq!(body["valid"], true);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn ingest_idempotency_key_replays_prior_success_for_same_body() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) = start_test_server(test_state(out_dir.path())).await;
+        let client = reqwest::Client::new();
+        let url = format!("http://{addr}/api/ingest");
+
+        let first = client
+            .post(&url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(IDEMPOTENCY_KEY, "same-body-key")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(first.status(), axum::http::StatusCode::OK);
+        let first_body: Value = first.json().await.unwrap();
+
+        let replay = client
+            .post(&url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(IDEMPOTENCY_KEY, "same-body-key")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(replay.status(), axum::http::StatusCode::OK);
+        let replay_body: Value = replay.json().await.unwrap();
+        assert_eq!(replay_body, first_body);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn ingest_idempotency_key_conflicts_for_different_body() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) = start_test_server(test_state(out_dir.path())).await;
+        let client = reqwest::Client::new();
+        let url = format!("http://{addr}/api/ingest");
+        let changed_body = r#"{
+            "bundle_id": "bundle-auth-test",
+            "created_at": "2026-07-13T21:40:00Z",
+            "messages": [{"role": "user", "content": "changed"}],
+            "token_count": 2
+        }"#;
+
+        let first = client
+            .post(&url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(IDEMPOTENCY_KEY, "conflict-key")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(first.status(), axum::http::StatusCode::OK);
+
+        let conflict = client
+            .post(&url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(IDEMPOTENCY_KEY, "conflict-key")
+            .body(changed_body)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(conflict.status(), axum::http::StatusCode::CONFLICT);
+        let body: Value = conflict.json().await.unwrap();
+        assert_eq!(body["error"]["code"], "idempotency_conflict");
+        assert_eq!(
+            body["error"]["message"],
+            "Idempotency-Key was already used with a different request body"
+        );
         server.abort();
     }
 

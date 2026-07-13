@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "316/402",
-    "pct": 79,
+    "score": "320/402",
+    "pct": 80,
     "grade": "B",
-    "commit": "da347b3",
-    "wave": "Wave-15"
+    "commit": "7798234",
+    "wave": "Wave-16"
   },
   "fr": [
     {
@@ -480,6 +480,25 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.18",
+      "status": "done",
+      "evidence": [
+        "scripts/openapi-drift-check.ps1",
+        ".github/workflows/security.yml",
+        "tests/visual/harness/responsive.spec.js",
+        "assets/tokens.css",
+        "scripts/installer-lifecycle-smoke.ps1",
+        "Containerfile"
+      ]
+    },
+    {
+      "id": "WBS-8.19",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -489,7 +508,8 @@
       "status": "partial",
       "evidence": [
         "docs/api/openapi.yaml",
-        "crates/sl-daemon/src/http.rs"
+        "crates/sl-daemon/src/http.rs",
+        "scripts/openapi-drift-check.ps1"
       ]
     },
     {
@@ -518,6 +538,7 @@
       "status": "partial",
       "evidence": [
         ".pre-commit-config.yaml",
+        ".github/workflows/security.yml",
         "CONTRIBUTING.md"
       ]
     },
@@ -555,23 +576,28 @@
     },
     {
       "id": "C09",
-      "score": "33/45",
+      "score": "34/45",
       "status": "partial"
     },
     {
       "id": "C10",
-      "score": "29/36",
+      "score": "30/36",
       "status": "partial",
       "evidence": [
         "assets/tokens.css",
-        "crates/sl-viewer/src/theme.rs",
-        "docs/VISUAL_SPEC.md"
+        "crates/sl-viewer/src/app.rs",
+        "tests/visual/harness/visual.spec.js"
       ]
     },
     {
       "id": "C11",
-      "score": "30/45",
-      "status": "partial"
+      "score": "32/45",
+      "status": "partial",
+      "evidence": [
+        "Containerfile",
+        "crates/sl-daemon/Containerfile",
+        "scripts/installer-lifecycle-smoke.ps1"
+      ]
     }
   ]
 }

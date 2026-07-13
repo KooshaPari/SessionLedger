@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "eval_surfaces": [
+    "okf_conformance",
+    "pipeline_bench"
+  ],
+  "fixture_seed": "sessionledger-okf-v1",
+  "fixture_glob": "docs/reference/conformance/fixtures/*.okf.json",
+  "fixture_count": 8,
+  "rust_msrv": "1.85",
+  "toolchain_channel": "stable",
+  "cargo_lock_sha256": "ebbef63ca90aae83541dac38d880803fe4095033dae86f66c2ba526b0678eaed",
+  "bench_policy_path": "docs/ops/perf-baseline.json",
+  "bench_gate_script": "scripts/bench-gate.ps1",
+  "verify_command": "./scripts/eval-repro-check.ps1"
+}

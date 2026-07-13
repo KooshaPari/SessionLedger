@@ -23,6 +23,16 @@ jobs:
         shell: pwsh
         run: ./docs/ops/traceability_lint.ps1
 
+  eval-repro:
+    name: eval reproducibility manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: verify eval manifest anchors
+        shell: pwsh
+        run: ./scripts/eval-repro-check.ps1
+
   openapi-drift:
     name: OpenAPI route drift · sl-daemon
     runs-on: ubuntu-latest

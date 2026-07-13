@@ -40,7 +40,8 @@ gate on a quiet machine before changing the baseline.
 
 Refresh the baseline only when the pipeline intentionally becomes slower, the
 benchmark workload changes, or repeated runs show that the existing baseline is
-stale for the supported CI environment.
+stale for the supported CI environment. Run `./scripts/eval-repro-check.ps1`
+first so lockfile and fixture anchors still match [`eval-manifest.json`](eval-manifest.json).
 
 Run:
 

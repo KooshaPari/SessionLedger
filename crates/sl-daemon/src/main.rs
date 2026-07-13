@@ -1,15 +1,15 @@
-//! `sl` — SessionLedger daemon and CLI companion.
+//! `sl-daemon` — SessionLedger daemon and CLI companion.
 //!
 //! ## Subcommands
 //!
 //! | Command     | Description                                               |
 //! |-------------|-----------------------------------------------------------|
-//! | `sl serve`  | Start the file-watcher daemon (long-running or `--once`)  |
-//! | `sl status` | Check daemon liveness (`GET /healthz`)                    |
-//! | `sl list`   | List compiled OKF bundle paths (`GET /api/bundles`)       |
-//! | `sl tail`   | Stream new bundle paths as they arrive (`GET /api/stream`)|
-//! | `sl export` | Export bundle metadata as CSV / Markdown / JSON            |
-//! | `sl summary`| Print aggregate statistics across all bundles              |
+//! | `sl-daemon serve`  | Start the file-watcher daemon (long-running or `--once`)  |
+//! | `sl-daemon status` | Check daemon liveness (`GET /healthz`)                    |
+//! | `sl-daemon list`   | List compiled OKF bundle paths (`GET /api/bundles`)       |
+//! | `sl-daemon tail`   | Stream new bundle paths as they arrive (`GET /api/stream`)|
+//! | `sl-daemon export` | Export bundle metadata as CSV / Markdown / JSON            |
+//! | `sl-daemon summary`| Print aggregate statistics across all bundles              |
 //!
 //! ## HTTP API (exposed by `sl serve`)
 //!
@@ -41,7 +41,8 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell};
 use std::path::Path;
 use tokio::sync::{broadcast, mpsc};
 use tracing::{error, info, info_span, warn, Instrument};
@@ -53,9 +54,26 @@ const CHANNEL_CAPACITY: usize = 256;
 /// Broadcast channel capacity for SSE notifications.
 const BROADCAST_CAPACITY: usize = 256;
 
+const CLI_AFTER_HELP: &str = r#"Examples:
+  sl-daemon serve --watch ~/.cursor/agent-transcripts --out ./okf-out
+  sl-daemon serve --watch ./sessions --out ./okf-out --once --http-bind 127.0.0.1:8080
+  curl -X POST http://127.0.0.1:8080/api/ingest \
+    -H 'content-type: application/json' --data-binary @bundle.json
+  sl-daemon completions zsh > _sl-daemon
+"#;
+
+const SERVE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon serve --watch ~/.cursor/agent-transcripts --out ./okf-out
+  sl-daemon serve --watch ./sessions --out ./okf-out --once
+  sl-daemon serve --watch ./sessions --out ./okf-out --http-bind off
+
+The HTTP listener is local-only. Use --http-bind off for batch ingest/export jobs
+that do not need /healthz, /api/bundles, /api/stream, or /api/ingest.
+"#;
+
 /// SessionLedger — daemon and CLI companion.
 #[derive(Parser, Debug)]
-#[command(name = "sl", version, about)]
+#[command(name = "sl-daemon", version, about, after_help = CLI_AFTER_HELP)]
 struct Args {
     /// Base URL of the daemon HTTP server (used by status / list / tail).
     #[arg(long, global = true, default_value = cli::DEFAULT_BASE_URL)]
@@ -68,6 +86,7 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Start the file-watcher daemon.
+    #[command(after_help = SERVE_AFTER_HELP)]
     Serve {
         /// Directory to watch for `*.jsonl` session transcripts.
         #[arg(long)]
@@ -228,6 +247,15 @@ enum Command {
         /// daemon.
         bundles: Vec<PathBuf>,
     },
+
+    /// Generate shell completion scripts to stdout.
+    ///
+    /// Supported shells: bash, zsh, fish, powershell.
+    Completions {
+        /// Shell to generate completions for.
+        #[arg(value_enum)]
+        shell: Shell,
+    },
 }
 
 /// Sub-actions for `sl tag`.
@@ -308,6 +336,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             run_search(&args.url, since, until, model, min_tokens, tags, limit, &format, &bundles)
                 .await;
         }
+        Command::Completions { shell } => {
+            run_completions(shell);
+        }
     }
 
     #[cfg(feature = "otel")]
@@ -316,6 +347,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn run_completions(shell: Shell) {
+    let mut command = Args::command();
+    generate(shell, &mut command, "sl-daemon", &mut std::io::stdout());
 }
 
 /// Install a `tracing` subscriber filtered by `RUST_LOG`.

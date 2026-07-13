@@ -232,9 +232,28 @@ pub fn App() -> Element {
                     --sl-ease-out: ease-out;
                     --sl-ease-in-out: ease-in-out;
                 }}
-                body {{ margin: 0; font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
-                .app {{ display: flex; height: 100vh; }}
-                .sidebar {{ width: 340px; min-width: 340px; border-right: 1px solid var(--sl-border); overflow-y: auto; background: var(--sl-surface); }}
+                html, body {{ margin: 0; max-width: 100%; overflow-x: clip; }}
+                body {{ font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
+                .app {{ display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow-x: clip; }}
+                .app > .sidebar {{
+                    width: 100%;
+                    min-width: 0;
+                    max-width: 100%;
+                    border-right: none;
+                    overflow-y: auto;
+                    overflow-x: clip;
+                    background: var(--sl-surface);
+                    display: flex;
+                    flex-direction: column;
+                    flex: 1;
+                    min-height: 0;
+                }}
+                .viewer-main .sidebar {{
+                    width: 100%;
+                    min-width: 0;
+                    max-width: 100%;
+                    border-right: none;
+                }}
                 .sidebar h2 {{ padding: 16px 20px; margin: 0; font-family: var(--font-ui); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-text-muted); border-bottom: 1px solid var(--sl-border); }}
                 .bundle-entry {{ padding: var(--sl-space-md) var(--sl-space-xl); cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background var(--sl-motion-fast) var(--sl-ease-out); }}
                 .bundle-entry:hover {{ background: var(--sl-surface-muted); }}
@@ -325,8 +344,52 @@ pub fn App() -> Element {
                 .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
                 .main-upper {{ flex: 1; overflow-y: auto; }}
                 .bundles-view {{ display: contents; }}
-                .viewer-main {{ flex: 1; min-width: 0; overflow: hidden; }}
+                .viewer-main {{ flex: 1; min-width: 0; width: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
+                @media (max-width: 600px) {{
+                    .tab {{
+                        min-height: 44px;
+                        min-width: 44px;
+                        padding: 12px 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-sizing: border-box;
+                    }}
+                    .theme-toggle {{
+                        min-height: 44px;
+                        padding: 12px 16px;
+                        box-sizing: border-box;
+                    }}
+                    .search-btn, .retry-btn {{
+                        min-height: 44px;
+                        min-width: 44px;
+                        padding: 10px 16px;
+                        box-sizing: border-box;
+                    }}
+                    .detail, .timeline-detail, .wiki-page {{
+                        padding: 16px;
+                        max-width: 100%;
+                        box-sizing: border-box;
+                    }}
+                    .diff-col-headers, .diff-row {{
+                        grid-template-columns: minmax(72px, 96px) minmax(0, 1fr) minmax(0, 1fr);
+                    }}
+                    .replay-controls .btn {{
+                        min-height: 44px;
+                        min-width: 44px;
+                        padding: 10px 16px;
+                        box-sizing: border-box;
+                    }}
+                }}
+                @media (min-width: 601px) {{
+                    .app > .sidebar {{
+                        width: 340px;
+                        min-width: 340px;
+                        max-width: 340px;
+                        border-right: 1px solid var(--sl-border);
+                    }}
+                }}
                 @media (prefers-reduced-motion: reduce) {{
                     *, *::before, *::after {{
                         animation-duration: 0.01ms !important;

@@ -37,11 +37,10 @@ pub fn applied_version(conn: &Connection) -> Result<u32, MigrateError> {
         return Ok(0);
     }
 
-    let version = conn.query_row(
-        "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
-        [],
-        |row| row.get::<_, i64>(0),
-    )?;
+    let version =
+        conn.query_row("SELECT COALESCE(MAX(version), 0) FROM schema_migrations", [], |row| {
+            row.get::<_, i64>(0)
+        })?;
     Ok(u32::try_from(version).unwrap_or(0))
 }
 

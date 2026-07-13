@@ -25,23 +25,17 @@ pub struct Migration {
 /// Ordered migration manifest — the SSOT for durable schema evolution.
 #[must_use]
 pub fn migrations() -> &'static [Migration] {
-    &[
-        Migration {
-            version: 1,
-            name: "initial_memory_facts",
-            sql: include_str!("migrations/001_initial.sql"),
-        },
-    ]
+    &[Migration {
+        version: 1,
+        name: "initial_memory_facts",
+        sql: include_str!("migrations/001_initial.sql"),
+    }]
 }
 
 /// Returns the highest bundled migration version.
 #[must_use]
 pub fn latest_version() -> u32 {
-    migrations()
-        .iter()
-        .map(|migration| migration.version)
-        .max()
-        .unwrap_or(0)
+    migrations().iter().map(|migration| migration.version).max().unwrap_or(0)
 }
 
 #[cfg(test)]

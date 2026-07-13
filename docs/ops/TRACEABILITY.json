@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "320/402",
-    "pct": 80,
+    "score": "324/402",
+    "pct": 81,
     "grade": "B",
-    "commit": "7798234",
-    "wave": "Wave-16"
+    "commit": "f6f03ce",
+    "wave": "Wave-17"
   },
   "fr": [
     {
@@ -499,6 +499,24 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.20",
+      "status": "done",
+      "evidence": [
+        "assets/tokens.css",
+        "crates/sl-daemon/src/banner.rs",
+        "docs/adr/0003-platform-code-signing.md",
+        "docs/ops/hermetic-builder.json",
+        "docs/ops/eval-manifest.json"
+      ]
+    },
+    {
+      "id": "WBS-8.21",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -549,14 +567,15 @@
     },
     {
       "id": "C06",
-      "score": "22/30",
+      "score": "23/30",
       "status": "partial",
       "evidence": [
         "scripts/repro-check.ps1",
-        ".github/workflows/ci.yml",
-        "docs/ops/reproducible-builds.md"
+        ".github/workflows/hermetic.yml",
+        "docs/ops/hermetic-builder.json",
+        "scripts/hermetic-check.ps1"
       ],
-      "remaining": "Hermetic/offline builders, cross-host and Windows proof, SLSA L3, blocking per-build provenance, and container provenance"
+      "remaining": "Cross-host and Windows proof, SLSA L3, blocking per-build provenance, and container provenance"
     },
     {
       "id": "C07",
@@ -571,8 +590,13 @@
     },
     {
       "id": "C08",
-      "score": "22/30",
-      "status": "partial"
+      "score": "23/30",
+      "status": "partial",
+      "evidence": [
+        "docs/ops/eval-manifest.json",
+        "scripts/eval-repro-check.ps1",
+        "docs/ops/eval-reproducibility.md"
+      ]
     },
     {
       "id": "C09",
@@ -581,10 +605,11 @@
     },
     {
       "id": "C10",
-      "score": "30/36",
+      "score": "32/36",
       "status": "partial",
       "evidence": [
         "assets/tokens.css",
+        "crates/sl-daemon/src/banner.rs",
         "crates/sl-viewer/src/app.rs",
         "tests/visual/harness/visual.spec.js"
       ]
@@ -594,8 +619,8 @@
       "score": "32/45",
       "status": "partial",
       "evidence": [
+        "docs/adr/0003-platform-code-signing.md",
         "Containerfile",
-        "crates/sl-daemon/Containerfile",
         "scripts/installer-lifecycle-smoke.ps1"
       ]
     }

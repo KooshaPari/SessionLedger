@@ -45,10 +45,12 @@ are not recomputed here.
 | WBS-7.5 | Wave-6 observability, eval, packaging, and a11y uplift | done | machine | `docs/ops/dashboards/`; `scripts/load-smoke.ps1`; `tests/visual/`; `docs/ops/distribution.md` | C05, C08, C09, C11 |
 | WBS-7.6 | Wave-7 supply-chain provenance and scorecard refresh | done | machine | `.github/workflows/release.yml`; `audit/SCORECARD.md` | C01, C04, C06; 268/402 |
 | WBS-8.1 | Wave-8 machine traceability and in-document status governance | done | machine | `docs/ops/WBS.md`; `docs/ops/GAP_QA_MATRIX.md`; `docs/ops/TRACEABILITY.json`; `docs/ops/traceability_lint.ps1` | C03; FR-001..FR-015; PLAN |
-| WBS-8.2 | Wave-8 close evidence-backed gaps to at least B (>=75%) | partial | machine | `docs/ops/GAP_QA_MATRIX.md`; `.github/workflows/release.yml`; `packaging/README.md`; `docs/ops/distribution.md`; `scripts/repro-check.ps1`; `docs/ops/reproducible-builds.md`; Wave-8/9 re-audit evidence | C00-C11; C11 portable artifact smoke + repro evidence landed; Wave-9 re-audit landed at 280/402; still short of B |
+| WBS-8.2 | Wave-8 close evidence-backed gaps to at least B (>=75%) | partial | machine | `docs/ops/GAP_QA_MATRIX.md`; `.github/workflows/release.yml`; `packaging/README.md`; `docs/ops/distribution.md`; `scripts/repro-check.ps1`; `docs/ops/reproducible-builds.md`; Wave-8/9 re-audit evidence | C00-C11; C11 portable artifact smoke + repro evidence landed; Wave-10 re-audit landed at 285/402; still short of B |
 | WBS-8.3 | Wave-8 independent re-audit and scorecard refresh | done | human | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 273/402 (68% C) |
 | WBS-8.4 | Wave-9 evidence packages (C02 trust, C06 repro, C07 property/fuzz, C11 archive smoke) | done | machine | `.github/workflows/release.yml`; `scripts/repro-check.ps1`; `docs/ops/local-trust-boundary.md`; `tests/properties.rs`; `fuzz/` | C02, C06, C07, C11; PRs #120-#123 |
 | WBS-8.5 | Wave-9 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 280/402 (70% C) |
+| WBS-8.6 | Wave-10 evidence packages (C01 CI hygiene, C03 journeys, C05 load/alerts, C08 bench gate) | done | machine | `.github/workflows/a11y.yml`; `.github/workflows/ops-load.yml`; `.github/workflows/bench-gate.yml`; `docs/USER_JOURNEYS.md`; `.env.example` | C01, C03, C05, C08; PRs #125-#128 |
+| WBS-8.7 | Wave-10 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 285/402 (71% C) |
 
 ## Organization-level control plane
 

@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "294/402",
-    "pct": 73,
-    "grade": "C",
-    "commit": "fa65de4",
-    "wave": "Wave-11"
+    "score": "302/402",
+    "pct": 75,
+    "grade": "B",
+    "commit": "e19005c",
+    "wave": "Wave-12"
   },
   "fr": [
     {
@@ -341,7 +341,7 @@
     },
     {
       "id": "WBS-8.2",
-      "status": "partial"
+      "status": "done"
     },
     {
       "id": "WBS-8.3",
@@ -411,6 +411,23 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.10",
+      "status": "done",
+      "evidence": [
+        ".github/workflows/ops-dashboards.yml",
+        "docs/ops/cross-platform-ci.md",
+        "tests/compression_eval.rs",
+        "tests/visual/golden/e1-bundle-empty.png"
+      ]
+    },
+    {
+      "id": "WBS-8.11",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -446,7 +463,7 @@
     },
     {
       "id": "C05",
-      "score": "22/30",
+      "score": "25/30",
       "status": "partial"
     },
     {
@@ -462,7 +479,7 @@
     },
     {
       "id": "C07",
-      "score": "23/30",
+      "score": "25/30",
       "status": "partial",
       "evidence": [
         "tests/properties.rs",
@@ -473,7 +490,7 @@
     },
     {
       "id": "C08",
-      "score": "20/30",
+      "score": "22/30",
       "status": "partial"
     },
     {
@@ -483,7 +500,7 @@
     },
     {
       "id": "C10",
-      "score": "25/36",
+      "score": "26/36",
       "status": "partial"
     },
     {

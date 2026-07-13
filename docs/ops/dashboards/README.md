@@ -28,3 +28,38 @@ defaults to the `sl-daemon` scrape job and supports filtering by instance.
 The Wave-6 exporter has no route labels or histogram buckets. The dashboard
 therefore shows service-wide error ratio and mean duration; it intentionally
 does not claim route-level or p95/p99 latency.
+
+## Provisioning
+
+To provision the dashboard from disk, mount this directory into Grafana and add
+a dashboard provider such as:
+
+```yaml
+apiVersion: 1
+
+providers:
+  - name: sessionledger
+    orgId: 1
+    folder: SessionLedger
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/sessionledger/dashboards
+```
+
+Place `sessionledger-red.json` under that path and restart Grafana, or wait for
+the provider refresh. The dashboard expects a Prometheus data source; keep its
+UID stable or choose the data source during manual import.
+
+Load `../alerts/sessionledger-slo.yaml` into Prometheus with `rule_files`:
+
+```yaml
+rule_files:
+  - /etc/prometheus/rules/sessionledger-slo.yaml
+```
+
+After Prometheus reloads, Grafana can show the same rules through the
+Prometheus data source's alerting/rules view. Keep the Prometheus scrape job
+named `sl-daemon`, or update both the dashboard variables and alert-rule label
+matchers to the deployed job name.

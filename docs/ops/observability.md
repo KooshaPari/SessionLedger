@@ -17,6 +17,12 @@ P0 product work. Remaining deep-obs work tracks [issue #65](https://github.com/K
 
 Default bind: port **8080** (`SL_PORT`). See [`runbook.md`](runbook.md).
 
+Scheduled evidence: `.github/workflows/ops-load.yml` runs a weekly and manual
+daemon load smoke against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics`.
+Prometheus SLO alert rules live in
+[`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) and are meant
+to be loaded with Prometheus `rule_files`.
+
 ### `/healthz` vs `/readyz`
 
 | Probe | Question it answers | Success | Failure | Who should call it |
@@ -97,7 +103,9 @@ land; until then, operators use the runbook triage table.
 | `SL-REPLAY-LATENCY` | Replay TTFB p95 &gt; 2s (fixtures) | P3 | None (friction-log) | Manual fixture replay |
 | `SL-METRICS-STALE` | `/metrics` unavailable for &gt; 5m | P3 | Slack (TBD) | [`runbook.md`](runbook.md) — Metrics |
 
-See also [`alerts.md`](alerts.md) for copy-paste stub definitions.
+See also [`alerts.md`](alerts.md) for copy-paste stub definitions and
+[`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) for
+Prometheus-loadable SLO alert rules.
 
 ## OpenTelemetry (feature-gated sketch — issue #65)
 

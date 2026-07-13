@@ -1,0 +1,94 @@
+name: Ops Load Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 9 * * 1"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  load-smoke:
+    name: scheduled load smoke · sl-daemon
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: crates/sl-daemon
+      - name: build sl-daemon workspace
+        working-directory: crates/sl-daemon
+        run: cargo build --locked
+      - name: run load smoke SLO
+        shell: pwsh
+        env:
+          RUST_LOG: sl_daemon=info,tower_http=warn
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $watchDir = Join-Path $env:RUNNER_TEMP "sl-watch"
+          $outDir = Join-Path $env:RUNNER_TEMP "sl-out"
+          New-Item -ItemType Directory -Force -Path $watchDir, $outDir | Out-Null
+
+          $metadata = cargo metadata `
+            --format-version 1 `
+            --no-deps `
+            --manifest-path crates/sl-daemon/Cargo.toml |
+            ConvertFrom-Json
+          $daemon = Join-Path $metadata.target_directory "debug/sl-daemon"
+          $args = @(
+            "serve",
+            "--watch", $watchDir,
+            "--out", $outDir,
+            "--http-bind", "127.0.0.1:8080"
+          )
+
+          $proc = Start-Process -FilePath $daemon -ArgumentList $args -NoNewWindow -PassThru
+          try {
+            $ready = $false
+            for ($attempt = 1; $attempt -le 30; $attempt++) {
+              if ($proc.HasExited) {
+                throw "sl-daemon exited before /readyz became healthy (exit code $($proc.ExitCode))."
+              }
+
+              try {
+                $response = Invoke-WebRequest `
+                  -Uri "http://127.0.0.1:8080/readyz" `
+                  -Method Get `
+                  -TimeoutSec 2 `
+                  -SkipHttpErrorCheck
+                if ($response.StatusCode -eq 200) {
+                  $ready = $true
+                  break
+                }
+              }
+              catch {
+                Write-Host "readyz attempt $attempt/30 failed: $($_.Exception.Message)"
+              }
+
+              Start-Sleep -Seconds 1
+            }
+
+            if (-not $ready) {
+              throw "sl-daemon did not become ready within 30 seconds."
+            }
+
+            ./scripts/load-smoke.ps1 `
+              -BaseUrl "http://127.0.0.1:8080" `
+              -Requests 100 `
+              -Concurrency 8 `
+              -MinSuccessRate 99 `
+              -MaxP95Ms 500
+          }
+          finally {
+            if ($proc -and -not $proc.HasExited) {
+              Stop-Process -Id $proc.Id -Force
+              $proc.WaitForExit(5000) | Out-Null
+            }
+          }

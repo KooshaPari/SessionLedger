@@ -23,6 +23,19 @@ jobs:
         shell: pwsh
         run: ./docs/ops/traceability_lint.ps1
 
+  openapi-drift:
+    name: OpenAPI route drift · sl-daemon
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: crates/sl-daemon
+      - name: check OpenAPI matches axum route surface
+        shell: pwsh
+        run: ./scripts/openapi-drift-check.ps1
+
   reproducible-build:
     name: reproducible build · sl-daemon
     runs-on: ubuntu-latest

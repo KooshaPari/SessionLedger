@@ -57,6 +57,23 @@ use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 const DEFAULT_INGEST_MAX_BODY_BYTES: usize = 1_048_576;
 const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
+/// HTTP methods and paths documented in `docs/api/openapi.yaml`.
+///
+/// Debug-only pprof routes are intentionally omitted. Keep in sync with the
+/// stable routes registered in [`router_with_pprof`] and validated by
+/// `scripts/openapi-drift-check.ps1`.
+#[allow(dead_code)]
+const OPENAPI_ROUTE_SURFACE: &[(&str, &str)] = &[
+    ("GET", "/healthz"),
+    ("GET", "/readyz"),
+    ("GET", "/api/bundles"),
+    ("GET", "/api/search"),
+    ("GET", "/api/stream"),
+    ("GET", "/api/replay/{bundle_id}"),
+    ("POST", "/api/ingest"),
+    ("GET", "/api/metrics"),
+    ("GET", "/metrics"),
+];
 const SL_API_KEY: &str = "SL_API_KEY";
 const SL_ENABLE_PPROF: &str = "SL_ENABLE_PPROF";
 const X_API_KEY: &str = "x-api-key";
@@ -1001,6 +1018,136 @@ mod tests {
             axum::serve(listener, router_with_pprof(state, pprof_enabled)).await.unwrap();
         });
         (addr, server)
+    }
+
+    fn openapi_path_from_manifest() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/api/openapi.yaml")
+    }
+
+    fn parse_openapi_route_surface(yaml: &str) -> std::collections::BTreeSet<(String, String)> {
+        use std::collections::BTreeSet;
+
+        let mut routes = BTreeSet::new();
+        let mut in_paths = false;
+        let mut current_path: Option<String> = None;
+
+        for line in yaml.lines() {
+            if line.trim() == "paths:" {
+                in_paths = true;
+                current_path = None;
+                continue;
+            }
+            if !in_paths {
+                continue;
+            }
+            if !line.is_empty() && !line.starts_with(' ') && line.trim_end().ends_with(':') {
+                break;
+            }
+            if let Some(path) = line.strip_prefix("  ").and_then(|rest| rest.strip_suffix(':')) {
+                if path.starts_with('/') {
+                    current_path = Some(path.to_owned());
+                    continue;
+                }
+            }
+            if let Some(path) = &current_path {
+                let trimmed = line.trim();
+                if let Some(method) = trimmed.strip_suffix(':') {
+                    match method {
+                        "get" | "post" | "put" | "patch" | "delete" | "head" | "options" => {
+                            routes.insert((method.to_ascii_uppercase(), path.clone()));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        routes
+    }
+
+    fn stable_router_routes_from_source() -> std::collections::BTreeSet<(String, String)> {
+        use std::collections::BTreeSet;
+
+        let src = include_str!("http.rs");
+        let start = src
+            .find("let router = Router::new()")
+            .expect("stable router block marker missing");
+        let end = start
+            + src[start..]
+                .find("let router = if pprof_enabled")
+                .expect("pprof router split marker missing");
+        let block = &src[start..end];
+        let mut routes = BTreeSet::new();
+
+        for line in block.lines() {
+            let trimmed = line.trim();
+            let Some(route_start) = trimmed.find(".route(\"") else {
+                continue;
+            };
+            let rest = &trimmed[route_start + ".route(\"".len()..];
+            let Some((path, remainder)) = rest.split_once('"') else {
+                continue;
+            };
+            let method = if remainder.contains("get(") {
+                "GET"
+            } else if remainder.contains("post(") {
+                "POST"
+            } else if remainder.contains("put(") {
+                "PUT"
+            } else if remainder.contains("patch(") {
+                "PATCH"
+            } else if remainder.contains("delete(") {
+                "DELETE"
+            } else {
+                continue;
+            };
+            routes.insert((method.to_owned(), path.to_owned()));
+        }
+
+        routes
+    }
+
+    fn expected_openapi_route_surface(
+    ) -> std::collections::BTreeSet<(String, String)> {
+        OPENAPI_ROUTE_SURFACE
+            .iter()
+            .map(|&(method, path)| (method.to_owned(), path.to_owned()))
+            .collect()
+    }
+
+    #[test]
+    fn openapi_route_surface_matches_yaml_contract() {
+        let openapi_path = openapi_path_from_manifest();
+        let yaml = std::fs::read_to_string(&openapi_path).unwrap_or_else(|err| {
+            panic!("failed to read {}: {err}", openapi_path.display())
+        });
+        let spec_routes = parse_openapi_route_surface(&yaml);
+        let expected = expected_openapi_route_surface();
+
+        let missing_from_spec: Vec<_> = expected.difference(&spec_routes).collect();
+        let extra_in_spec: Vec<_> = spec_routes.difference(&expected).collect();
+        assert!(
+            missing_from_spec.is_empty() && extra_in_spec.is_empty(),
+            "OpenAPI drift detected in {}.\n\
+             missing from openapi.yaml: {missing_from_spec:?}\n\
+             extra in openapi.yaml: {extra_in_spec:?}",
+            openapi_path.display()
+        );
+    }
+
+    #[test]
+    fn openapi_route_surface_matches_axum_router() {
+        let router_routes = stable_router_routes_from_source();
+        let expected = expected_openapi_route_surface();
+
+        let missing_from_router: Vec<_> = expected.difference(&router_routes).collect();
+        let extra_in_router: Vec<_> = router_routes.difference(&expected).collect();
+        assert!(
+            missing_from_router.is_empty() && extra_in_router.is_empty(),
+            "axum router drift detected in http.rs stable routes.\n\
+             missing from router: {missing_from_router:?}\n\
+             extra in router: {extra_in_router:?}"
+        );
     }
 
     #[test]

@@ -21,6 +21,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local |
 | brew / crates.io / DMG | Deferred | Soft distribution goals |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
+| Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
 
 ### Release matrix (CI)
 
@@ -186,6 +187,9 @@ The Windows ZIP can run portably or invoke `Install.ps1` for a per-user install.
 WiX MSI evaluation is documented in
 [`scripts/package-msi.md`](../../scripts/package-msi.md). See
 [`packaging/README.md`](../../packaging/README.md) for scaffold status.
+Run [`scripts/installer-lifecycle-smoke.ps1`](../../scripts/installer-lifecycle-smoke.ps1)
+for machine-checkable scaffold and lifecycle-documentation assertions; it does
+not perform a clean-host MSI install.
 
 ### Installer script draft (Linux / macOS)
 

@@ -3,6 +3,8 @@
 Build and package the `sl-viewer` desktop app for distribution. Full ops
 guide (data dirs, uninstall, signing deferral, Windows matrix):
 [`docs/ops/distribution.md`](../docs/ops/distribution.md).
+Mobile presence is intentionally Soft / N-A for the current desktop-plus-daemon
+scope; see [`docs/adr/0002-mobile-presence.md`](../docs/adr/0002-mobile-presence.md).
 
 ## Prerequisites
 
@@ -70,6 +72,9 @@ Release CI publishes and smoke-tests the portable Windows ZIP and Linux
 non-installable scaffold archive. `Install.ps1` can copy the local Windows
 package below LocalAppData, register an uninstall entry, and create a Start
 Menu shortcut. No MSI, AppImage, or `.deb` is a supported release target.
+`scripts/installer-lifecycle-smoke.ps1` dry-runs scaffold and lifecycle-doc
+assertions on any host with PowerShell; a full clean-host MSI install/uninstall
+test still requires Windows plus WiX tooling.
 Linux details and limitations are in
 [`packaging/linux/README.md`](linux/README.md).
 

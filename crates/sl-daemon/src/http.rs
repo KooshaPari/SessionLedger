@@ -55,6 +55,7 @@ use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 const DEFAULT_INGEST_MAX_BODY_BYTES: usize = 1_048_576;
 const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
 const SL_API_KEY: &str = "SL_API_KEY";
+const SL_ENABLE_PPROF: &str = "SL_ENABLE_PPROF";
 const X_API_KEY: &str = "x-api-key";
 
 /// Optional shared-secret authentication for mutating HTTP routes.
@@ -150,10 +151,14 @@ pub(crate) struct AppState {
 
 /// Build the axum [`Router`].
 pub(crate) fn router(state: AppState) -> Router {
+    router_with_pprof(state, pprof_enabled_from_env())
+}
+
+fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
     let http_metrics = state.http_metrics.clone();
 
-    Router::new()
+    let router = Router::new()
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
         .route("/api/bundles", get(list_bundles))
@@ -162,11 +167,25 @@ pub(crate) fn router(state: AppState) -> Router {
         .route("/api/replay/{bundle_id}", get(replay_bundle))
         .route("/api/ingest", post(ingest_bundle))
         .route("/api/metrics", get(metrics_handler))
-        .route("/metrics", get(prometheus_metrics))
+        .route("/metrics", get(prometheus_metrics));
+
+    let router = if pprof_enabled {
+        router
+            .route("/debug/pprof/cmdline", get(pprof_cmdline))
+            .route("/debug/pprof/profile", get(pprof_profile))
+    } else {
+        router
+    };
+
+    router
         .fallback(not_found)
         .with_state(state)
         .layer(middleware::from_fn_with_state(http_metrics, observe_request))
         .layer(cors)
+}
+
+fn pprof_enabled_from_env() -> bool {
+    std::env::var(SL_ENABLE_PPROF).is_ok_and(|value| value.trim() == "1")
 }
 
 /// Run the axum HTTP server on `addr` until `shutdown` resolves.
@@ -240,6 +259,30 @@ async fn prometheus_metrics(State(state): State<AppState>) -> Response {
     (
         [(CONTENT_TYPE, HeaderValue::from_static("text/plain; version=0.0.4; charset=utf-8"))],
         state.http_metrics.render_prometheus(),
+    )
+        .into_response()
+}
+
+/// `GET /debug/pprof/cmdline` — null-delimited process argv for pprof clients.
+async fn pprof_cmdline() -> Response {
+    let mut body = Vec::new();
+    for arg in std::env::args_os() {
+        if !body.is_empty() {
+            body.push(0);
+        }
+        body.extend(arg.to_string_lossy().as_bytes());
+    }
+
+    ([(CONTENT_TYPE, HeaderValue::from_static("application/octet-stream"))], body).into_response()
+}
+
+/// `GET /debug/pprof/profile` — CPU profile surface placeholder.
+async fn pprof_profile() -> Response {
+    (
+        axum::http::StatusCode::NOT_IMPLEMENTED,
+        [(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
+        "CPU profiling is not implemented in the default cross-platform build. \
+         The debug surface is intentionally gated by SL_ENABLE_PPROF=1.",
     )
         .into_response()
 }
@@ -805,10 +848,17 @@ mod tests {
     }
 
     async fn start_test_server(state: AppState) -> (SocketAddr, tokio::task::JoinHandle<()>) {
+        start_test_server_with_pprof(state, false).await
+    }
+
+    async fn start_test_server_with_pprof(
+        state: AppState,
+        pprof_enabled: bool,
+    ) -> (SocketAddr, tokio::task::JoinHandle<()>) {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let server = tokio::spawn(async move {
-            axum::serve(listener, router(state)).await.unwrap();
+            axum::serve(listener, router_with_pprof(state, pprof_enabled)).await.unwrap();
         });
         (addr, server)
     }
@@ -1101,6 +1151,39 @@ mod tests {
             client.get(format!("{base_url}/metrics")).send().await.unwrap().text().await.unwrap();
         assert!(metrics.contains("sl_http_requests_total 2"));
         assert!(metrics.contains("sl_http_errors_total 0"));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn pprof_routes_are_absent_by_default() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) = start_test_server(test_state(out_dir.path())).await;
+
+        let response = reqwest::Client::new()
+            .get(format!("http://{addr}/debug/pprof/profile"))
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), axum::http::StatusCode::NOT_FOUND);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn pprof_routes_are_available_when_enabled() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) = start_test_server_with_pprof(test_state(out_dir.path()), true).await;
+        let client = reqwest::Client::new();
+
+        let cmdline =
+            client.get(format!("http://{addr}/debug/pprof/cmdline")).send().await.unwrap();
+        assert_eq!(cmdline.status(), axum::http::StatusCode::OK);
+        assert!(!cmdline.bytes().await.unwrap().is_empty());
+
+        let profile =
+            client.get(format!("http://{addr}/debug/pprof/profile")).send().await.unwrap();
+        assert_eq!(profile.status(), axum::http::StatusCode::NOT_IMPLEMENTED);
+        assert!(profile.bytes().await.unwrap().len() > 16);
         server.abort();
     }
 }

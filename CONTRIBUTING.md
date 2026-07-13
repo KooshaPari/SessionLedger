@@ -64,8 +64,9 @@ Install local hooks once per checkout:
 pre-commit install
 ```
 
-The hook set includes gitleaks secret scanning for staged changes. To run it
-manually before committing, stage the intended files and run:
+The hook set includes gitleaks secret scanning for staged changes. CI also runs
+TruffleHog alongside gitleaks in [`.github/workflows/security.yml`](.github/workflows/security.yml).
+To run gitleaks manually before committing, stage the intended files and run:
 
 ```bash
 pre-commit run gitleaks

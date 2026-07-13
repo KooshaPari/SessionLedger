@@ -55,5 +55,11 @@ workflow runs only on `ubuntu-latest`. It does not download or execute macOS or
 Windows artifacts. Its purpose is to parse `release.yml` and fail if the release
 matrix no longer contains `ubuntu-latest`, `macos-latest`, and `windows-latest`.
 
+[`.github/workflows/race-smoke.yml`](../../.github/workflows/race-smoke.yml)
+runs the threaded merge/OKF smoke test on `ubuntu-latest`, `windows-latest`, and
+`macos-latest` with three repeats per runner. That gives affordable PR coverage
+for concurrency determinism across host families without executing release
+artifacts on every pull request.
+
 That guard keeps PR CI affordable while preventing accidental loss of the
 release matrix that provides cross-platform proof.

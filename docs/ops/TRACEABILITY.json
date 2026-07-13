@@ -154,7 +154,17 @@
     {"id": "C03", "score": "32/36", "status": "partial"},
     {"id": "C04", "score": "22/30", "status": "partial"},
     {"id": "C05", "score": "21/30", "status": "partial"},
-    {"id": "C06", "score": "18/30", "status": "partial"},
+    {
+      "id": "C06",
+      "score": "18/30",
+      "status": "partial",
+      "evidence": [
+        "scripts/repro-check.ps1",
+        ".github/workflows/ci.yml",
+        "docs/ops/reproducible-builds.md"
+      ],
+      "remaining": "Hermetic/offline builders, cross-host and Windows proof, SLSA L3, blocking per-build provenance, and container provenance"
+    },
     {"id": "C07", "score": "18/30", "status": "partial"},
     {"id": "C08", "score": "19/30", "status": "partial"},
     {"id": "C09", "score": "30/45", "status": "partial"},

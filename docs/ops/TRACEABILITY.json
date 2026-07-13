@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "306/402",
-    "pct": 76,
+    "score": "311/402",
+    "pct": 77,
     "grade": "B",
-    "commit": "d6441eb",
-    "wave": "Wave-13"
+    "commit": "fcd1e3b",
+    "wave": "Wave-14"
   },
   "fr": [
     {
@@ -445,6 +445,23 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.14",
+      "status": "done",
+      "evidence": [
+        "crates/sl-daemon/src/main.rs",
+        "crates/sl-daemon/src/http.rs",
+        "docs/viewer-hotkeys.md",
+        ".vale.ini"
+      ]
+    },
+    {
+      "id": "WBS-8.15",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -455,7 +472,7 @@
     },
     {
       "id": "C01",
-      "score": "24/30",
+      "score": "26/30",
       "status": "partial"
     },
     {
@@ -480,7 +497,7 @@
     },
     {
       "id": "C05",
-      "score": "25/30",
+      "score": "26/30",
       "status": "partial"
     },
     {
@@ -512,7 +529,7 @@
     },
     {
       "id": "C09",
-      "score": "31/45",
+      "score": "33/45",
       "status": "partial"
     },
     {

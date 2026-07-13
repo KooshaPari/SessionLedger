@@ -69,8 +69,9 @@ is outside the build's control.
 This is stronger provenance evidence, but it is not SLSA Build Level 3. To move
 closer to that bar:
 
-1. make release publication depend on successful per-platform attestations,
-   rather than attesting only the collected assets in the release job;
+1. make release publication depend on successful per-platform attestations in
+   each matrix build job, with a second aggregate attestation over collected
+   Release assets;
 2. verify each attestation's repository, workflow, commit, and subject digest
    before publishing; and
 3. protect the release environment so bypassing the required workflow needs

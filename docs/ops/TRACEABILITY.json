@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "302/402",
-    "pct": 75,
+    "score": "306/402",
+    "pct": 76,
     "grade": "B",
-    "commit": "e19005c",
-    "wave": "Wave-12"
+    "commit": "d6441eb",
+    "wave": "Wave-13"
   },
   "fr": [
     {
@@ -428,6 +428,23 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.12",
+      "status": "done",
+      "evidence": [
+        "crates/sl-daemon/src/http.rs",
+        "tests/visual/harness/responsive.spec.js",
+        "packaging/channels.md",
+        "packaging/systemd/sessionledger-daemon.service"
+      ]
+    },
+    {
+      "id": "WBS-8.13",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -443,7 +460,7 @@
     },
     {
       "id": "C02",
-      "score": "22/30",
+      "score": "23/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/http.rs",
@@ -495,7 +512,7 @@
     },
     {
       "id": "C09",
-      "score": "30/45",
+      "score": "31/45",
       "status": "partial"
     },
     {
@@ -505,7 +522,7 @@
     },
     {
       "id": "C11",
-      "score": "28/45",
+      "score": "30/45",
       "status": "partial"
     }
   ]

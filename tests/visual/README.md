@@ -70,8 +70,10 @@ The accessibility suite builds the production `sl-viewer` Dioxus web target,
 serves the generated WASM application over HTTP, and runs axe-core WCAG AA
 (including contrast) on every viewer tab at 375, 768, and 1280 CSS pixels. It
 also exercises the production ARIA tab state, focus order, and Escape-to-clear
-behavior. Install the `wasm32-unknown-unknown` target and Dioxus CLI 0.7.9,
-then run:
+behavior. The responsive overflow suite visits the same built viewer tabs at
+360, 768, and 1280 CSS pixels and asserts the document and body scroll widths
+do not exceed their client widths. Install the `wasm32-unknown-unknown` target
+and Dioxus CLI 0.7.9, then run:
 
 ```powershell
 rustup target add wasm32-unknown-unknown
@@ -82,6 +84,7 @@ cd ../../tests/visual/harness
 npm ci
 npx playwright install chromium
 npm run test:a11y
+npm run test:responsive
 ```
 
 The harness starts its small static server automatically and expects the build
@@ -103,6 +106,7 @@ cd tests/visual/harness
 npm ci
 npx playwright install chromium
 npm run test:a11y
+npm run test:responsive
 ```
 
 `.github/workflows/a11y.yml` runs both `validate.ps1` and this Playwright suite
@@ -135,6 +139,7 @@ tests/visual/
     r1-search-error.png
   harness/
     a11y.spec.js       ← axe across every built viewer tab + keyboard evidence
+    responsive.spec.js ← document-level no-horizontal-overflow evidence
     serve-viewer.mjs   ← static server for the Dioxus web build
     validate.ps1      ← headless VISUAL_SPEC contract check
     visual.spec.js   ← Playwright golden comparison

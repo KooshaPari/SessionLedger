@@ -3,6 +3,7 @@
 ## Prerequisites
 - Rust stable toolchain (latest stable)
 - Cargo (bundled with Rust)
+- pre-commit for local repository hooks
 
 ## Build
 ```bash
@@ -54,6 +55,21 @@ vale docs CONTRIBUTING.md
 Use the PowerShell script as the seed gate today. Upgrade the Vale style over
 time with project-specific substitutions, then wire `vale docs CONTRIBUTING.md`
 into CI as an optional warning before making it blocking.
+
+## Local Hooks
+
+Install local hooks once per checkout:
+
+```bash
+pre-commit install
+```
+
+The hook set includes gitleaks secret scanning for staged changes. To run it
+manually before committing, stage the intended files and run:
+
+```bash
+pre-commit run gitleaks
+```
 
 ## Branch Discipline
 - Always create feature branches off main

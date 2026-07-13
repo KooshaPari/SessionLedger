@@ -4,7 +4,7 @@
 CARGO ?= cargo
 DAEMON_MANIFEST := crates/sl-daemon/Cargo.toml
 
-.PHONY: help build test lint fmt clippy package dev dev-down
+.PHONY: help build test lint fmt clippy package seed dev dev-down
 
 help:
 	@echo "Targets:"
@@ -14,6 +14,7 @@ help:
 	@echo "  clippy    cargo clippy --all-targets --all-features"
 	@echo "  lint      fmt --check + clippy (CI-equivalent gate)"
 	@echo "  package   desktop packaging (packaging/Makefile)"
+	@echo "  seed      copy a sample OKF fixture into SL_DATA_DIR (default .sl-data)"
 	@echo "  dev       build then process-compose up"
 	@echo "  dev-down  process-compose down"
 
@@ -47,6 +48,10 @@ lint:
 ## package - desktop packaging via packaging/Makefile
 package:
 	$(MAKE) -C packaging package-all
+
+## seed - copy a sample OKF fixture into SL_DATA_DIR (default .sl-data)
+seed:
+	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/seed-sample.ps1
 
 ## dev - build both crates then bring up the process-compose stack
 dev: build

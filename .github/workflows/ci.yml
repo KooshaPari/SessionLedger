@@ -61,23 +61,26 @@ jobs:
   fuzz-smoke:
     name: fuzz smoke (10 seconds)
     runs-on: ubuntu-latest
-    # cargo-fuzz requires nightly; do not inherit workflow RUSTFLAGS (-D warnings)
-    # which breaks sanitizer flag composition under stable toolchains.
+    # cargo-fuzz requires nightly. rust-toolchain.toml pins stable, so force
+    # nightly via RUSTUP_TOOLCHAIN. Clear inherited RUSTFLAGS. Pin gnu host
+    # target — cargo-fuzz otherwise may pick musl, which cannot use ASAN.
     env:
       RUSTFLAGS: ""
       RUSTUP_TOOLCHAIN: nightly
+      CARGO_BUILD_TARGET: ""
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # nightly for fuzz
         with:
           toolchain: nightly
           components: rust-src
+          targets: x86_64-unknown-linux-gnu
       - name: install cargo-fuzz
         uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # cargo-fuzz
         with:
           tool: cargo-fuzz
       - name: fuzz OKF parse and roundtrip
-        run: cargo +nightly fuzz run okf_roundtrip --sanitizer address -- -max_total_time=10
+        run: cargo +nightly fuzz run okf_roundtrip --sanitizer address --target x86_64-unknown-linux-gnu -- -max_total_time=10
 
   coverage:
     name: coverage (85% gate)

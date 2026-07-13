@@ -25,7 +25,7 @@ use std::time::Instant;
 use axum::body::to_bytes;
 use axum::extract::Request;
 use axum::extract::{Path as AxumPath, Query, State};
-use axum::http::{header::CONTENT_TYPE, HeaderValue};
+use axum::http::{header::CONTENT_TYPE, HeaderMap, HeaderValue};
 use axum::middleware::{self, Next};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
@@ -36,6 +36,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::sync::{broadcast, Semaphore};
 
+use crate::audit::{self, AuditSink};
 use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
 use crate::metrics::{compute_metrics, HttpMetrics};
@@ -106,6 +107,8 @@ pub(crate) struct AppState {
     pub http_metrics: Arc<HttpMetrics>,
     /// Body-size and in-flight request limits for ingest.
     pub ingest_admission: IngestAdmission,
+    /// Durable local audit sink for structured actor/action events.
+    pub audit_sink: Arc<AuditSink>,
 }
 
 /// Build the axum [`Router`].
@@ -205,6 +208,7 @@ async fn prometheus_metrics(State(state): State<AppState>) -> Response {
 }
 
 const TRACEPARENT: &str = "traceparent";
+const X_REQUEST_ID: &str = "x-request-id";
 
 #[derive(Debug, PartialEq, Eq)]
 struct TraceParent {
@@ -241,6 +245,23 @@ fn parse_traceparent(value: &str) -> Option<TraceParent> {
         parent_id: parent_id.to_owned(),
         flags: flags.to_owned(),
     })
+}
+
+fn request_id_from_headers(headers: &HeaderMap) -> String {
+    headers
+        .get(X_REQUEST_ID)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .or_else(|| {
+            headers
+                .get(TRACEPARENT)
+                .and_then(|value| value.to_str().ok())
+                .and_then(parse_traceparent)
+                .map(|parsed| parsed.trace_id)
+        })
+        .unwrap_or_else(audit::local_request_id)
 }
 
 /// Count and trace every HTTP request while preserving valid upstream context.
@@ -401,8 +422,9 @@ async fn search_bundles(
 /// server) from a business-logic rejection (422 with actionable error details).
 #[tracing::instrument(skip(state, request))]
 async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Response {
+    let request_id = request_id_from_headers(request.headers());
     let Ok(_permit) = state.ingest_admission.semaphore.clone().try_acquire_owned() else {
-        audit_event("ingest", "rejected", "concurrency_limit");
+        audit_event(&state.audit_sink, "ingest", "rejected", "concurrency_limit", &request_id);
         return api_error(
             axum::http::StatusCode::TOO_MANY_REQUESTS,
             "ingest_busy",
@@ -412,7 +434,7 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
     let bytes = match to_bytes(request.into_body(), state.ingest_admission.max_body_bytes).await {
         Ok(bytes) => bytes,
         Err(_) => {
-            audit_event("ingest", "rejected", "body_too_large");
+            audit_event(&state.audit_sink, "ingest", "rejected", "body_too_large", &request_id);
             return api_error(
                 axum::http::StatusCode::PAYLOAD_TOO_LARGE,
                 "payload_too_large",
@@ -423,7 +445,7 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
     let payload: PostBundle = match serde_json::from_slice(&bytes) {
         Ok(payload) => payload,
         Err(error) => {
-            audit_event("ingest", "rejected", "invalid_json");
+            audit_event(&state.audit_sink, "ingest", "rejected", "invalid_json", &request_id);
             return api_error(
                 axum::http::StatusCode::BAD_REQUEST,
                 "invalid_json",
@@ -433,10 +455,10 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
     };
     let result = validate_okf_bundle(&payload);
     if result.valid {
-        audit_event("ingest", "accepted", "validation");
+        audit_event(&state.audit_sink, "ingest", "accepted", "validation", &request_id);
         Json(&result).into_response()
     } else {
-        audit_event("ingest", "rejected", "validation");
+        audit_event(&state.audit_sink, "ingest", "rejected", "validation", &request_id);
         (axum::http::StatusCode::UNPROCESSABLE_ENTITY, Json(&result)).into_response()
     }
 }
@@ -500,16 +522,35 @@ async fn not_found() -> Response {
     api_error(axum::http::StatusCode::NOT_FOUND, "not_found", "route not found")
 }
 
-fn audit_event(action: &'static str, outcome: &'static str, reason: &'static str) {
+fn audit_event(
+    sink: &AuditSink,
+    action: &'static str,
+    outcome: &'static str,
+    reason: &'static str,
+    request_id: &str,
+) {
     info!(
         target: "sl_daemon::audit",
         event_kind = "audit",
-        actor = "local",
+        actor = audit::LOCAL_ACTOR,
         action,
         outcome,
+        request_id,
         reason,
         "local operation"
     );
+    let event = audit::AuditEvent {
+        timestamp: audit::timestamp_unix_ms(),
+        actor: audit::LOCAL_ACTOR,
+        action,
+        outcome,
+        request_id,
+        reason: Some(reason),
+        resource: None,
+    };
+    if let Err(error) = sink.append(&event) {
+        warn!(error = %error, path = %sink.path().display(), "failed to append audit event");
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -653,6 +694,7 @@ mod tests {
             broadcast_tx,
             http_metrics: Arc::new(HttpMetrics::default()),
             ingest_admission: IngestAdmission::from_values(None, None).unwrap(),
+            audit_sink: Arc::new(AuditSink::new(out_dir)),
         }
     }
 
@@ -779,8 +821,10 @@ mod tests {
     #[test]
     #[traced_test]
     fn audit_event_contains_actor_action_and_outcome() {
-        audit_event("ingest", "accepted", "validation");
-        assert!(logs_contain("actor=\"local\""));
+        let dir = tempfile::TempDir::new().unwrap();
+        let sink = AuditSink::new(dir.path());
+        audit_event(&sink, "ingest", "accepted", "validation", "req-test");
+        assert!(logs_contain("actor=\"local\"") || logs_contain("actor=local"));
         assert!(logs_contain("action=\"ingest\""));
         assert!(logs_contain("outcome=\"accepted\""));
     }

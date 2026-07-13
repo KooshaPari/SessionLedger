@@ -3,8 +3,12 @@
 How SessionLedger is packaged, where data lives, how to uninstall cleanly, and
 how release integrity signing works, and what remains **deferred** for
 platform code-signing / notarization. Complements
-[`packaging/README.md`](../../packaging/README.md) and the tag-driven release
-workflow [`.github/workflows/release.yml`](../../.github/workflows/release.yml).
+[`packaging/README.md`](../../packaging/README.md),
+[`packaging/channels.md`](../../packaging/channels.md), the traditional Linux
+systemd unit
+[`packaging/systemd/sessionledger-daemon.service`](../../packaging/systemd/sessionledger-daemon.service),
+and the tag-driven release workflow
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml).
 
 Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 (signing + installer path).
@@ -16,10 +20,11 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Channel | Status | Notes |
 |---------|--------|-------|
 | GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing |
+| Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` installs the daemon/CLI from a checkout |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
 | Installer script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS GitHub Release artifacts |
 | Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local |
-| brew / crates.io / DMG | Deferred | Soft distribution goals |
+| Scoop / brew / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, formula, crate publication, DMG, or update automation exists yet |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 | Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
 
@@ -187,6 +192,9 @@ The Windows ZIP can run portably or invoke `Install.ps1` for a per-user install.
 WiX MSI evaluation is documented in
 [`scripts/package-msi.md`](../../scripts/package-msi.md). See
 [`packaging/README.md`](../../packaging/README.md) for scaffold status.
+See [`packaging/channels.md`](../../packaging/channels.md) for the current
+cargo install path, GitHub Release archive channel, draft install script, and
+future Scoop/Homebrew placeholders.
 Run [`scripts/installer-lifecycle-smoke.ps1`](../../scripts/installer-lifecycle-smoke.ps1)
 for machine-checkable scaffold and lifecycle-documentation assertions; it does
 not perform a clean-host MSI install.
@@ -206,6 +214,40 @@ to change the destination. Review the script before piping it to a shell.
 
 This is not a Homebrew formula or hosted installer service, and it does not
 enable automatic updates.
+
+### Traditional Linux systemd service
+
+For source installs of the daemon on a Linux host, install the sample unit from
+[`packaging/systemd/sessionledger-daemon.service`](../../packaging/systemd/sessionledger-daemon.service).
+It uses default `SL_*` values in the unit and an optional override file at
+`/etc/sessionledger/sessionledger-daemon.env`:
+
+```ini
+SL_WATCH_DIR=/var/lib/sessionledger/sessions
+SL_OUT_DIR=/var/lib/sessionledger/out
+SL_HTTP_BIND=127.0.0.1:8080
+SL_LOG_FORMAT=json
+SL_INGEST_MAX_BODY_BYTES=1048576
+SL_INGEST_MAX_CONCURRENCY=8
+```
+
+Example install flow:
+
+```bash
+cargo install --path crates/sl-daemon --locked
+sudo install -m 0755 "$(command -v sl-daemon)" /usr/local/bin/sl-daemon
+sudo useradd --system --home-dir /var/lib/sessionledger --shell /usr/sbin/nologin sessionledger
+sudo install -d -o sessionledger -g sessionledger /var/lib/sessionledger/sessions /var/lib/sessionledger/out
+sudo install -d /etc/sessionledger /etc/systemd/system
+sudo install -m 0644 packaging/systemd/sessionledger-daemon.service /etc/systemd/system/sessionledger-daemon.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now sessionledger-daemon
+```
+
+Create the `sessionledger` user/group before enabling the unit, or edit
+`User=` / `Group=` for your host policy. The unit assumes the `sl-daemon`
+binary is available at `/usr/local/bin/sl-daemon`; adjust `ExecStart=` if Cargo
+installs it elsewhere. The service is configured with `Restart=on-failure`.
 
 ---
 
@@ -330,6 +372,8 @@ the production path (deferred).
 ## Related
 
 - [`packaging/README.md`](../../packaging/README.md) — local Make targets
+- [`packaging/channels.md`](../../packaging/channels.md) — install channel status
+- [`packaging/systemd/sessionledger-daemon.service`](../../packaging/systemd/sessionledger-daemon.service) — traditional Linux service unit
 - [`runbook.md`](runbook.md) — `make dev`, health probes
 - [`observability.md`](observability.md) — `/healthz`, `/readyz`, metrics
 - [`SECURITY.md`](../../SECURITY.md) — supply chain / SBOM

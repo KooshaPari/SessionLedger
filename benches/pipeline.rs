@@ -1,4 +1,4 @@
-use std::hint::black_box;
+use std::{hint::black_box, time::Duration};
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use session_ledger::domain::session::{Corpus, Message, Role, Session};
@@ -49,5 +49,33 @@ fn pipeline_benches(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, pipeline_benches);
+fn configured_criterion() -> Criterion {
+    let mut criterion = Criterion::default().configure_from_args();
+
+    if let Ok(sample_size) = std::env::var("SESSION_LEDGER_BENCH_SAMPLE_SIZE") {
+        let sample_size = sample_size
+            .parse::<usize>()
+            .expect("SESSION_LEDGER_BENCH_SAMPLE_SIZE must be an integer");
+        criterion = criterion.sample_size(sample_size);
+    }
+    if let Ok(seconds) = std::env::var("SESSION_LEDGER_BENCH_WARM_UP_SECONDS") {
+        let seconds =
+            seconds.parse::<f64>().expect("SESSION_LEDGER_BENCH_WARM_UP_SECONDS must be a number");
+        criterion = criterion.warm_up_time(Duration::from_secs_f64(seconds));
+    }
+    if let Ok(seconds) = std::env::var("SESSION_LEDGER_BENCH_MEASUREMENT_SECONDS") {
+        let seconds = seconds
+            .parse::<f64>()
+            .expect("SESSION_LEDGER_BENCH_MEASUREMENT_SECONDS must be a number");
+        criterion = criterion.measurement_time(Duration::from_secs_f64(seconds));
+    }
+
+    criterion
+}
+
+criterion_group! {
+    name = benches;
+    config = configured_criterion();
+    targets = pipeline_benches
+}
 criterion_main!(benches);

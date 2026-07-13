@@ -5,6 +5,9 @@ guide (data dirs, uninstall, signing deferral, Windows matrix):
 [`docs/ops/distribution.md`](../docs/ops/distribution.md).
 Mobile presence is intentionally Soft / N-A for the current desktop-plus-daemon
 scope; see [`docs/adr/0002-mobile-presence.md`](../docs/adr/0002-mobile-presence.md).
+Install channel status is tracked in [`channels.md`](channels.md). A traditional
+Linux service unit lives at
+[`systemd/sessionledger-daemon.service`](systemd/sessionledger-daemon.service).
 
 ## Prerequisites
 

@@ -16,7 +16,7 @@
 - **OKF validation**: POST /api/ingest validates bundle schema
 - **Archive/restore**: gzip-compressed archival with flate2
 - **Filter flags**: --since, --until, --model, --min-tokens, --tag, --limit
-- **Dark/light theme**: #7c3aed accent, #06b6d4 secondary
+- **Dark/light theme**: Lab-Coat #2563eb accent, #14b8a6 secondary
 - **Startup banner**: colored ANSI branding
 
 ## Quick Start

@@ -68,7 +68,7 @@ pub fn ErrorState(
                 button {
                     class: "sl-error-retry",
                     "data-testid": "error-state-retry",
-                    style: "padding:6px 14px;font-size:12px;font-weight:600;border-radius:5px;cursor:pointer;border:1px solid {c.focus};background:{c.focus};color:#ffffff;",
+                    style: "padding:6px 14px;font-size:12px;font-weight:600;border-radius:5px;cursor:pointer;border:1px solid #2563eb;background:#2563eb;color:#ffffff;",
                     onclick: move |_| on_retry.call(()),
                     onkeydown: move |evt: Event<KeyboardData>| {
                         let key = evt.key();
@@ -100,7 +100,8 @@ mod tests {
     }
 
     #[test]
-    fn theme_focus_is_lab_coat_cobalt() {
-        assert_eq!(ThemeColors::dark().focus, "#2563eb");
+    fn theme_focus_is_on_dark_cobalt() {
+        assert_eq!(ThemeColors::dark().focus, "#93c5fd");
+        assert_eq!(ThemeColors::light().focus, "#2563eb");
     }
 }

@@ -27,7 +27,8 @@ Family: **Lab-Coat** (R&D). Light lab-bench base; cool cobalt primary; orange li
 |-------|-----|---------------|
 | `--lc-lab-white` | `#f6f8fa` | App / page background (lab coat) |
 | `--lc-slate` | `#1f2937` | Primary text, dark panels, bench grid |
-| `--lc-cobalt` | `#2563eb` | Primary accent — focus, links, selected, bundle bars |
+| `--lc-cobalt` | `#2563eb` | Primary accent (light) — focus, links, selected, fills |
+| `--lc-cobalt-on-dark` | `#93c5fd` | Dark-mode text/chrome accent — AA on slate + accent mixes |
 | `--lc-orange` | `#f97316` | Live / in-progress — Bunsen burner |
 | `--lc-teal` | `#14b8a6` | Secondary accent — success-adjacent, growth medium |
 
@@ -46,14 +47,42 @@ Family: **Lab-Coat** (R&D). Light lab-bench base; cool cobalt primary; orange li
 ### Light vs dark
 
 - **Brand default:** light Lab-Coat (`lab-white` canvas).
-- **Dark panel mode** (viewer chrome): slate panels on lab-white, or inverted slate canvas with cobalt/teal/orange accents unchanged. Accent hexes stay Lab-Coat; do not invent a second brand palette.
-- Theme API (`Theme::{Dark,Light}`) must resolve to these tokens once wired — no purple primary.
+- **Dark panel mode** (viewer chrome): inverted slate canvas; use `--lc-cobalt-on-dark` for accent *text/chrome* so WCAG AA holds on slate. Brand cobalt `#2563eb` remains for light mode and solid fills. Do not invent a non–Lab-Coat brand palette.
+- Theme API (`Theme::{Dark,Light}`) and web `data-theme="light|dark"` must resolve to these tokens — no purple primary.
+- Web preference persistence uses `localStorage["sl-viewer-theme"]` with values `light` or `dark`; absence falls back to OS preference.
+
+### Theme contract tokens
+
+| Token | Light role | Dark role |
+|-------|------------|-----------|
+| `--sl-bg` | Lab-white app canvas | Inverted slate canvas |
+| `--sl-surface` | White panel surface | Slate panel surface |
+| `--sl-surface-muted` | Muted lab bench tint | Muted slate tint |
+| `--sl-border` | Subtle neutral divider | Slate divider |
+| `--sl-text` | Slate primary text | Near-white primary text |
+| `--sl-text-muted` | Muted helper text | Muted helper text |
+| `--sl-accent` | Lab-Coat cobalt `#2563eb` | Lab-Coat on-dark cobalt `#93c5fd` |
+| `--sl-accent-secondary` | Lab-Coat teal `#14b8a6` | Lab-Coat on-dark teal `#2dd4bf` |
+| `--sl-accent-warning` | Lab-Coat orange | Lab-Coat orange |
+| `--sl-danger` / `--sl-danger-surface` | Error foreground/surface | Error foreground/surface |
 
 ### Contrast floor
 
 - Body text on `--lc-lab-white`: use `--lc-slate` (or darker).
 - Cobalt / orange / teal on lab-white: large UI / icons OK; small body text prefers slate with accent for chrome only.
+- Dark: accent text/chrome must use `--lc-cobalt-on-dark` (or equivalent ≥4.5:1 on `--lc-slate`); do not paint brand `#2563eb` as small text on slate.
 - Error text must meet WCAG AA against its background (§4).
+
+### Typography roles
+
+`assets/tokens.css` defines named type-role tokens so viewer CSS and docs demos can share intent without repeating raw stacks:
+
+| Token | Role |
+|-------|------|
+| `--font-display` | Product/hero display headings; use sparingly |
+| `--font-body` | Reading text and prose content |
+| `--font-mono` | Code, paths, timestamps, replay terminal output |
+| `--font-ui` | Buttons, tabs, labels, controls, dense app chrome |
 
 ---
 

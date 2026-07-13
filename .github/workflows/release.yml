@@ -15,10 +15,10 @@
 #   sl-viewer-<version>-windows-msi-scaffold.zip
 #
 # Platform signing / notarization: DEFERRED (unsigned binaries). Release
-# checksums are signed with cosign keyless signing and release assets receive
-# GitHub build provenance on a best-effort basis; attestation/signing failures
-# do not block an otherwise valid release. Gatekeeper and SmartScreen notes,
-# data dirs, uninstall: docs/ops/distribution.md
+# checksums are signed with cosign keyless signing on a best-effort basis.
+# Release assets receive blocking GitHub build provenance in the canonical
+# KooshaPari/SessionLedger repository; forks skip that OIDC-dependent step.
+# Gatekeeper and SmartScreen notes, data dirs, uninstall: docs/ops/distribution.md
 #
 # Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-viewer/README.md
 #      packaging/README.md  ·  docs/ops/distribution.md
@@ -202,9 +202,9 @@ jobs:
           cargo cyclonedx --format json
           cp session-ledger.cdx.json artifacts/session-ledger.cdx.json
 
-      - name: attest Release assets (best effort)
+      - name: attest Release assets
         id: provenance
-        continue-on-error: true
+        if: github.repository == 'KooshaPari/SessionLedger'
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: artifacts/*
@@ -213,12 +213,16 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.provenance.outcome }}" = "success" ]; then
+          if [ "${{ github.repository }}" != "KooshaPari/SessionLedger" ]; then
+            echo "::notice::Build provenance skipped outside KooshaPari/SessionLedger because OIDC attestations may be unavailable on forks."
+            echo "### Build provenance: skipped outside canonical repository" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.provenance.outcome }}" = "success" ]; then
             echo "::notice::Published GitHub build provenance for Release assets."
             echo "### Build provenance: published" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::notice::Build provenance was unavailable (non-blocking); the Release will continue."
-            echo "### Build provenance: unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Build provenance failed for KooshaPari/SessionLedger Release assets; release publication is blocked."
+            echo "### Build provenance: failed (blocking)" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
 
       - name: create Release
@@ -254,7 +258,8 @@ jobs:
             Verify archive hashes with `SHA256SUMS`. CI also attempts to publish
             `SHA256SUMS.sigstore.json`, a best-effort cosign keyless signature bundle.
             `session-ledger.cdx.json` is the CycloneDX SBOM. GitHub build provenance
-            is generated on a best-effort basis and can be verified with `gh attestation`.
+            is required for canonical KooshaPari/SessionLedger releases and can be
+            verified with `gh attestation`.
 
             See [`crates/sl-viewer/README.md`](https://github.com/KooshaPari/SessionLedger/tree/main/crates/sl-viewer) for build instructions.
           draft: false

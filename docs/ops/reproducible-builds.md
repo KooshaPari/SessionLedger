@@ -52,30 +52,29 @@ Windows mismatch as a warning; pass `-Strict` to make it blocking. For a
 mismatch, preserve both binaries, compare PE sections and PDB behavior, and
 record the runner and toolchain versions. Linux CI is always strict.
 
-For stronger hermetic evidence, use an immutable builder image, vendor and build
-dependencies offline, pin the exact Rust toolchain and system packages, and run
-the comparison on two fresh workers. Compare unpacked binaries separately from
-ZIP or tar metadata.
+For stronger hermetic evidence, start with the `sl-daemon` offline dependency
+gate in [`hermetic-builds.md`](hermetic-builds.md), then use an immutable builder
+image, vendor and build dependencies offline, pin the exact Rust toolchain and
+system packages, and run the comparison on two fresh workers. Compare unpacked
+binaries separately from ZIP or tar metadata.
 
 ## Provenance enforcement path
 
-The release workflow currently treats GitHub build provenance and checksum
-signing as fail-soft. This keeps releases available when OIDC or Sigstore has a
-transient outage, but it is not a blocking provenance policy and does not meet
-SLSA Build Level 3.
+The release workflow requires GitHub build provenance for assets published from
+the canonical `KooshaPari/SessionLedger` repository. The attestation step is
+skipped outside that repository so forks are not broken by unavailable OIDC
+permissions. Checksum signing remains best-effort because Sigstore availability
+is outside the build's control.
 
-To make provenance blocking:
+This is stronger provenance evidence, but it is not SLSA Build Level 3. To move
+closer to that bar:
 
-1. remove `continue-on-error: true` from the
-   `actions/attest-build-provenance` step in `.github/workflows/release.yml`;
-2. remove fail-soft handling from the cosign install, sign, and publish steps;
-3. make release publication depend on successful per-platform attestations,
+1. make release publication depend on successful per-platform attestations,
    rather than attesting only the collected assets in the release job;
-4. verify each attestation's repository, workflow, commit, and subject digest
+2. verify each attestation's repository, workflow, commit, and subject digest
    before publishing; and
-5. protect the release environment so bypassing the required workflow needs
+3. protect the release environment so bypassing the required workflow needs
    explicit maintainer approval.
 
-Until those controls land, consumers must verify `SHA256SUMS`, its Sigstore
-bundle when present, and GitHub attestations when present as described in
-[`distribution.md`](distribution.md).
+Consumers must verify `SHA256SUMS`, its Sigstore bundle when present, and GitHub
+attestations as described in [`distribution.md`](distribution.md).

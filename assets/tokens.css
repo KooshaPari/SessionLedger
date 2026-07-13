@@ -54,6 +54,33 @@
   --lc-teal:             #14b8a6;  /* secondary — growth-medium teal (light) */
   --lc-teal-on-dark:     #2dd4bf;  /* secondary text/chrome on dark mixes — WCAG AA */
 
+  /* Lab-Coat spacing scale (4px base grid). */
+  --lc-space-1:          4px;
+  --lc-space-2:          6px;
+  --lc-space-3:          8px;
+  --lc-space-4:          10px;
+  --lc-space-5:          12px;
+  --lc-space-6:          16px;
+  --lc-space-7:          20px;
+  --lc-space-8:          24px;
+  --lc-space-9:          32px;
+  --lc-space-10:         40px;
+
+  /* Lab-Coat corner radii. */
+  --lc-radius-sm:        4px;
+  --lc-radius-md:        6px;
+  --lc-radius-lg:        8px;
+  --lc-radius-pill:      10px;
+
+  /* Lab-Coat motion (VISUAL_SPEC §5). */
+  --lc-motion-fast:      150ms;
+  --lc-motion-medium:    220ms;
+  --lc-motion-slow:      1.8s;
+  --lc-motion-rise:      3.2s;
+  --lc-ease-out:         ease-out;
+  --lc-ease-in-out:      ease-in-out;
+  --lc-ease-in:          ease-in;
+
   /* ────────────────────────────────────────────────────────────
    * TERMINAL-FORGE — forgecode (terminal family)
    * Decision: vision-pillar proposed, 2026-07-06
@@ -117,6 +144,25 @@
  * persists the choice in localStorage. Accent tokens stay Lab-Coat in both
  * modes; only neutral surfaces and text invert.
  */
+:root {
+  /* Viewer spacing / radius / motion aliases (theme-agnostic). */
+  --sl-space-xs: var(--lc-space-1);
+  --sl-space-sm: var(--lc-space-3);
+  --sl-space-md: var(--lc-space-5);
+  --sl-space-lg: var(--lc-space-6);
+  --sl-space-xl: var(--lc-space-7);
+  --sl-space-2xl: var(--lc-space-9);
+  --sl-radius-sm: var(--lc-radius-sm);
+  --sl-radius-md: var(--lc-radius-md);
+  --sl-radius-lg: var(--lc-radius-lg);
+  --sl-radius-pill: var(--lc-radius-pill);
+  --sl-motion-fast: var(--lc-motion-fast);
+  --sl-motion-medium: var(--lc-motion-medium);
+  --sl-motion-slow: var(--lc-motion-slow);
+  --sl-ease-out: var(--lc-ease-out);
+  --sl-ease-in-out: var(--lc-ease-in-out);
+}
+
 :root,
 :root[data-theme="light"],
 .family-lab-coat[data-theme="light"] {

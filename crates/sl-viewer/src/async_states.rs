@@ -20,10 +20,8 @@ pub enum SkeletonLayout {
 /// Content-shaped loading placeholder that preserves final layout (no CLS).
 #[component]
 pub fn ContentSkeleton(
-    #[props(default)]
-    layout: SkeletonLayout,
-    #[props(default = 4_usize)]
-    list_rows: usize,
+    #[props(default)] layout: SkeletonLayout,
+    #[props(default = 4_usize)] list_rows: usize,
 ) -> Element {
     let rows = list_rows.clamp(3, 6);
     let list_blocks = (0..rows).map(|index| {

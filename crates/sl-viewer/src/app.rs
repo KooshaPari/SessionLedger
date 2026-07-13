@@ -2,11 +2,11 @@ use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
-use crate::fixture::query_fixture_active;
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
+use crate::fixture::query_fixture_active;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;

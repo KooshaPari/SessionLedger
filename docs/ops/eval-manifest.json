@@ -9,8 +9,9 @@
   "fixture_count": 8,
   "rust_msrv": "1.85",
   "toolchain_channel": "stable",
-  "cargo_lock_sha256": "ebbef63ca90aae83541dac38d880803fe4095033dae86f66c2ba526b0678eaed",
+  "cargo_lock_sha256": "0818041cd2fa117c2565ee07a1122f4a872aa318a1d9c9428dad16756b32f4ee",
   "bench_policy_path": "docs/ops/perf-baseline.json",
   "bench_gate_script": "scripts/bench-gate.ps1",
   "verify_command": "./scripts/eval-repro-check.ps1"
 }
+

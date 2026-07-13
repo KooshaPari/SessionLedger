@@ -3,8 +3,8 @@
 **Repo:** KooshaPari/SessionLedger
 **Date:** 2026-07-13
 **Repo-type profile:** CLI+daemon + desktop (sl-daemon + sl-viewer)
-**Auditor:** cursor-w15-reaudit
-**Commit audited:** da347b3 (origin/main / Wave-15)
+**Auditor:** cursor-w16-reaudit
+**Commit audited:** 7798234 (origin/main / Wave-16)
 
 > Rubric SSOT: phenotype-org-audits/audit-v38
 
@@ -21,31 +21,33 @@
 | C06 | Supply Chain | L51-L60 | 22/30 | 73% | C | see audit/.lane-c06 |
 | C07 | DX, QEng, Portability | L61-L70 | 25/30 | 83% | B | see audit/.lane-c07 |
 | C08 | Eval Coverage | L71-L80 | 22/30 | 73% | C | see audit/.lane-c08 |
-| C09 | Accessibility + UX | L81-L95 | 33/45 | 73% | C | see audit/.lane-c09 |
-| C10 | Visual Identity | L96-L107 | 29/36 | 81% | B | see audit/.lane-c10 |
-| C11 | Packaging + Distribution | L108-L122 | 30/45 | 67% | C | see audit/.lane-c11 |
+| C09 | Accessibility + UX | L81-L95 | 34/45 | 76% | C | see audit/.lane-c09 |
+| C10 | Visual Identity | L96-L107 | 30/36 | 83% | B | see audit/.lane-c10 |
+| C11 | Packaging + Distribution | L108-L122 | 32/45 | 71% | C | see audit/.lane-c11 |
 
 ## Overall
 
-**Weighted overall score:** 79% · **Overall grade:** B
+**Weighted overall score:** 80% · **Overall grade:** B
 
-(Raw rubric total across all 12 clusters. Sum 316 / 402.)
+(Raw rubric total across all 12 clusters. Sum 320 / 402.)
 
-## Wave-15 Delta
+## Wave-16 Delta
 
 | Cluster | Before | After | Raw delta | Evidence-backed movement |
 |---------|:------:|:-----:|:---------:|--------------------------|
-| C00 | 22/30 | 23/30 | +1 | Committed OpenAPI 3.1 + ingest Idempotency-Key (#148) |
-| C04 | 22/30 | 23/30 | +1 | gitleaks pre-commit hook (#149) |
-| C10 | 26/36 | 29/36 | +3 | Type/theme tokens, theme preference, AA on-dark accents (#150) |
-| **Overall** | **311/402 (77% B)** | **316/402 (79% B)** | **+5** | Holds B |
+| C00 | 23/30 | 23/30 | 0 | OpenAPI drift CI gate landed (#153); L2 already at pillar max |
+| C04 | 23/30 | 23/30 | 0 | TruffleHog dual-scan in security workflow (#152); L31 already at pillar max |
+| C09 | 33/45 | 34/45 | +1 | Production responsive shell + 44px touch targets (#155) |
+| C10 | 29/36 | 30/36 | +1 | Live-feed/compare/diff chrome tokenized (#156); spacing/motion scales close L96/L102 gaps at max score |
+| C11 | 30/45 | 32/45 | +2 | OCI HEALTHCHECK (#154); Windows install lifecycle CI smoke (#154) |
+| **Overall** | **316/402 (79% B)** | **320/402 (80% B)** | **+4** | Holds B |
 
 ## Headline Findings
 
-- **Strongest:** C03 (94% A); C01/C05 (87% B); C07 (83% B)
-- **Weakest:** C11 Packaging (67% C); C06/C08 (73% C)
-- **Wave-14 → Wave-15:** 77% B (311/402) → 79% B (316/402), +5 raw points
-- **Remaining unpaid:** native installer signing/clean-host install (C11), OpenAPI drift CI (C00 L2), trufflehog dual-scan (C04 L31), spacing/motion tokens + live-feed tokenization (C10)
+- **Strongest:** C03 (94% A); C01/C05 (87% B); C07/C10 (83% B)
+- **Weakest:** C11 Packaging (71% C); C06/C08 (73% C)
+- **Wave-15 → Wave-16:** 79% B (316/402) → 80% B (320/402), +4 raw points
+- **Remaining unpaid:** platform Authenticode/notarization (C11), durable schema/migrations (C00 L3), maintainer 2FA attestation (C04 L36), caption/measure typography tokens (C10 L97)
 
 ## N/A / soft goals
 

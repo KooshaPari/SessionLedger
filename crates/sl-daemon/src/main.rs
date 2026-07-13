@@ -24,6 +24,7 @@
 //! * `2` — general / unexpected error
 
 mod archive;
+mod audit;
 mod cli;
 mod etl;
 mod export;
@@ -43,7 +44,7 @@ use std::sync::Arc;
 use clap::{Parser, Subcommand};
 use std::path::Path;
 use tokio::sync::{broadcast, mpsc};
-use tracing::{error, info, info_span, Instrument};
+use tracing::{error, info, info_span, warn, Instrument};
 
 /// Channel depth. Bounded so a slow consumer applies backpressure to the
 /// watcher instead of letting an unbounded queue grow without limit.
@@ -396,16 +397,36 @@ fn parse_local_http_addr(value: &str) -> Result<SocketAddr, String> {
     Ok(addr)
 }
 
-fn audit_event(action: &'static str, outcome: &'static str, resource: &dyn std::fmt::Display) {
+fn audit_event(
+    sink: &audit::AuditSink,
+    action: &'static str,
+    outcome: &'static str,
+    resource: &dyn std::fmt::Display,
+) {
+    let request_id = audit::local_request_id();
+    let resource = resource.to_string();
     info!(
         target: "sl_daemon::audit",
         event_kind = "audit",
-        actor = "local",
+        actor = audit::LOCAL_ACTOR,
         action,
         outcome,
+        request_id,
         resource = %resource,
         "local operation"
     );
+    let event = audit::AuditEvent {
+        timestamp: audit::timestamp_unix_ms(),
+        actor: audit::LOCAL_ACTOR,
+        action,
+        outcome,
+        request_id: &request_id,
+        reason: None,
+        resource: Some(resource),
+    };
+    if let Err(error) = sink.append(&event) {
+        warn!(error = %error, path = %sink.path().display(), "failed to append audit event");
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -424,9 +445,12 @@ async fn run_serve(
 
     let (tx, mut rx) = mpsc::channel::<PathBuf>(CHANNEL_CAPACITY);
     let out_dir = out.clone();
+    let data_dir = audit::data_dir_from_env_or(&out);
+    let audit_sink = Arc::new(audit::AuditSink::new(&data_dir));
 
     // Consumer: drain the channel, transforming each path.
     let bcast_for_consumer = bcast_tx.clone();
+    let audit_sink_for_consumer = audit_sink.clone();
     let consumer = tokio::spawn(
         async move {
             let mut total = 0usize;
@@ -438,7 +462,12 @@ async fn run_serve(
                             total += written.len();
                             for w in &written {
                                 let _ = bcast_for_consumer.send(w.clone());
-                                audit_event("export", "succeeded", &w.display());
+                                audit_event(
+                                    &audit_sink_for_consumer,
+                                    "export",
+                                    "succeeded",
+                                    &w.display(),
+                                );
                             }
                             info!(
                                 path = %path.display(),
@@ -447,7 +476,12 @@ async fn run_serve(
                             );
                         }
                         Err(err) => {
-                            audit_event("export", "failed", &path.display());
+                            audit_event(
+                                &audit_sink_for_consumer,
+                                "export",
+                                "failed",
+                                &path.display(),
+                            );
                             error!(path = %path.display(), error = %err, "ETL transform failed");
                         }
                     }
@@ -471,6 +505,7 @@ async fn run_serve(
             broadcast_tx: bcast_tx.clone(),
             http_metrics: Arc::new(metrics::HttpMetrics::default()),
             ingest_admission,
+            audit_sink: audit_sink.clone(),
         };
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
         let handle = tokio::spawn(async move {
@@ -759,7 +794,9 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
 
     match archive::archive_bundles(data_dir, before, dry_run) {
         Ok(stats) => {
+            let audit_sink = audit::AuditSink::new(data_dir);
             audit_event(
+                &audit_sink,
                 "archive",
                 if dry_run { "dry_run" } else { "succeeded" },
                 &stats.archive_dir.display(),
@@ -773,7 +810,8 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
             );
         }
         Err(e) => {
-            audit_event("archive", "failed", &data_dir.display());
+            let audit_sink = audit::AuditSink::new(data_dir);
+            audit_event(&audit_sink, "archive", "failed", &data_dir.display());
             eprintln!("error: {e}");
             std::process::exit(2);
         }
@@ -785,6 +823,7 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
 // ---------------------------------------------------------------------------
 
 fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
+    let audit_sink = audit::AuditSink::new(data_dir);
     let archive_root = data_dir.join("archive");
     let archive_path = match archive::find_archive_path(&archive_root, bundle_id) {
         Ok(p) => p,
@@ -797,11 +836,11 @@ fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
     let output_dir = out.unwrap_or(data_dir);
     match archive::restore_bundle(&archive_path, output_dir) {
         Ok(restored) => {
-            audit_event("restore", "succeeded", &restored.display());
+            audit_event(&audit_sink, "restore", "succeeded", &restored.display());
             println!("Restored: {}", restored.display());
         }
         Err(e) => {
-            audit_event("restore", "failed", &archive_path.display());
+            audit_event(&audit_sink, "restore", "failed", &archive_path.display());
             eprintln!("error: {e}");
             std::process::exit(2);
         }

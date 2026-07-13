@@ -32,14 +32,26 @@ current clients retain actionable field diagnostics.
 
 ## Structured audit events
 
-Mutating or persistence-adjacent local operations emit `tracing` events with:
+Mutating or persistence-adjacent local operations emit `tracing` events and append
+the same actor/action record to a local JSONL audit file. The durable sink is:
+
+- `$SL_DATA_DIR/audit/events.jsonl` when `SL_DATA_DIR` is set.
+- `<serve --out>/audit/events.jsonl` for `sl serve` when `SL_DATA_DIR` is unset.
+- `<data_dir>/audit/events.jsonl` for archive/restore commands that already take
+  a `--data-dir`.
+
+Each line is a standalone JSON object written with append/create semantics and a
+flush plus `sync_data` call. The daemon never truncates or rewrites this file.
+Records include:
 
 - `event_kind="audit"`
 - `actor="local"`
 - `action` such as `ingest`, `export`, `archive`, or `restore`
 - `outcome` and a non-payload `reason` or `resource`
+- `request_id` and Unix-millisecond `timestamp`
 
 Enable newline-delimited JSON with the `json-logs` feature and
 `SL_LOG_FORMAT=json`. Events deliberately omit transcript and ingest-body
-contents. Logs are process output only: operators must configure collection,
-access control, and retention when durable or append-only records are required.
+contents. Operators own retention, rotation, backup, and access control for the
+JSONL audit path; rotation should move or copy the file without asking
+`sl-daemon` to rewrite historical records.

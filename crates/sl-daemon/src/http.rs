@@ -25,7 +25,7 @@ use std::time::Instant;
 use axum::body::to_bytes;
 use axum::extract::Request;
 use axum::extract::{Path as AxumPath, Query, State};
-use axum::http::{header::CONTENT_TYPE, HeaderMap, HeaderValue};
+use axum::http::{header::AUTHORIZATION, header::CONTENT_TYPE, HeaderMap, HeaderValue};
 use axum::middleware::{self, Next};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
@@ -54,6 +54,35 @@ use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 const DEFAULT_INGEST_MAX_BODY_BYTES: usize = 1_048_576;
 const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
+const SL_API_KEY: &str = "SL_API_KEY";
+const X_API_KEY: &str = "x-api-key";
+
+/// Optional shared-secret authentication for mutating HTTP routes.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct ApiKeyAuth {
+    expected: Option<Arc<str>>,
+}
+
+impl ApiKeyAuth {
+    pub(crate) fn from_env() -> Self {
+        Self::from_value(std::env::var(SL_API_KEY).ok())
+    }
+
+    fn from_value(value: Option<String>) -> Self {
+        let expected = value
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty())
+            .map(Arc::<str>::from);
+        Self { expected }
+    }
+
+    fn allows(&self, headers: &HeaderMap) -> bool {
+        let Some(expected) = self.expected.as_deref() else {
+            return true;
+        };
+        bearer_token_matches(headers, expected) || x_api_key_matches(headers, expected)
+    }
+}
 
 /// Process-local admission controls for `POST /api/ingest`.
 #[derive(Clone)]
@@ -113,6 +142,8 @@ pub(crate) struct AppState {
     pub http_metrics: Arc<HttpMetrics>,
     /// Body-size and in-flight request limits for ingest.
     pub ingest_admission: IngestAdmission,
+    /// Optional shared-secret authentication for mutating routes.
+    pub api_key_auth: ApiKeyAuth,
     /// Durable local audit sink for structured actor/action events.
     pub audit_sink: Arc<AuditSink>,
 }
@@ -459,6 +490,14 @@ async fn search_bundles(
 #[tracing::instrument(skip(state, request))]
 async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Response {
     let request_id = request_id_from_headers(request.headers());
+    if !state.api_key_auth.allows(request.headers()) {
+        audit_event(&state.audit_sink, "ingest", "rejected", "unauthorized", &request_id);
+        return api_error(
+            axum::http::StatusCode::UNAUTHORIZED,
+            "unauthorized",
+            "missing or invalid API key",
+        );
+    }
     let Ok(_permit) = state.ingest_admission.semaphore.clone().try_acquire_owned() else {
         audit_event(&state.audit_sink, "ingest", "rejected", "concurrency_limit", &request_id);
         return api_error(
@@ -532,6 +571,21 @@ fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
     }
 
     Ok(results)
+}
+
+fn bearer_token_matches(headers: &HeaderMap, expected: &str) -> bool {
+    headers
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .is_some_and(|token| token.trim() == expected)
+}
+
+fn x_api_key_matches(headers: &HeaderMap, expected: &str) -> bool {
+    headers
+        .get(X_API_KEY)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.trim() == expected)
 }
 
 #[derive(Serialize)]
@@ -730,8 +784,24 @@ mod tests {
             broadcast_tx,
             http_metrics: Arc::new(HttpMetrics::default()),
             ingest_admission: IngestAdmission::from_values(None, None).unwrap(),
+            api_key_auth: ApiKeyAuth::default(),
             audit_sink: Arc::new(AuditSink::new(out_dir)),
         }
+    }
+
+    fn test_state_with_api_key(out_dir: &Path, api_key: &str) -> AppState {
+        let mut state = test_state(out_dir);
+        state.api_key_auth = ApiKeyAuth::from_value(Some(api_key.to_owned()));
+        state
+    }
+
+    fn valid_ingest_body() -> &'static str {
+        r#"{
+            "bundle_id": "bundle-auth-test",
+            "created_at": "2026-07-13T21:40:00Z",
+            "messages": [{"role": "user", "content": "hello"}],
+            "token_count": 1
+        }"#
     }
 
     async fn start_test_server(state: AppState) -> (SocketAddr, tokio::task::JoinHandle<()>) {
@@ -876,6 +946,12 @@ mod tests {
     }
 
     #[test]
+    fn api_key_auth_ignores_unset_or_empty_env_values() {
+        assert!(ApiKeyAuth::from_value(None).allows(&HeaderMap::new()));
+        assert!(ApiKeyAuth::from_value(Some("  ".into())).allows(&HeaderMap::new()));
+    }
+
+    #[test]
     #[traced_test]
     fn audit_event_contains_actor_action_and_outcome() {
         let dir = tempfile::TempDir::new().unwrap();
@@ -884,6 +960,80 @@ mod tests {
         assert!(logs_contain("actor=\"local\"") || logs_contain("actor=local"));
         assert!(logs_contain("action=\"ingest\""));
         assert!(logs_contain("outcome=\"accepted\""));
+    }
+
+    #[tokio::test]
+    async fn ingest_without_api_key_keeps_loopback_trust_model() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) = start_test_server(test_state(out_dir.path())).await;
+
+        let response = reqwest::Client::new()
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let body: Value = response.json().await.unwrap();
+        assert_eq!(body["valid"], true);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn configured_api_key_allows_bearer_and_x_api_key_headers() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) =
+            start_test_server(test_state_with_api_key(out_dir.path(), "secret-token")).await;
+        let client = reqwest::Client::new();
+
+        let bearer = client
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .header(AUTHORIZATION, "Bearer secret-token")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(bearer.status(), axum::http::StatusCode::OK);
+
+        let x_api_key = client
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .header(X_API_KEY, "secret-token")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(x_api_key.status(), axum::http::StatusCode::OK);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn configured_api_key_denies_missing_or_invalid_credentials() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) =
+            start_test_server(test_state_with_api_key(out_dir.path(), "secret-token")).await;
+        let client = reqwest::Client::new();
+
+        for request in [
+            client
+                .post(format!("http://{addr}/api/ingest"))
+                .header(CONTENT_TYPE, "application/json")
+                .body(valid_ingest_body()),
+            client
+                .post(format!("http://{addr}/api/ingest"))
+                .header(CONTENT_TYPE, "application/json")
+                .header(AUTHORIZATION, "Bearer wrong-token")
+                .body(valid_ingest_body()),
+        ] {
+            let response = request.send().await.unwrap();
+            assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
+            let body: Value = response.json().await.unwrap();
+            assert_eq!(body["error"]["code"], "unauthorized");
+            assert_eq!(body["error"]["message"], "missing or invalid API key");
+        }
+        server.abort();
     }
 
     #[tokio::test]

@@ -500,11 +500,13 @@ async fn run_serve(
     } else {
         let addr = parse_local_http_addr(&http_bind)?;
         let ingest_admission = http::IngestAdmission::from_env()?;
+        let api_key_auth = http::ApiKeyAuth::from_env();
         let state = http::AppState {
             out_dir: Arc::new(out.clone()),
             broadcast_tx: bcast_tx.clone(),
             http_metrics: Arc::new(metrics::HttpMetrics::default()),
             ingest_admission,
+            api_key_auth,
             audit_sink: audit_sink.clone(),
         };
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();

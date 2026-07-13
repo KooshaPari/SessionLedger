@@ -6,6 +6,22 @@ fails at startup if `--http-bind` is a wildcard or non-loopback address. Put an
 authenticated, policy-enforcing proxy in front of a separately reviewed build
 instead of exposing this API directly.
 
+## Optional API-key gate
+
+Loopback is the default trust boundary. If `SL_API_KEY` is set to a non-empty
+value, mutating HTTP endpoints additionally require one of these headers:
+
+```text
+Authorization: Bearer <SL_API_KEY>
+X-API-Key: <SL_API_KEY>
+```
+
+Unauthenticated mutating requests return `401` with the API error envelope. Read
+endpoints such as `/healthz`, `/api/bundles`, and `/api/stream` remain governed
+by the loopback bind restriction. Leave `SL_API_KEY` unset for the default local
+desktop workflow; set it when a local automation, proxy, or browser extension
+needs an explicit shared secret for writes.
+
 ## Ingest admission controls
 
 `POST /api/ingest` has process-local body-size and concurrency limits:

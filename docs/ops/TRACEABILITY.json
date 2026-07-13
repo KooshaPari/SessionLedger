@@ -1,6 +1,6 @@
 {
   "schema": "sessionledger.traceability/v1",
-  "updated": "2026-07-12",
+  "updated": "2026-07-13",
   "status_vocabulary": [
     "done",
     "partial",
@@ -9,9 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "273/402",
-    "pct": 68,
-    "grade": "C"
+    "score": "280/402",
+    "pct": 70,
+    "grade": "C",
+    "commit": "fe9e26b",
+    "wave": "Wave-9"
   },
   "fr": [
     {
@@ -152,6 +154,22 @@
     {"id": "WBS-8.1", "status": "done"},
     {"id": "WBS-8.2", "status": "partial"},
     {"id": "WBS-8.3", "status": "done"},
+    {
+      "id": "WBS-8.4",
+      "status": "done",
+      "evidence": [
+        ".github/workflows/release.yml",
+        "scripts/repro-check.ps1",
+        "docs/ops/local-trust-boundary.md",
+        "tests/properties.rs",
+        "fuzz/"
+      ]
+    },
+    {
+      "id": "WBS-8.5",
+      "status": "done",
+      "evidence": ["audit/SCORECARD.md"]
+    },
     {"id": "WBS-9.1", "status": "partial"},
     {"id": "WBS-9.2", "status": "todo"},
     {"id": "WBS-9.3", "status": "partial"}
@@ -161,7 +179,7 @@
     {"id": "C01", "score": "23/30", "status": "partial"},
     {
       "id": "C02",
-      "score": "18/30",
+      "score": "21/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/http.rs",
@@ -174,7 +192,7 @@
     {"id": "C05", "score": "21/30", "status": "partial"},
 {
       "id": "C06",
-      "score": "18/30",
+      "score": "19/30",
       "status": "partial",
       "evidence": [
         "scripts/repro-check.ps1",
@@ -185,7 +203,7 @@
     },
     {
       "id": "C07",
-      "score": "18/30",
+      "score": "21/30",
       "status": "partial",
       "evidence": [
         "tests/properties.rs",

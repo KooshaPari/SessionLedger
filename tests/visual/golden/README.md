@@ -1,8 +1,9 @@
-# Golden screenshot baselines (optional)
+# Golden screenshot baselines
 
-Place approved PNGs here for the optional Playwright harness. The first
+Place approved PNGs here for the Playwright visual harness. The first
 comparison is wired to `e1-bundle-empty.png`; generate it intentionally with
-the update command in [`../README.md`](../README.md), inspect it, then commit it.
+the update command in [`../README.md`](../README.md), inspect it, document it in
+[`../PROVENANCE.md`](../PROVENANCE.md), then commit it.
 
 Reserved names:
 

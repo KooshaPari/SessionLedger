@@ -12,6 +12,7 @@ P0 product work. Remaining deep-obs work tracks [issue #65](https://github.com/K
 | Readiness | `GET /readyz` | Returns `200` + `ready` when `out_dir` exists; else `503`. Used by process-compose. |
 | Metrics | `GET /api/metrics` | Aggregated bundle stats: totals, avg tokens, model + daily histograms (`crates/sl-daemon/src/metrics.rs`). |
 | Prometheus RED metrics | `GET /metrics` | Process-local request count, HTTP errors, and request-duration sum/count. |
+| Local pprof debug | `GET /debug/pprof/*` | Optional loopback-only pprof-style surface when `SL_ENABLE_PPROF=1`. Disabled by default. |
 | Live events | `GET /api/stream` | SSE of newly written `*.okf.json` paths (viewer LiveFeed). |
 | Replay | `GET /api/replay/:id` | SSE entity playback (not ops metrics; product replay). |
 
@@ -175,6 +176,29 @@ Remaining future work:
 
 Operators without the `otel` feature continue to rely on `/healthz`, `/readyz`,
 `/api/metrics`, `/metrics`, and process logs.
+
+## Local pprof-style profiling
+
+Continuous profiling is intentionally local-only and off by default. The daemon's
+HTTP bind parser still rejects non-loopback addresses, and the debug routes are
+only registered when explicitly enabled:
+
+```bash
+SL_ENABLE_PPROF=1 sl serve --http-bind 127.0.0.1:8080
+```
+
+Available debug paths:
+
+| Path | Status | Notes |
+|------|--------|-------|
+| `GET /debug/pprof/cmdline` | `200` | Returns null-delimited process argv bytes, matching the pprof-style cmdline surface. |
+| `GET /debug/pprof/profile` | `501` | CPU sampling is not implemented in the default cross-platform build. The endpoint exists as the gated profiling surface and returns explanatory bytes. |
+
+The default build avoids pulling in a sampler that would make Windows + Linux CI
+fragile. If deeper profiling becomes a hard requirement, prefer adding a
+feature-gated sampler (`pprof` on supported targets, `jemalloc_pprof` for
+allocator profiles, or `tokio-console` for async task diagnostics) without
+changing the default dependency graph.
 
 ## HTTP trace-context sketch
 

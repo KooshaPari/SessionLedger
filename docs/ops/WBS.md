@@ -29,7 +29,7 @@ without a new audit.
 | WBS-4.2 | P4 FTS recall via context-mode and explicit TUI decision | partial | human | `docs/DESIGN.md` §3, §7; `crates/sl-viewer/` | DESIGN P4 residual; C00, C11 |
 | WBS-5.1 | P5 deterministic dedup merge and crash/lost-work recovery E2E | done | machine | `src/domain/merge.rs`; `src/domain/worklog.rs`; `tests/merge_recovery.rs` | FR-011; T-024, T-035; C03 |
 | WBS-6.1 | P6 85% coverage gate and deterministic golden corpus | done | machine | `.github/workflows/ci.yml`; `tests/okf_golden.rs`; `tests/fixtures/okf/` | T-037, T-038; C01, C08 |
-| WBS-6.2 | P6 property tests, fuzzing, race checks, and enforced performance budgets | todo | machine | `benches/pipeline.rs`; `audit/.lane-c00/C00.md`; `audit/.lane-c07/C07.md` | DESIGN P6 residual; C00 L6-L8; C07 L66-L68 |
+| WBS-6.2 | P6 property tests, fuzzing, race checks, and enforced performance budgets | partial | machine | `tests/properties.rs`; `fuzz/fuzz_targets/okf_roundtrip.rs`; `.github/workflows/ci.yml`; `CONTRIBUTING.md`; `benches/pipeline.rs` | DESIGN P6 residual; C00 L6-L8; C07 L66-L68 |
 
 ## audit-v38 waves
 

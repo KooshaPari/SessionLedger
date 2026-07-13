@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: ["a11y.spec.js", "visual.spec.js"],
+  testMatch: ["a11y.spec.js", "responsive.spec.js", "visual.spec.js"],
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",

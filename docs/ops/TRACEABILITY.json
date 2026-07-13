@@ -9,8 +9,8 @@
     "na"
   ],
   "overall_audit": {
-    "score": "268/402",
-    "pct": 67,
+    "score": "273/402",
+    "pct": 68,
     "grade": "C"
   },
   "fr": [
@@ -142,22 +142,22 @@
     {"id": "WBS-7.6", "status": "done"},
     {"id": "WBS-8.1", "status": "done"},
     {"id": "WBS-8.2", "status": "todo"},
-    {"id": "WBS-8.3", "status": "blocked"},
+    {"id": "WBS-8.3", "status": "done"},
     {"id": "WBS-9.1", "status": "partial"},
     {"id": "WBS-9.2", "status": "todo"},
     {"id": "WBS-9.3", "status": "partial"}
   ],
   "clusters": [
     {"id": "C00", "score": "22/30", "status": "partial"},
-    {"id": "C01", "score": "22/30", "status": "partial"},
+    {"id": "C01", "score": "23/30", "status": "partial"},
     {"id": "C02", "score": "18/30", "status": "partial"},
-    {"id": "C03", "score": "31/36", "status": "partial"},
+    {"id": "C03", "score": "32/36", "status": "partial"},
     {"id": "C04", "score": "22/30", "status": "partial"},
     {"id": "C05", "score": "21/30", "status": "partial"},
     {"id": "C06", "score": "18/30", "status": "partial"},
     {"id": "C07", "score": "18/30", "status": "partial"},
     {"id": "C08", "score": "19/30", "status": "partial"},
-    {"id": "C09", "score": "27/45", "status": "partial"},
+    {"id": "C09", "score": "30/45", "status": "partial"},
     {"id": "C10", "score": "25/36", "status": "partial"},
     {"id": "C11", "score": "25/45", "status": "partial"}
   ]

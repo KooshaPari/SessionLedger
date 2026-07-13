@@ -150,6 +150,18 @@ pub fn App() -> Element {
     let mut active_tab: Signal<Tab> = use_signal(|| Tab::Bundles);
     let colors = ThemeColors::dark();
 
+    #[cfg(feature = "web")]
+    use_effect(|| {
+        let _ = document::eval(
+            r#"
+            window.setTimeout(() => {
+              const splash = document.querySelector('.launch-splash');
+              if (splash) splash.remove();
+            }, 1800);
+            "#,
+        );
+    });
+
     let tab_body = match active_tab() {
         Tab::Bundles => rsx! { BundlesTab {} },
         Tab::History => rsx! { HistoryTimeline {} },
@@ -175,6 +187,10 @@ pub fn App() -> Element {
                     --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                     --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
                     --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                    --sl-font-caption: var(--font-ui);
+                    --sl-font-size-caption: 0.75rem;
+                    --sl-line-height-caption: 1.35;
+                    --sl-measure-max: 65ch;
                     --sl-bg: #f6f8fa;
                     --sl-surface: #ffffff;
                     --sl-surface-muted: #eef2f7;
@@ -268,9 +284,43 @@ pub fn App() -> Element {
                 .detail h1 {{ font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0 0 24px 0; color: var(--sl-text); }}
                 .detail-section {{ margin-bottom: 24px; }}
                 .detail-section h3 {{ font-family: var(--font-ui); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-accent); margin: 0 0 8px 0; }}
-                .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: var(--sl-text); }}
-                .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; }}
+                .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: var(--sl-text); max-width: var(--sl-measure-max); }}
+                .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; max-width: var(--sl-measure-max); }}
                 .detail-section li {{ font-size: 13px; line-height: 1.7; color: var(--sl-text-muted); }}
+                .caption {{ font-family: var(--sl-font-caption); font-size: var(--sl-font-size-caption); line-height: var(--sl-line-height-caption); color: var(--sl-text-muted); }}
+                .launch-splash {{
+                    position: fixed;
+                    inset: 0;
+                    z-index: 1000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: var(--sl-bg);
+                    animation: splash-dismiss var(--sl-motion-medium) var(--sl-ease-out) forwards;
+                    animation-delay: 1.2s;
+                }}
+                .launch-splash-inner {{ text-align: center; }}
+                .launch-splash-mark {{
+                    display: block;
+                    font-family: var(--font-display);
+                    font-size: 1.75rem;
+                    font-weight: 600;
+                    color: var(--sl-accent);
+                    letter-spacing: -0.02em;
+                }}
+                .launch-splash-caption {{
+                    display: block;
+                    margin-top: var(--sl-space-sm);
+                    font-family: var(--sl-font-caption);
+                    font-size: var(--sl-font-size-caption);
+                    line-height: var(--sl-line-height-caption);
+                    color: var(--sl-text-muted);
+                    text-transform: uppercase;
+                    letter-spacing: 0.12em;
+                }}
+                @keyframes splash-dismiss {{
+                    to {{ opacity: 0; visibility: hidden; pointer-events: none; }}
+                }}
                 .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sl-text-muted); font-size: 14px; }}
                 .tab-bar {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--sl-border); background: var(--sl-surface-muted); }}
                 .tab {{ flex: 1; padding: var(--sl-space-md) var(--sl-space-md); text-align: center; cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); border: none; border-bottom: 2px solid transparent; background: transparent; transition: all var(--sl-motion-fast) var(--sl-ease-out); }}
@@ -346,6 +396,7 @@ pub fn App() -> Element {
                 .bundles-view {{ display: contents; }}
                 .viewer-main {{ flex: 1; min-width: 0; width: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
+                .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
                 @media (max-width: 600px) {{
                     .tab {{
                         min-height: 44px;
@@ -397,10 +448,22 @@ pub fn App() -> Element {
                         transition-duration: 0.01ms !important;
                         scroll-behavior: auto !important;
                     }}
+                    .launch-splash {{
+                        animation: none;
+                        opacity: 0;
+                        visibility: hidden;
+                        pointer-events: none;
+                    }}
                 }}
             "#,
         }
         div { class: "app",
+            div { class: "launch-splash", role: "presentation",
+                div { class: "launch-splash-inner",
+                    span { class: "launch-splash-mark", "SessionLedger" }
+                    span { class: "launch-splash-caption", "Viewer" }
+                }
+            }
             div { class: "sidebar",
                 nav {
                     "aria-label": "Primary viewer navigation",

@@ -83,6 +83,8 @@ Family: **Lab-Coat** (R&D). Light lab-bench base; cool cobalt primary; orange li
 | `--font-body` | Reading text and prose content |
 | `--font-mono` | Code, paths, timestamps, replay terminal output |
 | `--font-ui` | Buttons, tabs, labels, controls, dense app chrome |
+| `--font-caption` | Captions, badges, metadata, helper copy below 14px body |
+| `--sl-measure-max` | Maximum line length for prose blocks (65ch) |
 
 ---
 

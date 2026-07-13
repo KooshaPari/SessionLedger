@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "285/402",
-    "pct": 71,
+    "score": "294/402",
+    "pct": 73,
     "grade": "C",
-    "commit": "dcde091",
-    "wave": "Wave-10"
+    "commit": "fa65de4",
+    "wave": "Wave-11"
   },
   "fr": [
     {
@@ -394,6 +394,23 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.8",
+      "status": "done",
+      "evidence": [
+        ".github/workflows/hermetic.yml",
+        "crates/sl-daemon/src/audit.rs",
+        "tests/race_smoke.rs",
+        "docs/adr/0002-mobile-presence.md"
+      ]
+    },
+    {
+      "id": "WBS-8.9",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -409,7 +426,7 @@
     },
     {
       "id": "C02",
-      "score": "21/30",
+      "score": "22/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/http.rs",
@@ -434,7 +451,7 @@
     },
     {
       "id": "C06",
-      "score": "19/30",
+      "score": "22/30",
       "status": "partial",
       "evidence": [
         "scripts/repro-check.ps1",
@@ -445,7 +462,7 @@
     },
     {
       "id": "C07",
-      "score": "21/30",
+      "score": "23/30",
       "status": "partial",
       "evidence": [
         "tests/properties.rs",
@@ -471,7 +488,7 @@
     },
     {
       "id": "C11",
-      "score": "25/45",
+      "score": "28/45",
       "status": "partial"
     }
   ]

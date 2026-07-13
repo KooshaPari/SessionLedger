@@ -37,6 +37,10 @@ jobs:
   build:
     name: build · ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -94,6 +98,12 @@ jobs:
           fi
 
           echo "ASSET_PATH=${DIR}.${{ matrix.archive }}" >> "$GITHUB_ENV"
+
+      - name: attest platform artifact
+        if: github.repository == 'KooshaPari/SessionLedger'
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: ${{ env.ASSET_PATH }}
 
       - name: upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

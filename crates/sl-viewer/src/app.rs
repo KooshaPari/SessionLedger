@@ -186,6 +186,21 @@ pub fn App() -> Element {
                     --sl-accent-warning: #f97316;
                     --sl-danger: #b91c1c;
                     --sl-danger-surface: #fef2f2;
+                    --sl-space-xs: 4px;
+                    --sl-space-sm: 8px;
+                    --sl-space-md: 12px;
+                    --sl-space-lg: 16px;
+                    --sl-space-xl: 20px;
+                    --sl-space-2xl: 32px;
+                    --sl-radius-sm: 4px;
+                    --sl-radius-md: 6px;
+                    --sl-radius-lg: 8px;
+                    --sl-radius-pill: 10px;
+                    --sl-motion-fast: 150ms;
+                    --sl-motion-medium: 220ms;
+                    --sl-motion-slow: 1.8s;
+                    --sl-ease-out: ease-out;
+                    --sl-ease-in-out: ease-in-out;
                 }}
                 :root[data-theme="dark"] {{
                     color-scheme: dark;
@@ -201,12 +216,27 @@ pub fn App() -> Element {
                     --sl-accent-warning: #f97316;
                     --sl-danger: #f87171;
                     --sl-danger-surface: #2a1a1a;
+                    --sl-space-xs: 4px;
+                    --sl-space-sm: 8px;
+                    --sl-space-md: 12px;
+                    --sl-space-lg: 16px;
+                    --sl-space-xl: 20px;
+                    --sl-space-2xl: 32px;
+                    --sl-radius-sm: 4px;
+                    --sl-radius-md: 6px;
+                    --sl-radius-lg: 8px;
+                    --sl-radius-pill: 10px;
+                    --sl-motion-fast: 150ms;
+                    --sl-motion-medium: 220ms;
+                    --sl-motion-slow: 1.8s;
+                    --sl-ease-out: ease-out;
+                    --sl-ease-in-out: ease-in-out;
                 }}
                 body {{ margin: 0; font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
                 .app {{ display: flex; height: 100vh; }}
                 .sidebar {{ width: 340px; min-width: 340px; border-right: 1px solid var(--sl-border); overflow-y: auto; background: var(--sl-surface); }}
                 .sidebar h2 {{ padding: 16px 20px; margin: 0; font-family: var(--font-ui); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-text-muted); border-bottom: 1px solid var(--sl-border); }}
-                .bundle-entry {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background 0.15s; }}
+                .bundle-entry {{ padding: var(--sl-space-md) var(--sl-space-xl); cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background var(--sl-motion-fast) var(--sl-ease-out); }}
                 .bundle-entry:hover {{ background: var(--sl-surface-muted); }}
                 .bundle-entry.selected {{ background: var(--sl-surface-muted); border-left: 3px solid var(--sl-accent); }}
                 .bundle-entry .source {{ font-size: 13px; font-weight: 600; color: var(--sl-text); }}
@@ -224,7 +254,7 @@ pub fn App() -> Element {
                 .detail-section li {{ font-size: 13px; line-height: 1.7; color: var(--sl-text-muted); }}
                 .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sl-text-muted); font-size: 14px; }}
                 .tab-bar {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--sl-border); background: var(--sl-surface-muted); }}
-                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); border: none; border-bottom: 2px solid transparent; background: transparent; transition: all 0.15s; }}
+                .tab {{ flex: 1; padding: var(--sl-space-md) var(--sl-space-md); text-align: center; cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); border: none; border-bottom: 2px solid transparent; background: transparent; transition: all var(--sl-motion-fast) var(--sl-ease-out); }}
                 .tab:hover {{ color: var(--sl-text); background: color-mix(in srgb, var(--sl-accent) 8%, transparent); }}
                 .tab.active {{ color: var(--sl-accent); border-bottom-color: var(--sl-accent); background: var(--sl-surface); }}
                 .tab:focus {{ outline: none; }}
@@ -237,7 +267,7 @@ pub fn App() -> Element {
                 .session-list {{ display: flex; flex-direction: column; height: 100%; }}
                 .search-input {{ width: 100%; padding: 10px 16px; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: 6px; color: var(--sl-text); font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
                 .session-count {{ padding: 6px 20px; font-size: 11px; color: var(--sl-text-muted); }}
-                .session-item {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background 0.15s; }}
+                .session-item {{ padding: var(--sl-space-md) var(--sl-space-xl); cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background var(--sl-motion-fast) var(--sl-ease-out); }}
                 .session-item:hover {{ background: var(--sl-surface-muted); }}
                 .session-item.selected {{ background: var(--sl-surface-muted); border-left: 3px solid var(--sl-accent); }}
                 .session-source {{ font-size: 13px; font-weight: 600; color: var(--sl-text); }}
@@ -259,39 +289,39 @@ pub fn App() -> Element {
                 .search-results {{ flex: 1; overflow-y: auto; }}
                 .search-error {{ padding: 10px 16px; font-size: 13px; color: var(--sl-danger); background: var(--sl-danger-surface); border-bottom: 1px solid var(--sl-border); }}
                 .live-feed {{ display: flex; flex-direction: column; height: 100%; }}
-                .live-feed-header {{ display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #2a2d35; background: #13151c; }}
-                .live-feed-title {{ font-size: 13px; font-weight: 600; color: #c8cdd6; flex: 1; }}
+                .live-feed-header {{ display: flex; align-items: center; gap: var(--sl-space-md); padding: var(--sl-space-md) var(--sl-space-lg); border-bottom: 1px solid var(--sl-border); background: var(--sl-bg); }}
+                .live-feed-title {{ font-size: 13px; font-weight: 600; color: var(--sl-text); flex: 1; }}
                 .feed-status {{ font-size: 11px; font-weight: 600; }}
-                .feed-status.live {{ color: #4ade80; }}
-                .feed-status.disconnected {{ color: #f87171; }}
-                .feed-status.connecting {{ color: #facc15; }}
-                .retry-btn {{ padding: 3px 10px; font-size: 11px; font-weight: 600; background: #252836; border: 1px solid #2a2d35; border-radius: 4px; color: #8b8fa3; cursor: pointer; }}
-                .retry-btn:hover {{ background: #2f3244; color: #c8cdd6; }}
-                .live-feed-list {{ flex: 1; overflow-y: auto; padding: 8px 0; }}
-                .feed-empty {{ padding: 16px 20px; font-size: 13px; color: #8b8fa3; }}
-                .feed-entry {{ display: flex; gap: 10px; align-items: baseline; padding: 6px 16px; border-bottom: 1px solid #1e2029; font-family: monospace; }}
-                .feed-entry:hover {{ background: #1c1f2b; }}
-                .feed-ts {{ font-size: 11px; color: #8b8fa3; white-space: nowrap; }}
-                .feed-path {{ font-size: 12px; color: #a1b4ff; word-break: break-all; }}
-                .compare-btn {{ padding: 2px 8px; font-size: 10px; font-weight: 600; background: #1e2435; border: 1px solid #2a2d35; border-radius: 4px; color: #8b8fa3; cursor: pointer; margin-left: 6px; }}
-                .compare-btn:hover {{ background: #2a2d45; color: #c8cdd6; }}
-                .compare-btn.active {{ background: #2a1a3a; color: #c084fc; border-color: #4a2a6a; }}
-                .diff-panel {{ border-top: 2px solid #6c8cff; background: #0d0f18; padding: 0; flex-shrink: 0; max-height: 340px; overflow-y: auto; }}
-                .diff-header {{ display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid #2a2d35; background: #13151c; }}
-                .diff-title {{ flex: 1; font-size: 13px; font-weight: 600; color: #c8cdd6; }}
-                .diff-badge {{ display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; background: #2a1a1a; color: #f87171; }}
-                .diff-badge-same {{ background: #1a3a2a; color: #4ade80; }}
-                .diff-close {{ cursor: pointer; font-size: 14px; color: #8b8fa3; padding: 2px 6px; border-radius: 4px; }}
-                .diff-close:hover {{ background: #252836; color: #c8cdd6; }}
-                .diff-col-headers {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #8b8fa3; border-bottom: 1px solid #2a2d35; background: #13151c; }}
+                .feed-status.live {{ color: var(--sl-accent-secondary); }}
+                .feed-status.disconnected {{ color: var(--sl-danger); }}
+                .feed-status.connecting {{ color: var(--sl-accent-warning); }}
+                .retry-btn {{ padding: var(--sl-space-xs) var(--sl-space-md); font-size: 11px; font-weight: 600; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); color: var(--sl-text-muted); cursor: pointer; transition: background var(--sl-motion-fast) var(--sl-ease-out), color var(--sl-motion-fast) var(--sl-ease-out); }}
+                .retry-btn:hover {{ background: color-mix(in srgb, var(--sl-accent) 8%, var(--sl-surface-muted)); color: var(--sl-text); }}
+                .live-feed-list {{ flex: 1; overflow-y: auto; padding: var(--sl-space-sm) 0; }}
+                .feed-empty {{ padding: var(--sl-space-lg) var(--sl-space-xl); font-size: 13px; color: var(--sl-text-muted); }}
+                .feed-entry {{ display: flex; gap: var(--sl-space-md); align-items: baseline; padding: var(--sl-space-sm) var(--sl-space-lg); border-bottom: 1px solid var(--sl-border); font-family: var(--font-mono); transition: background var(--sl-motion-fast) var(--sl-ease-out); }}
+                .feed-entry:hover {{ background: var(--sl-surface-muted); }}
+                .feed-ts {{ font-size: 11px; color: var(--sl-text-muted); white-space: nowrap; }}
+                .feed-path {{ font-size: 12px; color: var(--sl-accent); word-break: break-all; }}
+                .compare-btn {{ padding: 2px var(--sl-space-sm); font-size: 10px; font-weight: 600; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); color: var(--sl-text-muted); cursor: pointer; margin-left: var(--sl-space-sm); transition: background var(--sl-motion-fast) var(--sl-ease-out), color var(--sl-motion-fast) var(--sl-ease-out); }}
+                .compare-btn:hover {{ background: color-mix(in srgb, var(--sl-accent) 8%, var(--sl-surface-muted)); color: var(--sl-text); }}
+                .compare-btn.active {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); border-color: var(--sl-accent); }}
+                .diff-panel {{ border-top: 2px solid var(--sl-accent); background: var(--sl-bg); padding: 0; flex-shrink: 0; max-height: 340px; overflow-y: auto; }}
+                .diff-header {{ display: flex; align-items: center; padding: var(--sl-space-md) var(--sl-space-lg); border-bottom: 1px solid var(--sl-border); background: var(--sl-bg); }}
+                .diff-title {{ flex: 1; font-size: 13px; font-weight: 600; color: var(--sl-text); }}
+                .diff-badge {{ display: inline-block; margin-left: var(--sl-space-sm); padding: 1px var(--sl-space-sm); border-radius: var(--sl-radius-pill); font-size: 11px; font-weight: 600; background: var(--sl-danger-surface); color: var(--sl-danger); }}
+                .diff-badge-same {{ background: color-mix(in srgb, var(--sl-accent-secondary) 18%, transparent); color: var(--sl-accent-secondary); }}
+                .diff-close {{ cursor: pointer; font-size: 14px; color: var(--sl-text-muted); padding: 2px var(--sl-space-sm); border-radius: var(--sl-radius-sm); transition: background var(--sl-motion-fast) var(--sl-ease-out), color var(--sl-motion-fast) var(--sl-ease-out); }}
+                .diff-close:hover {{ background: var(--sl-surface-muted); color: var(--sl-text); }}
+                .diff-col-headers {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: var(--sl-space-sm) var(--sl-space-lg); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); border-bottom: 1px solid var(--sl-border); background: var(--sl-bg); }}
                 .diff-rows {{ display: flex; flex-direction: column; }}
-                .diff-row {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 12px; border-bottom: 1px solid #1e2029; font-family: monospace; align-items: start; }}
-                .diff-row-changed {{ background: #1a1520; }}
-                .diff-row-changed .diff-col-a {{ color: #f87171; }}
-                .diff-row-changed .diff-col-b {{ color: #4ade80; }}
-                .diff-field-label {{ color: #8b8fa3; font-weight: 600; font-family: system-ui, sans-serif; font-size: 11px; padding-top: 1px; }}
-                .diff-col-a {{ color: #c8cdd6; overflow-wrap: break-word; }}
-                .diff-col-b {{ color: #c8cdd6; overflow-wrap: break-word; }}
+                .diff-row {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: var(--sl-space-sm) var(--sl-space-lg); font-size: 12px; border-bottom: 1px solid var(--sl-border); font-family: var(--font-mono); align-items: start; }}
+                .diff-row-changed {{ background: color-mix(in srgb, var(--sl-danger) 6%, var(--sl-surface)); }}
+                .diff-row-changed .diff-col-a {{ color: var(--sl-danger); }}
+                .diff-row-changed .diff-col-b {{ color: var(--sl-accent-secondary); }}
+                .diff-field-label {{ color: var(--sl-text-muted); font-weight: 600; font-family: var(--font-ui); font-size: 11px; padding-top: 1px; }}
+                .diff-col-a {{ color: var(--sl-text); overflow-wrap: break-word; }}
+                .diff-col-b {{ color: var(--sl-text); overflow-wrap: break-word; }}
                 .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
                 .main-upper {{ flex: 1; overflow-y: auto; }}
                 .bundles-view {{ display: contents; }}
@@ -554,7 +584,7 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
             div { class: "session-count",
                 "{count} session{plural}"
                 if props.compare_idx.is_some() {
-                    span { style: "color:#c084fc; margin-left:8px;", "compare slot active" }
+                    span { style: "color:var(--sl-accent); margin-left:var(--sl-space-sm);", "compare slot active" }
                 }
             }
             for (orig_idx, summary) in filtered.into_iter() {

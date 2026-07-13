@@ -54,3 +54,45 @@ test("viewer exposes type tokens and persists theme preference", async ({ page }
     .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
     .toBe("light");
 });
+
+test("prefers-reduced-motion flattens transition durations", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();
+
+  const reduced = await page.evaluate(() =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  expect(reduced).toBe(true);
+
+  const duration = await page.evaluate(() => {
+    const tab = document.querySelector(".tab");
+    if (!tab) return null;
+    return getComputedStyle(tab).transitionDuration;
+  });
+
+  expect(duration).not.toBeNull();
+  // Global guard in app.rs sets 0.01ms under prefers-reduced-motion: reduce.
+  // Chromium may report that as "0.01ms" or scientific "1e-05s".
+  expect(duration).toMatch(/^0(\.0\d*)?ms$|^0s$|^1e-0[45]s$/);
+});
+
+test("viewer exposes spacing and motion tokens", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();
+
+  const tokens = await page.evaluate(() => {
+    const styles = getComputedStyle(document.documentElement);
+    return {
+      spaceMd: styles.getPropertyValue("--sl-space-md").trim(),
+      radiusSm: styles.getPropertyValue("--sl-radius-sm").trim(),
+      motionFast: styles.getPropertyValue("--sl-motion-fast").trim(),
+      easeOut: styles.getPropertyValue("--sl-ease-out").trim(),
+    };
+  });
+
+  expect(tokens.spaceMd).toBe("12px");
+  expect(tokens.radiusSm).toBe("4px");
+  expect(tokens.motionFast).toBe("150ms");
+  expect(tokens.easeOut).toBe("ease-out");
+});

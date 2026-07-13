@@ -18,7 +18,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
 | Installer script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS GitHub Release artifacts |
-| Native installer scaffolds | **Partial** | Installable Windows ZIP + WiX MSI source; Linux AppImage/`.deb` developer scripts; none published |
+| Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local |
 | brew / crates.io / DMG | Deferred | Soft distribution goals |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 
@@ -28,10 +28,11 @@ From `.github/workflows/release.yml` (on `push` tags `v*`):
 
 | Target triple | Runner | Archive | Status |
 |---------------|--------|---------|--------|
-| `x86_64-unknown-linux-gnu` | `ubuntu-latest` | `.tar.gz` | Shipped |
+| `x86_64-unknown-linux-gnu` | `ubuntu-latest` | `.tar.gz` | **Shipped + smoke-tested** |
 | `x86_64-apple-darwin` | `macos-latest` | `.tar.gz` | Shipped |
 | `aarch64-apple-darwin` | `macos-latest` | `.tar.gz` | Shipped |
-| `x86_64-pc-windows-msvc` | `windows-latest` | `.zip` (`sl-viewer.exe`) | **Shipped** |
+| `x86_64-pc-windows-msvc` | `windows-latest` | `.zip` (`sl-viewer.exe`) | **Shipped + smoke-tested** |
+| Windows MSI scaffold | `windows-latest` | `.zip` (`Product.wxs` + build notes) | **Published scaffold; no MSI** |
 
 Asset names:
 
@@ -40,6 +41,7 @@ sl-viewer-<tag>-x86_64-unknown-linux-gnu.tar.gz
 sl-viewer-<tag>-x86_64-apple-darwin.tar.gz
 sl-viewer-<tag>-aarch64-apple-darwin.tar.gz
 sl-viewer-<tag>-x86_64-pc-windows-msvc.zip
+sl-viewer-<tag>-windows-msi-scaffold.zip
 SHA256SUMS
 session-ledger.cdx.json
 SHA256SUMS.sigstore.json
@@ -51,20 +53,24 @@ best-effort. OIDC, attestation, cosign installation, signing, or upload failures
 do not fail or retract the otherwise valid unsigned Release.
 
 **Windows matrix status:** release CI produces an unsigned
-`x86_64-pc-windows-msvc` zip. On a Windows host, the local
+`x86_64-pc-windows-msvc` zip, then a dependent `windows-latest` job downloads
+and extracts that artifact and runs `sl-viewer.exe --version`. A matching Linux
+job validates the `.tar.gz` on `ubuntu-latest`; the Release is not created
+unless both smoke jobs pass. On a Windows host, the local
 `package-windows` target produces an equivalent versioned portable ZIP via
 `scripts/package-windows.ps1`. Day-to-day `ci.yml` remains Linux-only
 (Phenotype billing policy); Windows coverage is release-tag scoped, not PR CI.
-The installable ZIP, WiX MSI source, and Linux package scripts are **partial**
-developer scaffolds and are not release-CI outputs. MSI publication and
-Authenticode signing remain explicitly deferred.
+Release CI also attaches a ZIP containing the WiX MSI source and build notes,
+but does not build or claim an MSI. The installable-script layer, WiX MSI, and
+Linux package scripts remain **partial** developer scaffolds. MSI publication
+and Authenticode signing remain explicitly deferred.
 
 ### Installer matrix
 
 | Platform / format | Status | Current capability |
 |-------------------|--------|--------------------|
-| Windows installable ZIP | **Partial** | Per-user LocalAppData install, Start Menu shortcut, uninstall registration |
-| Windows MSI / WiX v4 | **Partial** | Build notes and `Product.wxs`; local evaluation only |
+| Windows installable ZIP | **Partial, CI-smoked** | Portable release binary is download/extract/execute-smoked; local package adds per-user install scripts |
+| Windows MSI / WiX v4 | **Partial, scaffold published** | Release source/docs archive plus local build notes and `Product.wxs`; no MSI output |
 | Linux AppImage | **Partial** | Local `appimagetool` build script |
 | Linux Debian package | **Partial** | Local `dpkg-deb` build script |
 | macOS `.app` | **Partial** | Unsigned host-local bundle; no DMG/notarization |

@@ -2,8 +2,9 @@
 
 `packaging/windows/Product.wxs` is a WiX v4 starting point for a per-user MSI.
 It installs `sl-viewer.exe` below `%LOCALAPPDATA%\Programs\SessionLedger` and
-adds a Start Menu shortcut. It is not wired into release CI and no MSI is
-currently published.
+adds a Start Menu shortcut. Release CI publishes this source file and these
+build notes in `sl-viewer-<tag>-windows-msi-scaffold.zip`; it does not build or
+publish an MSI.
 
 ## Developer build
 

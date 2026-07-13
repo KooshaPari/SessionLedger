@@ -12,6 +12,7 @@
 #   sl-viewer-<version>-x86_64-apple-darwin.tar.gz
 #   sl-viewer-<version>-aarch64-apple-darwin.tar.gz
 #   sl-viewer-<version>-x86_64-pc-windows-msvc.zip
+#   sl-viewer-<version>-windows-msi-scaffold.zip
 #
 # Platform signing / notarization: DEFERRED (unsigned binaries). Release
 # checksums are signed with cosign keyless signing and release assets receive
@@ -101,9 +102,78 @@ jobs:
           path: ${{ env.ASSET_PATH }}
           if-no-files-found: error
 
+      - name: package Windows MSI scaffold
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          DIR="sl-viewer-${{ github.ref_name }}-windows-msi-scaffold"
+          mkdir -p "${DIR}/packaging/windows" "${DIR}/scripts"
+          cp packaging/windows/Product.wxs "${DIR}/packaging/windows/"
+          cp scripts/package-msi.md "${DIR}/scripts/"
+          7z a -tzip "${DIR}.zip" "${DIR}"
+          echo "MSI_SCAFFOLD=${DIR}.zip" >> "$GITHUB_ENV"
+
+      - name: upload Windows MSI scaffold
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: windows-msi-scaffold
+          path: ${{ env.MSI_SCAFFOLD }}
+          if-no-files-found: error
+
+  smoke-windows:
+    name: smoke · Windows release artifact
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: x86_64-pc-windows-msvc
+          path: artifact
+
+      - name: extract and run version
+        shell: pwsh
+        run: |
+          $archive = Get-ChildItem -LiteralPath artifact -Filter *.zip -File |
+            Select-Object -First 1
+          if (-not $archive) {
+            throw "Windows release archive was not downloaded."
+          }
+          Expand-Archive -LiteralPath $archive.FullName -DestinationPath extracted
+          $binary = Get-ChildItem -LiteralPath extracted -Filter sl-viewer.exe -File -Recurse |
+            Select-Object -First 1
+          if (-not $binary) {
+            throw "sl-viewer.exe is missing from the Windows release archive."
+          }
+          & $binary.FullName --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "sl-viewer.exe --version exited with code $LASTEXITCODE."
+          }
+
+  smoke-linux:
+    name: smoke · Linux release artifact
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: x86_64-unknown-linux-gnu
+          path: artifact
+
+      - name: extract and run version
+        shell: bash
+        run: |
+          archive="$(printf '%s\n' artifact/*.tar.gz)"
+          test -f "${archive}"
+          mkdir extracted
+          tar xzf "${archive}" -C extracted
+          binary="$(printf '%s\n' extracted/*/sl-viewer)"
+          test -x "${binary}"
+          "${binary}" --version
+
   release:
     name: create Release · attach assets
-    needs: build
+    needs: [build, smoke-windows, smoke-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -179,6 +249,7 @@ jobs:
             | `sl-viewer-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz`   | macOS (Intel)   |
             | `sl-viewer-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz`  | macOS (Apple Silicon) |
             | `sl-viewer-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip`   | Windows (x86_64) |
+            | `sl-viewer-${{ github.ref_name }}-windows-msi-scaffold.zip` | WiX v4 source + build notes (not an MSI) |
 
             Verify archive hashes with `SHA256SUMS`. CI also attempts to publish
             `SHA256SUMS.sigstore.json`, a best-effort cosign keyless signature bundle.

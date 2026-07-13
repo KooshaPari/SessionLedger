@@ -41,10 +41,16 @@ use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
 use crate::metrics::{compute_metrics, HttpMetrics};
 use crate::validation::{validate_okf_bundle, PostBundle};
+#[cfg(feature = "otel")]
+use opentelemetry::trace::{
+    SpanContext, SpanId, TraceContextExt as _, TraceFlags, TraceId, TraceState,
+};
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt as _;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info, warn, Instrument as _};
+#[cfg(feature = "otel")]
+use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 const DEFAULT_INGEST_MAX_BODY_BYTES: usize = 1_048_576;
 const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
@@ -208,6 +214,8 @@ async fn prometheus_metrics(State(state): State<AppState>) -> Response {
 }
 
 const TRACEPARENT: &str = "traceparent";
+#[cfg(feature = "otel")]
+const TRACESTATE: &str = "tracestate";
 const X_REQUEST_ID: &str = "x-request-id";
 
 #[derive(Debug, PartialEq, Eq)]
@@ -264,6 +272,26 @@ fn request_id_from_headers(headers: &HeaderMap) -> String {
         .unwrap_or_else(audit::local_request_id)
 }
 
+#[cfg(feature = "otel")]
+fn remote_parent_context(
+    headers: &HeaderMap,
+    traceparent: &TraceParent,
+) -> Option<opentelemetry::Context> {
+    let trace_id = TraceId::from_hex(&traceparent.trace_id).ok()?;
+    let span_id = SpanId::from_hex(&traceparent.parent_id).ok()?;
+    let flags = u8::from_str_radix(&traceparent.flags, 16).ok()?;
+    let trace_flags =
+        if flags & 0x01 == 0x01 { TraceFlags::SAMPLED } else { TraceFlags::default() };
+    let trace_state = headers
+        .get(TRACESTATE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<TraceState>().ok())
+        .unwrap_or_default();
+    let span_context = SpanContext::new(trace_id, span_id, trace_flags, true, trace_state);
+
+    Some(opentelemetry::Context::current().with_remote_span_context(span_context))
+}
+
 /// Count and trace every HTTP request while preserving valid upstream context.
 async fn observe_request(
     State(metrics): State<Arc<HttpMetrics>>,
@@ -296,6 +324,14 @@ async fn observe_request(
         parent_span_id = %parent_span_id,
         trace_flags = %trace_flags,
     );
+    #[cfg(feature = "otel")]
+    if let Some((_, parsed)) = propagated.as_ref() {
+        if let Some(parent_context) = remote_parent_context(request.headers(), parsed) {
+            if let Err(error) = span.set_parent(parent_context) {
+                warn!(?error, "failed to attach remote OTel parent context");
+            }
+        }
+    }
     let mut response = next.run(request).instrument(span).await;
     if let Some(value) = traceparent.and_then(|value| HeaderValue::from_str(&value).ok()) {
         response.headers_mut().insert(TRACEPARENT, value);
@@ -807,6 +843,27 @@ mod tests {
         assert!(
             parse_traceparent("00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01").is_none()
         );
+    }
+
+    #[cfg(feature = "otel")]
+    #[test]
+    fn builds_remote_otel_parent_context_from_trace_context_headers() {
+        use opentelemetry::trace::TraceContextExt as _;
+
+        let traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+        let parsed = parse_traceparent(traceparent).unwrap();
+        let mut headers = HeaderMap::new();
+        headers.insert(TRACEPARENT, HeaderValue::from_static(traceparent));
+        headers.insert(TRACESTATE, HeaderValue::from_static("rojo=00f067aa0ba902b7"));
+
+        let context = remote_parent_context(&headers, &parsed).unwrap();
+        let span_context = context.span().span_context().clone();
+
+        assert!(span_context.is_remote());
+        assert_eq!(span_context.trace_id().to_string(), parsed.trace_id);
+        assert_eq!(span_context.span_id().to_string(), parsed.parent_id);
+        assert!(span_context.is_sampled());
+        assert_eq!(span_context.trace_state().header(), "rojo=00f067aa0ba902b7");
     }
 
     #[test]

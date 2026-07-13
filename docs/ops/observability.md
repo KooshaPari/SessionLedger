@@ -21,7 +21,8 @@ Scheduled evidence: `.github/workflows/ops-load.yml` runs a weekly and manual
 daemon load smoke against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics`.
 Prometheus SLO alert rules live in
 [`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) and are meant
-to be loaded with Prometheus `rule_files`.
+to be loaded with Prometheus `rule_files`. The Alertmanager routing placeholder
+lives in [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml).
 
 ### `/healthz` vs `/readyz`
 
@@ -107,6 +108,37 @@ See also [`alerts.md`](alerts.md) for copy-paste stub definitions and
 [`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) for
 Prometheus-loadable SLO alert rules.
 
+### Prometheus and Alertmanager loading
+
+Load the SLO rules from `prometheus.yml`:
+
+```yaml
+rule_files:
+  - /etc/prometheus/rules/sessionledger-slo.yaml
+```
+
+Point Prometheus at Alertmanager if you want the rules to route beyond the
+Prometheus UI:
+
+```yaml
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+```
+
+Start Alertmanager with the SessionLedger placeholder config after replacing
+the webhook URL with an operator-owned endpoint:
+
+```bash
+alertmanager --config.file=/etc/alertmanager/alertmanager.yaml
+```
+
+The in-tree placeholder routes `job="sl-daemon"` alerts to
+`sessionledger-webhook-placeholder`; it is evidence wiring, not a production
+receiver.
+
 ## OpenTelemetry (feature-gated sketch — issue #65)
 
 Tracked under [issue #65](https://github.com/KooshaPari/SessionLedger/issues/65)
@@ -120,7 +152,7 @@ are addressed here; **remaining code work**:
 | `tracing` subscriber + env log discipline | **Done** | fmt subscriber + `RUST_LOG` |
 | Optional production JSON logs | **Done** | `json-logs` feature + `SL_LOG_FORMAT=json` |
 | Soft-goal OTLP export sketch | **Feature-gated sketch** | `otel` Cargo feature; traces only |
-| W3C `traceparent` propagation | **HTTP sketch** | Valid v00 context parsed, attached to request span, echoed on response |
+| W3C `traceparent` propagation | **Done for HTTP ingress** | Valid v00 context parsed, set as OTel parent when `otel` is enabled, echoed on response |
 | Prometheus / OTLP RED exporters | **Prometheus HTTP RED subset done** | `/metrics`, parallel to `/api/metrics` |
 
 Build the optional exporter without changing the default dependency graph:
@@ -149,9 +181,11 @@ Operators without the `otel` feature continue to rely on `/healthz`, `/readyz`,
 Every HTTP route accepts a W3C `traceparent` header in the common
 `00-<trace-id>-<parent-id>-<flags>` form. Valid lowercase contexts are attached
 to the `http.request` tracing span as `trace_id`, `parent_span_id`, and
-`trace_flags`, then echoed on the response. Invalid headers are ignored. This
-is deliberately a propagation sketch: it does not create a replacement trace
-ID and does not yet connect context to ETL adapter spans.
+`trace_flags`, then echoed on the response. When the `otel` feature is enabled,
+the same parsed context becomes the remote OpenTelemetry parent context for the
+request span; `tracestate` is preserved when present and valid. Invalid headers
+are ignored. This does not create a replacement trace ID and does not yet
+connect context to ETL adapter spans.
 
 ## Production log format
 

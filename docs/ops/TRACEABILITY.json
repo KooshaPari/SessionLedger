@@ -780,12 +780,8 @@
         "renovate.json",
         "docs/adr/0004-commit-signing-policy.md",
         "scripts/commit-signing-check.ps1",
-        "scripts/branch-protection-check.ps1",
-        "docs/ops/branch-protection.md",
-        ".github/workflows/branch-protection.yml",
         "CONTRIBUTING.md"
-      ],
-      "remaining": "Maintainer 2FA attestation (not machine-verifiable from repo)"
+      ]
     },
     {
       "id": "C05",

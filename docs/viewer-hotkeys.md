@@ -30,6 +30,10 @@ Search, Timeline, and Replay.
 (`role="dialog"` with a `listbox` of options). Current commands:
 
 - **Focus search** — switch to the Search tab and focus the first filter field.
+- **Open keyboard help** — open the shortcut reference overlay (`?` equivalent).
+- **Next view tab** — select and focus the next tab, wrapping from Replay to Bundles.
+- **Previous view tab** — select and focus the previous tab, wrapping from Bundles to Replay.
+- **Clear search** — switch to Search and reset filters, results, and errors (same as `Escape` on the Search view).
 - **Toggle theme** — switch between light and dark theme.
 
 Arrow keys move the active option; Enter runs it. Escape closes the palette.

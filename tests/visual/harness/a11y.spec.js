@@ -104,6 +104,10 @@ test("Ctrl+K opens command palette and Escape closes it", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Command palette" })).toBeVisible();
   await expect(page.getByRole("listbox", { name: "Viewer commands" })).toBeVisible();
   await expect(page.getByRole("option", { name: /Focus search/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Open keyboard help/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Next view tab/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Previous view tab/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Clear search/ })).toBeVisible();
   await expect(page.getByRole("option", { name: /Toggle theme/ })).toBeVisible();
 
   await page.keyboard.press("Escape");
@@ -121,6 +125,45 @@ test("command palette Focus search switches to Search and focuses the filter", a
     "true",
   );
   await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeFocused();
+});
+
+test("command palette Open keyboard help opens the help overlay", async ({ page }) => {
+  await page.goto("/");
+  const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
+  await page.keyboard.press("Control+k");
+  await page.getByRole("option", { name: /Open keyboard help/ }).click();
+  await expect(helpDialog).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Keyboard shortcuts" })).toBeVisible();
+});
+
+test("command palette Next view tab advances the active tab", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("tab", { name: "Bundles" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.keyboard.press("Control+k");
+  await page.getByRole("option", { name: /Next view tab/ }).click();
+  await expect(page.getByRole("tab", { name: "History" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("tab", { name: "History" })).toBeFocused();
+});
+
+test("command palette Clear search resets filters on the Search tab", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Search", exact: true }).click();
+  const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
+  await since.fill("2026-01-01");
+  await page.keyboard.press("Control+k");
+  await page.getByRole("option", { name: /Clear search/ }).click();
+  await expect(page.getByRole("tab", { name: "Search" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(since).toHaveValue("");
+  await expect(since).toBeFocused();
 });
 
 test("primary controls expose stable accessible names", async ({ page }) => {
@@ -278,7 +321,7 @@ test("help overlay lists every shortcut row for keyboard efficiency", async ({ p
   await page.goto("/");
   await page.getByRole("button", { name: "Help (?)" }).click();
   const rows = page.locator(".help-overlay-table tbody tr");
-  await expect(rows).toHaveCount(11);
+  await expect(rows).toHaveCount(12);
   await expect(page.getByRole("dialog")).toHaveAttribute("aria-labelledby", "help-overlay-title");
   await expect(page.getByRole("columnheader", { name: "Shortcut" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Action" })).toBeVisible();

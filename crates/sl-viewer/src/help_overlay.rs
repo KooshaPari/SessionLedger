@@ -23,6 +23,11 @@ pub const SHORTCUTS: &[HelpShortcut] = &[
         action: "Open or close the command palette.",
     },
     HelpShortcut {
+        keys: "Arrow keys + Enter",
+        scope: "Command palette",
+        action: "Move through commands and run focus search, open help, switch tabs, clear search, or toggle theme.",
+    },
+    HelpShortcut {
         keys: "Tab / Shift+Tab",
         scope: "Whole viewer",
         action: "Move through focus order. The active view tab is the only tab stop in the tablist before panel controls.",

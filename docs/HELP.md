@@ -20,8 +20,9 @@ current viewer shortcuts. It is implemented in `crates/sl-viewer/src/help_overla
 | Press `Cmd+K` / `Ctrl+K` | Toggle the command palette (works in text fields too). |
 | Press `Escape` | Close the palette. |
 
-The palette ships focus-search and toggle-theme commands
-(`crates/sl-viewer/src/command_palette.rs`).
+The palette ships six commands — focus search, open keyboard help, next/previous
+view tab, clear search, and toggle theme — in
+`crates/sl-viewer/src/command_palette.rs`.
 
 ## Related references
 

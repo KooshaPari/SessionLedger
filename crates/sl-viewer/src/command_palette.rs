@@ -7,6 +7,10 @@ use dioxus::prelude::*;
 pub enum PaletteAction {
     FocusSearch,
     ToggleTheme,
+    OpenHelp,
+    NextTab,
+    PrevTab,
+    ClearSearch,
 }
 
 /// One selectable command in the palette.
@@ -18,13 +22,37 @@ pub struct PaletteCommand {
     pub action: PaletteAction,
 }
 
-/// Minimal command set for Wave-28 C09.
+/// Power-user command set for Wave-29 C09 (L81.14).
 pub const COMMANDS: &[PaletteCommand] = &[
     PaletteCommand {
         id: "focus-search",
         label: "Focus search",
         hint: "Switch to Search and focus the first filter",
         action: PaletteAction::FocusSearch,
+    },
+    PaletteCommand {
+        id: "open-help",
+        label: "Open keyboard help",
+        hint: "Show the shortcut reference overlay",
+        action: PaletteAction::OpenHelp,
+    },
+    PaletteCommand {
+        id: "next-tab",
+        label: "Next view tab",
+        hint: "Select and focus the next tab, wrapping at Replay",
+        action: PaletteAction::NextTab,
+    },
+    PaletteCommand {
+        id: "prev-tab",
+        label: "Previous view tab",
+        hint: "Select and focus the previous tab, wrapping at Bundles",
+        action: PaletteAction::PrevTab,
+    },
+    PaletteCommand {
+        id: "clear-search",
+        label: "Clear search",
+        hint: "Switch to Search and reset filters without moving focus",
+        action: PaletteAction::ClearSearch,
     },
     PaletteCommand {
         id: "toggle-theme",
@@ -149,15 +177,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn commands_include_focus_search_and_theme() {
+    fn commands_cover_viewer_shell_actions() {
         assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::FocusSearch));
         assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::ToggleTheme));
-        assert_eq!(COMMANDS.len(), 2);
+        assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::OpenHelp));
+        assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::NextTab));
+        assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::PrevTab));
+        assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::ClearSearch));
+        assert_eq!(COMMANDS.len(), 6);
     }
 
     #[test]
     fn command_ids_are_stable() {
         assert_eq!(COMMANDS[0].id, "focus-search");
-        assert_eq!(COMMANDS[1].id, "toggle-theme");
+        assert_eq!(COMMANDS[1].id, "open-help");
+        assert_eq!(COMMANDS[2].id, "next-tab");
+        assert_eq!(COMMANDS[3].id, "prev-tab");
+        assert_eq!(COMMANDS[4].id, "clear-search");
+        assert_eq!(COMMANDS[5].id, "toggle-theme");
     }
 }

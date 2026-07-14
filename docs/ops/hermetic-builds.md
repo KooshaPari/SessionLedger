@@ -61,6 +61,19 @@ Use this checklist when closing C06 environment-isolation / OCI gaps. Items
 marked **done** are already in-tree; the rest stay unpaid until operators wire
 GitHub Environments and harden runners.
 
+Machine-verify the checklist anchors and done-gate evidence paths (no cargo
+build, no network):
+
+```powershell
+pwsh ./scripts/hermetic-isolation-check.ps1 -SelfCheck
+```
+
+`-SelfCheck` asserts this section stays present, done rows stay marked **done**,
+unpaid L3 rows stay documented, `hermetic-builder.json` digests match
+`hermetic.yml`, and `release.yml` keeps soft-fail `oci-image` plus the
+verify-on-deploy pointer. It does **not** claim SLSA Build Level 3. Optional
+soft CI runs the same SelfCheck from `hermetic.yml` (`continue-on-error: true`).
+
 | Gate | Status | Evidence / next step |
 |------|--------|----------------------|
 | Offline `sl-daemon` fetch+build | **done** | `scripts/hermetic-check.ps1` + `hermetic.yml` |
@@ -73,6 +86,7 @@ GitHub Environments and harden runners.
 | Immutable / ephemeral runners for release | unpaid | Pin self-hosted or hardened runners; avoid mutable `ubuntu-latest` as sole L3 claim |
 | Vendored deps + two-builder rebuild | unpaid | Vendor or remote-cache proof; rebuild on a second independent builder |
 | System package / linker snapshot | unpaid | Lock OS packages inside the builder image beyond the Rust toolchain pin |
+| Isolation checklist SelfCheck | **done** | `scripts/hermetic-isolation-check.ps1 -SelfCheck` (+ soft CI job) |
 
 **Policy:** Prefer deploy-time verify (`oci-cosign-verify.ps1`) over flipping
 `oci-image` to hard-fail while GHCR permissions or Sigstore/OIDC can soft-fail.

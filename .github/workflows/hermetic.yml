@@ -23,6 +23,17 @@ jobs:
         shell: pwsh
         run: ./scripts/repro-check.ps1 -PolicyOnly
 
+  # Soft C06 L3 isolation checklist — docs/pin consistency only (non-blocking).
+  environment-isolation-checklist:
+    name: hermetic · environment isolation checklist (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: SelfCheck isolation checklist + builder pin
+        shell: pwsh
+        run: ./scripts/hermetic-isolation-check.ps1 -SelfCheck
+
   sl-daemon-offline:
     name: sl-daemon · locked offline build
     runs-on: ubuntu-latest

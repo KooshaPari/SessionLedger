@@ -1,13 +1,54 @@
 # SessionLedger developer task surface
+# Prefer `just` / `task` when installed; recipes below remain the fallback.
 # Aligns with AGENTS.md / .github/workflows/ci.yml where noted.
 
 CARGO ?= cargo
 DAEMON_MANIFEST := crates/sl-daemon/Cargo.toml
 
-.PHONY: help build test lint fmt clippy package seed dev dev-down
+# Use `just` when available (GNU make / POSIX shells).
+JUST := $(shell command -v just 2>/dev/null)
+
+.PHONY: help build test lint fmt clippy package seed dev dev-down up
+
+ifdef JUST
 
 help:
-	@echo "Targets:"
+	@$(JUST) --list
+
+build:
+	@$(JUST) build
+
+test:
+	@$(JUST) test
+
+lint:
+	@$(JUST) lint
+
+fmt:
+	@$(JUST) fmt
+
+clippy:
+	@$(JUST) clippy
+
+package:
+	@$(JUST) package
+
+seed:
+	@$(JUST) seed
+
+up:
+	@$(JUST) up
+
+dev:
+	@$(JUST) dev
+
+dev-down:
+	@$(JUST) dev-down
+
+else
+
+help:
+	@echo "Targets (install \`just\` for the preferred runner):"
 	@echo "  build     compile sl-daemon and sl-viewer (debug)"
 	@echo "  test      cargo test --all-features --locked (+ daemon)"
 	@echo "  fmt       apply rustfmt (workspace + daemon)"
@@ -15,7 +56,8 @@ help:
 	@echo "  lint      fmt --check + clippy (CI-equivalent gate)"
 	@echo "  package   desktop packaging (packaging/Makefile)"
 	@echo "  seed      copy a sample OKF fixture into SL_DATA_DIR (default .sl-data)"
-	@echo "  dev       build then process-compose up"
+	@echo "  up        runtime-up script if present, else process-compose up"
+	@echo "  dev       build then up"
 	@echo "  dev-down  process-compose down"
 
 ## build - compile sl-daemon and sl-viewer (debug profile)
@@ -53,10 +95,22 @@ package:
 seed:
 	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/seed-sample.ps1
 
-## dev - build both crates then bring up the process-compose stack
+## up - runtime-up script if present, else process-compose
+up:
+	@if [ -f scripts/runtime-up.ps1 ]; then \
+		pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/runtime-up.ps1; \
+	elif [ -f scripts/runtime-up.sh ]; then \
+		bash scripts/runtime-up.sh; \
+	else \
+		process-compose up; \
+	fi
+
+## dev - build both crates then bring up the local stack
 dev: build
-	process-compose up
+	@$(MAKE) up
 
 ## dev-down - tear down the process-compose stack
 dev-down:
 	process-compose down
+
+endif

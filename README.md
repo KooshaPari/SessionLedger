@@ -21,7 +21,9 @@
 
 ## Quick Start
 ```
-make dev
+just dev
+# or: task dev
+# or: make dev
 # or separately:
 cargo run -p sl-daemon -- serve
 cargo run -p sl-viewer

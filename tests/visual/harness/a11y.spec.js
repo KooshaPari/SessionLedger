@@ -141,12 +141,54 @@ test.describe("status regions and cognitive fixtures", () => {
     const error = page.getByRole("alert");
     await expect(error).toBeVisible();
     await expect(error).toHaveAttribute("aria-live", "assertive");
+    await expect(error).toHaveAttribute("id", "search-error-message");
     await expect(error).toContainText(/something went wrong/i);
     const retry = page.getByRole("button", { name: "Retry" });
     await expect(retry).toBeVisible();
     await expect(retry).toBeEnabled();
+    await expect(retry).toHaveAttribute("aria-describedby", "search-error-message-detail");
     await expect(page.getByTestId("error-state-retry")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeVisible();
+  });
+
+  test("search error fixture associates fields via aria-invalid and aria-errormessage", async ({
+    page,
+  }) => {
+    await page.goto("/?fixture=search-error");
+    const error = page.getByRole("alert");
+    await expect(error).toHaveAttribute("id", "search-error-message");
+
+    for (const name of ["Since (YYYY-MM-DD)", "Model (substring)"]) {
+      const field = page.getByRole("textbox", { name });
+      await expect(field).toHaveAttribute("aria-invalid", "true");
+      await expect(field).toHaveAttribute("aria-errormessage", "search-error-message");
+    }
+
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeVisible();
+    await expect(retry).toHaveAttribute("aria-describedby", "search-error-message-detail");
+  });
+
+  test("Clear asks for confirmation before wiping search filters", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("tab", { name: "Search", exact: true }).click();
+    const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
+    await since.fill("2026-01-01");
+
+    await page.getByRole("button", { name: "Clear", exact: true }).click();
+    const confirm = page.getByRole("alertdialog");
+    await expect(confirm).toBeVisible();
+    await expect(confirm).toContainText(/clear search/i);
+    await expect(since).toHaveValue("2026-01-01");
+
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(since).toHaveValue("2026-01-01");
+
+    await page.getByRole("button", { name: "Clear", exact: true }).click();
+    await page.getByRole("button", { name: "Confirm clear" }).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(since).toHaveValue("");
   });
 
   test("stream skeleton fixture exposes labelled feed status and stream skeleton", async ({ page }) => {

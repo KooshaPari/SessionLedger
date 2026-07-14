@@ -193,6 +193,9 @@ pub fn ErrorColorFixture() -> Element {
 }
 
 /// Recoverable error panel for failed async bundle / daemon loads.
+///
+/// Exposes a stable DOM `id` so form controls can point
+/// `aria-errormessage` at this alert (WCAG 3.3.1 / 3.3.3 association).
 #[component]
 pub fn ErrorState(
     /// Error message shown to the user.
@@ -203,10 +206,14 @@ pub fn ErrorState(
     /// Retry handler (used when `retryable` is true).
     #[props(default)]
     on_retry: EventHandler<()>,
+    /// DOM id referenced by `aria-errormessage` on associated fields.
+    #[props(default = "sl-error-message".to_string())]
+    error_id: String,
 ) -> Element {
     let c = ThemeColors::dark();
     rsx! {
         div {
+            id: "{error_id}",
             class: "sl-error-state",
             role: "alert",
             "aria-live": "assertive",
@@ -217,6 +224,7 @@ pub fn ErrorState(
                 "Something went wrong"
             }
             p {
+                id: "{error_id}-detail",
                 style: "margin:0;color:{c.muted};",
                 "{message}"
             }
@@ -224,6 +232,7 @@ pub fn ErrorState(
                 button {
                     class: "sl-error-retry",
                     "data-testid": "error-state-retry",
+                    "aria-describedby": "{error_id}-detail",
                     style: "padding:6px 14px;font-size:12px;font-weight:600;border-radius:5px;cursor:pointer;border:1px solid #2563eb;background:#2563eb;color:#ffffff;",
                     onclick: move |_| on_retry.call(()),
                     onkeydown: move |evt: Event<KeyboardData>| {

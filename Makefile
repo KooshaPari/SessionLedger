@@ -8,7 +8,7 @@ DAEMON_MANIFEST := crates/sl-daemon/Cargo.toml
 # Use `just` when available (GNU make / POSIX shells).
 JUST := $(shell command -v just 2>/dev/null)
 
-.PHONY: help build test lint fmt clippy package seed bench-gate bench-gate-check dev dev-down up
+.PHONY: help build test lint fmt clippy package seed bench-gate bench-gate-check bench-gate-latency dev dev-down up
 
 ifdef JUST
 
@@ -42,6 +42,9 @@ bench-gate:
 bench-gate-check:
 	@$(JUST) bench-gate-check
 
+bench-gate-latency:
+	@$(JUST) bench-gate-latency
+
 up:
 	@$(JUST) up
 
@@ -64,6 +67,7 @@ help:
 	@echo "  seed      copy a sample OKF fixture into SL_DATA_DIR (default .sl-data)"
 	@echo "  bench-gate        enforced pipeline Criterion perf-budget gate"
 	@echo "  bench-gate-check  perf-budget policy SelfCheck (no cargo bench)"
+	@echo "  bench-gate-latency soft C00 L6 p95 latency SelfCheck"
 	@echo "  up        runtime-up script if present, else process-compose up"
 	@echo "  dev       build then up"
 	@echo "  dev-down  process-compose down"
@@ -110,6 +114,10 @@ bench-gate:
 ## bench-gate-check - validate enforced budget policy without cargo bench
 bench-gate-check:
 	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/bench-gate.ps1 -SelfCheck
+
+## bench-gate-latency - soft C00 L6 p95 latency baseline SelfCheck
+bench-gate-latency:
+	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/bench-gate.ps1 -SoftLatencyCheck
 
 ## up - runtime-up script if present, else process-compose
 up:

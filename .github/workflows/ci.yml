@@ -44,6 +44,18 @@ jobs:
         shell: pwsh
         run: ./scripts/bench-gate.ps1 -SelfCheck
 
+  # Soft C00 L6 latency baseline schema smoke (also covered by SoftLatencyCheck
+  # in bench-gate.yml with continue-on-error).
+  latency-baseline-policy:
+    name: latency baseline policy (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: assert checked-in p95 latency baselines
+        shell: pwsh
+        run: ./scripts/bench-gate.ps1 -SoftLatencyCheck
+
   openapi-drift:
     name: OpenAPI route drift · sl-daemon
     runs-on: ubuntu-latest

@@ -17,7 +17,10 @@ param(
 
     [switch]$UpdateBaseline,
 
-    [switch]$SelfCheck
+    [switch]$SelfCheck,
+
+    # Soft C00 L6 latency SelfCheck only (no cargo bench). Always non-blocking.
+    [switch]$SoftLatencyCheck
 )
 
 Set-StrictMode -Version Latest
@@ -131,6 +134,116 @@ function Assert-BaselinePolicy {
     return $threshold
 }
 
+function Assert-LatencyPolicy {
+    param(
+        [Parameter(Mandatory = $true)]$Baseline,
+        [Parameter(Mandatory = $true)][string]$Path
+    )
+
+    if ($null -eq $Baseline.latency) {
+        throw "Baseline '$Path' is missing latency (C00 L6 checked-in p95 budgets)."
+    }
+
+    $latency = $Baseline.latency
+    if ($null -eq $latency.threshold_percent) {
+        throw "Baseline latency.threshold_percent is required."
+    }
+
+    $threshold = [double]$latency.threshold_percent
+    if ($threshold -le 0 -or $threshold -gt 500) {
+        throw "Baseline latency.threshold_percent must be in (0, 500]; got $threshold."
+    }
+
+    $enforced = $false
+    if ($latency.PSObject.Properties.Name -contains "enforced") {
+        $enforced = [bool]$latency.enforced
+    }
+
+    if ($null -eq $latency.benchmarks) {
+        throw "Baseline latency.benchmarks object is missing."
+    }
+
+    foreach ($name in $benchmarkNames) {
+        $key = Get-BenchmarkKey -BenchmarkName $name
+        $entry = Get-BaselineBenchmarkEntry -Benchmarks $latency.benchmarks -Key $key
+
+        $p95Ns = [double]$entry.p95_ns
+        if ($p95Ns -le 0) {
+            throw "Baseline latency '$key'.p95_ns must be > 0."
+        }
+
+        if ($entry.PSObject.Properties.Name -contains "budget_p95_ns") {
+            $budgetNs = [double]$entry.budget_p95_ns
+        }
+        else {
+            $budgetNs = $p95Ns * (1.0 + ($threshold / 100.0))
+        }
+
+        $expectedMin = $p95Ns * (1.0 + ($threshold / 100.0))
+        if ($budgetNs + 0.001 -lt $expectedMin) {
+            throw ("Baseline latency '{0}'.budget_p95_ns ({1}) is tighter than p95_ns + {2}% ({3})." -f `
+                $key, $budgetNs, $threshold, $expectedMin)
+        }
+        if ($budgetNs -lt $p95Ns) {
+            throw "Baseline latency '$key'.budget_p95_ns must be >= p95_ns."
+        }
+    }
+
+    if ($null -eq $latency.http_load_smoke) {
+        throw "Baseline latency.http_load_smoke is required (documents load-smoke p95 SLO)."
+    }
+    $httpMax = [double]$latency.http_load_smoke.max_p95_ms
+    if ($httpMax -le 0) {
+        throw "Baseline latency.http_load_smoke.max_p95_ms must be > 0."
+    }
+
+    return @{
+        ThresholdPercent = $threshold
+        Enforced         = $enforced
+        HttpMaxP95Ms     = $httpMax
+    }
+}
+
+function Get-CriterionP95Ns {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BenchmarkName
+    )
+
+    $samplePath = Join-Path $criterionDir "pipeline/$BenchmarkName/current/sample.json"
+    if (-not (Test-Path -LiteralPath $samplePath -PathType Leaf)) {
+        return $null
+    }
+
+    $sample = Get-Content -LiteralPath $samplePath -Raw | ConvertFrom-Json
+    if ($null -eq $sample.times -or $null -eq $sample.iters) {
+        return $null
+    }
+
+    $times = @($sample.times)
+    $iters = @($sample.iters)
+    if ($times.Count -eq 0 -or $times.Count -ne $iters.Count) {
+        return $null
+    }
+
+    $perIter = New-Object System.Collections.Generic.List[double]
+    for ($i = 0; $i -lt $times.Count; $i++) {
+        $n = [double]$iters[$i]
+        if ($n -le 0) {
+            continue
+        }
+        $perIter.Add([double]$times[$i] / $n)
+    }
+
+    if ($perIter.Count -eq 0) {
+        return $null
+    }
+
+    $sorted = @($perIter | Sort-Object)
+    $p95Index = [Math]::Max(0, [Math]::Ceiling(0.95 * $sorted.Count) - 1)
+    return [double]$sorted[$p95Index]
+}
+
 function Get-CriterionEstimate {
     param(
         [Parameter(Mandatory = $true)]
@@ -170,7 +283,7 @@ $Body
     }
 }
 
-if ($SelfCheck) {
+if ($SoftLatencyCheck -or $SelfCheck) {
     if (-not (Test-Path -LiteralPath $BaselinePath -PathType Leaf)) {
         throw "Baseline not found at '$BaselinePath'."
     }
@@ -179,7 +292,47 @@ if ($SelfCheck) {
     }
 
     $baseline = Get-Content -LiteralPath $BaselinePath -Raw | ConvertFrom-Json
+
+    if ($SoftLatencyCheck -and -not $SelfCheck) {
+        $latencyInfo = Assert-LatencyPolicy -Baseline $baseline -Path $BaselinePath
+        $threshold = $latencyInfo.ThresholdPercent
+        $enforcedLabel = if ($latencyInfo.Enforced) { "true" } else { "false (soft CI)" }
+
+        $rows = New-Object System.Collections.Generic.List[string]
+        $rows.Add("| Benchmark | Baseline p95 (ns) | Budget ceiling (ns) | Threshold |")
+        $rows.Add("|---|---:|---:|---:|")
+        foreach ($name in $benchmarkNames) {
+            $key = Get-BenchmarkKey -BenchmarkName $name
+            $entry = Get-BaselineBenchmarkEntry -Benchmarks $baseline.latency.benchmarks -Key $key
+            $p95Ns = [double]$entry.p95_ns
+            if ($entry.PSObject.Properties.Name -contains "budget_p95_ns") {
+                $budgetNs = [double]$entry.budget_p95_ns
+            }
+            else {
+                $budgetNs = $p95Ns * (1.0 + ($threshold / 100.0))
+            }
+            $rows.Add(("| `{0}` | {1:N3} | {2:N3} | {3:N1}% |" -f $key, $p95Ns, $budgetNs, $threshold))
+        }
+
+        Write-Host "bench-gate SoftLatencyCheck passed (latency.enforced=$enforcedLabel, threshold=${threshold}%)."
+        Write-Host ("HTTP load-smoke max p95: {0} ms" -f $latencyInfo.HttpMaxP95Ms)
+        Write-Host ("Documented latency budgets: {0}" -f ($benchmarkNames -join ", "))
+        Write-GateSummary -Title "Pipeline latency baseline SoftCheck (C00 L6)" -Body @"
+Soft latency policy OK (``latency.enforced=$enforcedLabel``).
+
+Threshold: **${threshold}%** slower than checked-in ``p95_ns``.
+
+HTTP load-smoke ``max_p95_ms``: **$($latencyInfo.HttpMaxP95Ms)**.
+
+$($rows -join "`n")
+
+Soft CI: p95 overruns warn only until ``latency.enforced`` is promoted to ``true``.
+"@
+        exit 0
+    }
+
     $threshold = Assert-BaselinePolicy -Baseline $baseline -Path $BaselinePath
+    $latencyInfo = Assert-LatencyPolicy -Baseline $baseline -Path $BaselinePath
 
     $rows = New-Object System.Collections.Generic.List[string]
     $rows.Add("| Benchmark | Baseline mean (ns) | Budget ceiling (ns) | Threshold |")
@@ -197,7 +350,25 @@ if ($SelfCheck) {
         $rows.Add(("| `{0}` | {1:N3} | {2:N3} | {3:N1}% |" -f $key, $meanNs, $budgetNs, $threshold))
     }
 
+    $latRows = New-Object System.Collections.Generic.List[string]
+    $latRows.Add("| Benchmark | Baseline p95 (ns) | Budget ceiling (ns) | Soft threshold |")
+    $latRows.Add("|---|---:|---:|---:|")
+    foreach ($name in $benchmarkNames) {
+        $key = Get-BenchmarkKey -BenchmarkName $name
+        $entry = Get-BaselineBenchmarkEntry -Benchmarks $baseline.latency.benchmarks -Key $key
+        $p95Ns = [double]$entry.p95_ns
+        if ($entry.PSObject.Properties.Name -contains "budget_p95_ns") {
+            $budgetNs = [double]$entry.budget_p95_ns
+        }
+        else {
+            $budgetNs = $p95Ns * (1.0 + ($latencyInfo.ThresholdPercent / 100.0))
+        }
+        $latRows.Add(("| `{0}` | {1:N3} | {2:N3} | {3:N1}% |" -f $key, $p95Ns, $budgetNs, $latencyInfo.ThresholdPercent))
+    }
+
+    $latEnforced = if ($latencyInfo.Enforced) { "true" } else { "false (soft)" }
     Write-Host "bench-gate SelfCheck passed (enforced=true, threshold=${threshold}%)."
+    Write-Host ("Latency soft budgets present (latency.enforced={0}, threshold={1}%)." -f $latEnforced, $latencyInfo.ThresholdPercent)
     Write-Host ("Documented budgets: {0}" -f ($benchmarkNames -join ", "))
     Write-GateSummary -Title "Pipeline perf-budget SelfCheck" -Body @"
 Enforced blocking gate policy OK (``policy.enforced=true``).
@@ -206,7 +377,13 @@ Threshold: **${threshold}%** slower than checked-in ``mean_ns``.
 
 $($rows -join "`n")
 
-CI fails when any Criterion mean exceeds ``budget_mean_ns``.
+### Soft latency (C00 L6)
+
+``latency.enforced=$latEnforced`` · threshold **$($latencyInfo.ThresholdPercent)%** · HTTP load-smoke max p95 **$($latencyInfo.HttpMaxP95Ms) ms**.
+
+$($latRows -join "`n")
+
+CI fails when any Criterion mean exceeds ``budget_mean_ns``. Soft p95 overruns warn only.
 "@
     exit 0
 }
@@ -245,13 +422,44 @@ try {
             }
         }
 
+        $latencyThreshold = $ThresholdPercent
+        $httpMaxP95Ms = 500.0
+        $httpMinSuccess = 99.0
+        if (Test-Path -LiteralPath $BaselinePath -PathType Leaf) {
+            $existing = Get-Content -LiteralPath $BaselinePath -Raw | ConvertFrom-Json
+            if ($null -ne $existing.latency -and $null -ne $existing.latency.threshold_percent) {
+                $latencyThreshold = [double]$existing.latency.threshold_percent
+            }
+            if ($null -ne $existing.latency -and $null -ne $existing.latency.http_load_smoke) {
+                if ($null -ne $existing.latency.http_load_smoke.max_p95_ms) {
+                    $httpMaxP95Ms = [double]$existing.latency.http_load_smoke.max_p95_ms
+                }
+                if ($null -ne $existing.latency.http_load_smoke.min_success_rate_percent) {
+                    $httpMinSuccess = [double]$existing.latency.http_load_smoke.min_success_rate_percent
+                }
+            }
+        }
+
         $benchmarkBaselines = [ordered]@{}
+        $latencyBaselines = [ordered]@{}
         foreach ($entry in $current.GetEnumerator()) {
             $meanNs = [Math]::Round([double]$entry.Value, 3)
             $budgetNs = [Math]::Round($meanNs * (1.0 + ($ThresholdPercent / 100.0)), 3)
             $benchmarkBaselines[$entry.Key] = [ordered]@{
                 mean_ns        = $meanNs
                 budget_mean_ns = $budgetNs
+            }
+
+            $benchName = $entry.Key -replace '^pipeline/', ''
+            $p95Raw = Get-CriterionP95Ns -BenchmarkName $benchName
+            if ($null -eq $p95Raw) {
+                $p95Raw = $meanNs * 1.15
+            }
+            $p95Ns = [Math]::Round([double]$p95Raw, 3)
+            $budgetP95 = [Math]::Round($p95Ns * (1.0 + ($latencyThreshold / 100.0)), 3)
+            $latencyBaselines[$entry.Key] = [ordered]@{
+                p95_ns        = $p95Ns
+                budget_p95_ns = $budgetP95
             }
         }
 
@@ -273,6 +481,25 @@ try {
                     "A run fails when any current mean exceeds budget_mean_ns (baseline mean + threshold_percent)."
                 )
             }
+            latency             = [ordered]@{
+                enforced            = $false
+                threshold_percent   = [double]$latencyThreshold
+                units               = "nanoseconds"
+                metric              = "criterion_sample_p95"
+                notes               = @(
+                    "C00 L6 soft latency budgets: checked-in p95 baselines with the same regression threshold as mean budgets.",
+                    "Soft CI only (policy.latency.enforced=false): overruns warn and annotate the gate artifact; they do not fail the blocking mean gate.",
+                    "Refresh via ./scripts/bench-gate.ps1 -UpdateBaseline.",
+                    "HTTP load-smoke p95 SLO (ms) is recorded under http_load_smoke for ops alignment with scripts/load-smoke.ps1."
+                )
+                http_load_smoke     = [ordered]@{
+                    max_p95_ms                 = $httpMaxP95Ms
+                    min_success_rate_percent   = $httpMinSuccess
+                    script                     = "scripts/load-smoke.ps1"
+                    workflow                   = ".github/workflows/ops-load.yml"
+                }
+                benchmarks          = $latencyBaselines
+            }
             benchmarks          = $benchmarkBaselines
         }
 
@@ -289,18 +516,26 @@ try {
 
     $baseline = Get-Content -LiteralPath $BaselinePath -Raw | ConvertFrom-Json
     $policyThreshold = Assert-BaselinePolicy -Baseline $baseline -Path $BaselinePath
+    $latencyInfo = Assert-LatencyPolicy -Baseline $baseline -Path $BaselinePath
     if ($ThresholdPercent -lt 0) {
         $ThresholdPercent = $policyThreshold
     }
 
     Write-Host ("Gate threshold: fail when current mean exceeds budget_mean_ns (>{0:N1}% slower than baseline)." -f $ThresholdPercent)
     Write-Host "Enforcement: blocking (policy.enforced=true)."
+    Write-Host ("Soft latency: compare Criterion sample p95 vs budget_p95_ns (latency.enforced={0}, threshold={1:N1}%)." -f `
+        $(if ($latencyInfo.Enforced) { "true" } else { "false" }), $latencyInfo.ThresholdPercent)
 
     $failures = [System.Collections.Generic.List[string]]::new()
+    $latencyWarnings = [System.Collections.Generic.List[string]]::new()
     $resultRows = [System.Collections.Generic.List[object]]::new()
+    $latencyRows = [System.Collections.Generic.List[object]]::new()
     $summaryRows = New-Object System.Collections.Generic.List[string]
     $summaryRows.Add("| Benchmark | Baseline | Current | Budget | Delta | Result |")
     $summaryRows.Add("|---|---:|---:|---:|---:|:---:|")
+    $latencySummaryRows = New-Object System.Collections.Generic.List[string]
+    $latencySummaryRows.Add("| Benchmark | Baseline p95 | Current p95 | Budget p95 | Delta | Result |")
+    $latencySummaryRows.Add("|---|---:|---:|---:|---:|:---:|")
 
     foreach ($name in $benchmarkNames) {
         $key = Get-BenchmarkKey -BenchmarkName $name
@@ -339,12 +574,72 @@ try {
             $failures.Add(("{0} exceeded budget: current {1:N0} ns > budget {2:N0} ns ({3:N1}% vs allowed {4:N1}%)." -f `
                 $key, $currentMean, $budgetMean, $deltaPercent, $ThresholdPercent))
         }
+
+        # Soft C00 L6 p95 latency comparison (non-blocking unless latency.enforced=true).
+        $latEntry = Get-BaselineBenchmarkEntry -Benchmarks $baseline.latency.benchmarks -Key $key
+        $baselineP95 = [double]$latEntry.p95_ns
+        if ($latEntry.PSObject.Properties.Name -contains "budget_p95_ns") {
+            $budgetP95 = [double]$latEntry.budget_p95_ns
+        }
+        else {
+            $budgetP95 = $baselineP95 * (1.0 + ($latencyInfo.ThresholdPercent / 100.0))
+        }
+        $currentP95 = Get-CriterionP95Ns -BenchmarkName $name
+        if ($null -eq $currentP95) {
+            $latencySummaryRows.Add(("| `{0}` | {1:N0} | n/a | {2:N0} | n/a | SKIP |" -f `
+                $key, $baselineP95, $budgetP95))
+            $latencyRows.Add([ordered]@{
+                    benchmark      = $key
+                    baseline_p95_ns = [Math]::Round($baselineP95, 3)
+                    current_p95_ns  = $null
+                    budget_p95_ns   = [Math]::Round($budgetP95, 3)
+                    delta_percent   = $null
+                    passed          = $null
+                    skipped         = $true
+                })
+            Write-Host ("{0} soft-latency: sample.json missing — SKIP p95 check." -f $key) -ForegroundColor Yellow
+        }
+        else {
+            $latDelta = (($currentP95 - $baselineP95) / $baselineP95) * 100.0
+            $latPassed = $currentP95 -le $budgetP95
+            $latLabel = if ($latPassed) { "PASS" } else { $(if ($latencyInfo.Enforced) { "FAIL" } else { "WARN" }) }
+
+            Write-Host ("{0} soft-latency: baseline_p95={1:N0} ns current_p95={2:N0} ns delta={3:N1}% budget={4:N0} ns => {5}" -f `
+                $key, $baselineP95, $currentP95, $latDelta, $budgetP95, $latLabel)
+
+            $latencySummaryRows.Add(("| `{0}` | {1:N0} | {2:N0} | {3:N0} | {4:N1}% | {5} |" -f `
+                $key, $baselineP95, $currentP95, $budgetP95, $latDelta, $latLabel))
+
+            $latencyRows.Add([ordered]@{
+                    benchmark       = $key
+                    baseline_p95_ns = [Math]::Round($baselineP95, 3)
+                    current_p95_ns  = [Math]::Round($currentP95, 3)
+                    budget_p95_ns   = [Math]::Round($budgetP95, 3)
+                    delta_percent   = [Math]::Round($latDelta, 3)
+                    passed          = $latPassed
+                    skipped         = $false
+                })
+
+            if (-not $latPassed) {
+                $msg = ("{0} exceeded soft p95 budget: current {1:N0} ns > budget {2:N0} ns ({3:N1}% vs allowed {4:N1}%)." -f `
+                    $key, $currentP95, $budgetP95, $latDelta, $latencyInfo.ThresholdPercent)
+                if ($latencyInfo.Enforced) {
+                    $failures.Add($msg)
+                }
+                else {
+                    $latencyWarnings.Add($msg)
+                    Write-Host "WARN: $msg" -ForegroundColor Yellow
+                }
+            }
+        }
     }
 
     $artifactDir = Split-Path -Parent $ArtifactPath
     if ($artifactDir) {
         New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
     }
+    $latencyPassed = ($latencyWarnings.Count -eq 0) -and `
+        (@($latencyRows | Where-Object { $null -ne $_.passed -and $_.passed -eq $false }).Count -eq 0)
     $artifact = [ordered]@{
         schema_version     = 1
         enforced           = $true
@@ -352,6 +647,15 @@ try {
         baseline_path      = $BaselinePath
         passed             = ($failures.Count -eq 0)
         results            = @($resultRows)
+        latency            = [ordered]@{
+            enforced           = [bool]$latencyInfo.Enforced
+            threshold_percent  = $latencyInfo.ThresholdPercent
+            soft               = -not [bool]$latencyInfo.Enforced
+            passed             = $latencyPassed
+            warnings           = @($latencyWarnings)
+            results            = @($latencyRows)
+            http_load_smoke_max_p95_ms = $latencyInfo.HttpMaxP95Ms
+        }
     }
     $artifact | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ArtifactPath -Encoding utf8
     Write-Host "Wrote gate artifact: $ArtifactPath"
@@ -362,6 +666,10 @@ Blocking gate failed (``policy.enforced=true``). Threshold: **${ThresholdPercent
 
 $($summaryRows -join "`n")
 
+### Soft latency (C00 L6)
+
+$($latencySummaryRows -join "`n")
+
 Failures:
 $($failures | ForEach-Object { "- $_" } | Out-String)
 "@
@@ -371,12 +679,31 @@ $($failures | ForEach-Object { "- $_" } | Out-String)
         exit 1
     }
 
+    $softNote = ""
+    if ($latencyWarnings.Count -gt 0) {
+        $softNote = @"
+
+Soft latency warnings (non-blocking):
+$($latencyWarnings | ForEach-Object { "- $_" } | Out-String)
+"@
+    }
+
     Write-GateSummary -Title "Pipeline perf-budget gate passed" -Body @"
 Blocking gate passed (``policy.enforced=true``). Threshold: **${ThresholdPercent}%**.
 
 $($summaryRows -join "`n")
+
+### Soft latency (C00 L6)
+
+``latency.enforced=$(if ($latencyInfo.Enforced) { "true" } else { "false" })`` · threshold **$($latencyInfo.ThresholdPercent)%**.
+
+$($latencySummaryRows -join "`n")
+$softNote
 "@
     Write-Host "Pipeline performance gate passed."
+    if ($latencyWarnings.Count -gt 0) {
+        Write-Host ("Soft latency warnings: {0} (non-blocking)." -f $latencyWarnings.Count) -ForegroundColor Yellow
+    }
 }
 finally {
     $env:SESSION_LEDGER_BENCH_SAMPLE_SIZE = $oldSampleSize

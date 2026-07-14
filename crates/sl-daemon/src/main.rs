@@ -35,6 +35,8 @@ mod metrics;
 mod resilience;
 #[cfg(feature = "otel")]
 mod otel;
+#[cfg(feature = "otel-metrics")]
+mod otel_metrics;
 mod shutdown;
 mod tag;
 mod validation;
@@ -374,6 +376,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let otel_provider = init_tracing();
     #[cfg(not(feature = "otel"))]
     init_tracing();
+    #[cfg(feature = "otel-metrics")]
+    otel_metrics::maybe_log_stub_status();
     let args = Args::parse();
 
     match args.command {

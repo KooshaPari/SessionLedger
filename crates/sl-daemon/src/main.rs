@@ -68,9 +68,12 @@ const SERVE_AFTER_HELP: &str = r#"Examples:
   sl-daemon serve --watch ~/.cursor/agent-transcripts --out ./okf-out
   sl-daemon serve --watch ./sessions --out ./okf-out --once
   sl-daemon serve --watch ./sessions --out ./okf-out --http-bind off
+  SL_API_KEY=secret sl-daemon serve --watch ./sessions --out ./okf-out --http-bind 0.0.0.0:8080
 
-The HTTP listener is local-only. Use --http-bind off for batch ingest/export jobs
-that do not need /healthz, /api/bundles, /api/stream, or /api/ingest.
+Loopback binds (127.0.0.0/8, ::1) keep the local trust model: SL_API_KEY is optional
+and only gates mutating routes when set. Non-loopback binds require a non-empty
+SL_API_KEY and gate all /api/* routes. Use --http-bind off for batch jobs that do
+not need HTTP.
 "#;
 
 const EXPORT_AFTER_HELP: &str = r#"Examples:
@@ -121,6 +124,7 @@ enum Command {
         once: bool,
 
         /// Address to bind the HTTP server on (e.g. `127.0.0.1:8080`).
+        /// Loopback keeps optional API-key trust; non-loopback requires `SL_API_KEY`.
         /// Pass `off` to disable the HTTP server entirely.
         #[arg(long, default_value = "127.0.0.1:8080")]
         http_bind: String,
@@ -458,15 +462,22 @@ fn init_tracing() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
     None
 }
 
-fn parse_local_http_addr(value: &str) -> Result<SocketAddr, String> {
-    let addr: SocketAddr =
-        value.parse().map_err(|error| format!("invalid --http-bind address {value:?}: {error}"))?;
-    if !addr.ip().is_loopback() {
-        return Err(format!(
-            "--http-bind must use a loopback address (127.0.0.0/8 or ::1), got {addr}"
-        ));
+fn parse_http_bind(value: &str) -> Result<SocketAddr, String> {
+    value.parse().map_err(|error| format!("invalid --http-bind address {value:?}: {error}"))
+}
+
+/// Non-loopback binds require a configured API key; loopback keeps optional-key behavior.
+fn ensure_http_bind_auth(addr: SocketAddr, auth: &http::ApiKeyAuth) -> Result<(), String> {
+    if addr.ip().is_loopback() {
+        return Ok(());
     }
-    Ok(addr)
+    if auth.is_configured() {
+        return Ok(());
+    }
+    Err(format!(
+        "non-loopback --http-bind {addr} requires SL_API_KEY \
+         (set a non-empty shared secret, or bind to 127.0.0.0/8 or ::1 for the local trust model)"
+    ))
 }
 
 fn audit_event(
@@ -519,21 +530,21 @@ async fn run_serve(
     #[cfg(not(feature = "sqlite"))]
     if memory_db.is_some() {
         return Err(
-            "--memory-db / SL_MEMORY_DB requires sl-daemon built with --features sqlite".into(),
+            "--memory-db / SL_MEMORY_DB requires sl-daemon built with --features sqlite".into()
         );
     }
 
     #[cfg(feature = "sqlite")]
-    let memory_store: Option<Arc<session_ledger::SqliteMemoryStore>> =
-        if let Some(path) = memory_db {
-            let store = session_ledger::SqliteMemoryStore::open(&path).map_err(|error| {
-                format!("failed to open memory database {}: {error}", path.display())
-            })?;
-            info!(memory_db = %path.display(), "durable memory store enabled");
-            Some(Arc::new(store))
-        } else {
-            None
-        };
+    let memory_store: Option<Arc<session_ledger::SqliteMemoryStore>> = if let Some(path) = memory_db
+    {
+        let store = session_ledger::SqliteMemoryStore::open(&path).map_err(|error| {
+            format!("failed to open memory database {}: {error}", path.display())
+        })?;
+        info!(memory_db = %path.display(), "durable memory store enabled");
+        Some(Arc::new(store))
+    } else {
+        None
+    };
 
     // Broadcast channel: ETL consumer publishes every written path; HTTP SSE
     // handler subscribes one receiver per connected client.
@@ -619,9 +630,14 @@ async fn run_serve(
     let http_handle = if http_bind.eq_ignore_ascii_case("off") {
         None
     } else {
-        let addr = parse_local_http_addr(&http_bind)?;
+        let addr = parse_http_bind(&http_bind)?;
         let ingest_admission = http::IngestAdmission::from_env()?;
-        let api_key_auth = http::ApiKeyAuth::from_env();
+        let mut api_key_auth = http::ApiKeyAuth::from_env();
+        ensure_http_bind_auth(addr, &api_key_auth)?;
+        if !addr.ip().is_loopback() {
+            api_key_auth = api_key_auth.with_protect_all_api(true);
+            info!(%addr, "non-loopback HTTP bind; SL_API_KEY required for all /api/* routes");
+        }
         let state = http::AppState {
             out_dir: Arc::new(out.clone()),
             broadcast_tx: bcast_tx.clone(),
@@ -1248,10 +1264,25 @@ mod tests {
     }
 
     #[test]
-    fn http_bind_accepts_only_loopback_addresses() {
-        assert!(parse_local_http_addr("127.0.0.1:8080").is_ok());
-        assert!(parse_local_http_addr("[::1]:8080").is_ok());
-        assert!(parse_local_http_addr("0.0.0.0:8080").is_err());
-        assert!(parse_local_http_addr("[::]:8080").is_err());
+    fn http_bind_parses_loopback_and_non_loopback_addresses() {
+        assert!(parse_http_bind("127.0.0.1:8080").is_ok());
+        assert!(parse_http_bind("[::1]:8080").is_ok());
+        assert!(parse_http_bind("0.0.0.0:8080").is_ok());
+        assert!(parse_http_bind("[::]:8080").is_ok());
+        assert!(parse_http_bind("not-an-addr").is_err());
+    }
+
+    #[test]
+    fn non_loopback_bind_requires_configured_api_key() {
+        let loopback = parse_http_bind("127.0.0.1:8080").unwrap();
+        let remote = parse_http_bind("0.0.0.0:8080").unwrap();
+        let unset = http::ApiKeyAuth::from_value(None);
+        let configured = http::ApiKeyAuth::from_value(Some("secret".into()));
+
+        assert!(ensure_http_bind_auth(loopback, &unset).is_ok());
+        assert!(ensure_http_bind_auth(loopback, &configured).is_ok());
+        assert!(ensure_http_bind_auth(remote, &configured).is_ok());
+        let err = ensure_http_bind_auth(remote, &unset).unwrap_err();
+        assert!(err.contains("requires SL_API_KEY"));
     }
 }

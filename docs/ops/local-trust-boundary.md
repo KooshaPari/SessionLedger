@@ -1,30 +1,44 @@
 # Local trust boundary and HTTP admission
 
-`sl-daemon` is a single-user desktop companion, not a network service. Its HTTP
-listener accepts only loopback addresses (`127.0.0.0/8` or `::1`). `sl serve`
-fails at startup if `--http-bind` is a wildcard or non-loopback address. Put an
-authenticated, policy-enforcing proxy in front of a separately reviewed build
-instead of exposing this API directly.
+`sl-daemon` is a single-user desktop companion, not a multi-tenant network
+service. Prefer binding HTTP to loopback (`127.0.0.0/8` or `::1`). Non-loopback
+binds are allowed only when a non-empty `SL_API_KEY` is configured; without that
+key, `sl serve` fails at startup with an explicit deny. Put a TLS-terminating,
+policy-enforcing proxy in front of any LAN/WAN exposure and treat the shared
+secret as host-local credential material.
 
-## Optional API-key gate
+## Bind modes and API-key gate
 
-Loopback is the default trust boundary. If `SL_API_KEY` is set to a non-empty
-value, mutating HTTP endpoints additionally require one of these headers:
+| Bind | `SL_API_KEY` | Behavior |
+|---|---|---|
+| Loopback (`127.0.0.0/8`, `::1`) | unset | Local trust model: mutating and read `/api/*` routes are open to the host |
+| Loopback | set | Mutating routes (`POST /api/ingest`) require the key; read `/api/*` stay open |
+| Non-loopback (`0.0.0.0`, LAN IP, `::`, …) | unset | **Startup deny** — configure `SL_API_KEY` or bind loopback |
+| Non-loopback | set | All `/api/*` routes require the key; `/healthz` and `/readyz` stay open for probes |
+
+Accepted credential headers when a key is required:
 
 ```text
 Authorization: Bearer <SL_API_KEY>
 X-API-Key: <SL_API_KEY>
 ```
 
-Unauthenticated mutating requests return `401` with the API error envelope. Read
-endpoints such as `/healthz`, `/api/bundles`, and `/api/stream` remain governed
-by the loopback bind restriction. Leave `SL_API_KEY` unset for the default local
-desktop workflow; set it when a local automation, proxy, or browser extension
-needs an explicit shared secret for writes.
+Unauthenticated requests return `401` with the API error envelope. Leave
+`SL_API_KEY` unset for the default local desktop workflow; set it for local
+automation that needs an explicit write secret, or whenever `--http-bind` is not
+loopback.
+
+Example remote-style bind (still single-tenant; TLS remains operator-owned):
+
+```bash
+export SL_API_KEY="$(openssl rand -hex 32)"
+sl-daemon serve --watch ./sessions --out ./okf-out --http-bind 0.0.0.0:8080
+curl -H "Authorization: Bearer $SL_API_KEY" http://127.0.0.1:8080/api/bundles
+```
 
 ## Ingest admission controls
 
-`POST /api/ingest` has process-local body-size and concurrency limits:
+`POST /api/ingest` has process-local body-size and concurrency (bulkhead) limits:
 
 | Environment variable | Default | Meaning |
 |---|---:|---|
@@ -34,7 +48,9 @@ needs an explicit shared secret for writes.
 Both values must be positive integers; invalid values stop server startup.
 Requests above the body limit return `413`. Requests arriving while all ingest
 permits are occupied return `429`. These are admission controls, not tenant
-quotas or distributed rate limits.
+quotas or distributed rate limits. Native tower `RateLimitLayer` is not used:
+axum clones layers per connection, so those counters would not share process-wide
+state. The ingest semaphore is the intentional bulkhead.
 
 Clients may send `Idempotency-Key` on `POST /api/ingest` to safely retry a
 successful request while the daemon process is still running. The daemon stores
@@ -130,9 +146,9 @@ Recommended operator policy for a single-user desktop install:
 4. **Backup** — include `<data_dir>/audit/` in the same backup scope as OKF
    bundles. Treat exported audit copies like security-sensitive metadata (actor,
    action, resource names) even though payloads are omitted.
-5. **Access control** — rely on OS file permissions and the loopback-only HTTP
-   bind. Audit files are not exposed over `/api/*`; local filesystem access is
-   the trust boundary.
+5. **Access control** — rely on OS file permissions plus the HTTP bind/API-key
+   policy above. Audit files are not exposed over `/api/*`; local filesystem
+   access remains the primary trust boundary for the sink itself.
 
 ### Export and compliance review
 

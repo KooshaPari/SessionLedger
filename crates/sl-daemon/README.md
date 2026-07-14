@@ -61,11 +61,13 @@ container run --rm \
 | `--out <dir>`   | Where `<id>.okf.json` files are written (auto-created) |
 | `--once`        | Single deterministic sweep, then exit (CI / cron) |
 
-The HTTP listener is local-only: `--http-bind` must use `127.0.0.0/8` or `::1`.
-Ingest admission is configured with `SL_INGEST_MAX_BODY_BYTES` (default
-`1048576`) and `SL_INGEST_MAX_CONCURRENCY` (default `8`). See
+The HTTP listener defaults to loopback (`127.0.0.0/8` or `::1`) with optional
+`SL_API_KEY` on mutating routes. Non-loopback `--http-bind` requires a non-empty
+`SL_API_KEY` and gates all `/api/*` routes. Ingest admission is configured with
+`SL_INGEST_MAX_BODY_BYTES` (default `1048576`) and `SL_INGEST_MAX_CONCURRENCY`
+(default `8`). See
 [`docs/ops/local-trust-boundary.md`](../../docs/ops/local-trust-boundary.md) for
-the error envelope, audit fields, and operational boundary.
+the bind/auth matrix, error envelope, audit fields, and operational boundary.
 
 ## Shell completions
 

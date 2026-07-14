@@ -17,8 +17,9 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 const CAPACITY: usize = 4;
+const CAPACITY_U32: u32 = 4;
 const PRODUCERS: usize = 4;
-const ITEMS_PER_PRODUCER: usize = 16;
+const ITEMS_PER_PRODUCER: u32 = 16;
 
 /// Producer half of the model: stop on cancel, never block on a full channel.
 fn try_produce(
@@ -64,7 +65,7 @@ fn bounded_capacity_is_respected_then_cancel_drains_exactly() {
     let (tx, rx) = sync_channel::<u32>(CAPACITY);
     let cancel = AtomicBool::new(false);
 
-    let sent = try_produce(&tx, &cancel, 0..(CAPACITY as u32 * 4));
+    let sent = try_produce(&tx, &cancel, 0..(CAPACITY_U32 * 4));
     assert_eq!(sent, CAPACITY, "try_send must stop at capacity without blocking");
 
     // Further enqueues fail while full; cancel then forbids retries.
@@ -78,7 +79,7 @@ fn bounded_capacity_is_respected_then_cancel_drains_exactly() {
         drained.push(v);
     }
     assert_eq!(drained.len(), CAPACITY);
-    assert_eq!(drained, (0..CAPACITY as u32).collect::<Vec<_>>());
+    assert_eq!(drained, (0..CAPACITY_U32).collect::<Vec<_>>());
 }
 
 #[test]
@@ -96,8 +97,9 @@ fn concurrent_producers_conserve_messages_under_cancel() {
             let sent_total = Arc::clone(&sent_total);
             thread::spawn(move || {
                 start.wait();
-                let base = (producer * ITEMS_PER_PRODUCER) as u32;
-                let ids = (0..ITEMS_PER_PRODUCER as u32).map(|i| base + i);
+                let base =
+                    u32::try_from(producer).expect("producer index fits u32") * ITEMS_PER_PRODUCER;
+                let ids = (0..ITEMS_PER_PRODUCER).map(|i| base + i);
                 let local = try_produce(&tx, &cancel, ids);
                 sent_total.fetch_add(local, Ordering::Relaxed);
                 local

@@ -1,28 +1,19 @@
-# Release workflow for sl-viewer (Dioxus desktop app).
+# Release workflow for sl-viewer / sl-daemon (Dioxus desktop + daemon).
 #
-# Packages the native desktop viewer binary on tag push (v*) and attaches
-# it to a GitHub Release.  The viewer is a single-codebase Dioxus 0.6 app
-# (default feature = desktop / native window).
+# Packages native desktop viewer binaries, an unsigned Windows MSI, unsigned
+# macOS PKGs, best-effort Linux deb/AppImage, and portable sl-daemon archives
+# on tag push (v*), then attaches them to a GitHub Release.
 #
 # Usage:
 #   git tag v0.1.0 && git push origin v0.1.0
 #
-# The resulting Release will contain per-platform archives:
-#   sl-viewer-<version>-x86_64-unknown-linux-gnu.tar.gz
-#   sl-viewer-<version>-x86_64-apple-darwin.tar.gz
-#   sl-viewer-<version>-aarch64-apple-darwin.tar.gz
-#   sl-viewer-<version>-x86_64-pc-windows-msvc.zip
-#   sl-viewer-<version>-windows-msi-scaffold.zip
+# Platform signing / notarization: DEFERRED (unsigned binaries + installers).
+# Authenticode and Apple notarization stay out of scope per ADR 0003.
+# Release checksums are signed with cosign keyless signing on a best-effort
+# basis. Release assets receive blocking GitHub build provenance in the
+# canonical KooshaPari/SessionLedger repository; forks skip that OIDC step.
 #
-# Platform signing / notarization: DEFERRED (unsigned binaries). Release
-# checksums are signed with cosign keyless signing on a best-effort basis.
-# Release assets receive blocking GitHub build provenance in the canonical
-# KooshaPari/SessionLedger repository; forks skip that OIDC-dependent step.
-# Attestations bind each archive subject digest to workflow materials metadata
-# (source checkout at commit) per the SLSA materials contract.
-# Gatekeeper and SmartScreen notes, data dirs, uninstall: docs/ops/distribution.md
-#
-# Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-viewer/README.md
+# Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-daemon/Cargo.toml
 #      packaging/README.md  ·  docs/ops/distribution.md
 
 name: Release
@@ -54,18 +45,19 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             archive: tar.gz
-            archiver: tar czf
+            arch_label: x86_64
           - target: x86_64-apple-darwin
             os: macos-latest
             archive: tar.gz
-            archiver: tar czf
+            arch_label: x86_64
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: tar.gz
-            archiver: tar czf
+            arch_label: aarch64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: zip
+            arch_label: x64
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
@@ -86,70 +78,165 @@ jobs:
           echo "epoch=${epoch}" >> "$GITHUB_OUTPUT"
           echo "SOURCE_DATE_EPOCH=${epoch}"
 
-      - name: build sl-viewer (desktop)
-        run: cargo build -p sl-viewer --release --target ${{ matrix.target }} --locked
+      - name: derive version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.ref_name }}"
+          ver="${tag#v}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+
+      - name: build sl-viewer + sl-daemon
+        run: cargo build -p sl-viewer -p sl-daemon --release --target ${{ matrix.target }} --locked
         env:
-          # The desktop feature is the default — explicit is clearer for CI.
           CARGO_FEATURES: desktop
           CARGO_INCREMENTAL: "0"
           SOURCE_DATE_EPOCH: ${{ steps.source-date-epoch.outputs.epoch }}
 
-      - name: package binary
+      - name: package portable archives
         shell: bash
         run: |
-          PKG="sl-viewer"
-          VER="${{ github.ref_name }}"
+          set -euo pipefail
+          VER="${{ steps.version.outputs.tag }}"
           TARGET="${{ matrix.target }}"
-          DIR="${PKG}-${VER}-${TARGET}"
+          mkdir -p dist-out
 
-          mkdir -p "${DIR}"
+          package_bin() {
+            local pkg="$1"
+            local dir="${pkg}-${VER}-${TARGET}"
+            mkdir -p "${dir}"
+            if [ "${{ matrix.os }}" = "windows-latest" ]; then
+              cp "target/${TARGET}/release/${pkg}.exe" "${dir}/"
+              7z a -tzip "${dir}.zip" "${dir}"
+              cp "${dir}.zip" "dist-out/"
+              echo "${dir}.zip"
+            else
+              cp "target/${TARGET}/release/${pkg}" "${dir}/"
+              tar czf "${dir}.tar.gz" "${dir}"
+              cp "${dir}.tar.gz" "dist-out/"
+              echo "${dir}.tar.gz"
+            fi
+          }
 
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp "target/${TARGET}/release/${PKG}.exe" "${DIR}/"
-            7z a -tzip "${DIR}.zip" "${DIR}"
-            echo "ASSET=${DIR}.zip" >> "$GITHUB_ENV"
-          else
-            cp "target/${TARGET}/release/${PKG}" "${DIR}/"
-            tar czf "${DIR}.tar.gz" "${DIR}"
-            echo "ASSET=${DIR}.tar.gz" >> "$GITHUB_ENV"
+          VIEWER_ASSET="$(package_bin sl-viewer)"
+          DAEMON_ASSET="$(package_bin sl-daemon)"
+          echo "VIEWER_ASSET=${VIEWER_ASSET}" >> "$GITHUB_ENV"
+          echo "DAEMON_ASSET=${DAEMON_ASSET}" >> "$GITHUB_ENV"
+          echo "ASSET_PATH=dist-out" >> "$GITHUB_ENV"
+
+      - name: package Windows MSI (unsigned)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          dotnet tool install --global wix --version 4.0.4
+          $tools = Join-Path $env:USERPROFILE ".dotnet\tools"
+          echo $tools | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $env:Path = "$tools;$env:Path"
+
+          $ver = "${{ steps.version.outputs.version }}"
+          $target = "${{ matrix.target }}"
+          $bin = Join-Path $PWD "target\$target\release\sl-viewer.exe"
+          $dist = Join-Path $PWD "packaging\dist"
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+          & .\scripts\package-msi.ps1 `
+            -Target $target `
+            -Version $ver `
+            -BinaryPath $bin `
+            -DistDir $dist `
+            -SkipBuild
+          if ($LASTEXITCODE -ne 0) {
+            throw "package-msi.ps1 failed with exit code $LASTEXITCODE."
+          }
+
+          $msi = Join-Path $dist "SessionLedger-$ver-x64.msi"
+          if (-not (Test-Path -LiteralPath $msi -PathType Leaf)) {
+            throw "MSI not found at $msi"
+          }
+          Copy-Item -LiteralPath $msi -Destination (Join-Path $PWD "dist-out\SessionLedger-$ver-x64.msi")
+          echo "MSI_ASSET=SessionLedger-$ver-x64.msi" >> $env:GITHUB_ENV
+
+      - name: package macOS app + PKG (unsigned)
+        if: contains(matrix.target, 'apple-darwin')
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ steps.version.outputs.version }}"
+          TARGET="${{ matrix.target }}"
+          ARCH_LABEL="${{ matrix.arch_label }}"
+          BINARY="$PWD/target/${TARGET}/release/sl-viewer"
+          DIST="$PWD/packaging/dist"
+          mkdir -p "$DIST" dist-out
+          chmod +x packaging/macos/package-app.sh packaging/macos/package-pkg.sh
+          VERSION="$VER" BINARY="$BINARY" DIST="$DIST" ARCH_LABEL="$ARCH_LABEL" \
+            ./packaging/macos/package-app.sh
+          VERSION="$VER" DIST="$DIST" ARCH_LABEL="$ARCH_LABEL" \
+            ./packaging/macos/package-pkg.sh
+          PKG="$DIST/SessionLedger-${VER}-${ARCH_LABEL}.pkg"
+          test -f "$PKG"
+          cp "$PKG" dist-out/
+          # Also ship a tarball of the .app for convenience.
+          APP_TAR="SessionLedger-${VER}-${ARCH_LABEL}.app.tar.gz"
+          tar czf "dist-out/${APP_TAR}" -C "$DIST" SessionLedger.app
+          echo "PKG_ASSET=$(basename "$PKG")" >> "$GITHUB_ENV"
+          echo "APP_TAR_ASSET=${APP_TAR}" >> "$GITHUB_ENV"
+
+      - name: package Linux .deb (best effort)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          VER="${{ steps.version.outputs.version }}"
+          BINARY="$PWD/target/${{ matrix.target }}/release/sl-viewer"
+          DIST="$PWD/packaging/dist"
+          mkdir -p "$DIST" dist-out
+          chmod +x packaging/linux/package-deb.sh
+          VERSION="$VER" BINARY="$BINARY" DIST="$DIST" ARCH=amd64 \
+            ./packaging/linux/package-deb.sh
+          cp "$DIST/sessionledger_${VER}_amd64.deb" dist-out/
+
+      - name: package Linux AppImage (best effort)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          VER="${{ steps.version.outputs.version }}"
+          BINARY="$PWD/target/${{ matrix.target }}/release/sl-viewer"
+          DIST="$PWD/packaging/dist"
+          mkdir -p "$DIST" dist-out
+          chmod +x packaging/linux/package-appimage.sh
+          curl -fsSL -o /tmp/appimagetool-x86_64.AppImage \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x /tmp/appimagetool-x86_64.AppImage
+          export PATH="/tmp:$PATH"
+          ln -sf /tmp/appimagetool-x86_64.AppImage /tmp/appimagetool
+          if ! VERSION="$VER" BINARY="$BINARY" DIST="$DIST" ARCH=x86_64 \
+              ./packaging/linux/package-appimage.sh; then
+            APPIMAGE_EXTRACT_AND_RUN=1 VERSION="$VER" BINARY="$BINARY" DIST="$DIST" ARCH=x86_64 \
+              ./packaging/linux/package-appimage.sh
           fi
+          cp "$DIST/SessionLedger-${VER}-x86_64.AppImage" dist-out/
 
-          echo "ASSET_PATH=${DIR}.${{ matrix.archive }}" >> "$GITHUB_ENV"
-
-      - name: attest platform artifact
+      - name: attest platform artifacts
         if: github.repository == 'KooshaPari/SessionLedger'
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
-          subject-path: ${{ env.ASSET_PATH }}
+          subject-path: dist-out/*
 
-      - name: upload artifact
+      - name: upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ matrix.target }}
-          path: ${{ env.ASSET_PATH }}
-          if-no-files-found: error
-
-      - name: package Windows MSI scaffold
-        if: matrix.os == 'windows-latest'
-        shell: bash
-        run: |
-          DIR="sl-viewer-${{ github.ref_name }}-windows-msi-scaffold"
-          mkdir -p "${DIR}/packaging/windows" "${DIR}/scripts"
-          cp packaging/windows/Product.wxs "${DIR}/packaging/windows/"
-          cp scripts/package-msi.md "${DIR}/scripts/"
-          7z a -tzip "${DIR}.zip" "${DIR}"
-          echo "MSI_SCAFFOLD=${DIR}.zip" >> "$GITHUB_ENV"
-
-      - name: upload Windows MSI scaffold
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: windows-msi-scaffold
-          path: ${{ env.MSI_SCAFFOLD }}
+          path: dist-out/*
           if-no-files-found: error
 
   smoke-windows:
-    name: smoke · Windows release artifact
+    name: smoke · Windows ZIP + MSI
     needs: build
     runs-on: windows-latest
     steps:
@@ -158,10 +245,10 @@ jobs:
           name: x86_64-pc-windows-msvc
           path: artifact
 
-      - name: extract and run version
+      - name: portable ZIP --version
         shell: pwsh
         run: |
-          $archive = Get-ChildItem -LiteralPath artifact -Filter *.zip -File |
+          $archive = Get-ChildItem -LiteralPath artifact -Filter "sl-viewer-*.zip" -File |
             Select-Object -First 1
           if (-not $archive) {
             throw "Windows release archive was not downloaded."
@@ -177,6 +264,53 @@ jobs:
             throw "sl-viewer.exe --version exited with code $LASTEXITCODE."
           }
 
+      - name: MSI silent install → --version → uninstall
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $msi = Get-ChildItem -LiteralPath artifact -Filter "SessionLedger-*-x64.msi" -File |
+            Select-Object -First 1
+          if (-not $msi) {
+            throw "SessionLedger MSI was not downloaded."
+          }
+
+          $installDir = Join-Path $env:LOCALAPPDATA "Programs\SessionLedger"
+          $viewer = Join-Path $installDir "sl-viewer.exe"
+
+          Write-Host "Installing $($msi.Name) silently..."
+          $p = Start-Process -FilePath "msiexec.exe" -ArgumentList @(
+            "/i", $msi.FullName, "/qn", "/norestart"
+          ) -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            throw "msiexec install exited with code $($p.ExitCode)."
+          }
+          if (-not (Test-Path -LiteralPath $viewer -PathType Leaf)) {
+            throw "Expected installed viewer at $viewer"
+          }
+
+          & $viewer --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed sl-viewer.exe --version exited with code $LASTEXITCODE."
+          }
+
+          Write-Host "Uninstalling MSI silently..."
+          $u = Start-Process -FilePath "msiexec.exe" -ArgumentList @(
+            "/x", $msi.FullName, "/qn", "/norestart"
+          ) -Wait -PassThru
+          if ($u.ExitCode -ne 0) {
+            throw "msiexec uninstall exited with code $($u.ExitCode)."
+          }
+
+          $deadline = (Get-Date).AddSeconds(60)
+          while ((Get-Date) -lt $deadline) {
+            if (-not (Test-Path -LiteralPath $installDir)) {
+              Write-Host "Install directory removed."
+              return
+            }
+            Start-Sleep -Seconds 2
+          }
+          throw "Install directory still present after uninstall: $installDir"
+
   smoke-linux:
     name: smoke · Linux release artifact
     needs: build
@@ -190,7 +324,8 @@ jobs:
       - name: extract and run version
         shell: bash
         run: |
-          archive="$(printf '%s\n' artifact/*.tar.gz)"
+          set -euo pipefail
+          archive="$(printf '%s\n' artifact/sl-viewer-*.tar.gz)"
           test -f "${archive}"
           mkdir extracted
           tar xzf "${archive}" -C extracted
@@ -198,9 +333,57 @@ jobs:
           test -x "${binary}"
           "${binary}" --version
 
+      - name: verify optional Linux installers present or absent gracefully
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          debs=(artifact/sessionledger_*.deb)
+          apps=(artifact/SessionLedger-*.AppImage)
+          if ((${#debs[@]})); then
+            echo "deb present: ${debs[*]}"
+            dpkg-deb --info "${debs[0]}"
+          else
+            echo "No .deb attached (best-effort packaging skipped or failed)."
+          fi
+          if ((${#apps[@]})); then
+            echo "AppImage present: ${apps[*]}"
+            test -f "${apps[0]}"
+          else
+            echo "No AppImage attached (best-effort packaging skipped or failed)."
+          fi
+
+  smoke-macos-pkg:
+    name: smoke · macOS PKG expand
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: aarch64-apple-darwin
+          path: artifact
+
+      - name: expand PKG and check app payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$(printf '%s\n' artifact/SessionLedger-*-aarch64.pkg)"
+          test -f "${pkg}"
+          mkdir expanded
+          pkgutil --expand "${pkg}" expanded/pkg
+          # productbuild layout varies; search for the .app payload.
+          if find expanded -name 'SessionLedger.app' -type d | grep -q .; then
+            echo "Found SessionLedger.app inside PKG"
+          else
+            # Fallback: list package contents for diagnosis, then accept Payload presence.
+            find expanded -maxdepth 4 -print
+            test -n "$(find expanded -name Payload -type f | head -n 1)"
+            echo "PKG expands and contains a Payload (unsigned productbuild)."
+          fi
+
   release:
     name: create Release · attach assets
-    needs: [build, smoke-windows, smoke-linux]
+    needs: [build, smoke-windows, smoke-linux, smoke-macos-pkg]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -219,7 +402,12 @@ jobs:
 
       - name: create checksums
         working-directory: artifacts
-        run: sha256sum sl-viewer-* > SHA256SUMS
+        run: |
+          set -euo pipefail
+          # Hash every shipped release file (archives, installers, SBOM later).
+          find . -maxdepth 1 -type f ! -name SHA256SUMS ! -name 'SHA256SUMS.*' \
+            -printf '%P\n' | sort | xargs -r sha256sum > SHA256SUMS
+          cat SHA256SUMS
 
       - name: install cargo-cyclonedx
         run: cargo install cargo-cyclonedx --locked
@@ -228,6 +416,12 @@ jobs:
         run: |
           cargo cyclonedx --format json
           cp session-ledger.cdx.json artifacts/session-ledger.cdx.json
+          # Refresh checksums to include the SBOM.
+          (
+            cd artifacts
+            find . -maxdepth 1 -type f ! -name SHA256SUMS ! -name 'SHA256SUMS.*' \
+              -printf '%P\n' | sort | xargs -r sha256sum > SHA256SUMS
+          )
 
       - name: attest Release assets
         id: provenance
@@ -256,31 +450,36 @@ jobs:
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3
         with:
           tag_name: ${{ github.ref_name }}
-          name: "sl-viewer ${{ github.ref_name }}"
+          name: "SessionLedger ${{ github.ref_name }}"
           body: |
-            ## sl-viewer ${{ github.ref_name }}
+            ## SessionLedger ${{ github.ref_name }}
 
-            Desktop Dioxus viewer for SessionLedger compiled bundles.
+            Desktop Dioxus viewer + portable `sl-daemon` archives. Installers are
+            **unsigned** (Authenticode / Apple notarization deferred — ADR 0003).
 
-            ### Launch
-
-            ```bash
-            # Linux / macOS
-            ./sl-viewer
-
-            # Windows
-            sl-viewer.exe
-            ```
-
-            ### Checksums
+            ### Portable archives
 
             | Asset | Platform |
             | ----- | -------- |
-            | `sl-viewer-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz` | Linux (x86_64) |
-            | `sl-viewer-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz`   | macOS (Intel)   |
-            | `sl-viewer-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz`  | macOS (Apple Silicon) |
-            | `sl-viewer-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip`   | Windows (x86_64) |
-            | `sl-viewer-${{ github.ref_name }}-windows-msi-scaffold.zip` | WiX v4 source + build notes (not an MSI) |
+            | `sl-viewer-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz` | Linux viewer (x86_64) |
+            | `sl-daemon-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz` | Linux daemon (x86_64) |
+            | `sl-viewer-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz` | macOS viewer (Intel) |
+            | `sl-daemon-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz` | macOS daemon (Intel) |
+            | `sl-viewer-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz` | macOS viewer (Apple Silicon) |
+            | `sl-daemon-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz` | macOS daemon (Apple Silicon) |
+            | `sl-viewer-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip` | Windows viewer (x86_64) |
+            | `sl-daemon-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip` | Windows daemon (x86_64) |
+
+            ### Installers (unsigned)
+
+            | Asset | Notes |
+            | ----- | ----- |
+            | `SessionLedger-<ver>-x64.msi` | WiX v4 per-user MSI (Windows) |
+            | `SessionLedger-<ver>-aarch64.pkg` | productbuild PKG (Apple Silicon) |
+            | `SessionLedger-<ver>-x86_64.pkg` | productbuild PKG (Intel) |
+            | `SessionLedger-<ver>-aarch64.app.tar.gz` / `…-x86_64.app.tar.gz` | Unsigned `.app` bundles |
+            | `sessionledger_<ver>_amd64.deb` | Best-effort Debian package |
+            | `SessionLedger-<ver>-x86_64.AppImage` | Best-effort AppImage |
 
             Verify archive hashes with `SHA256SUMS`. CI also attempts to publish
             `SHA256SUMS.sigstore.json`, a best-effort cosign keyless signature bundle.
@@ -288,7 +487,7 @@ jobs:
             is required for canonical KooshaPari/SessionLedger releases and can be
             verified with `gh attestation`.
 
-            See [`crates/sl-viewer/README.md`](https://github.com/KooshaPari/SessionLedger/tree/main/crates/sl-viewer) for build instructions.
+            See [`docs/ops/distribution.md`](https://github.com/KooshaPari/SessionLedger/blob/main/docs/ops/distribution.md).
           draft: false
           prerelease: false
           files: artifacts/*

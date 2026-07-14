@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- WiX v4 scaffold. See scripts/package-msi.md before producing an artifact. -->
+<!-- WiX v4 per-user MSI. Built by scripts/package-msi.ps1 (unsigned; Authenticode deferred). -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package
     Name="SessionLedger Viewer"
@@ -26,7 +26,7 @@
 
   <Fragment>
     <ComponentGroup Id="ApplicationComponents" Directory="INSTALLFOLDER">
-      <Component>
+      <Component Guid="*">
         <File Id="ViewerExecutable" Source="$(var.SourceDir)\sl-viewer.exe">
           <Shortcut
             Id="StartMenuShortcut"
@@ -44,8 +44,10 @@
           KeyPath="yes" />
         <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
       </Component>
-      <Component>
+      <Component Guid="*">
         <File Source="$(var.SourceDir)\LICENSE-MIT" />
+      </Component>
+      <Component Guid="*">
         <File Source="$(var.SourceDir)\LICENSE-APACHE" />
       </Component>
     </ComponentGroup>

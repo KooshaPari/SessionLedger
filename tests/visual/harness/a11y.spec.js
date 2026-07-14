@@ -92,6 +92,23 @@ test("Help control opens keyboard help and Escape closes it", async ({ page }) =
   await expect(helpButton).toHaveAttribute("aria-expanded", "false");
 });
 
+test("Escape closes help overlay even when focus is in a search field", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Search", exact: true }).click();
+  const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
+  await since.fill("2026-01-01");
+  await since.focus();
+
+  const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
+  await page.getByRole("button", { name: "Help (?)" }).click();
+  await expect(helpDialog).toHaveCount(1);
+
+  await page.keyboard.press("Escape");
+  await expect(helpDialog).toHaveCount(0);
+  await expect(since).toHaveValue("2026-01-01");
+  await expect(page.getByRole("button", { name: "Help (?)" })).toBeFocused();
+});
+
 test("Ctrl+K opens command palette and Escape closes it", async ({ page }) => {
   await page.goto("/");
   const palette = page.locator('[data-testid="command-palette-dialog"]');
@@ -276,9 +293,29 @@ test.describe("status regions and cognitive fixtures", () => {
     await expect(since).toHaveValue("2026-01-01");
 
     await page.getByRole("button", { name: "Clear", exact: true }).click();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(since).toHaveValue("2026-01-01");
+
+    await page.getByRole("button", { name: "Clear", exact: true }).click();
     await page.getByRole("button", { name: "Confirm clear" }).click();
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(since).toHaveValue("");
+  });
+
+  test("search error fixture dismisses on Escape without moving focus", async ({ page }) => {
+    await page.goto("/?fixture=search-error");
+    const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
+    const error = page.getByRole("alert");
+    await expect(error).toBeVisible();
+    await expect(since).toHaveAttribute("aria-invalid", "true");
+
+    await since.focus();
+    await page.keyboard.press("Escape");
+    await expect(error).toHaveCount(0);
+    await expect(since).toHaveAttribute("aria-invalid", "false");
+    await expect(since).toBeFocused();
   });
 
   test("stream skeleton fixture exposes labelled feed status and stream skeleton", async ({ page }) => {

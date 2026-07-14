@@ -1,7 +1,7 @@
 //! Skeleton integration tests proving the domain compiles and behaves.
 //!
 //! Traceability: JSONL ingest / distill paths cover FR-001; injectable
-//! ContinuationBundle compile covers FR-012.
+//! [`ContinuationBundle`] compile covers FR-012.
 
 use session_ledger::distill;
 use session_ledger::domain::dedup::DedupKey;

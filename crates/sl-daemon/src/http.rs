@@ -42,7 +42,7 @@ use tokio::sync::{broadcast, Semaphore};
 use crate::audit::{self, AuditSink};
 use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
-use crate::metrics::{compute_metrics, HttpMetrics};
+use crate::metrics::{compute_metrics, normalize_http_route, HttpMetrics};
 use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 #[cfg(feature = "otel")]
 use opentelemetry::trace::{
@@ -488,7 +488,8 @@ async fn observe_request(
     }
     let is_error = response.status().is_client_error() || response.status().is_server_error();
     let elapsed = started.elapsed().as_micros().try_into().unwrap_or(u64::MAX);
-    metrics.request_completed(is_error, elapsed);
+    let route = normalize_http_route(&path);
+    metrics.request_completed(route, is_error, elapsed);
     response
 }
 

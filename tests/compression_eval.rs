@@ -17,7 +17,7 @@ const COMPRESS_TOKEN_FIXTURES: &[&str] = &[
     "docs/reference/conformance/fixtures/archive-gzip-resume-036.okf.json",
 ];
 
-/// Per-fixture token ledger rows: intent token_estimate sum must match gate total.
+/// Per-fixture token ledger rows: intent `token_estimate` sum must match gate total.
 const TOKEN_LEDGER_FIXTURES: &[(&str, u32, &[u32])] = &[
     ("docs/reference/conformance/fixtures/task-family-token-budget-032.okf.json", 370, &[210, 160]),
     (
@@ -103,10 +103,10 @@ fn compress_token_fixtures_per_eval_token_ledger_matches_gate() {
             .iter()
             .filter(|entity| entity["type"] == "gate")
             .find_map(|entity| entity["properties"]["total_token_estimate"].as_u64())
-            .map(|value| u32::try_from(value).expect("token estimate fits u32"))
-            .unwrap_or_else(|| {
-                panic!("{} missing gate.properties.total_token_estimate", path.display())
-            });
+            .map_or_else(
+                || panic!("{} missing gate.properties.total_token_estimate", path.display()),
+                |value| u32::try_from(value).expect("token estimate fits u32"),
+            );
 
         let config_sum: u32 = expected_intents.iter().sum();
         assert_eq!(

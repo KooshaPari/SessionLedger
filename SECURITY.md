@@ -73,8 +73,9 @@ Critical supply-chain or remote-code issues may be accelerated at maintainer dis
 SessionLedger uses **SHA-256 content hashing** (`sha2`) for dedup keys and
 **operator-owned TLS** at a reverse proxy for remote-style daemon deploys. There
 is **no encryption-at-rest** for OKF bundles or audit files and **no in-tree
-KMS** — see the full inventory, TLS samples (Caddy/nginx), and explicit
-non-goals in [`docs/ops/crypto-inventory.md`](docs/ops/crypto-inventory.md).
+KMS** — Phase-0 defers app-level envelope encryption to host FDE / ACLs / vault
+injection. See the full inventory, TLS samples (Caddy/nginx), and KMS/at-rest
+guidance in [`docs/ops/crypto-inventory.md`](docs/ops/crypto-inventory.md).
 STRIDE-lite context: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 
 ## API keys and secret rotation

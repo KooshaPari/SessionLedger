@@ -25,9 +25,11 @@ In Grafana, choose **Dashboards → New → Import**, upload
 `sessionledger-red.json`, and select the Prometheus data source. The dashboard
 defaults to the `sl-daemon` scrape job and supports filtering by instance.
 
-The Wave-6 exporter has no route labels or histogram buckets. The dashboard
-therefore shows service-wide error ratio and mean duration; it intentionally
-does not claim route-level or p95/p99 latency.
+The Wave-6 dashboard panels target aggregate counters only. As of Wave-19
+(`#169`), `/metrics` also emits per-route `route` labels and histogram buckets
+(`sl_http_request_duration_seconds_bucket{route=...}`). This JSON has not yet
+been updated with route-level panels; it therefore shows service-wide error
+ratio and mean duration and does not claim route-level p95/p99 latency.
 
 ## Provisioning
 

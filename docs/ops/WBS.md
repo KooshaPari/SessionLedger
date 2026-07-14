@@ -45,7 +45,7 @@ are not recomputed here.
 | WBS-7.5 | Wave-6 observability, eval, packaging, and a11y uplift | done | machine | `docs/ops/dashboards/`; `scripts/load-smoke.ps1`; `tests/visual/`; `docs/ops/distribution.md` | C05, C08, C09, C11 |
 | WBS-7.6 | Wave-7 supply-chain provenance and scorecard refresh | done | machine | `.github/workflows/release.yml`; `audit/SCORECARD.md` | C01, C04, C06; 268/402 |
 | WBS-8.1 | Wave-8 machine traceability and in-document status governance | done | machine | `docs/ops/WBS.md`; `docs/ops/GAP_QA_MATRIX.md`; `docs/ops/TRACEABILITY.json`; `docs/ops/traceability_lint.ps1` | C03; FR-001..FR-015; PLAN |
-| WBS-8.2 | Wave-8 close evidence-backed gaps to at least B (>=75%) | done | machine | `docs/ops/GAP_QA_MATRIX.md`; `.github/workflows/release.yml`; `packaging/README.md`; `docs/ops/distribution.md`; `scripts/repro-check.ps1`; `docs/ops/reproducible-builds.md`; Wave-8/9 re-audit evidence | C00-C11; C11 portable artifact smoke + repro evidence landed; Wave-18 re-audit landed at 326/402 (81% B) |
+| WBS-8.2 | Wave-8 close evidence-backed gaps to at least B (>=75%) | done | machine | `docs/ops/GAP_QA_MATRIX.md`; `.github/workflows/release.yml`; `packaging/README.md`; `docs/ops/distribution.md`; `scripts/repro-check.ps1`; `docs/ops/reproducible-builds.md`; Wave-8/9 re-audit evidence | C00-C11; C11 portable artifact smoke + repro evidence landed; Wave-19 re-audit landed at 327/402 (81% B) |
 | WBS-8.3 | Wave-8 independent re-audit and scorecard refresh | done | human | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 273/402 (68% C) |
 | WBS-8.4 | Wave-9 evidence packages (C02 trust, C06 repro, C07 property/fuzz, C11 archive smoke) | done | machine | `.github/workflows/release.yml`; `scripts/repro-check.ps1`; `docs/ops/local-trust-boundary.md`; `tests/properties.rs`; `fuzz/` | C02, C06, C07, C11; PRs #120-#123 |
 | WBS-8.5 | Wave-9 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 280/402 (70% C) |
@@ -67,6 +67,8 @@ are not recomputed here.
 | WBS-8.21 | Wave-17 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 324/402 (81% B) |
 | WBS-8.22 | Wave-18 evidence packages (C00 schema scaffold, C06 per-matrix provenance contract, C07 race OS-matrix, C10 skeletons/L1 golden) | done | machine | `src/schema/`; `scripts/provenance-contract-check.ps1`; `.github/workflows/race-smoke.yml`; `crates/sl-viewer/src/async_states.rs`; `tests/visual/golden/l1-content-skeleton.png` | C00, C06, C07, C10; PRs #163-#166 |
 | WBS-8.23 | Wave-18 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 326/402 (81% B) |
+| WBS-8.24 | Wave-19 evidence packages (C00 SqliteMemoryStore, C05 per-route histograms, C07 flake tracker/rerun stats, C10 stream skeletons) | done | machine | `src/ports/sqlite_memory.rs`; `crates/sl-daemon/src/metrics.rs`; `scripts/flake-tracker-check.ps1`; `scripts/flake-rerun-stats.ps1`; `crates/sl-viewer/src/live_feed.rs`; `crates/sl-viewer/src/replay_view.rs` | C00, C05, C07, C10; PRs #168-#171 |
+| WBS-8.25 | Wave-19 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 327/402 (81% B) |
 
 ## Organization-level control plane
 

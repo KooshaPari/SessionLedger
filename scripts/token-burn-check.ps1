@@ -137,10 +137,24 @@ foreach ($entry in @($config.fixtures)) {
     if ($parsed.GateTotal -ne $expectedTotal) {
         throw "Fixture '$rel' gate total_token_estimate is $($parsed.GateTotal); config expects $expectedTotal."
     }
-    $sortedObserved = @($parsed.IntentEstimates | Sort-Object)
-    $sortedExpected = @($expectedIntents | Sort-Object)
-    if (($sortedObserved -join ',') -ne ($sortedExpected -join ',')) {
-        throw "Fixture '$rel' intent token_estimate list [$($sortedObserved -join ', ')] does not match config [$($sortedExpected -join ', ')]."
+    $obsKey = [string]::Join(
+        ',',
+        @(
+            $parsed.IntentEstimates |
+                ForEach-Object { [int]$_ } |
+                Sort-Object
+        )
+    )
+    $expKey = [string]::Join(
+        ',',
+        @(
+            $expectedIntents |
+                ForEach-Object { [int]$_ } |
+                Sort-Object
+        )
+    )
+    if ($obsKey -cne $expKey) {
+        throw "Fixture '$rel' intent token_estimate list [$obsKey] does not match config [$expKey]."
     }
 
     $ledgerRows.Add([pscustomobject]@{

@@ -59,13 +59,13 @@ test("Tab order reaches active tab then active-panel controls", async ({ page })
 
   await expect(page.getByRole("tab", { name: "Search" })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.locator(".search-input").first()).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeFocused();
 });
 
 test("Escape clears the search without moving focus", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("tab", { name: "Search" }).click();
-  const since = page.locator(".search-input").first();
+  const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
   await since.fill("2026-01-01");
   await since.press("Escape");
   await expect(since).toHaveValue("");
@@ -75,17 +75,44 @@ test("Escape clears the search without moving focus", async ({ page }) => {
 test("Help control opens keyboard help and Escape closes it", async ({ page }) => {
   await page.goto("/");
   const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
-  const helpButton = page.locator("#viewer-help-button");
+  const helpButton = page.getByRole("button", { name: "Help (?)" });
   await expect(helpDialog).toHaveCount(0);
   await expect(helpButton).toBeVisible();
+  await expect(helpButton).toHaveAttribute("aria-haspopup", "dialog");
+  await expect(helpButton).toHaveAttribute("aria-expanded", "false");
 
   await helpButton.click();
   await expect(helpDialog).toHaveCount(1);
+  await expect(helpButton).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("heading", { name: "Keyboard shortcuts" })).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(helpDialog).toHaveCount(0);
   await expect(helpButton).toBeFocused();
+  await expect(helpButton).toHaveAttribute("aria-expanded", "false");
+});
+
+test("primary controls expose stable accessible names", async ({ page }) => {
+  await page.goto("/");
+
+  const theme = page.getByRole("button", { name: "Toggle light and dark theme" });
+  await expect(theme).toBeVisible();
+  await expect(theme).toBeEnabled();
+
+  const help = page.getByRole("button", { name: "Help (?)" });
+  await expect(help).toBeVisible();
+  await expect(help).toHaveAttribute("aria-controls", "keyboard-help-dialog");
+
+  // Bundles uses synchronous sample data after the loading gate; wait on role+name.
+  const filter = page.getByRole("textbox", { name: "Filter sessions" });
+  await expect(filter).toBeVisible();
+  await expect(filter).toHaveAttribute("placeholder", "Filter sessions...");
+
+  await page.getByRole("tab", { name: "Search", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Model (substring)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Search", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Clear", exact: true })).toBeVisible();
 });
 
 test.describe("status regions and cognitive fixtures", () => {
@@ -111,12 +138,15 @@ test.describe("status regions and cognitive fixtures", () => {
 
   test("search error fixture exposes assertive alert with retry", async ({ page }) => {
     await page.goto("/?fixture=search-error");
-    const error = page.getByTestId("error-state");
+    const error = page.getByRole("alert");
     await expect(error).toBeVisible();
-    await expect(error).toHaveAttribute("role", "alert");
     await expect(error).toHaveAttribute("aria-live", "assertive");
     await expect(error).toContainText(/something went wrong/i);
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeVisible();
+    await expect(retry).toBeEnabled();
     await expect(page.getByTestId("error-state-retry")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeVisible();
   });
 
   test("stream skeleton fixture exposes labelled feed status and stream skeleton", async ({ page }) => {
@@ -173,10 +203,11 @@ test.describe("landmarks and reduced motion", () => {
 
 test("help overlay lists every shortcut row for keyboard efficiency", async ({ page }) => {
   await page.goto("/");
-  await page.locator("#viewer-help-button").click();
+  await page.getByRole("button", { name: "Help (?)" }).click();
   const rows = page.locator(".help-overlay-table tbody tr");
   await expect(rows).toHaveCount(9);
   await expect(page.getByRole("dialog")).toHaveAttribute("aria-labelledby", "help-overlay-title");
   await expect(page.getByRole("columnheader", { name: "Shortcut" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Action" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Close keyboard help" })).toBeVisible();
 });

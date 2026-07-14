@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "324/402",
+    "score": "326/402",
     "pct": 81,
     "grade": "B",
-    "commit": "f6f03ce",
-    "wave": "Wave-17"
+    "commit": "1a1eaf9",
+    "wave": "Wave-18"
   },
   "fr": [
     {
@@ -517,16 +517,35 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.22",
+      "status": "done",
+      "evidence": [
+        "src/schema/migrate.rs",
+        "scripts/provenance-contract-check.ps1",
+        ".github/workflows/race-smoke.yml",
+        "crates/sl-viewer/src/async_states.rs",
+        "tests/visual/golden/l1-content-skeleton.png"
+      ]
+    },
+    {
+      "id": "WBS-8.23",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
     {
       "id": "C00",
-      "score": "23/30",
+      "score": "24/30",
       "status": "partial",
       "evidence": [
         "docs/api/openapi.yaml",
-        "crates/sl-daemon/src/http.rs",
+        "src/schema/mod.rs",
+        "docs/ops/schema-migrations.md",
         "scripts/openapi-drift-check.ps1"
       ]
     },
@@ -570,22 +589,23 @@
       "score": "23/30",
       "status": "partial",
       "evidence": [
-        "scripts/repro-check.ps1",
-        ".github/workflows/hermetic.yml",
-        "docs/ops/hermetic-builder.json",
-        "scripts/hermetic-check.ps1"
+        "scripts/provenance-contract-check.ps1",
+        ".github/workflows/provenance-contract.yml",
+        ".github/workflows/release.yml",
+        "docs/ops/reproducible-builds.md"
       ],
-      "remaining": "Cross-host and Windows proof, SLSA L3, blocking per-build provenance, and container provenance"
+      "remaining": "SLSA-L3 material metadata, cross-host/Windows proof, and container provenance"
     },
     {
       "id": "C07",
       "score": "25/30",
       "status": "partial",
       "evidence": [
+        "tests/race_smoke.rs",
+        ".github/workflows/race-smoke.yml",
+        "docs/ops/cross-platform-ci.md",
         "tests/properties.rs",
-        "fuzz/",
-        ".github/workflows/ci.yml",
-        "CONTRIBUTING.md"
+        "fuzz/"
       ]
     },
     {
@@ -605,12 +625,12 @@
     },
     {
       "id": "C10",
-      "score": "32/36",
+      "score": "33/36",
       "status": "partial",
       "evidence": [
+        "crates/sl-viewer/src/async_states.rs",
         "assets/tokens.css",
-        "crates/sl-daemon/src/banner.rs",
-        "crates/sl-viewer/src/app.rs",
+        "tests/visual/golden/l1-content-skeleton.png",
         "tests/visual/harness/visual.spec.js"
       ]
     },

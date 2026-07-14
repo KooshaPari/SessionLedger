@@ -27,8 +27,9 @@ Capture or eyeball each surface (store approved PNGs under `tests/visual/golden/
 | E2 | History detail, nothing selected | Muted “Select a session…” empty-state |
 | E3 | Timeline / list with zero rows | “No bundles…” (or equivalent); calm, not red |
 | E4 | Search with no matches | Zero-match copy + clear path; not `.search-error` |
+| E5 | First-run, no corpus ingested | Short why + cobalt CTA; not error styling or live orange |
 
-- [ ] E1–E4 pass copy + color rules in VISUAL_SPEC §2.
+- [ ] E1–E5 pass copy + color rules in VISUAL_SPEC §2.
 
 ## Loading states
 
@@ -136,8 +137,11 @@ tests/visual/
     e2-history-empty.png
     e3-timeline-zero.png
     e4-search-empty.png
+    e5-first-run-empty.png
     l1-search-loading.png
     r1-search-error.png
+    r2-replay-error.png
+    r3-error-color.png
   harness/
     a11y.spec.js       ← axe across every built viewer tab + keyboard evidence
     responsive.spec.js ← document-level no-horizontal-overflow evidence

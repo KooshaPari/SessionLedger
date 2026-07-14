@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 
-use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
+use crate::async_states::{ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, SkeletonLayout};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
@@ -116,6 +116,8 @@ fn initial_tab_for_viewer() -> Tab {
         Tab::History
     } else if query_fixture_active("search-empty") || query_fixture_active("search-error") {
         Tab::Search
+    } else if query_fixture_active("replay-error") {
+        Tab::Replay
     } else {
         Tab::Bundles
     }
@@ -722,6 +724,20 @@ fn BundlesTab() -> Element {
         }
         loading.set(false);
     });
+
+    if query_fixture_active("first-run") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            FirstRunEmpty {}
+        };
+    }
+
+    if query_fixture_active("error-color") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ErrorColorFixture {}
+        };
+    }
 
     if loading() || query_fixture_active("skeleton") {
         return rsx! {

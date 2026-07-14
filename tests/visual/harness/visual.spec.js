@@ -32,11 +32,44 @@ test("E4 search zero-match empty state matches its golden", async ({ page }) => 
   });
 });
 
+test("E5 first-run empty state matches its golden", async ({ page }) => {
+  await page.goto("/?fixture=first-run");
+  await expect(page.getByRole("tab", { name: "Bundles", selected: true })).toBeVisible();
+  await expect(page.getByTestId("first-run-empty")).toBeVisible();
+  await expect(page.getByTestId("first-run-cta")).toBeVisible();
+  await expect(page).toHaveScreenshot("e5-first-run-empty.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
+});
+
 test("R1 search error state matches its golden", async ({ page }) => {
   await page.goto("/?fixture=search-error");
   await expect(page.getByRole("tab", { name: "Search", selected: true })).toBeVisible();
   await expect(page.getByText("daemon not reachable")).toBeVisible();
   await expect(page).toHaveScreenshot("r1-search-error.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
+});
+
+test("R2 replay stream error state matches its golden", async ({ page }) => {
+  await page.goto("/?fixture=replay-error");
+  await expect(page.getByRole("tab", { name: "Replay", selected: true })).toBeVisible();
+  await expect(page.getByTestId("replay-status-error")).toBeVisible();
+  await expect(page.getByTestId("error-state-retry")).toBeVisible();
+  await expect(page).toHaveScreenshot("r2-replay-error.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
+});
+
+test("R3 error color contract matches its golden", async ({ page }) => {
+  await page.goto("/?fixture=error-color");
+  await expect(page.getByRole("tab", { name: "Bundles", selected: true })).toBeVisible();
+  await expect(page.getByTestId("error-color-panel")).toBeVisible();
+  await expect(page.getByTestId("error-color-live-badge")).toBeVisible();
+  await expect(page).toHaveScreenshot("r3-error-color.png", {
     animations: "disabled",
     maxDiffPixelRatio: 0.03,
   });

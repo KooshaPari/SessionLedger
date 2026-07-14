@@ -5,6 +5,7 @@
 use dioxus::prelude::*;
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
+use crate::fixture::query_fixture_active;
 
 /// Default daemon base URL (configurable via `SL_DAEMON_URL` env at runtime).
 const DEFAULT_DAEMON: &str = "http://127.0.0.1:8080";
@@ -82,6 +83,45 @@ pub fn ReplayView() -> Element {
     let mut progress: Signal<(usize, usize)> = use_signal(|| (0, 0));
 
     let daemon_url = option_env!("SL_DAEMON_URL").unwrap_or(DEFAULT_DAEMON);
+
+    if query_fixture_active("replay-error") {
+        return rsx! {
+            style {
+                r#"
+                .replay-view {{ display: flex; flex-direction: column; height: 100%; padding: 16px 20px; box-sizing: border-box; }}
+                .replay-controls {{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }}
+                .replay-input {{ flex: 1; min-width: 180px; padding: 8px 12px; background: #1c1f2b; border: 1px solid #2a2d35; border-radius: 6px; color: #e1e4ea; font-size: 13px; font-family: monospace; }}
+                .btn {{ padding: 8px 16px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }}
+                .btn-play {{ background: #2563eb; color: #fff; }}
+                .status-error {{ color: #f87171; font-size: 13px; padding: 8px 0; }}
+                "#
+            }
+            div {
+                class: "replay-view",
+                "data-testid": "replay-error-fixture",
+                div { class: "replay-controls",
+                    input {
+                        class: "replay-input",
+                        r#type: "text",
+                        "aria-label": "Bundle ID",
+                        value: "sess-visual-fixture",
+                        readonly: true,
+                    }
+                    button { class: "btn btn-play", disabled: true, "Play" }
+                }
+                p {
+                    class: "status-error",
+                    "data-testid": "replay-status-error",
+                    "Replay stream disconnected before completion."
+                }
+                ErrorState {
+                    message: "daemon closed the SSE replay stream (visual fixture)".to_owned(),
+                    retryable: true,
+                    on_retry: move |_| {},
+                }
+            }
+        };
+    }
 
     rsx! {
         style {

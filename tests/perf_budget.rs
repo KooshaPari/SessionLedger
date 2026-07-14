@@ -104,7 +104,8 @@ fn perf_baseline_exposes_soft_latency_budgets() {
         "pipeline/inject_render_200_messages",
     ];
     for key in required {
-        let entry = benchmarks.get(key).unwrap_or_else(|| panic!("missing latency benchmark {key}"));
+        let entry =
+            benchmarks.get(key).unwrap_or_else(|| panic!("missing latency benchmark {key}"));
         let p95 = entry
             .get("p95_ns")
             .and_then(serde_json::Value::as_f64)

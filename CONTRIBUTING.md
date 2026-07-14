@@ -95,6 +95,17 @@ To run gitleaks manually before committing, stage the intended files and run:
 pre-commit run gitleaks
 ```
 
+When changing environment documentation, keep [`.env.example`](.env.example)
+complete for local runtime keys (including the `SL_API_KEY` placeholder) and
+run the light gate:
+
+```powershell
+pwsh -NoProfile -File scripts/env-example-check.ps1
+```
+
+Do not commit real API keys. Secret rotation and header handling are summarized
+in [`SECURITY.md`](SECURITY.md#api-keys-and-secret-rotation).
+
 ## Branch Discipline
 - Always create feature branches off main
 - Never commit directly to main

@@ -35,11 +35,7 @@ fn compress_token_fixtures_zstd_roundtrip_stays_below_ratio_gate() {
             .decompress(&compressed)
             .unwrap_or_else(|err| panic!("decompress {}: {err}", path.display()));
 
-        assert_eq!(
-            decoded, source,
-            "zstd must preserve fixture bytes for {}",
-            path.display()
-        );
+        assert_eq!(decoded, source, "zstd must preserve fixture bytes for {}", path.display());
 
         let ratio_bps = compressed.len() * 10_000 / source.len();
         assert!(

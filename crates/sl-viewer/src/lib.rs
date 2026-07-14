@@ -17,6 +17,7 @@ pub mod bundle_list;
 pub mod corpus_loader;
 pub mod detail_pane;
 pub mod fixture;
+pub mod help_overlay;
 pub mod history_tab;
 pub mod live_feed;
 pub mod memory_tab;

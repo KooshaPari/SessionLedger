@@ -49,6 +49,15 @@ pwsh -NoProfile -File scripts/record-native-webview-smoke.ps1 `
   -Outcome pass `
   -ScreenReader NVDA `
   -OutPath docs/ops/fixtures/native-webview-smoke.local.json
+
+# Optional: attach to a running daemon for live-daemon parity probes
+# (see docs/a11y/status-regions-and-native-smoke.md#live-daemon-native-webview-parity):
+pwsh -NoProfile -File scripts/record-native-webview-smoke.ps1 `
+  -Outcome pass `
+  -AttachDaemon `
+  -DaemonUrl http://127.0.0.1:8080 `
+  -ScreenReader NVDA `
+  -OutPath docs/ops/fixtures/native-webview-smoke.local.json
 ```
 
 Commit only intentional evidence under audit packages; keep

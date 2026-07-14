@@ -61,7 +61,10 @@ const CLI_AFTER_HELP: &str = r#"Examples:
   sl-daemon serve --watch ./sessions --out ./okf-out --once --http-bind 127.0.0.1:8080
   curl -X POST http://127.0.0.1:8080/api/ingest \
     -H 'content-type: application/json' --data-binary @bundle.json
+  sl-daemon status
+  sl-daemon search --tag production --format json
   sl-daemon completions zsh > _sl-daemon
+  sh scripts/install-sl-daemon-completions.sh
 "#;
 
 const SERVE_AFTER_HELP: &str = r#"Examples:
@@ -92,6 +95,37 @@ const TAG_AFTER_HELP: &str = r#"Examples:
   sl-daemon tag add ./out/sess-abc.okf.json reviewed production
   sl-daemon tag list ./out/sess-abc.okf.json
   sl-daemon tag search reviewed --dir ./out
+"#;
+
+const ARCHIVE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon archive --before 2025-01-01 --data-dir ./okf-out
+  sl-daemon archive --before 2025-01-01 --data-dir ./okf-out --dry-run
+"#;
+
+const RESTORE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon restore sess-abc --data-dir ./okf-out
+  sl-daemon restore sess-abc --data-dir ./okf-out --out ./restored
+"#;
+
+const REPLAY_AFTER_HELP: &str = r#"Examples:
+  sl-daemon replay sess-abc
+  sl-daemon replay ./okf-out/sess-abc.okf.json --speed 2.0
+  sl-daemon replay sess-abc --no-stream
+"#;
+
+const VALIDATE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon validate sess-abc --data-dir ./okf-out
+"#;
+
+const COMPLETIONS_AFTER_HELP: &str = r#"Examples:
+  sl-daemon completions bash > sl-daemon.bash
+  sl-daemon completions zsh > _sl-daemon
+  sl-daemon completions fish > sl-daemon.fish
+  sl-daemon completions powershell > sl-daemon.ps1
+
+Committed scripts live under crates/sl-daemon/completions/. Install with:
+  sh scripts/install-sl-daemon-completions.sh
+  pwsh -File scripts/install-sl-daemon-completions.ps1
 "#;
 
 /// SessionLedger — daemon and CLI companion.
@@ -179,6 +213,7 @@ enum Command {
     },
 
     /// Archive bundles older than a given date by gzipping them.
+    #[command(after_help = ARCHIVE_AFTER_HELP)]
     Archive {
         /// Archive bundles with created_at strictly before this date (YYYY-MM-DD).
         #[arg(long)]
@@ -195,6 +230,7 @@ enum Command {
     },
 
     /// Restore a previously archived bundle by decompressing it.
+    #[command(after_help = RESTORE_AFTER_HELP)]
     Restore {
         /// Bundle ID (without extension) to restore from the archive.
         bundle_id: String,
@@ -212,6 +248,7 @@ enum Command {
     /// Replay a compiled OKF bundle, streaming its entities in chronological
     /// order.  Connects to the running daemon's SSE endpoint unless
     /// `--bundle` points to a local file.
+    #[command(after_help = REPLAY_AFTER_HELP)]
     Replay {
         /// Bundle ID (e.g. `sess-abc`) or path to a `.okf.json` file.
         bundle_id: String,
@@ -231,6 +268,7 @@ enum Command {
     /// Reads `<data_dir>/<bundle_id>.okf.json`, re-packages the metadata as a
     /// `PostBundle`, and runs local validation.  Exits 0 when valid, 1 when
     /// invalid (diagnostics printed to stdout as JSON), 2 on I/O or parse error.
+    #[command(after_help = VALIDATE_AFTER_HELP)]
     Validate {
         /// Bundle ID (filename stem, without `.okf.json`).
         bundle_id: String,
@@ -283,6 +321,7 @@ enum Command {
     /// Generate shell completion scripts to stdout.
     ///
     /// Supported shells: bash, zsh, fish, powershell.
+    #[command(after_help = COMPLETIONS_AFTER_HELP)]
     Completions {
         /// Shell to generate completions for.
         #[arg(value_enum)]

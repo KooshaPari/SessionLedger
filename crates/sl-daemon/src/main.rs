@@ -20,7 +20,7 @@
 //! ## Exit codes
 //!
 //! * `0` — success (or daemon running, for `status`)
-//! * `1` — daemon not running (for `status` / `tail` when daemon absent)
+//! * `1` — daemon not running, validation failed, or no search matches
 //! * `2` — general / unexpected error
 
 mod archive;
@@ -70,6 +70,24 @@ const SERVE_AFTER_HELP: &str = r#"Examples:
 
 The HTTP listener is local-only. Use --http-bind off for batch ingest/export jobs
 that do not need /healthz, /api/bundles, /api/stream, or /api/ingest.
+"#;
+
+const EXPORT_AFTER_HELP: &str = r#"Examples:
+  sl-daemon export --format csv
+  sl-daemon export --format md --out report.md ./out/sess-abc.okf.json
+  sl-daemon export --format json --url http://127.0.0.1:9001
+"#;
+
+const SEARCH_AFTER_HELP: &str = r#"Examples:
+  sl-daemon search --since 2026-01-01 --model gpt
+  sl-daemon search --tag production --format json
+  sl-daemon search --min-tokens 1000 --limit 10
+"#;
+
+const TAG_AFTER_HELP: &str = r#"Examples:
+  sl-daemon tag add ./out/sess-abc.okf.json reviewed production
+  sl-daemon tag list ./out/sess-abc.okf.json
+  sl-daemon tag search reviewed --dir ./out
 "#;
 
 /// SessionLedger — daemon and CLI companion.
@@ -126,6 +144,7 @@ enum Command {
     /// When no bundle paths are given, all bundles are fetched from the daemon
     /// via GET /api/bundles.  Each bundle path must point to an OKF JSON file
     /// on the local filesystem.
+    #[command(after_help = EXPORT_AFTER_HELP)]
     Export {
         /// Output format: csv | md | json  (default: csv).
         #[arg(long, default_value = "csv")]
@@ -148,6 +167,7 @@ enum Command {
     },
 
     /// Manage tags on OKF bundle files.
+    #[command(after_help = TAG_AFTER_HELP)]
     Tag {
         #[command(subcommand)]
         action: TagAction,
@@ -201,11 +221,11 @@ enum Command {
         no_stream: bool,
     },
 
-    /// Validate an OKF bundle by sending it to the daemon's ingest endpoint.
+    /// Validate an OKF bundle on disk against ingest rules.
     ///
-    /// Reads the bundle file at `<data_dir>/<bundle_id>.okf.json`, re-packages
-    /// the metadata as a `PostBundle`, and calls `POST /api/ingest`.  Exits 0
-    /// when valid, 1 when invalid (errors printed to stdout as JSON), 2 on error.
+    /// Reads `<data_dir>/<bundle_id>.okf.json`, re-packages the metadata as a
+    /// `PostBundle`, and runs local validation.  Exits 0 when valid, 1 when
+    /// invalid (diagnostics printed to stdout as JSON), 2 on I/O or parse error.
     Validate {
         /// Bundle ID (filename stem, without `.okf.json`).
         bundle_id: String,
@@ -219,6 +239,7 @@ enum Command {
     ///
     /// When no `--bundles` paths are given, all bundles are fetched from the
     /// daemon via GET /api/bundles.
+    #[command(after_help = SEARCH_AFTER_HELP)]
     Search {
         /// Include only bundles created on or after this date (YYYY-MM-DD).
         #[arg(long)]
@@ -318,7 +339,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .filter(|value| !value.trim().is_empty())
                     .map(PathBuf::from)
             });
-            run_serve(watch, out, once, http_bind, memory_db).await?;
+            if let Err(error) = run_serve(watch, out, once, http_bind, memory_db).await {
+                cli::exit_error(error);
+            }
         }
         Command::Status => run_status(&args.url).await,
         Command::List => run_list(&args.url).await,
@@ -649,16 +672,14 @@ async fn run_status(base_url: &str) {
     match cli::fetch_health(&client, base_url).await {
         Ok(cli::HealthStatus::Running { body }) => {
             println!("daemon running — {body}");
-            std::process::exit(0);
+            std::process::exit(cli::EXIT_OK);
         }
         Ok(cli::HealthStatus::NotRunning) => {
             println!("daemon not running");
-            std::process::exit(1);
+            eprintln!("hint: {}", cli::daemon_down_message(base_url));
+            std::process::exit(cli::EXIT_NOT_OK);
         }
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "health check failed", e),
     }
 }
 
@@ -674,10 +695,7 @@ async fn run_list(base_url: &str) {
                 println!("{p}");
             }
         }
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "fetching bundle list", e),
     }
 }
 
@@ -695,14 +713,7 @@ async fn run_tail(base_url: &str) {
 
     let resp = match client.get(&url).header("Accept", "text/event-stream").send().await {
         Ok(r) => r,
-        Err(e) if e.is_connect() => {
-            eprintln!("daemon not running at {base_url}");
-            std::process::exit(1);
-        }
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "connecting to SSE stream", e),
     };
 
     let byte_stream = resp.bytes_stream().map_err(std::io::Error::other);
@@ -757,10 +768,7 @@ async fn resolve_bundle_paths(base_url: &str, given: &[PathBuf]) -> Vec<PathBuf>
     let client = reqwest::Client::new();
     match cli::fetch_bundle_paths(&client, base_url).await {
         Ok(paths) => paths.into_iter().map(PathBuf::from).collect(),
-        Err(e) => {
-            eprintln!("error fetching bundle list: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "fetching bundle list", e),
     }
 }
 
@@ -774,10 +782,7 @@ async fn run_export(
 
     let fmt = match export::ExportFormat::from_str(format_str) {
         Ok(f) => f,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_error(e),
     };
 
     let paths = resolve_bundle_paths(base_url, given_bundles).await;
@@ -792,8 +797,7 @@ async fn run_export(
     match out_path {
         Some(p) => {
             if let Err(e) = std::fs::write(p, &rendered) {
-                eprintln!("error writing to {}: {e}", p.display());
-                std::process::exit(2);
+                cli::exit_error(format!("writing to {}: {e}", p.display()));
             }
         }
         None => print!("{rendered}"),
@@ -810,19 +814,13 @@ fn run_tag(action: TagAction) {
             Ok(updated) => {
                 eprintln!("tags updated: {:?}", updated);
             }
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(2);
-            }
+            Err(e) => cli::exit_error(e),
         },
         TagAction::Remove { bundle, tags } => match tag::remove(&bundle, &tags) {
             Ok(updated) => {
                 eprintln!("tags updated: {:?}", updated);
             }
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(2);
-            }
+            Err(e) => cli::exit_error(e),
         },
         TagAction::List { bundle } => match tag::list(&bundle) {
             Ok(tags) => {
@@ -830,10 +828,7 @@ fn run_tag(action: TagAction) {
                     println!("{t}");
                 }
             }
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(2);
-            }
+            Err(e) => cli::exit_error(e),
         },
         TagAction::Search { tag: search_tag, dir } => match tag::search_dir(&dir, &search_tag) {
             Ok(paths) => {
@@ -841,10 +836,7 @@ fn run_tag(action: TagAction) {
                     println!("{}", p.display());
                 }
             }
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(2);
-            }
+            Err(e) => cli::exit_error(e),
         },
     }
 }
@@ -868,8 +860,9 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
     let before = match chrono::NaiveDate::parse_from_str(before_str, "%Y-%m-%d") {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("error: invalid --before date {before_str:?}: {e}");
-            std::process::exit(2);
+            cli::exit_error(format!(
+                "invalid --before date {before_str:?}: {e} (expected YYYY-MM-DD)"
+            ));
         }
     };
 
@@ -897,8 +890,7 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
         Err(e) => {
             let audit_sink = audit::AuditSink::new(data_dir);
             audit_event(&audit_sink, "archive", "failed", &data_dir.display());
-            eprintln!("error: {e}");
-            std::process::exit(2);
+            cli::exit_error(e);
         }
     }
 }
@@ -912,10 +904,7 @@ fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
     let archive_root = data_dir.join("archive");
     let archive_path = match archive::find_archive_path(&archive_root, bundle_id) {
         Ok(p) => p,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_error(e),
     };
 
     let output_dir = out.unwrap_or(data_dir);
@@ -926,8 +915,7 @@ fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
         }
         Err(e) => {
             audit_event(&audit_sink, "restore", "failed", &archive_path.display());
-            eprintln!("error: {e}");
-            std::process::exit(2);
+            cli::exit_error(e);
         }
     }
 }
@@ -942,18 +930,12 @@ fn run_validate(bundle_id: &str, data_dir: &Path) {
     let path = data_dir.join(format!("{bundle_id}.okf.json"));
     let text = match std::fs::read_to_string(&path) {
         Ok(t) => t,
-        Err(e) => {
-            eprintln!("error: cannot read {}: {e}", path.display());
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_error(format!("cannot read {}: {e}", path.display())),
     };
 
     let value: serde_json::Value = match serde_json::from_str(&text) {
         Ok(v) => v,
-        Err(e) => {
-            eprintln!("error: cannot parse {}: {e}", path.display());
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_error(format!("cannot parse {}: {e}", path.display())),
     };
 
     // Re-package the on-disk OKF fields into a PostBundle for validation.
@@ -1018,7 +1000,7 @@ fn run_validate(bundle_id: &str, data_dir: &Path) {
     let json = serde_json::to_string_pretty(&result).unwrap_or_default();
     println!("{json}");
     if !result.valid {
-        std::process::exit(1);
+        std::process::exit(cli::EXIT_NOT_OK);
     }
 }
 
@@ -1048,29 +1030,33 @@ async fn run_search(
 
     if matched.is_empty() {
         eprintln!("no bundles matched the given filters");
-        return;
+        std::process::exit(cli::EXIT_NOT_OK);
     }
 
     let owned: Vec<export::BundleMeta> = matched.into_iter().cloned().collect();
 
-    let rendered = match export::ExportFormat::from_str(format_str) {
-        Ok(export::ExportFormat::Csv) => export::render_csv(&owned),
-        Ok(export::ExportFormat::Markdown) => export::render_markdown(&owned),
-        Ok(export::ExportFormat::Json) => export::render_json(&owned),
-        // Default / "text": one session_id  created_at  model  token_count  tags line each
-        _ => {
-            let mut out = String::new();
-            for m in &owned {
-                out.push_str(&format!(
-                    "{}\t{}\t{}\t{}\t[{}]\n",
-                    m.session_id,
-                    m.created_at,
-                    m.model,
-                    m.token_count,
-                    m.tags.join(", ")
-                ));
-            }
-            out
+    let rendered = if format_str.eq_ignore_ascii_case("text") {
+        let mut out = String::new();
+        for m in &owned {
+            out.push_str(&format!(
+                "{}\t{}\t{}\t{}\t[{}]\n",
+                m.session_id,
+                m.created_at,
+                m.model,
+                m.token_count,
+                m.tags.join(", ")
+            ));
+        }
+        out
+    } else {
+        let fmt = match export::ExportFormat::from_str(format_str) {
+            Ok(f) => f,
+            Err(e) => cli::exit_error(e),
+        };
+        match fmt {
+            export::ExportFormat::Csv => export::render_csv(&owned),
+            export::ExportFormat::Markdown => export::render_markdown(&owned),
+            export::ExportFormat::Json => export::render_json(&owned),
         }
     };
 
@@ -1125,21 +1111,13 @@ async fn run_replay(base_url: &str, bundle_id: &str, speed: f64, no_stream: bool
     let client = reqwest::Client::new();
     let resp = match client.get(&url).header("Accept", "text/event-stream").send().await {
         Ok(r) => r,
-        Err(e) if e.is_connect() => {
-            eprintln!("daemon not running at {base_url}");
-            std::process::exit(1);
-        }
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "connecting to replay stream", e),
     };
 
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        eprintln!("server error {status}: {body}");
-        std::process::exit(2);
+        cli::exit_error(format!("server error {status}: {body}"));
     }
 
     let byte_stream = resp.bytes_stream().map_err(std::io::Error::other);

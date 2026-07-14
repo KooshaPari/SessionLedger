@@ -90,4 +90,3 @@ pub fn process_jsonl_file<P: AsRef<std::path::Path>>(
     let sessions = read_jsonl_sessions(path)?;
     Ok(sessions.iter().map(process_session).collect())
 }
-

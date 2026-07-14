@@ -11,9 +11,11 @@
 # Authenticode and Apple notarization stay out of scope per ADR 0003.
 # Release checksums are signed with cosign keyless signing on a best-effort
 # basis. The sl-daemon OCI image (crates/sl-daemon/Containerfile → GHCR) is
-# built, keyless-cosign-signed, and attested on a best-effort basis and never
-# blocks portable Release publication. Deploy-time verify-on-deploy lives in
-# scripts/oci-cosign-verify.ps1 (fails closed when a signature is expected).
+# built, keyless-cosign-signed, attested, and release-verified on the canonical
+# KooshaPari/SessionLedger repository (blocking when GHCR/OIDC credentials are
+# present). Forks skip OCI with an explicit reason. Deploy-time verify-on-deploy
+# also lives in scripts/oci-cosign-verify.ps1 (fails closed when a signature is
+# expected).
 # Release assets receive blocking GitHub build provenance in the canonical
 # KooshaPari/SessionLedger repository; forks skip that OIDC step.
 #
@@ -387,7 +389,7 @@ jobs:
 
   release:
     name: create Release · attach assets
-    needs: [build, smoke-windows, smoke-linux, smoke-macos-pkg]
+    needs: [build, smoke-windows, smoke-linux, smoke-macos-pkg, oci-image]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -491,9 +493,10 @@ jobs:
             is required for canonical KooshaPari/SessionLedger releases and can be
             verified with `gh attestation`.
 
-            CI also best-effort builds and pushes `ghcr.io/kooshapari/sl-daemon`
-            from `crates/sl-daemon/Containerfile`, then keyless-cosign signs and
-            attests the image digest. OCI failures do not block this Release.
+            CI builds and pushes `ghcr.io/kooshapari/sl-daemon` from
+            `crates/sl-daemon/Containerfile`, then keyless-cosign signs,
+            attests, and verifies the image digest on the canonical repository.
+            Forks skip OCI; portable archives remain valid when OCI is skipped.
 
             See [`docs/ops/distribution.md`](https://github.com/KooshaPari/SessionLedger/blob/main/docs/ops/distribution.md).
           draft: false
@@ -549,15 +552,9 @@ jobs:
           fi
 
   oci-image:
-    name: OCI image · build + cosign (best effort)
+    name: OCI image · build + cosign
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    # Soft-fail by design: portable Release archives must remain available even
-    # when GHCR push, keyless cosign, or OCI attestation fails (packages:write /
-    # OIDC / registry outages). Do not flip this job to blocking without GHCR
-    # package permissions and a protected release environment. Deploy-time trust
-    # is enforced by scripts/oci-cosign-verify.ps1, not by failing this job.
-    continue-on-error: true
     permissions:
       contents: read
       packages: write
@@ -566,8 +563,22 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
+      - name: detect OCI release gate
+        id: oci_gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.repository }}" != "KooshaPari/SessionLedger" ]; then
+            echo "required=false" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=Outside canonical KooshaPari/SessionLedger; GHCR packages:write and OIDC attestations are unavailable on forks." >> "$GITHUB_OUTPUT"
+          else
+            echo "required=true" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: normalize image name (GHCR requires lowercase)
         id: image
+        if: steps.oci_gate.outputs.required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -576,7 +587,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        continue-on-error: true
+        if: steps.oci_gate.outputs.required == 'true'
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ steps.image.outputs.name }}
@@ -586,14 +597,12 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        if: steps.meta.outcome == 'success'
-        continue-on-error: true
+        if: steps.oci_gate.outputs.required == 'true'
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to GHCR
         id: login
-        if: steps.buildx.outcome == 'success'
-        continue-on-error: true
+        if: steps.oci_gate.outputs.required == 'true'
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
@@ -602,8 +611,7 @@ jobs:
 
       - name: Build and push sl-daemon OCI image
         id: build
-        if: steps.login.outcome == 'success'
-        continue-on-error: true
+        if: steps.oci_gate.outputs.required == 'true'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
@@ -616,14 +624,12 @@ jobs:
 
       - name: install cosign
         id: cosign
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: steps.oci_gate.outputs.required == 'true'
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
 
       - name: cosign sign image (keyless)
         id: sign
-        if: steps.cosign.outcome == 'success'
-        continue-on-error: true
+        if: steps.oci_gate.outputs.required == 'true'
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
@@ -634,31 +640,41 @@ jobs:
 
       - name: attest OCI image
         id: attest
-        if: steps.build.outcome == 'success' && github.repository == 'KooshaPari/SessionLedger'
-        continue-on-error: true
+        if: steps.oci_gate.outputs.required == 'true'
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-name: ${{ steps.image.outputs.name }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+      - name: verify OCI image (cosign + attestation)
+        id: verify
+        if: steps.oci_gate.outputs.required == 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          ./scripts/oci-cosign-verify.ps1 `
+            -Tag "${{ github.ref_name }}" `
+            -Digest "${{ steps.build.outputs.digest }}" `
+            -RequireAttestation
+
       - name: report OCI signing status
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.sign.outcome }}" = "success" ]; then
-            echo "::notice::Published keyless cosign signature for ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}."
-            echo "### OCI cosign: published" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.oci_gate.outputs.required }}" != "true" ]; then
+            echo "::notice::OCI image build/sign/verify skipped: ${{ steps.oci_gate.outputs.skip_reason }}"
+            echo "### OCI cosign: skipped (no release credentials)" >> "$GITHUB_STEP_SUMMARY"
+            echo "${{ steps.oci_gate.outputs.skip_reason }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "Portable Release archives remain valid. Deploy gate: \`scripts/oci-cosign-verify.ps1\` when a digest was published on a prior canonical release." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.verify.outcome }}" = "success" ]; then
+            echo "::notice::Published and verified keyless cosign + attestation for ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}."
+            echo "### OCI cosign: published + verified (blocking)" >> "$GITHUB_STEP_SUMMARY"
             echo "Digest: \`${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
             echo "Verify-on-deploy: \`pwsh ./scripts/oci-cosign-verify.ps1 -Tag ${{ github.ref_name }} -Digest ${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
-            if [ "${{ steps.attest.outcome }}" = "success" ]; then
-              echo "### OCI attestation: published" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "### OCI attestation: skipped or unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
-              echo "Cosign signature may still verify; attestation is best-effort. Portable Release archives remain valid." >> "$GITHUB_STEP_SUMMARY"
-            fi
           else
-            echo "::notice::OCI build/sign skipped or failed (non-blocking; portable Release remains valid). meta=${{ steps.meta.outcome }}, buildx=${{ steps.buildx.outcome }}, login=${{ steps.login.outcome }}, build=${{ steps.build.outcome }}, cosign=${{ steps.cosign.outcome }}, sign=${{ steps.sign.outcome }}, attest=${{ steps.attest.outcome }}. Use archives + SHA256SUMS, or re-run after GHCR packages:write / OIDC is healthy. Deploy gate: scripts/oci-cosign-verify.ps1 (fails closed when a signature is expected)."
-            echo "### OCI cosign: skipped or unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
-            echo "Portable Release archives and \`SHA256SUMS\` remain the supported install path. Do not treat a missing OCI signature as verify-on-deploy success; run \`scripts/oci-cosign-verify.ps1\` only when this job published a digest." >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::OCI build/sign/attest/verify failed for KooshaPari/SessionLedger; release publication is blocked."
+            echo "### OCI cosign: failed (blocking)" >> "$GITHUB_STEP_SUMMARY"
+            echo "meta=${{ steps.meta.outcome }}, buildx=${{ steps.buildx.outcome }}, login=${{ steps.login.outcome }}, build=${{ steps.build.outcome }}, cosign=${{ steps.cosign.outcome }}, sign=${{ steps.sign.outcome }}, attest=${{ steps.attest.outcome }}, verify=${{ steps.verify.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi

@@ -122,7 +122,7 @@ $doneNeedles = @(
     @{ Needle = "Offline ``sl-daemon`` fetch+build | **done**"; Label = "offline gate marked done" },
     @{ Needle = "Digest-pinned builder image | **done**"; Label = "builder pin marked done" },
     @{ Needle = "``SOURCE_DATE_EPOCH`` release wiring | **done**"; Label = "SOURCE_DATE_EPOCH marked done" },
-    @{ Needle = "Best-effort GHCR build + keyless cosign + attest | **done**"; Label = "OCI soft publish marked done" },
+    @{ Needle = "GHCR build + keyless cosign + attest + release verify | **done**"; Label = "OCI release-blocking gate marked done" },
     @{ Needle = "Verify-on-deploy (cosign / attestation) | **done (deploy-time)**"; Label = "verify-on-deploy marked done" },
     @{ Needle = "Isolation checklist SelfCheck | **done**"; Label = "SelfCheck gate marked done" }
 )
@@ -133,7 +133,6 @@ foreach ($item in $doneNeedles) {
 
 $unpaidNeedles = @(
     "Protected GitHub Environment for releases | unpaid",
-    "Make ``oci-image`` release-blocking | unpaid",
     "Immutable / ephemeral runners for release | unpaid",
     "Vendored deps + two-builder rebuild | unpaid",
     "System package / linker snapshot | unpaid"
@@ -183,13 +182,16 @@ $rel = Get-Content -LiteralPath $releaseWorkflow -Raw
 if ($rel -notmatch '(?m)^\s*oci-image:\s*$') {
     throw "release.yml missing oci-image job."
 }
-if ($rel -notmatch 'continue-on-error:\s*true') {
-    throw "release.yml expected continue-on-error soft-fail wiring for best-effort OCI."
+if ($rel -notmatch 'detect OCI release gate') {
+    throw "release.yml missing detect OCI release gate step for canonical blocking / fork skip."
 }
 if ($rel -notmatch 'oci-cosign-verify\.ps1') {
     throw "release.yml should reference scripts/oci-cosign-verify.ps1 for deploy-time verify guidance."
 }
-[void](Write-Check -Label "release.yml oci-image soft-fail + verify-on-deploy pointer" -Ok $true)
+if ($rel -notmatch 'needs:.*oci-image') {
+    throw "release.yml release job should depend on oci-image for blocking publication."
+}
+[void](Write-Check -Label "release.yml oci-image blocking gate + verify-on-deploy pointer" -Ok $true)
 
 $summary = @"
 ## Hermetic isolation checklist
@@ -198,7 +200,7 @@ SelfCheck passed: ``docs/ops/hermetic-builds.md`` checklist anchors + done-gate
 evidence paths + builder digest pin consistency.
 
 Unpaid L3 rows still documented as open: $unpaidStillOpen
-(Environment protection, blocking OCI, immutable runners, vendor/two-builder,
+(Environment protection, immutable runners, vendor/two-builder,
 system package snapshot). Soft CI only — full SLSA Build L3 remains unpaid.
 "@
 

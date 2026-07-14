@@ -20,7 +20,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Channel | Status | Notes |
 |---------|--------|-------|
 | GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing |
-| GHCR OCI (`sl-daemon`) | **Best-effort on `v*` tags** | Builds `crates/sl-daemon/Containerfile`, pushes `ghcr.io/kooshapari/sl-daemon`, keyless cosign + GitHub attestation; failures never block portable Releases |
+| GHCR OCI (`sl-daemon`) | **Blocking on canonical `v*` tags** | Builds `crates/sl-daemon/Containerfile`, pushes `ghcr.io/kooshapari/sl-daemon`, keyless cosign + GitHub attestation + in-workflow verify; forks skip OCI with an explicit reason |
 | Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` or `cargo install --git … --path crates/sl-daemon` |
 | curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` Release archives |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
@@ -66,9 +66,10 @@ SHA256SUMS.sigstore.json
 
 `session-ledger.cdx.json` is the CycloneDX SBOM and is required for the Release
 job to succeed. GitHub build provenance is blocking on the canonical repository.
-`SHA256SUMS.sigstore.json` and the GHCR `sl-daemon` image cosign/attest path
-remain best-effort. Authenticode and Apple notarization stay deferred under
-ADR 0003 — published MSI/PKG artifacts are **unsigned**.
+On the canonical repository, the GHCR `sl-daemon` cosign/attest/verify path is
+also release-blocking. `SHA256SUMS.sigstore.json` remains best-effort.
+Authenticode and Apple notarization stay deferred under ADR 0003 — published
+MSI/PKG artifacts are **unsigned**.
 
 **Windows matrix status:** release CI produces an unsigned portable ZIP and a
 real WiX v4 MSI (`SessionLedger-<ver>-x64.msi`), then `smoke-windows` runs ZIP
@@ -162,11 +163,12 @@ Volumes are owned by non-root user `sl` (uid `10001`). The canonical daemon
 image defines an OCI `HEALTHCHECK` that probes `GET /healthz` on
 `127.0.0.1:8080` while `sl-daemon serve` is running.
 
-On each `v*` tag, `release.yml` job `oci-image` best-effort builds that
-Containerfile, pushes `ghcr.io/kooshapari/sl-daemon:<tag>` (and `latest` for
-non-prerelease tags), keyless-cosign signs the digest, and publishes GitHub
-build provenance to the registry. Soft failures leave the portable Release
-intact — same policy as `SHA256SUMS.sigstore.json`.
+On each `v*` tag, `release.yml` job `oci-image` builds that Containerfile,
+pushes `ghcr.io/kooshapari/sl-daemon:<tag>` (and `latest` for non-prerelease
+tags), keyless-cosign signs the digest, publishes GitHub build provenance to
+the registry, and runs in-workflow cosign/attestation verify before the Release
+job publishes assets. On the canonical repository this path is blocking; forks
+skip OCI with an explicit reason so portable archives remain valid.
 
 Local build (no registry):
 
@@ -451,9 +453,10 @@ the checksum comparison then binds the downloaded archive to that signed file.
 
 ### Verify an OCI image (cosign)
 
-When the best-effort `oci-image` job succeeds for a Release tag, pull by digest
-and verify the keyless signature **before deploying**. Prefer the helper script
-(Windows / PowerShell 7+, also fine under `pwsh` on Linux/macOS):
+When the `oci-image` job succeeds for a Release tag on the canonical
+repository, pull by digest and verify the keyless signature **before deploying**.
+Prefer the helper script (Windows / PowerShell 7+, also fine under `pwsh` on
+Linux/macOS):
 
 ```powershell
 pwsh ./scripts/oci-cosign-verify.ps1 -Tag <tag> -Digest sha256:<digest>
@@ -462,9 +465,10 @@ pwsh ./scripts/oci-cosign-verify.ps1 -Tag <tag> -Digest sha256:<digest> -Require
 ```
 
 The script fails closed when cosign cannot verify the digest. That is the
-verify-on-deploy gate. It does **not** change release CI: missing GHCR push or
-signature still leaves portable archives + `SHA256SUMS` valid (soft-fail
-`oci-image` job). Use `-AllowUnsigned` only for dry-runs.
+verify-on-deploy gate. Release CI already runs the same verify step after sign
+and attest on the canonical repository. Forks skip OCI; missing GHCR push or
+signature still leaves portable archives + `SHA256SUMS` valid. Use
+`-AllowUnsigned` only for dry-runs.
 
 Manual equivalent (replace `<tag>` and `<digest>`):
 
@@ -488,9 +492,8 @@ If cosign or `gh attestation verify` reports no signature/attestation, treat
 OCI provenance as unavailable for that tag and either rebuild locally from
 `crates/sl-daemon/Containerfile` or fall back to the portable `sl-daemon`
 archive path above. Do not treat a missing OCI signature as a successful
-verify-on-deploy check. Do not make `oci-image` release-blocking until a
-protected GitHub Environment and reliable `packages:write` / OIDC path exist;
-see the [environment isolation checklist](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps).
+verify-on-deploy check. A protected GitHub Environment for releases remains
+unpaid — see the [environment isolation checklist](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps).
 
 ### Verify GitHub build provenance
 

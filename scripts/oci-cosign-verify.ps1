@@ -7,9 +7,9 @@
   the SessionLedger release.yml tag identity. Optionally runs
   `gh attestation verify` for GitHub OCI provenance.
 
-  This script is for deploy-time trust checks. It does NOT change release CI:
-  portable archives and unsigned Releases remain valid when the soft-fail
-  `oci-image` job skips GHCR push/sign (no packages secrets / OIDC hiccups).
+  This script is for deploy-time trust checks. Release CI runs the same verify
+  on the canonical repository after sign/attest. Forks skip the `oci-image` job
+  when GHCR/OIDC credentials are unavailable.
 
   Exit codes:
     0 — cosign verify succeeded (and attestation when -RequireAttestation)

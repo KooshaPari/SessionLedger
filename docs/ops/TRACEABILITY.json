@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "327/402",
-    "pct": 81,
+    "score": "329/402",
+    "pct": 82,
     "grade": "B",
-    "commit": "6344eff",
-    "wave": "Wave-19"
+    "commit": "8ed65d9",
+    "wave": "Wave-20"
   },
   "fr": [
     {
@@ -554,6 +554,27 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.26",
+      "status": "done",
+      "evidence": [
+        "crates/sl-daemon/src/main.rs",
+        "crates/sl-daemon/src/http.rs",
+        "docs/ops/dashboards/sessionledger-red.json",
+        "scripts/flake-quarantine-apply.ps1",
+        ".github/workflows/cross-platform-build.yml",
+        "tests/visual/golden/e2-history-empty.png",
+        "tests/visual/golden/e4-search-empty.png",
+        "tests/visual/golden/r1-search-error.png"
+      ]
+    },
+    {
+      "id": "WBS-8.27",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -565,6 +586,8 @@
         "docs/api/openapi.yaml",
         "src/schema/mod.rs",
         "src/ports/sqlite_memory.rs",
+        "crates/sl-daemon/src/main.rs",
+        "crates/sl-daemon/src/http.rs",
         "docs/ops/schema-migrations.md",
         "scripts/openapi-drift-check.ps1"
       ]
@@ -605,6 +628,8 @@
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/metrics.rs",
+        "docs/ops/dashboards/sessionledger-red.json",
+        "scripts/dashboard-provision-check.ps1",
         "docs/ops/observability.md"
       ]
     },
@@ -627,7 +652,9 @@
       "evidence": [
         "scripts/flake-tracker-check.ps1",
         "scripts/flake-rerun-stats.ps1",
+        "scripts/flake-quarantine-apply.ps1",
         "docs/ops/flake-tracker.md",
+        ".github/workflows/cross-platform-build.yml",
         "tests/race_smoke.rs",
         ".github/workflows/race-smoke.yml",
         "docs/ops/cross-platform-ci.md",
@@ -652,13 +679,17 @@
     },
     {
       "id": "C10",
-      "score": "33/36",
+      "score": "35/36",
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/async_states.rs",
         "crates/sl-viewer/src/live_feed.rs",
         "crates/sl-viewer/src/replay_view.rs",
+        "crates/sl-viewer/src/search_view.rs",
         "assets/tokens.css",
+        "tests/visual/golden/e2-history-empty.png",
+        "tests/visual/golden/e4-search-empty.png",
+        "tests/visual/golden/r1-search-error.png",
         "tests/visual/golden/l1-content-skeleton.png",
         "tests/visual/harness/visual.spec.js"
       ]

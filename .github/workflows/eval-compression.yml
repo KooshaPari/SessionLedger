@@ -37,12 +37,12 @@ jobs:
         shell: pwsh
         run: ./scripts/token-burn-check.ps1 -SelfCheck
 
-  # C08 L75 cross-language OKF fixture parity — hermetic SelfCheck only (blocking).
+  # C08 L75 cross-language OKF fixture parity + structural harness (blocking).
   cross-language-parity:
     name: cross-language parity SelfCheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - name: self-check cross-language parity SSOT + fixture tags
+      - name: self-check cross-language parity SSOT + structural harness
         shell: pwsh
         run: ./scripts/cross-language-parity-check.ps1 -SelfCheck

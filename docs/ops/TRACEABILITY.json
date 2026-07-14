@@ -1,6 +1,6 @@
 {
   "schema": "sessionledger.traceability/v1",
-  "updated": "2026-07-13",
+  "updated": "2026-07-14",
   "status_vocabulary": [
     "done",
     "partial",
@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "333/402",
-    "pct": 83,
+    "score": "337/402",
+    "pct": 84,
     "grade": "B",
-    "commit": "92b2792",
-    "wave": "Wave-21"
+    "commit": "b08c3fe",
+    "wave": "Wave-22"
   },
   "fr": [
     {
@@ -596,18 +596,39 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.30",
+      "status": "done",
+      "evidence": [
+        "crates/sl-daemon/src/shutdown.rs",
+        "scripts/audit-review.ps1",
+        ".github/workflows/ops-gameday.yml",
+        "docs/ops/eval-manifest.json",
+        "docs/a11y/status-regions-and-native-smoke.md",
+        "tests/visual/golden/e5-first-run-empty.png"
+      ]
+    },
+    {
+      "id": "WBS-8.31",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
     {
       "id": "C00",
-      "score": "24/30",
+      "score": "25/30",
       "status": "partial",
       "evidence": [
         "docs/api/openapi.yaml",
         "src/schema/mod.rs",
         "src/ports/sqlite_memory.rs",
+        "crates/sl-daemon/src/shutdown.rs",
         "crates/sl-daemon/src/main.rs",
+        "crates/sl-daemon/src/watcher.rs",
         "crates/sl-daemon/src/http.rs",
         "docs/ops/schema-migrations.md",
         "scripts/openapi-drift-check.ps1"
@@ -626,7 +647,8 @@
         "crates/sl-daemon/src/audit.rs",
         "crates/sl-daemon/src/http.rs",
         "crates/sl-daemon/src/main.rs",
-        "docs/ops/local-trust-boundary.md"
+        "docs/ops/local-trust-boundary.md",
+        "scripts/audit-review.ps1"
       ]
     },
     {
@@ -648,7 +670,7 @@
     },
     {
       "id": "C05",
-      "score": "27/30",
+      "score": "28/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/metrics.rs",
@@ -656,6 +678,8 @@
         "scripts/dashboard-provision-check.ps1",
         ".github/workflows/ops-chaos-smoke.yml",
         "scripts/ops-chaos-smoke.ps1",
+        ".github/workflows/ops-gameday.yml",
+        "docs/ops/alerts/sessionledger-slo.yaml",
         "docs/ops/observability.md"
       ]
     },
@@ -702,12 +726,15 @@
     },
     {
       "id": "C09",
-      "score": "35/45",
+      "score": "37/45",
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/help_overlay.rs",
         "docs/HELP.md",
-        "tests/visual/harness/a11y.spec.js"
+        "docs/a11y/status-regions-and-native-smoke.md",
+        "scripts/inclusive-language-check.ps1",
+        "tests/visual/harness/a11y.spec.js",
+        "tests/fixtures/a11y/help_shortcuts.golden.tsv"
       ]
     },
     {
@@ -722,7 +749,10 @@
         "assets/tokens.css",
         "tests/visual/golden/e2-history-empty.png",
         "tests/visual/golden/e4-search-empty.png",
+        "tests/visual/golden/e5-first-run-empty.png",
         "tests/visual/golden/r1-search-error.png",
+        "tests/visual/golden/r2-replay-error.png",
+        "tests/visual/golden/r3-error-color.png",
         "tests/visual/golden/l1-content-skeleton.png",
         "tests/visual/harness/visual.spec.js"
       ]

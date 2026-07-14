@@ -245,7 +245,7 @@ only registered when explicitly enabled.
 | Bind | Loopback only (`127.0.0.0/8` or `::1`). Non-loopback `--http-bind` is rejected at startup. |
 | Default | Gate unset → `GET /debug/pprof/*` returns `404` (routes not mounted). |
 | Enable | Gate set → cmdline + profile paths mount on the same HTTP listener as `/healthz`. |
-| CPU sample | Default cross-platform build returns `501` on `/debug/pprof/profile` (stub surface). Do not expect a protobuf CPU profile yet. |
+| CPU sample | On unix, `GET /debug/pprof/profile` returns a protobuf CPU profile (`?seconds=N`, default 1, max 30). Windows builds keep a `501` platform stub (pprof-rs needs SIGPROF). |
 | Auth | Same local trust model as other debug surfaces; no separate pprof API key. Prefer never exposing beyond loopback. |
 | OpenAPI | Debug routes are intentionally omitted from `docs/api/openapi.yaml`. |
 
@@ -255,9 +255,9 @@ SL_ENABLE_PPROF=1 sl serve --http-bind 127.0.0.1:8080
 # cmdline: 200 application/octet-stream (null-delimited argv)
 curl -fsS "http://127.0.0.1:8080/debug/pprof/cmdline" | xxd | head
 
-# profile: 501 text stub until a feature-gated sampler lands
-curl -sS -o /tmp/sl-profile.txt -w "%{http_code}\n" \
-  "http://127.0.0.1:8080/debug/pprof/profile"
+# profile: 200 application/octet-stream (pprof protobuf); use ?seconds=N (1..30)
+curl -fsS -o /tmp/sl-profile.pb \
+  "http://127.0.0.1:8080/debug/pprof/profile?seconds=5"
 ```
 
 Available debug paths:
@@ -265,7 +265,7 @@ Available debug paths:
 | Path | Status | Notes |
 |------|--------|-------|
 | `GET /debug/pprof/cmdline` | `200` | Returns null-delimited process argv bytes, matching the pprof-style cmdline surface. |
-| `GET /debug/pprof/profile` | `501` | CPU sampling is not implemented in the default cross-platform build. The endpoint exists as the gated profiling surface and returns explanatory bytes. |
+| `GET /debug/pprof/profile` | `200` (unix) / `501` (Windows) | Unix builds sample CPU via `pprof` and return protobuf bytes. Optional `?seconds=N` (clamped 1..=30, default 1). Concurrent samples return `503`. |
 
 ### Smoke evidence
 
@@ -285,11 +285,7 @@ Available debug paths:
 Scheduled evidence runs on the `pprof-smoke` job in
 [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
 
-The default build avoids pulling in a sampler that would make Windows + Linux CI
-fragile. If deeper profiling becomes a hard requirement, prefer adding a
-feature-gated sampler (`pprof` on supported targets, `jemalloc_pprof` for
-allocator profiles, or `tokio-console` for async task diagnostics) without
-changing the default dependency graph.
+The `pprof` dependency is unix-only (`cfg(unix)`), so Windows CI/release builds stay green while Linux smoke asserts a non-501 protobuf profile.
 
 ## HTTP trace-context sketch
 

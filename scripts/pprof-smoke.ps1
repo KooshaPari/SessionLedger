@@ -6,7 +6,8 @@ Smoke-test the loopback pprof debug surface on sl-daemon.
 Operator contract (see docs/ops/observability.md):
   - Routes exist only when SL_ENABLE_PPROF=1 (exact trim).
   - GET /debug/pprof/cmdline -> 200 octet-stream (null-delimited argv).
-  - GET /debug/pprof/profile -> 501 text (CPU sampler stub on default builds).
+  - GET /debug/pprof/profile?seconds=1 -> 200 octet-stream CPU protobuf on unix;
+    501 text on Windows (SIGPROF sampler is unix-only).
   - Without the gate, both paths return 404.
 
 Modes:
@@ -41,6 +42,10 @@ $ErrorActionPreference = "Stop"
 $scriptRoot = $PSScriptRoot
 $repoRoot = Split-Path -Parent $scriptRoot
 
+function Test-IsWindowsHost {
+    return ($IsWindows -eq $true) -or ($env:OS -eq "Windows_NT")
+}
+
 function Resolve-DaemonPath {
     param([string]$ExplicitPath)
 
@@ -51,7 +56,7 @@ function Resolve-DaemonPath {
         return (Resolve-Path -LiteralPath $ExplicitPath).Path
     }
 
-    $desiredTarget = Join-Path $repoRoot "target-w24-c05-pprof"
+    $desiredTarget = Join-Path $repoRoot "target-w27-c05"
     if (
         [string]::IsNullOrWhiteSpace($env:CARGO_TARGET_DIR) -or
         -not $env:CARGO_TARGET_DIR.StartsWith($repoRoot, [System.StringComparison]::OrdinalIgnoreCase)
@@ -85,7 +90,7 @@ function Resolve-DaemonPath {
 
     $metadata = $metadataJson | ConvertFrom-Json
     $candidate = Join-Path $metadata.target_directory "debug/sl-daemon"
-    if ($IsWindows -or $env:OS -eq "Windows_NT") {
+    if (Test-IsWindowsHost) {
         $candidate = "$candidate.exe"
     }
 
@@ -132,13 +137,14 @@ function Wait-ReadyzHealthy {
 function Invoke-PprofProbe {
     param(
         [Parameter(Mandatory = $true)][string]$Url,
-        [Parameter(Mandatory = $true)][string]$Path
+        [Parameter(Mandatory = $true)][string]$Path,
+        [int]$TimeoutSec = 5
     )
 
     return Invoke-WebRequest `
         -Uri "$Url$Path" `
         -Method Get `
-        -TimeoutSec 5 `
+        -TimeoutSec $TimeoutSec `
         -SkipHttpErrorCheck
 }
 
@@ -161,18 +167,44 @@ function Assert-PprofEnabledContract {
     }
     Write-Host "ok: /debug/pprof/cmdline -> 200 ($cmdlineLen bytes)"
 
-    $profile = Invoke-PprofProbe -Url $Url -Path "/debug/pprof/profile"
-    if ([int]$profile.StatusCode -ne 501) {
-        throw "Expected /debug/pprof/profile -> 501, got $($profile.StatusCode)."
+    # Default sample window is 1s; allow headroom beyond the sleep.
+    $profile = Invoke-PprofProbe -Url $Url -Path "/debug/pprof/profile?seconds=1" -TimeoutSec 20
+    $profileStatus = [int]$profile.StatusCode
+    $profileLen = 0
+    if ($null -ne $profile.RawContentLength) {
+        $profileLen = [int]$profile.RawContentLength
     }
-    $profileText = [string]$profile.Content
-    if ($profileText.Length -lt 16) {
-        throw "/debug/pprof/profile body too short for stub explanation."
+    elseif ($null -ne $profile.Content) {
+        if ($profile.Content -is [byte[]]) {
+            $profileLen = $profile.Content.Length
+        }
+        else {
+            $profileLen = ([string]$profile.Content).Length
+        }
     }
-    if ($profileText -notmatch "SL_ENABLE_PPROF") {
-        throw "/debug/pprof/profile stub body missing SL_ENABLE_PPROF mention."
+
+    if (Test-IsWindowsHost) {
+        if ($profileStatus -ne 501) {
+            throw "Expected /debug/pprof/profile -> 501 on Windows (unix sampler), got $profileStatus."
+        }
+        $profileText = [string]$profile.Content
+        if ($profileText -notmatch "not supported|unix|platform") {
+            throw "/debug/pprof/profile Windows stub body missing platform explanation."
+        }
+        Write-Host "ok: /debug/pprof/profile -> 501 (Windows: unix-only sampler)"
     }
-    Write-Host "ok: /debug/pprof/profile -> 501 (CPU sampler stub)"
+    else {
+        if ($profileStatus -eq 501) {
+            throw "Expected /debug/pprof/profile -> non-501 CPU protobuf when enabled, got 501 stub."
+        }
+        if ($profileStatus -ne 200) {
+            throw "Expected /debug/pprof/profile -> 200, got $profileStatus."
+        }
+        if ($profileLen -lt 1) {
+            throw "/debug/pprof/profile returned an empty body."
+        }
+        Write-Host "ok: /debug/pprof/profile -> 200 ($profileLen bytes CPU protobuf)"
+    }
 }
 
 function Assert-PprofDisabled {
@@ -245,6 +277,7 @@ if ($SelfCheck) {
     }
     Write-Host "Self-check passed: pprof smoke args and operator contract are coherent."
     Write-Host "Contract: SL_ENABLE_PPROF=1 registers /debug/pprof/{cmdline,profile}; else 404."
+    Write-Host "Contract: enabled profile returns 200 protobuf on unix (non-501); 501 on Windows."
     exit 0
 }
 
@@ -257,7 +290,7 @@ if ($AttachOnly) {
     $normalizedBaseUrl = $BaseUrl.TrimEnd("/")
     Wait-ReadyzHealthy -Url $normalizedBaseUrl
 
-    $probe = Invoke-PprofProbe -Url $normalizedBaseUrl -Path "/debug/pprof/profile"
+    $probe = Invoke-PprofProbe -Url $normalizedBaseUrl -Path "/debug/pprof/profile?seconds=1" -TimeoutSec 20
     $status = [int]$probe.StatusCode
     if ($status -eq 404) {
         Write-Host "skip: pprof surface disabled (set SL_ENABLE_PPROF=1 to enable)."

@@ -534,15 +534,114 @@ async fn pprof_cmdline() -> Response {
     ([(CONTENT_TYPE, HeaderValue::from_static("application/octet-stream"))], body).into_response()
 }
 
-/// `GET /debug/pprof/profile` — CPU profile surface placeholder.
-async fn pprof_profile() -> Response {
-    (
-        axum::http::StatusCode::NOT_IMPLEMENTED,
-        [(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
-        "CPU profiling is not implemented in the default cross-platform build. \
-         The debug surface is intentionally gated by SL_ENABLE_PPROF=1.",
-    )
-        .into_response()
+/// Default CPU sample window when `?seconds=` is omitted (kept short for local smoke).
+const DEFAULT_PPROF_SECONDS: u64 = 1;
+/// Hard cap so a single request cannot block the process for minutes.
+const MAX_PPROF_SECONDS: u64 = 30;
+
+#[derive(Debug, Deserialize)]
+struct PprofProfileParams {
+    #[serde(default = "default_pprof_seconds")]
+    seconds: u64,
+}
+
+fn default_pprof_seconds() -> u64 {
+    DEFAULT_PPROF_SECONDS
+}
+
+/// `GET /debug/pprof/profile` — CPU profile protobuf (unix) when `SL_ENABLE_PPROF=1`.
+///
+/// Optional `?seconds=N` (clamped to 1..=30, default 1). Loopback bind remains the
+/// process-level gate; this handler only runs when the env gate registered the route.
+async fn pprof_profile(Query(params): Query<PprofProfileParams>) -> Response {
+    let seconds = params.seconds.clamp(1, MAX_PPROF_SECONDS);
+
+    #[cfg(unix)]
+    {
+        match sample_cpu_profile(seconds).await {
+            Ok(body) => (
+                [(CONTENT_TYPE, HeaderValue::from_static("application/octet-stream"))],
+                body,
+            )
+                .into_response(),
+            Err(PprofSampleError::Busy) => (
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                [(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
+                "CPU profiler is already running; retry after the in-flight sample completes.",
+            )
+                .into_response(),
+            Err(PprofSampleError::Failed(message)) => {
+                warn!(%message, seconds, "cpu pprof sample failed");
+                (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    [(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
+                    format!("CPU profiling failed: {message}"),
+                )
+                    .into_response()
+            }
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = seconds;
+        (
+            axum::http::StatusCode::NOT_IMPLEMENTED,
+            [(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
+            "CPU profiling via pprof is not supported on this platform (unix SIGPROF sampler). \
+             Enable SL_ENABLE_PPROF=1 on Linux/macOS for protobuf profiles.",
+        )
+            .into_response()
+    }
+}
+
+#[cfg(unix)]
+enum PprofSampleError {
+    Busy,
+    Failed(String),
+}
+
+/// Serialize CPU samples for one window. The `pprof` crate owns a process-global
+/// profiler, so concurrent requests are rejected with [`PprofSampleError::Busy`].
+#[cfg(unix)]
+async fn sample_cpu_profile(seconds: u64) -> Result<Vec<u8>, PprofSampleError> {
+    tokio::task::spawn_blocking(move || {
+        use std::sync::TryLockError;
+
+        use pprof::protos::Message;
+
+        static PPROF_LOCK: Mutex<()> = Mutex::new(());
+
+        let _guard = match PPROF_LOCK.try_lock() {
+            Ok(guard) => guard,
+            Err(TryLockError::WouldBlock) => return Err(PprofSampleError::Busy),
+            Err(TryLockError::Poisoned(poisoned)) => poisoned.into_inner(),
+        };
+
+        let profiler = pprof::ProfilerGuardBuilder::default()
+            .frequency(99)
+            .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+            .build()
+            .map_err(|error| PprofSampleError::Failed(error.to_string()))?;
+
+        std::thread::sleep(Duration::from_secs(seconds));
+
+        let report = profiler
+            .report()
+            .build()
+            .map_err(|error| PprofSampleError::Failed(error.to_string()))?;
+        let profile = report
+            .pprof()
+            .map_err(|error| PprofSampleError::Failed(error.to_string()))?;
+
+        let mut body = Vec::new();
+        profile
+            .encode(&mut body)
+            .map_err(|error| PprofSampleError::Failed(error.to_string()))?;
+        Ok(body)
+    })
+    .await
+    .map_err(|error| PprofSampleError::Failed(error.to_string()))?
 }
 
 const TRACEPARENT: &str = "traceparent";
@@ -1892,10 +1991,23 @@ mod tests {
         assert_eq!(cmdline.status(), axum::http::StatusCode::OK);
         assert!(!cmdline.bytes().await.unwrap().is_empty());
 
-        let profile =
-            client.get(format!("http://{addr}/debug/pprof/profile")).send().await.unwrap();
-        assert_eq!(profile.status(), axum::http::StatusCode::NOT_IMPLEMENTED);
-        assert!(profile.bytes().await.unwrap().len() > 16);
+        // Keep the sample window short; default is already 1s.
+        let profile = client
+            .get(format!("http://{addr}/debug/pprof/profile?seconds=1"))
+            .timeout(Duration::from_secs(15))
+            .send()
+            .await
+            .unwrap();
+        #[cfg(unix)]
+        {
+            assert_eq!(profile.status(), axum::http::StatusCode::OK);
+            assert!(!profile.bytes().await.unwrap().is_empty());
+        }
+        #[cfg(not(unix))]
+        {
+            assert_eq!(profile.status(), axum::http::StatusCode::NOT_IMPLEMENTED);
+            assert!(profile.bytes().await.unwrap().len() > 16);
+        }
         server.abort();
     }
 }

@@ -163,10 +163,49 @@ pub fn HelpOverlay(open: bool, on_close: EventHandler<()>) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn shortcuts_include_help_toggle() {
         assert!(SHORTCUTS.iter().any(|s| s.keys == "?"));
         assert!(SHORTCUTS.iter().any(|s| s.scope == "This help overlay"));
+    }
+
+    /// Golden snapshot for keyboard-help copy — auditors can diff this file.
+    #[test]
+    fn shortcuts_match_golden_snapshot() {
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let golden = manifest_dir
+            .join("../../tests/fixtures/a11y/help_shortcuts.golden.tsv")
+            .canonicalize()
+            .expect("help shortcuts golden path");
+        let expected = std::fs::read_to_string(&golden).expect("read help shortcuts golden");
+        let normalize = |s: &str| s.replace("\r\n", "\n");
+        let mut actual = String::new();
+        for row in SHORTCUTS {
+            actual.push_str(&format!("{}\t{}\t{}\n", row.keys, row.scope, row.action));
+        }
+        assert_eq!(
+            normalize(actual.trim_end()),
+            normalize(expected.trim_end()),
+            "help overlay copy drifted from {}",
+            golden.display()
+        );
+    }
+
+    #[test]
+    fn shortcut_actions_use_plain_language() {
+        for row in SHORTCUTS {
+            assert!(
+                !row.action.contains("ERR_") && !row.action.contains("error code"),
+                "shortcut {:?} should stay human-readable",
+                row.keys
+            );
+            assert!(
+                row.action.chars().any(|c| c.is_ascii_alphabetic()),
+                "shortcut {:?} needs descriptive copy",
+                row.keys
+            );
+        }
     }
 }

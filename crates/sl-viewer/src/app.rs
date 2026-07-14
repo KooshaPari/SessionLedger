@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 
 use crate::async_states::{
-    ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, SkeletonLayout,
+    ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState, SkeletonLayout,
 };
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
@@ -120,6 +120,8 @@ fn initial_tab_for_viewer() -> Tab {
         Tab::Search
     } else if query_fixture_active("replay-error") {
         Tab::Replay
+    } else if query_fixture_active("stream-skeleton") {
+        Tab::LiveFeed
     } else {
         Tab::Bundles
     }
@@ -558,6 +560,12 @@ pub fn App() -> Element {
                         border-right: 1px solid var(--sl-border);
                     }}
                 }}
+                .sl-loading-spinner {{
+                    animation: sl-spin 0.8s linear infinite;
+                }}
+                @keyframes sl-spin {{
+                    to {{ transform: rotate(360deg); }}
+                }}
                 @media (prefers-reduced-motion: reduce) {{
                     *, *::before, *::after {{
                         animation-duration: 0.01ms !important;
@@ -570,6 +578,9 @@ pub fn App() -> Element {
                         opacity: 0;
                         visibility: hidden;
                         pointer-events: none;
+                    }}
+                    .sl-loading-spinner {{
+                        animation: none !important;
                     }}
                 }}
             "#,
@@ -741,6 +752,15 @@ fn BundlesTab() -> Element {
         };
     }
 
+    if query_fixture_active("loading-long") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            LoadingState {
+                message: "Loading bundles…".to_string(),
+                patience_hint: true,
+            }
+        };
+    }
     if loading() || query_fixture_active("skeleton") {
         return rsx! {
             h2 { "Compiled Bundles" }

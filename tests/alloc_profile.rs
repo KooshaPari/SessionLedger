@@ -1,4 +1,4 @@
-//! L8 alloc-profile hermetic wiring: JSON SSOT + script SelfCheck.
+//! L8 alloc-profile hermetic wiring: JSON SSOT + script `SelfCheck`.
 //!
 //! The optional `dhat` heap measurement lives in `tests/alloc_profile_dhat.rs`
 //! (`--features alloc-profile`). Default CI graphs exercise only this file.

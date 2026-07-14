@@ -46,10 +46,18 @@ OS window chrome is outside the browser harness; this checklist captures what au
 5. **Keyboard efficiency** — Press `?` (outside a text field): help overlay opens with shortcut table; `Escape` closes and focus returns to **Help (?)**.
 6. **Search escape hatch** — On Search tab, type in a filter, press `Escape`: fields clear, focus stays in the filter.
 
-Record pass/fail and build ID in your audit worksheet. Do not claim Authenticode or platform signing here — see packaging ADR 0003 for the portable trust model.
+Record pass/fail and build ID in your audit worksheet, or write machine-readable
+evidence with `scripts/record-native-webview-smoke.ps1` (schema sample:
+[`docs/ops/fixtures/native-webview-smoke.sample.json`](../ops/fixtures/native-webview-smoke.sample.json)).
+Do not claim Authenticode or platform signing here — see packaging ADR 0003 for
+the portable trust model.
+
+For NVDA/VoiceOver announcement checks and what axe/ARIA already cover in CI,
+see [`docs/a11y/screen-reader-smoke.md`](screen-reader-smoke.md).
 
 ## Related references
 
+- [`docs/a11y/screen-reader-smoke.md`](screen-reader-smoke.md) — L81.4 SR procedure
 - [`docs/viewer-hotkeys.md`](../viewer-hotkeys.md) — keyboard contract
 - [`docs/HELP.md`](../HELP.md) — operator help
 - [`docs/VISUAL_SPEC.md`](../VISUAL_SPEC.md) §3–5 — loading, skeleton, and error anatomy

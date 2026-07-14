@@ -33,6 +33,29 @@ and any temporary quarantine.
 The `fuzz-smoke` CI job runs the committed OKF corpus for 10 seconds. Longer
 local campaigns use `cargo fuzz run okf_roundtrip`.
 
+## Native WebView accessibility smoke
+
+After a desktop viewer change that affects landmarks, status regions, Help, or
+Search recovery, run the checklists in
+[`docs/a11y/status-regions-and-native-smoke.md`](docs/a11y/status-regions-and-native-smoke.md)
+and [`docs/a11y/screen-reader-smoke.md`](docs/a11y/screen-reader-smoke.md), then
+record a machine-readable pass:
+
+```powershell
+# Prefer a worktree-local target when building the viewer in parallel lanes:
+$env:CARGO_TARGET_DIR = "$PWD/target-w23-c09"
+# cargo run -p sl-viewer … (desktop feature) — exercise the checklist, then:
+pwsh -NoProfile -File scripts/record-native-webview-smoke.ps1 `
+  -Outcome pass `
+  -ScreenReader NVDA `
+  -OutPath docs/ops/fixtures/native-webview-smoke.local.json
+```
+
+Commit only intentional evidence under audit packages; keep
+`native-webview-smoke.local.json` untracked unless an audit asks for it. The
+checked-in sample is
+[`docs/ops/fixtures/native-webview-smoke.sample.json`](docs/ops/fixtures/native-webview-smoke.sample.json).
+
 ## Inclusive Language Checks
 
 Run the lightweight seed gate before documentation-heavy changes:

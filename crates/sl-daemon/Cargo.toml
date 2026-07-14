@@ -65,3 +65,6 @@ otel = [
     "dep:opentelemetry-otlp",
     "dep:tracing-opentelemetry",
 ]
+# Soft stub: compile-time acknowledgment of unpaid OTLP metrics push.
+# Does not pull OpenTelemetry metrics deps; Prometheus GET /metrics stays default.
+otel-metrics = []

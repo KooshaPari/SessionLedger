@@ -31,6 +31,10 @@ SL_OTLP_ENDPOINT=http://localhost:4317 cargo run -p sl-daemon --features otel --
 set. If neither variable is set, the feature-enabled binary uses the same local
 fmt logs and `RUST_LOG` filtering as the default build.
 
+OTLP **metrics** push is a soft stub (`--features otel-metrics`, optional
+`SL_OTLP_METRICS=1` acknowledgment). Default Prometheus `GET /metrics` is
+unchanged — see [`docs/ops/otlp-metrics.md`](../../docs/ops/otlp-metrics.md).
+
 ## Run options
 
 ### 1. Native process-compose (preferred for local dev — no container)

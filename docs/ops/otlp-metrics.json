@@ -1,0 +1,15 @@
+{
+  "schema": "sessionledger.otlp-metrics.v1",
+  "prometheus_http": "/metrics",
+  "otlp_metrics_export": "none",
+  "cargo_feature": "otel-metrics",
+  "ack_env": "SL_OTLP_METRICS",
+  "endpoint_env": ["SL_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT"],
+  "notes": [
+    "Soft stub for C05 L43/L42 OTLP metrics export — not a live metrics push client.",
+    "Default builds keep dependency-free Prometheus text at GET /metrics (HTTP RED).",
+    "otel-metrics Cargo feature compiles the acknowledgment stub only; no OTLP metrics deps yet.",
+    "otlp_metrics_export remains none until labeled RED counters are bridged to OTLP.",
+    "SelfCheck: pwsh ./scripts/otlp-metrics-check.ps1 -SelfCheck"
+  ]
+}

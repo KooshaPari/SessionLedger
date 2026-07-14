@@ -63,3 +63,11 @@ artifacts on every pull request.
 
 That guard keeps PR CI affordable while preventing accidental loss of the
 release matrix that provides cross-platform proof.
+
+## Default PR build-test
+
+[`.github/workflows/cross-platform-build.yml`](../../.github/workflows/cross-platform-build.yml)
+runs affordable `cargo build --locked` checks for the root workspace and the
+isolated `sl-daemon` workspace on `ubuntu-latest`, `windows-latest`, and
+`macos-latest`. This complements the Linux-only `build-test` job in `ci.yml`
+without executing the full test matrix on every host family.

@@ -218,8 +218,45 @@ test("primary controls expose stable accessible names", async ({ page }) => {
   await page.getByRole("tab", { name: "Search", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Model (substring)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show advanced filters" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Search", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Clear", exact: true })).toBeVisible();
+});
+
+test("Search advanced filters disclose on demand with recognition badge", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Search", exact: true }).click();
+
+  const toggle = page.getByTestId("search-advanced-toggle");
+  const panel = page.getByTestId("search-advanced-panel");
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toHaveAttribute("aria-controls", "search-advanced-filters");
+  await expect(panel).toBeHidden();
+  await expect(page.getByRole("spinbutton", { name: "Min Tokens" })).toBeHidden();
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: "Hide advanced filters" })).toBeVisible();
+  await expect(panel).toBeVisible();
+  await expect(page.getByRole("group", { name: "Advanced search filters" })).toBeVisible();
+
+  const minTokens = page.getByRole("spinbutton", { name: "Min Tokens" });
+  await expect(minTokens).toBeVisible();
+  await minTokens.fill("1000");
+  await expect(page.getByTestId("search-advanced-badge")).toContainText("1 active");
+
+  await page.getByRole("button", { name: "Hide advanced filters" }).click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(panel).toBeHidden();
+  await expect(page.getByTestId("search-advanced-badge")).toContainText("1 active");
+
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm clear" }).click();
+  await expect(page.getByTestId("search-advanced-badge")).toHaveCount(0);
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });
 
 test.describe("status regions and cognitive fixtures", () => {

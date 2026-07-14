@@ -57,9 +57,9 @@ pub use ports::adapters::ZstdCompressor;
 pub use ports::adapters::{
     InMemoryMemoryStore, NoopTraceSink, PassthroughCompressor, TracingTraceSink,
 };
+pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};
 #[cfg(feature = "sqlite")]
 pub use ports::sqlite_memory::SqliteMemoryStore;
-pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};
 
 /// Process a single session through the entire ingest→distill→export pipeline.
 ///

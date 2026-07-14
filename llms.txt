@@ -15,6 +15,7 @@ losslessly. Turns ephemeral tool sessions into durable ledgers and injectable
 | [`docs/reference/OKF-SPEC.md`](docs/reference/OKF-SPEC.md) | OKF v1.0 |
 | [`docs/OKF-ROUNDTRIP.md`](docs/OKF-ROUNDTRIP.md) | JSONL→daemon→OKF→viewer smoke |
 | [`docs/ops/runbook.md`](docs/ops/runbook.md) | Local `make dev` / healthz |
+| [`docs/ops/feedback-budgets.md`](docs/ops/feedback-budgets.md) | Measured check/test/lint loop budgets |
 | [`docs/ops/observability.md`](docs/ops/observability.md) | Metrics + OTel soft goal |
 | [`docs/ops/AGILEPLUS.md`](docs/ops/AGILEPLUS.md) | AgilePlus bootstrap, FR/NFR mapping, and GitHub sync |
 

@@ -21,6 +21,8 @@ $RequiredKeys = @(
     "SL_OUT_DIR",
     "SL_INGEST_MAX_BODY_BYTES",
     "SL_INGEST_MAX_CONCURRENCY",
+    "SL_API_RATE_LIMIT",
+    "SL_API_RATE_WINDOW_MS",
     "SL_DAEMON_URL"
 )
 

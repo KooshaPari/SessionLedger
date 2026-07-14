@@ -48,9 +48,27 @@ curl -H "Authorization: Bearer $SL_API_KEY" http://127.0.0.1:8080/api/bundles
 Both values must be positive integers; invalid values stop server startup.
 Requests above the body limit return `413`. Requests arriving while all ingest
 permits are occupied return `429`. These are admission controls, not tenant
-quotas or distributed rate limits. Native tower `RateLimitLayer` is not used:
-axum clones layers per connection, so those counters would not share process-wide
-state. The ingest semaphore is the intentional bulkhead.
+quotas or distributed rate limits. Native tower `RateLimitLayer` is not used for
+the ingest bulkhead: axum clones layers per connection, so those counters would
+not share process-wide state. The ingest semaphore is the intentional bulkhead.
+
+## General `/api/*` rate limit (tower-style)
+
+Beyond the ingest bulkhead, `sl-daemon` can apply a process-wide fixed-window
+throttle to every `/api/*` route. The budget is shared across connections (an
+`Arc`-backed counter), which is the workable substitute for tower
+`RateLimitLayer` under axum's per-connection service clone model.
+
+| Environment variable | Default | Meaning |
+|---|---:|---|
+| `SL_API_RATE_LIMIT` | unset → **off** on open loopback; **`60`** when `SL_API_KEY` is set or bind is non-loopback | Max `/api/*` requests accepted per window (`0` / `off` disables) |
+| `SL_API_RATE_WINDOW_MS` | `1000` | Window length in milliseconds (must be > 0) |
+
+Loopback without a shared key keeps local DX: the throttle stays off unless you
+set `SL_API_RATE_LIMIT` yourself. Shared-key and non-loopback paths enable the
+default `60` requests per second when the env is unset. Excess `/api/*` traffic
+returns `429` with `error.code="rate_limited"`. `/healthz`, `/readyz`, and
+`/metrics` are not throttled.
 
 Clients may send `Idempotency-Key` on `POST /api/ingest` to safely retry a
 successful request while the daemon process is still running. The daemon stores

@@ -638,11 +638,23 @@ async fn run_serve(
             api_key_auth = api_key_auth.with_protect_all_api(true);
             info!(%addr, "non-loopback HTTP bind; SL_API_KEY required for all /api/* routes");
         }
+        // Shared-key or non-loopback path gets a default tower-style API throttle;
+        // pure loopback DX leaves it off unless SL_API_RATE_LIMIT is set.
+        let enforce_api_rate_default = api_key_auth.is_configured() || !addr.ip().is_loopback();
+        let api_rate_limit = http::ApiRateLimit::from_env(enforce_api_rate_default)?;
+        if api_rate_limit.is_enabled() {
+            info!(
+                limit = api_rate_limit.limit,
+                window_ms = api_rate_limit.window.as_millis() as u64,
+                "HTTP /api/* rate limit enabled"
+            );
+        }
         let state = http::AppState {
             out_dir: Arc::new(out.clone()),
             broadcast_tx: bcast_tx.clone(),
             http_metrics: Arc::new(metrics::HttpMetrics::default()),
             ingest_admission,
+            api_rate_limit,
             api_key_auth,
             audit_sink: audit_sink.clone(),
             idempotency_cache: http::IngestIdempotencyCache::default(),

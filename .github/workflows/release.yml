@@ -18,6 +18,8 @@
 # checksums are signed with cosign keyless signing on a best-effort basis.
 # Release assets receive blocking GitHub build provenance in the canonical
 # KooshaPari/SessionLedger repository; forks skip that OIDC-dependent step.
+# Attestations bind each archive subject digest to workflow materials metadata
+# (source checkout at commit) per the SLSA materials contract.
 # Gatekeeper and SmartScreen notes, data dirs, uninstall: docs/ops/distribution.md
 #
 # Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-viewer/README.md

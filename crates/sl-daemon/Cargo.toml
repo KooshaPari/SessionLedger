@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 session-ledger = { path = "../.." }
+# SQLite memory persistence is optional; enable with `--features sqlite`.
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "signal", "fs", "time"] }
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 clap = { version = "4", features = ["derive"] }
@@ -51,6 +52,7 @@ unsafe_code = "forbid"
 
 [features]
 default = []
+sqlite = ["session-ledger/sqlite"]
 json-logs = ["tracing-subscriber/json"]
 otel = [
     "dep:opentelemetry",

@@ -105,6 +105,11 @@ enum Command {
         /// Pass `off` to disable the HTTP server entirely.
         #[arg(long, default_value = "127.0.0.1:8080")]
         http_bind: String,
+
+        /// SQLite database for durable episodic memory (`SL_MEMORY_DB`).
+        /// Requires `sl-daemon` built with `--features sqlite`.
+        #[arg(long)]
+        memory_db: Option<PathBuf>,
     },
 
     /// Check daemon status (exit 0 = running, exit 1 = not running).
@@ -306,8 +311,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     match args.command {
-        Command::Serve { watch, out, once, http_bind } => {
-            run_serve(watch, out, once, http_bind).await?;
+        Command::Serve { watch, out, once, http_bind, memory_db } => {
+            let memory_db = memory_db.or_else(|| {
+                std::env::var("SL_MEMORY_DB")
+                    .ok()
+                    .filter(|value| !value.trim().is_empty())
+                    .map(PathBuf::from)
+            });
+            run_serve(watch, out, once, http_bind, memory_db).await?;
         }
         Command::Status => run_status(&args.url).await,
         Command::List => run_list(&args.url).await,
@@ -475,10 +486,30 @@ async fn run_serve(
     out: PathBuf,
     once: bool,
     http_bind: String,
+    memory_db: Option<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let version = env!("CARGO_PKG_VERSION");
     banner::emit_interactive_banner(version);
     info!(banner = %banner::plain_banner(version), "startup");
+
+    #[cfg(not(feature = "sqlite"))]
+    if memory_db.is_some() {
+        return Err(
+            "--memory-db / SL_MEMORY_DB requires sl-daemon built with --features sqlite".into(),
+        );
+    }
+
+    #[cfg(feature = "sqlite")]
+    let memory_store: Option<Arc<session_ledger::SqliteMemoryStore>> =
+        if let Some(path) = memory_db {
+            let store = session_ledger::SqliteMemoryStore::open(&path).map_err(|error| {
+                format!("failed to open memory database {}: {error}", path.display())
+            })?;
+            info!(memory_db = %path.display(), "durable memory store enabled");
+            Some(Arc::new(store))
+        } else {
+            None
+        };
 
     // Broadcast channel: ETL consumer publishes every written path; HTTP SSE
     // handler subscribes one receiver per connected client.
@@ -492,13 +523,21 @@ async fn run_serve(
     // Consumer: drain the channel, transforming each path.
     let bcast_for_consumer = bcast_tx.clone();
     let audit_sink_for_consumer = audit_sink.clone();
+    #[cfg(feature = "sqlite")]
+    let memory_for_consumer = memory_store.clone();
     let consumer = tokio::spawn(
         async move {
             let mut total = 0usize;
             while let Some(path) = rx.recv().await {
                 let span = info_span!("etl.transform", path = %path.display());
                 async {
-                    match etl::transform_file(&path, &out_dir) {
+                    #[cfg(feature = "sqlite")]
+                    let memory_ref = memory_for_consumer
+                        .as_ref()
+                        .map(|store| store.as_ref() as &dyn session_ledger::ports::MemoryStore);
+                    #[cfg(not(feature = "sqlite"))]
+                    let memory_ref: Option<&dyn session_ledger::ports::MemoryStore> = None;
+                    match etl::transform_file(&path, &out_dir, memory_ref) {
                         Ok(written) => {
                             total += written.len();
                             for w in &written {
@@ -550,6 +589,8 @@ async fn run_serve(
             api_key_auth,
             audit_sink: audit_sink.clone(),
             idempotency_cache: http::IngestIdempotencyCache::default(),
+            #[cfg(feature = "sqlite")]
+            memory_store: memory_store.clone(),
         };
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
         let handle = tokio::spawn(async move {

@@ -9,7 +9,7 @@ P0 product work. Remaining deep-obs work tracks [issue #65](https://github.com/K
 | Surface | Path | Purpose |
 |---------|------|---------|
 | Liveness | `GET /healthz` | Returns `200` + body `ok`. Process is up. |
-| Readiness | `GET /readyz` | Returns `200` + `ready` when `out_dir` exists; else `503`. Used by process-compose. |
+| Readiness | `GET /readyz` | Returns `200` + `ready` when `out_dir` exists and optional `SL_MEMORY_DB` passes a probe; else `503`. Used by process-compose. |
 | Metrics | `GET /api/metrics` | Aggregated bundle stats: totals, avg tokens, model + daily histograms (`crates/sl-daemon/src/metrics.rs`). |
 | Prometheus RED metrics | `GET /metrics` | Process-local request count, HTTP errors, and request-duration sum/count. |
 | Local pprof debug | `GET /debug/pprof/*` | Optional loopback-only pprof-style surface when `SL_ENABLE_PPROF=1`. Disabled by default. |
@@ -30,7 +30,7 @@ lives in [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml).
 | Probe | Question it answers | Success | Failure | Who should call it |
 |-------|---------------------|---------|---------|-------------------|
 | `/healthz` | Is the HTTP process alive? | `200` + `ok` | Connection refused / timeout | Process supervisors, `sl status`, crude uptime checks |
-| `/readyz` | Can the daemon serve work that needs `out_dir`? | `200` + `ready` when `out_dir` exists and is a directory | `503` when `out_dir` is missing or not a dir | `process-compose` readiness probe, load balancers, viewer `depends_on` |
+| `/readyz` | Can the daemon serve work that needs `out_dir` (and optional memory DB)? | `200` + `ready` when `out_dir` exists and is a directory, and `SL_MEMORY_DB` answers a probe when configured | `503` when `out_dir` is missing or memory DB probe fails | `process-compose` readiness probe, load balancers, viewer `depends_on` |
 
 Rules of thumb:
 

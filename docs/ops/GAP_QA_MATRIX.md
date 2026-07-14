@@ -22,7 +22,7 @@ package, and the JSON mirror in the same change.
 | C08 | 24/30 · partial | Fourteen-fixture multi-lang corpus + anchor manifest landed; compression/token and larger families remain shallow | `audit/.lane-c08/C08.md`; `docs/ops/eval-manifest.json`; `docs/reference/conformance/README.md` | Grow larger task-family fixtures | 2026-07-14 |
 | C09 | 39/45 · partial | Error-field association + Clear confirm landed; shell completions and live-daemon native parity remain | `audit/.lane-c09/C09.md`; `crates/sl-viewer/src/search_view.rs`; `tests/visual/harness/a11y.spec.js`; `docs/a11y/status-regions-and-native-smoke.md` | Complete live-daemon native WebView parity | 2026-07-14 |
 | C10 | 36/36 · done | Visual identity pillars at max after splash goldens | `audit/.lane-c10/C10.md`; `tests/visual/golden/s1-launch-splash.png`; `tests/visual/golden/s1-launch-splash-light.png` | Keep splash/theme goldens current | 2026-07-14 |
-| C11 | 32/45 · partial | Unsigned clean-host portable install smoke landed; platform signing deferred per ADR 0003 | `audit/.lane-c11/C11.md`; `docs/ops/distribution.md`; `scripts/installer-lifecycle-smoke.ps1` | Add credentials + signed production installer evidence | 2026-07-13 |
+| C11 | 36/45 · partial | Unsigned MSI/PKG Release smoke + curl/irm + brew/winget manifests + runtime facade landed; platform signing deferred per ADR 0003 | `audit/.lane-c11/C11.md`; `justfile`; `Taskfile.yml`; `scripts/runtime-up.*`; `scripts/install.sh`; `scripts/install.ps1`; `packaging/homebrew/`; `packaging/winget/`; `packaging/macos/`; `.github/workflows/release.yml` | Publish brew/winget; add credentials + signed production installer evidence | 2026-07-14 |
 
 ## Functional requirements
 
@@ -53,6 +53,6 @@ These are residual themes only; they do not create new PLAN T-IDs.
 | PLAN-P3 | partial | LLM-backed intent extraction and `curate.py` convergence remain | `docs/DESIGN.md` §6-7; adapter contract tests with provenance | Claim WBS-3.2 after cross-repo destination approval | 2026-07-12 |
 | PLAN-P4 | partial | context-mode FTS recall and explicit TUI scope decision remain | `docs/DESIGN.md` §3, §7; recall E2E or accepted `na` decision | Human decides TUI; machine implements approved recall boundary | 2026-07-12 |
 | PLAN-P6 | partial | Coverage, property, fuzz, and loom-lite race_model gates landed; full permutation checkers and enforced perf-budget gates remain | `tests/properties.rs`; `fuzz/`; `tests/race_model.rs`; CI repeats properties and runs bounded fuzz/race smoke | Finish full loom/shuttle and checked benchmark-budget evidence in WBS-6.2 | 2026-07-14 |
-| PLAN-W8-B | done | Wave-24 result is 349/402 (87% B), meeting the B threshold | Independent audit-v38 result is at least 302/402 and >=75% | Hold B; pursue C11 signing implementation for higher grades | 2026-07-14 |
+| PLAN-W8-B | done | Wave-25 result is 353/402 (88% B), meeting the B threshold | Independent audit-v38 result is at least 302/402 and >=75% | Hold B; pursue C11 signing + published brew/winget for higher grades | 2026-07-14 |
 | PLAN-ORG | partial | Registry spine and governance-policy conformance require cross-repo/human evidence | Registry entry links SessionLedger; policy checklist and org controls are recorded | Human owns WBS-9.1..WBS-9.3 | 2026-07-12 |
 

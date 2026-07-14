@@ -64,26 +64,34 @@ Replace webhook URL and receiver names before paging.
 | `SessionLedgerRedMetricsMissing` | `up == 1 unless sl_http_requests_total` | `warning` | Slack (TBD) | `sessionledger-slo.yaml` |
 | `SL-METRICS-STALE` | `max(up{job="sl-daemon"}) == 0 or absent(up{job="sl-daemon"})` | `info` | Slack (TBD) | docs (overlaps scrape-down) |
 
-Alertmanager placeholder ([`alertmanager.yaml`](alerts/alertmanager.yaml)):
+Alertmanager config ([`alertmanager.yaml`](alerts/alertmanager.yaml)):
 
 ```yaml
 route:
   receiver: sessionledger-webhook-placeholder
   routes:
+    - receiver: sessionledger-pagerduty   # severity=warning + page=true
+    - receiver: sessionledger-slack-ops   # severity=warning
     - receiver: sessionledger-webhook-placeholder
-      matchers:
-        - job="sl-daemon"
 ```
 
-Production mapping (fill before go-live):
+Production mapping (stubs checked in; live IDs via env — never commit secrets):
 
-| `severity` / intent | Receiver | Notes |
-|---------------------|----------|-------|
-| `warning` + P1 scrape-down | PagerDuty service (TBD) | Inhibits fast error burn on same instance |
-| `warning` + P2 error budget | Slack `#sessionledger-ops` (TBD) | |
-| `info` / `ticket` | friction-log or ticket queue | No page |
+| `severity` / intent | Receiver | Route ID stub / env |
+|---------------------|----------|---------------------|
+| `warning` + `page=true` (P1) | `sessionledger-pagerduty` | `SL_ALERT_PAGERDUTY_ROUTING_KEY` ← `REPLACE_ME_PAGERDUTY_ROUTING_KEY` |
+| `warning` (P2) | `sessionledger-slack-ops` | `SL_ALERT_SLACK_CHANNEL_ID` + `SL_ALERT_SLACK_WEBHOOK_URL` |
+| default / `info` | `sessionledger-webhook-placeholder` | loopback webhook (local only) |
 
-Validate rules locally:
+Stub env file: [`route-ids.stub.env`](alerts/route-ids.stub.env). Soft validation
+always accepts placeholders; `-Strict` requires live env:
+
+```powershell
+pwsh -NoProfile -File scripts/alert-route-ids-check.ps1
+pwsh -NoProfile -File scripts/alert-route-ids-check.ps1 -Strict
+```
+
+Validate Prometheus rules locally:
 
 ```bash
 promtool check rules docs/ops/alerts/sessionledger-slo.yaml
@@ -257,6 +265,8 @@ annotations:
 3. Run quarterly game-day workflow; archive `gameday-evidence.json`.
 4. Add route-labelled ingest/replay counters before enabling their alert stubs.
 5. Replace `probe_*` stubs with real blackbox metrics.
-6. Fill Slack / PagerDuty route IDs in the routing table above.
+6. Export live `SL_ALERT_*` values (never commit), substitute into
+   [`alertmanager.yaml`](alerts/alertmanager.yaml), and pass
+   `scripts/alert-route-ids-check.ps1 -Strict`.
 7. Close remaining #65 exporter items; keep these files as the source of truth
    for rule intent.

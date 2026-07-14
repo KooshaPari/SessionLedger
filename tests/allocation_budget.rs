@@ -5,9 +5,9 @@
 //! jemalloc or continuous `dhat` profiling in production builds.
 //!
 //! Run:
-//!   cargo test --test allocation_budget --locked
-//!   pwsh ./scripts/allocation-budget-check.ps1 -SelfCheck
-//!   pwsh ./scripts/allocation-budget-check.ps1
+//!   `cargo test --test allocation_budget --locked`
+//!   `pwsh ./scripts/allocation-budget-check.ps1 -SelfCheck`
+//!   `pwsh ./scripts/allocation-budget-check.ps1`
 
 use std::alloc::System;
 use std::path::PathBuf;

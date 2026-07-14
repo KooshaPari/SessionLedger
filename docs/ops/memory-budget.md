@@ -4,8 +4,10 @@ SessionLedger's Memory & Allocation lane starts with a **generous RSS / working-
 smoke** on the `sl-daemon` ingest path (`POST /api/ingest`). This is score-1
 evidence only: it catches gross regressions, not allocator-level waste.
 
-Deeper `dhat` / custom-allocator profiling and optional `bytes::Bytes` / `Cow`
-zero-copy work remain follow-ups.
+A cheap counting-allocator companion lives in
+[`allocation-budget.md`](allocation-budget.md) (`process_session` heap deltas via
+`stats_alloc`). Continuous `dhat` / jemalloc profiling and optional
+`bytes::Bytes` / `Cow` zero-copy work remain follow-ups.
 
 ## Ceiling
 
@@ -101,6 +103,7 @@ keep this soft until allocator profiling tightens the budget.
 - Measures **process RSS / working set**, not heap allocations or peak during a
   single request frame.
 - Debug builds and cold caches inflate RSS; the ceiling accounts for that.
-- Does not enable `dhat`, jemalloc, or `#[global_allocator]` instrumentation.
+- Does not enable `dhat`, jemalloc, or production `#[global_allocator]` instrumentation
+  (see [`allocation-budget.md`](allocation-budget.md) for the test-only counting smoke).
 - Does not prove zero-copy (`Bytes` / `Cow`) on the ingest body path.
 - Attach mode requires a discoverable `sl-daemon` process name on the host.

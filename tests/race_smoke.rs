@@ -1,4 +1,7 @@
 //! Threaded smoke tests for deterministic merge, dedup, and OKF output.
+//!
+//! Companion: `tests/race_model.rs` covers bounded channel + cancel
+//! conservation (loom-lite). Both run under `.github/workflows/race-smoke.yml`.
 
 use std::sync::{Arc, Barrier};
 use std::thread;

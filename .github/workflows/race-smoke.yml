@@ -18,7 +18,7 @@ env:
 
 jobs:
   race-smoke:
-    name: threaded merge and OKF smoke · ${{ matrix.os }}
+    name: race smoke + channel/cancel model · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -29,10 +29,10 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
-      - name: race smoke test (3 repeats)
+      - name: race smoke + race model (3 repeats)
         shell: bash
         run: |
           for run in 1 2 3; do
-            echo "race smoke repeat ${run}/3 on ${{ matrix.os }}"
-            cargo test --test race_smoke --locked -- --test-threads=1
+            echo "race smoke/model repeat ${run}/3 on ${{ matrix.os }}"
+            cargo test --test race_smoke --test race_model --locked -- --test-threads=1
           done

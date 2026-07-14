@@ -30,5 +30,7 @@ CI runs the manifest unit tests on every pull request through the default
 ## Limits
 
 This scaffold ships a feature-gated [`SqliteMemoryStore`](../../src/ports/sqlite_memory.rs)
-that applies the manifest at open time. Cancellation semantics and FSM
+that applies the manifest at open time. `sl-daemon serve` opens the store when
+`--memory-db` or `SL_MEMORY_DB` is set (requires `sl-daemon` built with
+`--features sqlite`) and probes it from `GET /readyz`. Cancellation semantics and FSM
 allow-lists remain separate C00 work.

@@ -206,6 +206,9 @@ pub(crate) struct AppState {
     pub audit_sink: Arc<AuditSink>,
     /// Successful ingest responses keyed by process-local Idempotency-Key values.
     pub idempotency_cache: IngestIdempotencyCache,
+    /// Optional durable memory store probed by `/readyz` when configured.
+    #[cfg(feature = "sqlite")]
+    pub memory_store: Option<Arc<session_ledger::SqliteMemoryStore>>,
 }
 
 /// Build the axum [`Router`].
@@ -272,21 +275,34 @@ async fn healthz() -> Response {
     "ok".into_response()
 }
 
-/// `GET /readyz` — readiness probe (output directory must exist and be a dir).
+/// `GET /readyz` — readiness probe (output directory and optional memory DB).
 #[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
 async fn readyz(headers: HeaderMap, State(state): State<AppState>) -> Response {
     let path = state.out_dir.as_path();
-    if path.is_dir() {
-        "ready".into_response()
-    } else {
+    if !path.is_dir() {
         warn!(out_dir = %path.display(), "readyz: out_dir not ready");
-        api_error(
+        return api_error(
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
             "not_ready",
             format!("out_dir not ready: {}", path.display()),
             request_id_from_headers(&headers),
-        )
+        );
     }
+
+    #[cfg(feature = "sqlite")]
+    if let Some(store) = &state.memory_store {
+        if let Err(error) = store.ping() {
+            warn!(error = %error, "readyz: memory_db not ready");
+            return api_error(
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                "memory_db_not_ready",
+                format!("memory_db not ready: {error}"),
+                request_id_from_headers(&headers),
+            );
+        }
+    }
+
+    "ready".into_response()
 }
 
 /// `GET /api/bundles` — return all `*.okf.json` documents as a JSON array.
@@ -987,6 +1003,8 @@ mod tests {
             api_key_auth: ApiKeyAuth::default(),
             audit_sink: Arc::new(AuditSink::new(out_dir)),
             idempotency_cache: IngestIdempotencyCache::default(),
+            #[cfg(feature = "sqlite")]
+            memory_store: None,
         }
     }
 

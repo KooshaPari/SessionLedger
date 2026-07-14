@@ -9,7 +9,9 @@
 
 use std::path::{Path, PathBuf};
 
-use session_ledger::{process_session, read_jsonl_sessions};
+use session_ledger::export::okf::export_to_okf;
+use session_ledger::ports::MemoryStore;
+use session_ledger::{compile_and_store, process_session, read_jsonl_sessions};
 
 /// Errors surfaced while transforming one JSONL file into OKF documents.
 #[derive(Debug, thiserror::Error)]
@@ -26,6 +28,12 @@ pub enum EtlError {
         #[source]
         source: std::io::Error,
     },
+    #[error("memory persistence failed for {path}: {source}")]
+    Memory {
+        path: PathBuf,
+        #[source]
+        source: session_ledger::ports::PortError,
+    },
     #[error("serializing OKF: {0}")]
     Serialize(#[from] serde_json::Error),
 }
@@ -33,9 +41,16 @@ pub enum EtlError {
 /// Compile + export every session in `jsonl_path`, writing one
 /// `<session-id>.okf.json` per session under `out_dir`.
 ///
+/// When `memory_store` is set, distilled episodic facts are persisted through
+/// the configured [`MemoryStore`] before OKF export.
+///
 /// Returns the paths written (stable order — same as the sessions in the file).
 /// `out_dir` is created if missing.
-pub fn transform_file(jsonl_path: &Path, out_dir: &Path) -> Result<Vec<PathBuf>, EtlError> {
+pub fn transform_file(
+    jsonl_path: &Path,
+    out_dir: &Path,
+    memory_store: Option<&dyn MemoryStore>,
+) -> Result<Vec<PathBuf>, EtlError> {
     let sessions = read_jsonl_sessions(jsonl_path)
         .map_err(|source| EtlError::Ingest { path: jsonl_path.to_path_buf(), source })?;
 
@@ -44,7 +59,15 @@ pub fn transform_file(jsonl_path: &Path, out_dir: &Path) -> Result<Vec<PathBuf>,
 
     let mut written = Vec::with_capacity(sessions.len());
     for session in &sessions {
-        let doc = process_session(session);
+        let doc = if let Some(store) = memory_store {
+            let output = compile_and_store(session, store).map_err(|source| EtlError::Memory {
+                path: jsonl_path.to_path_buf(),
+                source,
+            })?;
+            export_to_okf(&output.bundle, session.corpus.as_str())
+        } else {
+            process_session(session)
+        };
         let json = serde_json::to_string_pretty(&doc)?;
         let out_path = out_dir.join(format!("{}.okf.json", sanitize(&session.id)));
         std::fs::write(&out_path, json)
@@ -91,7 +114,7 @@ mod tests {
         let jsonl = write_fixture(tmp.path(), 3);
         let out = tmp.path().join("out");
 
-        let written = transform_file(&jsonl, &out).expect("transform");
+        let written = transform_file(&jsonl, &out, None).expect("transform");
 
         assert_eq!(written.len(), 3, "one OKF doc per session");
         for (i, path) in written.iter().enumerate() {
@@ -110,7 +133,7 @@ mod tests {
         let out = tmp.path().join("nested").join("deeper");
         assert!(!out.exists());
 
-        let written = transform_file(&jsonl, &out).expect("transform");
+        let written = transform_file(&jsonl, &out, None).expect("transform");
         assert_eq!(written.len(), 1);
         assert!(out.is_dir(), "out dir auto-created");
     }
@@ -119,5 +142,24 @@ mod tests {
     fn sanitize_replaces_path_separators() {
         assert_eq!(sanitize("a/b:c\\d"), "a_b_c_d");
         assert_eq!(sanitize("plain-id"), "plain-id");
+    }
+
+    #[cfg(feature = "sqlite")]
+    #[test]
+    fn transform_file_persists_distilled_facts_when_memory_store_configured() {
+        use session_ledger::SqliteMemoryStore;
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let jsonl = write_fixture(tmp.path(), 1);
+        let out = tmp.path().join("out");
+        let memory_path = tmp.path().join("memory.db");
+        let store = SqliteMemoryStore::open(&memory_path).expect("open memory db");
+
+        let written =
+            transform_file(&jsonl, &out, Some(&store)).expect("transform with memory store");
+        assert_eq!(written.len(), 1);
+
+        let recalled = store.recall("pagination", 5).expect("recall distilled facts");
+        assert!(!recalled.is_empty(), "distilled episodic facts should persist");
     }
 }

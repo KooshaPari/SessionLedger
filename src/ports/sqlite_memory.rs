@@ -49,6 +49,18 @@ impl SqliteMemoryStore {
         migrate::apply_all(&conn).map_err(|error| map_migrate(&error))?;
         Ok(Self { conn: Mutex::new(conn), next_id: AtomicU64::new(0) })
     }
+
+    /// Lightweight readiness probe for `/readyz` dependency checks.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PortError::Backend`] when the database connection is unusable.
+    pub fn ping(&self) -> Result<(), PortError> {
+        let conn = self.conn.lock().map_err(|error| {
+            PortError::Backend(format!("sqlite memory store lock poisoned: {error}"))
+        })?;
+        conn.query_row("SELECT 1", [], |_| Ok(())).map_err(|error| map_sqlite(&error))
+    }
 }
 
 impl MemoryStore for SqliteMemoryStore {
@@ -149,6 +161,12 @@ mod tests {
                 "Expose a database health endpoint".to_owned()
             ]
         );
+    }
+
+    #[test]
+    fn sqlite_memory_store_ping_reports_ready() {
+        let store = SqliteMemoryStore::open_in_memory().expect("open memory db");
+        store.ping().expect("ping");
     }
 
     #[test]

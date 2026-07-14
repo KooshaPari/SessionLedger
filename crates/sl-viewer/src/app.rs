@@ -21,6 +21,7 @@ use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
 use crate::theme::ThemeColors;
 use crate::timeline::TimelineView;
+use crate::tokens::{TOKENS_CSS, VIEWER_COLOR_SCHEME};
 use crate::unfinished_tab::UnfinishedWork;
 
 /// Tab identifiers for the viewer.
@@ -376,78 +377,8 @@ pub fn App() -> Element {
 
     rsx! {
         style {
-            r#"
-                :root {{
-                    color-scheme: light;
-                    --font-display: ui-serif, Georgia, "Times New Roman", serif;
-                    --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-                    --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                    --sl-font-caption: var(--font-ui);
-                    --sl-font-size-caption: 0.75rem;
-                    --sl-line-height-caption: 1.35;
-                    --sl-measure-max: 65ch;
-                    --sl-bg: #f6f8fa;
-                    --sl-surface: #ffffff;
-                    --sl-surface-muted: #eef2f7;
-                    --sl-border: #d8dee8;
-                    --sl-text: #1f2937;
-                    --sl-text-muted: #5c5f6e;
-                    --sl-accent: #2563eb;
-                    --sl-accent-secondary: #14b8a6;
-                    --sl-accent-warning: #f97316;
-                    --sl-danger: #b91c1c;
-                    --sl-danger-surface: #fef2f2;
-                    --sl-space-xs: 4px;
-                    --sl-space-sm: 8px;
-                    --sl-space-md: 12px;
-                    --sl-space-lg: 16px;
-                    --sl-space-xl: 20px;
-                    --sl-space-2xl: 32px;
-                    --sl-radius-sm: 4px;
-                    --sl-radius-md: 6px;
-                    --sl-radius-lg: 8px;
-                    --sl-radius-pill: 10px;
-                    --sl-motion-fast: 150ms;
-                    --sl-motion-medium: 220ms;
-                    --sl-motion-slow: 1.8s;
-                    --sl-ease-out: ease-out;
-                    --sl-ease-in-out: ease-in-out;
-                    --sl-skeleton-base: #e8ecf2;
-                    --sl-skeleton-highlight: rgba(37, 99, 235, 0.14);
-                }}
-                :root[data-theme="dark"] {{
-                    color-scheme: dark;
-                    --sl-bg: #111827;
-                    --sl-surface: #1f2937;
-                    --sl-surface-muted: #243244;
-                    --sl-border: #374151;
-                    --sl-text: #f3f4f6;
-                    --sl-text-muted: #b6bfcc;
-                    /* On-dark cobalt: AA ≥4.5:1 on slate + accent color-mix chrome. */
-                    --sl-accent: #93c5fd;
-                    --sl-accent-secondary: #2dd4bf;
-                    --sl-accent-warning: #f97316;
-                    --sl-danger: #f87171;
-                    --sl-danger-surface: #2a1a1a;
-                    --sl-space-xs: 4px;
-                    --sl-space-sm: 8px;
-                    --sl-space-md: 12px;
-                    --sl-space-lg: 16px;
-                    --sl-space-xl: 20px;
-                    --sl-space-2xl: 32px;
-                    --sl-radius-sm: 4px;
-                    --sl-radius-md: 6px;
-                    --sl-radius-lg: 8px;
-                    --sl-radius-pill: 10px;
-                    --sl-motion-fast: 150ms;
-                    --sl-motion-medium: 220ms;
-                    --sl-motion-slow: 1.8s;
-                    --sl-ease-out: ease-out;
-                    --sl-ease-in-out: ease-in-out;
-                    --sl-skeleton-base: #2b3544;
-                    --sl-skeleton-highlight: rgba(147, 197, 253, 0.14);
-                }}
+            // Design tokens: assets/tokens.css via crate::tokens (C09 L81.8 SSOT).
+            "{TOKENS_CSS}{VIEWER_COLOR_SCHEME}
                 html, body {{ margin: 0; max-width: 100%; overflow-x: clip; }}
                 body {{ font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
                 .app {{ display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow-x: clip; }}
@@ -532,7 +463,7 @@ pub fn App() -> Element {
                 .sl-content-skeleton-bundles {{ flex-direction: row; }}
                 .sl-content-skeleton-list {{ flex-direction: column; }}
                 .sl-content-skeleton-stream {{ flex-direction: column; flex: 1; padding: var(--sl-space-md) var(--sl-space-lg); box-sizing: border-box; }}
-                .sl-skeleton-stream-lines {{ display: flex; flex-direction: column; gap: var(--sl-space-sm); width: 100%; font-family: "SF Mono", "Menlo", "Consolas", monospace; }}
+                .sl-skeleton-stream-lines {{ display: flex; flex-direction: column; gap: var(--sl-space-sm); width: 100%; font-family: var(--font-mono); }}
                 .sl-skeleton-stream-line-wrap {{ min-height: 16px; }}
                 .sl-skeleton-stream-line {{ height: 12px; }}
                 .sl-skeleton-list {{ width: 340px; min-width: 340px; max-width: 340px; border-right: 1px solid var(--sl-border); padding: var(--sl-space-sm) 0; box-sizing: border-box; }}
@@ -735,7 +666,7 @@ pub fn App() -> Element {
                         animation: none !important;
                     }}
                 }}
-            "#,
+            ",
         }
         div {
             class: "app",

@@ -41,10 +41,15 @@ Use the **Lab-Coat** family wrapper class (`.family-lab-coat`):
 
 ## Status
 
-- **File-copy phase (this commit)**: vendored tokens.css into `assets/`.
-- **Wiring phase (next owned-repos pass)**: requires `pub mod theme;` in `crates/sl-viewer/src/lib.rs` + `pub use theme::*;` in lib.rs to make the Rust-side colors available. Then either:
-  - Replace existing `ThemeColors::dark()` / `::light()` hex literals with `theme::lab_coat::*` constants, OR
-  - Add a new `LabCoat` theme variant alongside existing Dark/Light.
+- **File-copy phase**: vendored `tokens.css` into `assets/`.
+- **Wiring phase (Wave-31 C09)**: complete —
+  - `crates/sl-viewer/src/tokens.rs` embeds `assets/tokens.css` and exports
+    `lab_coat::*` hex constants.
+  - `ThemeColors` consumes `tokens::lab_coat` (no ad-hoc accent hex).
+  - `app.rs` embeds `TOKENS_CSS` for `--sl-*` / `--lc-*`; chrome CSS uses
+    `var(--sl-*)` only.
+  - Contract + SelfCheck: `docs/a11y/design-tokens.md`,
+    `scripts/design-tokens-check.ps1 -SelfCheck`.
 
 ## Cross-repo palette registry
 
@@ -57,12 +62,6 @@ The 5 documented families in `assets/tokens.css`:
 5. **MelosViz** — pre-existing
 
 All families are pairwise non-overlapping per the overlap verifier.
-
-## Why this is file-only at this point
-
-- Dioxus asset pipeline + Rust `theme.rs` module wiring are owned-repos scope (Rust edit).
-- Vendoring tokens.css now means: when the wiring PR lands, the palette registry is already in the right place.
-- No runtime behavior changes from this commit; it's purely a foundation commit.
 
 ## Re-syncing from canonical
 

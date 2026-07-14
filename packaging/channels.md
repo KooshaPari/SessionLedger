@@ -12,8 +12,8 @@ SessionLedger artifacts. It complements the local packaging targets in
 | Cargo from source | **Active for developers** | `cargo install --path crates/sl-daemon --locked`; or `cargo install --git https://github.com/KooshaPari/SessionLedger --locked --path crates/sl-daemon` |
 | GitHub Releases archives | **Active** | Tagged `v*` releases publish `sl-viewer-<tag>-<target>.tar.gz` / `.zip`, checksums, SBOM, and best-effort provenance |
 | curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` archives from GitHub Releases |
-| Homebrew formula | **Manifests in-repo, publish tap/PR next** | Template at [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb); fill SHA-256s from `SHA256SUMS`, then publish a tap or homebrew-core PR |
-| winget manifests | **Manifests in-repo, publish tap/PR next** | Templates under [`packaging/winget/`](winget/); fill `InstallerSha256`, then open a `microsoft/winget-pkgs` PR |
+| Homebrew formula | **Manifests in-repo (not a live tap)** | Template at [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb); fill digests with [`scripts/fill-packaging-checksums.ps1`](../scripts/fill-packaging-checksums.ps1), then follow [`docs/ops/brew-winget-publish.md`](../docs/ops/brew-winget-publish.md) |
+| winget manifests | **Manifests in-repo (not on winget yet)** | Templates under [`packaging/winget/`](winget/); same fill script + publish doc before opening a `microsoft/winget-pkgs` PR |
 | Windows installable ZIP | **Partial, CI-smoked** | Release ZIP is smoke-tested; local package adds PowerShell install/uninstall scripts |
 | Linux AppImage / `.deb` | **Partial local scaffolds** | Developer-only scripts under `packaging/linux/`; not release channels |
 | Scoop bucket | **Future placeholder** | No manifest, bucket, or update automation exists yet |
@@ -89,13 +89,23 @@ GitHub Releases are the current user-facing archive channel for `sl-viewer`.
 The daemon is also available as a best-effort GHCR image, from source
 (`cargo install --git` / `--path`), or via local process-compose / Containerfile.
 
-## Homebrew And winget (next: publish)
+## Homebrew And winget (templates only — not live)
 
-- Homebrew: [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb)
-  installs `sl-viewer` from Release tarballs and documents `sl-daemon` via Cargo
-  in caveats. Replace placeholder `sha256` digests before publishing a tap.
-- winget: [`packaging/winget/`](winget/) holds Package / Installer / Locale YAML
-  pointing at the Windows Release ZIP. Replace the zeroed `InstallerSha256`,
-  then submit to `microsoft/winget-pkgs`.
+These channels are **not** published yet. Do not advertise
+`brew install …` or `winget install KooshaPari.SessionLedger` as working
+install paths until a tap / winget-pkgs merge exists.
+
+1. Fill digests from a Release `SHA256SUMS`:
+
+   ```powershell
+   pwsh ./scripts/fill-packaging-checksums.ps1 -Sha256Sums ./SHA256SUMS -Version v0.1.0
+   ```
+
+2. Follow the external publish checklist:
+   [`docs/ops/brew-winget-publish.md`](../docs/ops/brew-winget-publish.md).
+
+- Homebrew template: [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb)
+  (`sl-viewer` from Release tarballs; daemon via Cargo in caveats).
+- winget templates: [`packaging/winget/`](winget/) (portable Windows ZIP).
 
 Scoop remains an explicit placeholder only.

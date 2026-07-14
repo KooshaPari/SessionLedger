@@ -77,9 +77,18 @@ foreach ($required in @($benchPolicyPath, $benchGatePath)) {
     }
 }
 
+$benchPolicy = Get-Content -LiteralPath $benchPolicyPath -Raw | ConvertFrom-Json
+if (-not [bool]$benchPolicy.policy.enforced) {
+    throw "Bench policy at '$benchPolicyPath' must set policy.enforced=true for the blocking perf-budget gate."
+}
+$threshold = [double]$benchPolicy.policy.threshold_percent
+if ($threshold -le 0) {
+    throw "Bench policy threshold_percent must be > 0 (got $threshold)."
+}
+
 $commit = (& git -C $repoRoot rev-parse HEAD).Trim()
 Write-Host "Eval reproducibility check passed."
 Write-Host "  commit=$commit"
 Write-Host "  fixture_seed=$($manifest.fixture_seed) fixture_count=$fixtureCount anchor_count=$($anchors.Count)"
 Write-Host "  cargo_lock_sha256=$lockHash"
-Write-Host "  rustc=$rustcSemver bench_policy=$($manifest.bench_policy_path)"
+Write-Host "  rustc=$rustcSemver bench_policy=$($manifest.bench_policy_path) enforced=true threshold=${threshold}%"

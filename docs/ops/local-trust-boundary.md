@@ -7,6 +7,10 @@ key, `sl serve` fails at startup with an explicit deny. Put a TLS-terminating,
 policy-enforcing proxy in front of any LAN/WAN exposure and treat the shared
 secret as host-local credential material.
 
+Cryptography inventory (hashing vs encryption-at-rest), Caddy/nginx TLS samples,
+and the explicit no-KMS posture:
+[`crypto-inventory.md`](crypto-inventory.md).
+
 ## Bind modes and API-key gate
 
 | Bind | `SL_API_KEY` | Behavior |

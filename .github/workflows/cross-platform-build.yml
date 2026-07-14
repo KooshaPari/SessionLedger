@@ -64,8 +64,11 @@ jobs:
             linker: musl-gcc
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      # Must match rust-toolchain.toml channel — floating `stable` leaves the
+      # pin override without the exotic target std (E0463 missing `core`).
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # pinned
         with:
+          toolchain: 1.96.0
           targets: ${{ matrix.target }}
       - name: install cross linker packages
         run: |

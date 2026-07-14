@@ -80,6 +80,9 @@ Write machine-readable native WebView smoke evidence (schema sample + recorder):
 
 - Fixture: [`docs/ops/fixtures/native-webview-smoke.sample.json`](../ops/fixtures/native-webview-smoke.sample.json)
 - Recorder: `pwsh -NoProfile -File scripts/record-native-webview-smoke.ps1`
+- Live daemon (optional): add `-AttachDaemon -DaemonUrl http://127.0.0.1:8080`
+  after the [live-daemon native parity](status-regions-and-native-smoke.md#live-daemon-native-webview-parity)
+  checklist so evidence includes HTTP probes beyond the fixture sample.
 
 See [CONTRIBUTING.md](../../CONTRIBUTING.md#native-webview-accessibility-smoke)
 for maintainer steps. Do not claim platform code-signing here — ADR 0003.

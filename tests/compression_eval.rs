@@ -96,14 +96,14 @@ fn compress_token_fixtures_per_eval_token_ledger_matches_gate() {
             .iter()
             .filter(|entity| entity["type"] == "intent")
             .filter_map(|entity| entity["properties"]["token_estimate"].as_u64())
-            .map(|value| value as u32)
+            .map(|value| u32::try_from(value).expect("token estimate fits u32"))
             .sum();
 
         let gate_total = entities
             .iter()
             .filter(|entity| entity["type"] == "gate")
             .find_map(|entity| entity["properties"]["total_token_estimate"].as_u64())
-            .map(|value| value as u32)
+            .map(|value| u32::try_from(value).expect("token estimate fits u32"))
             .unwrap_or_else(|| {
                 panic!("{} missing gate.properties.total_token_estimate", path.display())
             });
@@ -132,7 +132,7 @@ fn compress_token_fixtures_per_eval_token_ledger_matches_gate() {
             .iter()
             .filter(|entity| entity["type"] == "intent")
             .filter_map(|entity| entity["properties"]["token_estimate"].as_u64())
-            .map(|value| value as u32)
+            .map(|value| u32::try_from(value).expect("token estimate fits u32"))
             .collect();
         observed.sort_unstable();
         let mut expected = expected_intents.to_vec();

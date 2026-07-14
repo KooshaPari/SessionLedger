@@ -139,7 +139,7 @@ pub fn t(key: &str) -> &str {
 
 /// Translate `key` for an explicit locale override (still honors English fallback).
 #[must_use]
-pub fn t_locale(key: &str, locale: Option<&str>) -> &str {
+pub fn t_locale<'a>(key: &'a str, locale: Option<&str>) -> &'a str {
     let tag = active_locale(locale);
     if let Some(cat) = try_catalog(&tag) {
         if let Some(msg) = cat.get(key) {

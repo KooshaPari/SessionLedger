@@ -134,8 +134,10 @@ Structure-aware fuzzing via `cargo-fuzz` (nightly + ASAN on Linux CI).
 | [`fuzz/fuzz_targets/okf_roundtrip.rs`](../../fuzz/fuzz_targets/okf_roundtrip.rs) | `fuzz/corpus/okf_roundtrip/` | OKF parse + roundtrip invariants |
 | [`fuzz/fuzz_targets/jsonl_ingest.rs`](../../fuzz/fuzz_targets/jsonl_ingest.rs) | `fuzz/corpus/jsonl_ingest/` | JSONL ingest parse paths |
 
-PR smoke: `ci.yml` → `fuzz-smoke` (10 seconds per target). Longer campaigns
-remain operator/nightly work — no sustained fuzz gate on every merge.
+PR smoke: `ci.yml` → `fuzz-smoke` (10 seconds per target). Sustained soft
+cadence (120 s / target, crash artifact triage): [`fuzz-cadence.md`](fuzz-cadence.md)
++ `.github/workflows/fuzz-cadence.yml` (`continue-on-error`; skipped on PR so
+default CI stays fast). No blocking sustained fuzz gate on every merge.
 
 Local (nightly toolchain + `cargo-fuzz` installed):
 

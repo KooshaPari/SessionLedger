@@ -84,7 +84,7 @@ observability systems.
 | **R**ate | Replay / stream consumers | SSE connect count (not counted) | `sl_sse_clients` | OTLP up-down counter |
 | **E**rrors | HTTP 4xx–5xx responses | Process-local counter | `sl_http_errors_total` | `/metrics` |
 | **E**rrors | Readiness failures | `/readyz` → `503` | `sl_readyz_failures_total` | OTLP counter |
-| **D**uration | HTTP request time | Process-local summary sum/count | `sl_http_request_duration_seconds` | `/metrics` |
+| **D**uration | HTTP request time | Process-local summary + per-route histogram buckets | `sl_http_request_duration_seconds` | `/metrics` |
 | **D**uration | Ingest → compile → write | Not timed | `sl_ingest_duration_seconds` | OTLP histogram (future) |
 | **D**uration | Replay time-to-first-byte | Manual | `sl_replay_ttfb_seconds` | OTLP histogram |
 | **D**uration | `/api/metrics` compute | Not timed | `sl_metrics_handler_duration_seconds` | OTLP histogram |
@@ -172,7 +172,7 @@ neither variable is set, the daemon keeps its normal fmt subscriber and
 Remaining future work:
 
 1. Continue W3C context across ingest → compile → export when adapters land.
-2. Add endpoint labels and histogram buckets, or bridge the RED signals to OTLP.
+2. Bridge labeled RED signals to OTLP and add process gauges.
 
 Operators without the `otel` feature continue to rely on `/healthz`, `/readyz`,
 `/api/metrics`, `/metrics`, and process logs.

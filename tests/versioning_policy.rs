@@ -1,4 +1,4 @@
-//! Hermetic SelfCheck for C11 L119 versioning policy / tagged CHANGELOG.
+//! Hermetic `SelfCheck` for C11 L119 versioning policy / tagged CHANGELOG.
 //! Local: `pwsh ./scripts/versioning-policy-check.ps1 -SelfCheck`
 
 use std::path::PathBuf;

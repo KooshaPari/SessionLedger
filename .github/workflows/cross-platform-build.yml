@@ -43,3 +43,44 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: build root workspace
         run: cargo build --locked
+
+  # Exotic Linux targets beyond the host OS matrix: aarch64-gnu + musl.
+  # cargo check only (no full link of sl-viewer / webkit). Covers session-ledger
+  # lib + isolated sl-daemon workspace.
+  exotic-cargo-check:
+    name: exotic check · ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-unknown-linux-gnu
+            apt: gcc-aarch64-linux-gnu
+            linker_env: CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER
+            linker: aarch64-linux-gnu-gcc
+          - target: x86_64-unknown-linux-musl
+            apt: musl-tools
+            linker_env: CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER
+            linker: musl-gcc
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: install cross linker packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.apt }}
+      - name: configure target linker
+        run: echo "${{ matrix.linker_env }}=${{ matrix.linker }}" >> "$GITHUB_ENV"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          key: exotic-${{ matrix.target }}
+          workspaces: |
+            .
+            crates/sl-daemon
+      - name: check session-ledger (lib, no viewer)
+        run: cargo check --locked --target ${{ matrix.target }} -p session-ledger
+      - name: check sl-daemon workspace
+        working-directory: crates/sl-daemon
+        run: cargo check --locked --target ${{ matrix.target }}

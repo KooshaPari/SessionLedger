@@ -181,9 +181,9 @@ jobs:
   fuzz-smoke:
     name: fuzz smoke (10 seconds)
     runs-on: ubuntu-latest
-    # cargo-fuzz requires nightly. rust-toolchain.toml pins stable, so force
-    # nightly via RUSTUP_TOOLCHAIN. Clear inherited RUSTFLAGS. Pin gnu host
-    # target — cargo-fuzz otherwise may pick musl, which cannot use ASAN.
+    # cargo-fuzz requires nightly. rust-toolchain.toml pins an exact stable
+    # rustc, so force nightly via RUSTUP_TOOLCHAIN. Clear inherited RUSTFLAGS.
+    # Pin gnu host target — cargo-fuzz otherwise may pick musl, which cannot use ASAN.
     env:
       RUSTFLAGS: ""
       RUSTUP_TOOLCHAIN: nightly

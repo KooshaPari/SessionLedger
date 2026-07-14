@@ -34,6 +34,17 @@ jobs:
         shell: pwsh
         run: ./scripts/hermetic-isolation-check.ps1 -SelfCheck
 
+  # Soft C06 L60 exact rustc pin — toml/json/docs + CI wiring (non-blocking).
+  rustc-toolchain-pin:
+    name: hermetic · exact rustc toolchain pin (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: SelfCheck rust-toolchain.toml exact channel + CI uses pin
+        shell: pwsh
+        run: ./scripts/rustc-toolchain-check.ps1 -SelfCheck
+
   sl-daemon-offline:
     name: sl-daemon · locked offline build
     runs-on: ubuntu-latest

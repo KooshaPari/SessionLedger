@@ -17,7 +17,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  # rust-toolchain.toml pins stable; force nightly for cargo-miri.
+  # rust-toolchain.toml pins an exact rustc; force nightly for cargo-miri.
   RUSTUP_TOOLCHAIN: nightly
   RUSTFLAGS: ""
 

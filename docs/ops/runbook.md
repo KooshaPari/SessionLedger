@@ -4,7 +4,7 @@ How to run the daemon + viewer stack and verify liveness / readiness.
 
 ## Prerequisites
 
-- Rust toolchain from `rust-toolchain.toml` (MSRV 1.85+)
+- Exact rustc from `rust-toolchain.toml` (see `docs/ops/rustc-toolchain-pin.md`; MSRV 1.85+)
 - [`process-compose`](https://github.com/F1bonacc1/process-compose) on `PATH` (default runtime)
 - Optional: Dioxus CLI for viewer bundling (`cargo install dioxus-cli`)
 - Optional engines (Podman, WSL, Apple Container, PhenoCompose/nvms): see

@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     continue-on-error: true
-    # cargo-fuzz requires nightly. rust-toolchain.toml pins stable, so force
+    # cargo-fuzz requires nightly. rust-toolchain.toml pins an exact rustc, so force
     # nightly via RUSTUP_TOOLCHAIN. Clear inherited RUSTFLAGS. Pin gnu host
     # target — cargo-fuzz otherwise may pick musl, which cannot use ASAN.
     env:

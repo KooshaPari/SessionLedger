@@ -40,8 +40,8 @@ if ($dashboard.title -ne "SessionLedger / RED") {
 }
 
 $panels = @($dashboard.panels)
-if ($panels.Count -lt 5) {
-    throw "Expected at least 5 dashboard panels, found $($panels.Count)."
+if ($panels.Count -lt 8) {
+    throw "Expected at least 8 dashboard panels, found $($panels.Count)."
 }
 
 $requiredPanels = @(
@@ -49,7 +49,10 @@ $requiredPanels = @(
     "Request rate",
     "HTTP error ratio",
     "Mean request duration",
-    "Request and error increases"
+    "Request and error increases",
+    "Route request rate",
+    "Route error ratio",
+    "Route p95 latency"
 )
 
 foreach ($title in $requiredPanels) {
@@ -87,6 +90,14 @@ foreach ($metric in $requiredMetrics) {
     if ($allExpressions -notmatch [regex]::Escape($metric)) {
         throw "Dashboard targets do not reference required metric '$metric'."
     }
+}
+
+if ($allExpressions -notmatch 'route!=') {
+    throw "Dashboard targets do not reference per-route label matchers."
+}
+
+if ($allExpressions -notmatch 'histogram_quantile') {
+    throw "Dashboard targets do not include route-level latency rollups."
 }
 
 Write-Host "Dashboard provisioning check passed: $DashboardPath"

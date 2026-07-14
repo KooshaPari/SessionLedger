@@ -6,7 +6,7 @@
   ],
   "fixture_seed": "sessionledger-okf-v1",
   "fixture_glob": "docs/reference/conformance/fixtures/*.okf.json",
-  "fixture_count": 14,
+  "fixture_count": 17,
   "fixture_anchors": [
     "arm-ci-runner-007.okf.json",
     "auth-fix-session-001.okf.json",
@@ -21,6 +21,9 @@
     "forge-go-module-026.okf.json",
     "minimal-session-042.okf.json",
     "multi-intent-088.okf.json",
+    "task-family-compress-resume-033.okf.json",
+    "task-family-multiturn-031.okf.json",
+    "task-family-token-budget-032.okf.json",
     "tool-evidence-021.okf.json"
   ],
   "rust_msrv": "1.85",

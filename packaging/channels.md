@@ -9,21 +9,48 @@ SessionLedger artifacts. It complements the local packaging targets in
 
 | Channel | Status | Artifact / command |
 |---------|--------|--------------------|
-| Cargo from source | **Active for developers** | `cargo install --path crates/sl-daemon --locked`; build `sl-viewer` with local packaging targets |
+| Cargo from source | **Active for developers** | `cargo install --path crates/sl-daemon --locked`; or `cargo install --git https://github.com/KooshaPari/SessionLedger --locked --path crates/sl-daemon` |
 | GitHub Releases archives | **Active** | Tagged `v*` releases publish `sl-viewer-<tag>-<target>.tar.gz` / `.zip`, checksums, SBOM, and best-effort provenance |
-| Repository install script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS `sl-viewer` archives from GitHub Releases |
+| curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` archives from GitHub Releases |
+| Homebrew formula | **Manifests in-repo, publish tap/PR next** | Template at [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb); fill SHA-256s from `SHA256SUMS`, then publish a tap or homebrew-core PR |
+| winget manifests | **Manifests in-repo, publish tap/PR next** | Templates under [`packaging/winget/`](winget/); fill `InstallerSha256`, then open a `microsoft/winget-pkgs` PR |
 | Windows installable ZIP | **Partial, CI-smoked** | Release ZIP is smoke-tested; local package adds PowerShell install/uninstall scripts |
 | Linux AppImage / `.deb` | **Partial local scaffolds** | Developer-only scripts under `packaging/linux/`; not release channels |
 | Scoop bucket | **Future placeholder** | No manifest, bucket, or update automation exists yet |
-| Homebrew tap | **Future placeholder** | No formula, tap, bottle, or notarized macOS channel exists yet |
 | crates.io | **Future placeholder** | No crates are published to crates.io yet |
+
+Native MSI / PKG installer lanes (when concurrent) live under `packaging/windows`
+and `packaging/macos` — see [`packaging/README.md`](README.md). The curl/irm
+scripts and brew/winget templates target portable GitHub Release archives and
+do not replace those installer formats.
+
+## curl / irm install scripts
+
+Linux / macOS (checksum-verified `sl-viewer`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scripts/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scripts/install.ps1 | iex
+```
+
+Set `SL_VERSION=v0.1.0` to pin a release. On Unix, `SL_INSTALL_DIR` overrides
+the destination (default `~/.local/bin`). On Windows, `SL_INSTALL_DIR` defaults
+to `%LOCALAPPDATA%\Programs\SessionLedger`. Review the script before piping it
+to a shell.
 
 ## Cargo Install Path
 
-The daemon/CLI crate can be installed from a checkout for local operations:
+The daemon/CLI crate can be installed from a checkout or directly from GitHub:
 
 ```bash
 cargo install --path crates/sl-daemon --locked
+# or, without a local clone:
+cargo install --git https://github.com/KooshaPari/SessionLedger --locked --path crates/sl-daemon
 ```
 
 This installs the `sl-daemon` binary into Cargo's configured bin directory
@@ -37,9 +64,8 @@ sl-daemon serve \
   --http-bind 127.0.0.1:8080
 ```
 
-`cargo install --path` is a developer/source channel. It does not provide
-automatic updates, package-manager metadata, desktop integration, or platform
-signing.
+`cargo install` is a developer/source channel. It does not provide automatic
+updates, package-manager metadata, desktop integration, or platform signing.
 
 ## GitHub Releases Archives
 
@@ -57,21 +83,17 @@ best-effort `SHA256SUMS.sigstore.json`. Verify archives with the checksum and
 provenance flow in [`docs/ops/distribution.md`](../docs/ops/distribution.md).
 
 GitHub Releases are the current user-facing archive channel for `sl-viewer`.
-The daemon remains installable from source or container/local process-compose
-until a dedicated daemon release artifact is added.
+The daemon remains installable from source (`cargo install --git` / `--path`)
+or container/local process-compose until a dedicated daemon release artifact is
+added.
 
-## Draft And Future Channels
+## Homebrew And winget (next: publish)
 
-[`scripts/install.sh`](../scripts/install.sh) is a documented draft for
-Linux/macOS archive installation:
+- Homebrew: [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb)
+  installs `sl-viewer` from Release tarballs and documents `sl-daemon` via Cargo
+  in caveats. Replace placeholder `sha256` digests before publishing a tap.
+- winget: [`packaging/winget/`](winget/) holds Package / Installer / Locale YAML
+  pointing at the Windows Release ZIP. Replace the zeroed `InstallerSha256`,
+  then submit to `microsoft/winget-pkgs`.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scripts/install.sh | sh
-```
-
-Set `SL_VERSION=v0.1.0` to pin a release and `SL_INSTALL_DIR=/desired/bin` to
-change the destination. Review the script before piping it to a shell.
-
-Scoop and Homebrew are explicit placeholders only. Do not describe them as
-available until this repository contains the corresponding manifest/formula,
-release automation, and validation path.
+Scoop remains an explicit placeholder only.

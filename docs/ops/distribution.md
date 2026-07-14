@@ -363,6 +363,20 @@ Create the `sessionledger` user/group before enabling the unit, or edit
 binary is available at `/usr/local/bin/sl-daemon`; adjust `ExecStart=` if Cargo
 installs it elsewhere. The service is configured with `Restart=on-failure`.
 
+### Traditional server TLS reverse proxy (Caddy / nginx)
+
+Keep `SL_HTTP_BIND=127.0.0.1:8080` on the systemd unit so the daemon stays on
+loopback. Terminate TLS at the edge with either sample config:
+
+| Proxy | Sample config | Notes |
+|-------|---------------|-------|
+| Caddy | [`packaging/caddy/Caddyfile`](../../packaging/caddy/Caddyfile) | Automatic HTTPS via ACME when DNS points at the host; set `SESSIONLEDGER_HOST` or edit the site address |
+| nginx | [`packaging/nginx/sessionledger.conf`](../../packaging/nginx/sessionledger.conf) | HTTP→HTTPS redirect + `proxy_pass` to `127.0.0.1:8080`; supply your own cert paths |
+
+Typical order: install and enable `sessionledger-daemon`, then install the
+chosen proxy config and reload Caddy/nginx. Do not bind the daemon publicly
+when the reverse proxy owns `:443`.
+
 ---
 
 ## Uninstall / cleanliness
@@ -528,6 +542,8 @@ the production path (deferred).
 - [`packaging/README.md`](../../packaging/README.md) — local Make targets
 - [`packaging/channels.md`](../../packaging/channels.md) — install channel status
 - [`packaging/systemd/sessionledger-daemon.service`](../../packaging/systemd/sessionledger-daemon.service) — traditional Linux service unit
+- [`packaging/caddy/Caddyfile`](../../packaging/caddy/Caddyfile) — TLS reverse proxy (Caddy)
+- [`packaging/nginx/sessionledger.conf`](../../packaging/nginx/sessionledger.conf) — TLS reverse proxy (nginx)
 - [`runbook.md`](runbook.md) — `make dev`, health probes
 - [`observability.md`](observability.md) — `/healthz`, `/readyz`, metrics
 - [`SECURITY.md`](../../SECURITY.md) — supply chain / SBOM

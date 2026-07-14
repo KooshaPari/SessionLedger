@@ -138,6 +138,21 @@ Default ceiling is **512 MiB** working-set / RSS after a small ingest burst.
 The soft scheduled job lives in
 [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
 
+## Allocation budget smoke (pipeline heap)
+
+Cheap L8 companion to the RSS smoke — counting-allocator deltas over one
+`process_session()` pass (contract: [`allocation-budget.md`](allocation-budget.md)):
+
+```powershell
+pwsh ./scripts/allocation-budget-check.ps1 -SelfCheck
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w27-c00-alloc"
+pwsh ./scripts/allocation-budget-check.ps1
+```
+
+Default ceilings are **1 MiB** bytes allocated and **5 000** allocations for the
+8-message fixture. Soft scheduled job: `allocation-budget` in
+[`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
+
 ## Audit retention and review
 
 The durable audit sink is append-only JSONL (default) or SQLite under

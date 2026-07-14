@@ -87,10 +87,20 @@ SessionLedger is a single-user local companion. Do not commit real secrets.
 | Rotation | Stop callers using the old key → replace `SL_API_KEY` in the daemon environment → restart `sl-daemon` → update automation headers. Treat the previous key as burned; do not reuse it. |
 | Repo hygiene | Never put live keys in `.env.example`, docs, fixtures, or commits. CI runs [`scripts/env-example-check.ps1`](scripts/env-example-check.ps1) (required keys + no high-entropy secret patterns) and gitleaks/TruffleHog on the tree. |
 
+## Privacy hygiene (single-tenant)
+
+SessionLedger is a **single-user** local companion — not a multi-tenant hosted
+service. Operator guidance for PII in logs, transcript retention, redaction
+before export, and loopback trust lives in
+[`docs/ops/privacy-hygiene.md`](docs/ops/privacy-hygiene.md). STRIDE-lite
+disclosure context: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md). Bind and
+`SL_API_KEY` policy: [`docs/ops/local-trust-boundary.md`](docs/ops/local-trust-boundary.md).
+
 Local verify:
 
 ```powershell
 pwsh -NoProfile -File scripts/env-example-check.ps1
+pwsh -NoProfile -File scripts/privacy-hygiene-check.ps1 -SelfCheck
 pre-commit run gitleaks
 ```
 

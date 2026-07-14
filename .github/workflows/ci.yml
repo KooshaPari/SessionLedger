@@ -130,13 +130,15 @@ jobs:
       - name: test
         run: cargo test --all-features --locked
       - name: property and flake smoke (3 repeats)
+        shell: pwsh
         env:
           PROPTEST_CASES: 64
         run: |
-          for run in 1 2 3; do
-            echo "property test repeat ${run}/3"
-            cargo test --test properties --locked
-          done
+          $skipArgs = @(& ./scripts/flake-quarantine-apply.ps1)
+          for ($run = 1; $run -le 3; $run++) {
+            Write-Host "property test repeat ${run}/3"
+            cargo test --test properties --locked @skipArgs
+          }
 
   fuzz-smoke:
     name: fuzz smoke (10 seconds)

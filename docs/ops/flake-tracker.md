@@ -30,3 +30,7 @@ the tracker before rerunning locally. CI publishes rerun stats from
 
 Resolved flakes stay in the file with `status: "resolved"` until the next
 release cycle, so reviewers can see when a quarantine was removed.
+
+[`scripts/flake-quarantine-apply.ps1`](../../scripts/flake-quarantine-apply.ps1)
+reads quarantined entries and emits `cargo test --skip <name>` arguments for
+the `flake-tracker` and default `build-test` property reruns.

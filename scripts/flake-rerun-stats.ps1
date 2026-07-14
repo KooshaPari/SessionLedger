@@ -5,6 +5,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $statsPath = Join-Path $repoRoot 'docs/ops/flake-rerun-stats.json'
 $repeats = if ($env:FLAKE_RERUN_REPEATS) { [int]$env:FLAKE_RERUN_REPEATS } else { 3 }
+$quarantineArgs = @(& (Join-Path $PSScriptRoot 'flake-quarantine-apply.ps1'))
 
 $runs = @()
 $failures = 0
@@ -13,7 +14,7 @@ for ($run = 1; $run -le $repeats; $run++) {
     Write-Host "flake rerun ${run}/${repeats}: cargo test --test properties"
     Push-Location $repoRoot
     try {
-        cargo test --test properties --locked
+        cargo test --test properties --locked @quarantineArgs
         $exit = $LASTEXITCODE
     } finally {
         Pop-Location

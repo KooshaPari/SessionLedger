@@ -8,19 +8,21 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Soft multi-locale i18n: `locales/es.json` + `SL_LOCALE` / `t_locale` selection (C01 L16; Fluent/ICU still deferred).
 
-- ADR 0005: explicit no Workers/Vercel/edge deploy target (C11 L114) + `edge-deploy-scope` SelfCheck.
+- Viewer `ErrorState` non-color cues: warning glyph + `aria-invalid` (C09 L81.15).
 
+- Versioning policy SSOT + CHANGELOG tagged-section SelfCheck (C11 L119).
+- ADR 0005: explicit no Workers/Vercel/edge deploy target (C11 L114) + `edge-deploy-scope` SelfCheck.
 - Blocking `sandbox-boundary` SelfCheck job in `security.yml` (C04 L40; hard no-net/rootless still unpaid).
 
-- `GET /readyz` readiness probe + process-compose probe switch; SLO stubs in observability docs.
+## [0.2.0] - 2026-07-04
 
-- Security pack (audit-v38 C04/C06 P0): `SECURITY.md`, `CODE_OF_CONDUCT.md`, `deny.toml`, `.github/workflows/security.yml` (cargo-deny + gitleaks), `.github/dependabot.yml`, `.pre-commit-config.yaml`.
-- Agent-readiness docs: `docs/functional_requirements.md` (FR catalog), `PLAN.md`, `WORK_DAG.md`, `llms.txt`.
-- Ops stubs: `docs/ops/runbook.md` (`make dev` / healthz :8080) and `docs/ops/observability.md` (metrics + OTel soft goal).
-- `AGENTS.md` ╬ô├ç├╢ agent entrypoint (build/test/lint/worktree/forbidden-ops); Key files links to FR/PLAN/llms/runbook.
-- `rust-toolchain.toml` ╬ô├ç├╢ reproducible toolchain (MSRV 1.85 via Cargo).
-- `.github/PULL_REQUEST_TEMPLATE.md` and `user-friction` issue template + `docs/friction-log.md`.
-- proc-compose deploy stack with sl-viewer + Makefile + quickstart (#39).
+Initial public release tag (`v0.2.0`).
 
-<!-- Prior history predates this changelog; reconstruct from git tags as versions are cut. -->
+### Added
 
+- Desktop viewer release workflow + launch instructions.
+- Packaging scaffolds for macOS `.app` and Linux portable binaries.
+- Session list / search selection in the viewer.
+- Domain mutation-targeted state machine and boundary tests.
+
+<!-- Earlier history was Unreleased-aggregated; tag sections start at 0.2.0. -->

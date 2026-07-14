@@ -43,15 +43,13 @@ jobs:
           path: artifacts/pipeline-perf-gate.json
           if-no-files-found: warn
 
-  # Soft C00 L6 latency baseline evidence — schema + thresholds only (no cargo bench).
-  # Non-blocking so provisional p95 ceilings can land without flaking PRs.
+  # Blocking C00 L6 latency baseline evidence — schema + enforced thresholds (no cargo bench).
   latency-baseline:
-    name: latency baseline soft check
+    name: latency baseline check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - name: assert checked-in p95 latency baselines (soft)
+      - name: assert checked-in p95 latency baselines (enforced)
         shell: pwsh
         run: ./scripts/bench-gate.ps1 -SoftLatencyCheck

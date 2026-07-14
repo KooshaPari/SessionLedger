@@ -1,5 +1,5 @@
 //! Contract checks for the enforced pipeline perf-budget gate (WBS-6.2 / C07)
-//! and soft C00 L6 latency baselines.
+//! and enforced C00 L6 latency baselines.
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -63,7 +63,7 @@ fn perf_baseline_exposes_enforced_budgets() {
 }
 
 #[test]
-fn perf_baseline_exposes_soft_latency_budgets() {
+fn perf_baseline_exposes_enforced_latency_budgets() {
     let path = repo_root().join("docs/ops/perf-baseline.json");
     let raw = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
@@ -72,8 +72,8 @@ fn perf_baseline_exposes_soft_latency_budgets() {
 
     assert_eq!(
         value.pointer("/latency/enforced").and_then(serde_json::Value::as_bool),
-        Some(false),
-        "latency.enforced must be false for soft C00 L6 CI"
+        Some(true),
+        "latency.enforced must be true for the blocking C00 L6 CI gate"
     );
 
     let threshold = value
@@ -142,8 +142,8 @@ fn bench_gate_self_check_validates_enforced_policy() {
     assert!(stdout.contains("SelfCheck passed"), "expected SelfCheck success line, got:\n{stdout}");
     assert!(stdout.contains("enforced=true"), "expected enforced=true echo, got:\n{stdout}");
     assert!(
-        stdout.contains("Latency soft budgets present"),
-        "expected soft latency echo, got:\n{stdout}"
+        stdout.contains("Latency budgets present"),
+        "expected latency budget echo, got:\n{stdout}"
     );
 }
 

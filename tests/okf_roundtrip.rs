@@ -185,7 +185,7 @@ fn conformance_corpus_fixtures_validate_via_our_parser() {
     let fixture_root = manifest_dir.join("docs/reference/conformance/fixtures");
     let mut paths: Vec<_> = std::fs::read_dir(&fixture_root)
         .expect("read conformance fixtures dir")
-        .filter_map(|entry| entry.ok())
+        .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| {
             path.extension().is_some_and(|ext| ext == "json")

@@ -260,7 +260,7 @@ until each module reaches 85%.
 ## Related
 
 - [`runtime-facade.md`](runtime-facade.md) — `SL_RUNTIME` matrix, PhenoCompose/nvms, Podman/WSL/Apple Container
-- [`observability.md`](observability.md) — SLO stubs, RED map, `/healthz` vs `/readyz`, game-day cadence, OTel/#65
+- [`observability.md`](observability.md) — SLO stubs, RED map, `/healthz` vs `/readyz`, game-day cadence, OTel/#65, [W3C ETL sidecar](observability.md#w3c-etl-sidecar)
 - [`alerts.md`](alerts.md) — PromQL, routing evidence, rule promotion status
 - [`WBS.md`](WBS.md) — phased project and organization work packages
 - [`GAP_QA_MATRIX.md`](GAP_QA_MATRIX.md) — current audit and acceptance gaps

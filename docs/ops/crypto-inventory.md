@@ -3,8 +3,7 @@
 Status: **C02 L22** — documents what cryptography SessionLedger uses today, how
 operators terminate TLS for a remote-style daemon deploy, and the **Phase-0
 decision** on KMS / encryption-at-rest (deferred in-tree vs recommended host
-deploy patterns). This is **not** a claim of an in-tree key-management service
-(KMS), envelope encryption, or application-level encryption-at-rest.
+deploy patterns). This documents a **soft** in-tree SHA-256 keystream envelope helper (soft `src/envelope.rs` helper) for experiments. It is **not** a production KMS, sealed-secret client, or automatic encryption-at-rest for OKF/audit stores.
 
 Related: [`SECURITY.md`](../../SECURITY.md) (reporting + API-key rotation),
 [`docs/THREAT_MODEL.md`](../THREAT_MODEL.md) (STRIDE-lite surfaces),
@@ -21,7 +20,7 @@ Related: [`SECURITY.md`](../../SECURITY.md) (reporting + API-key rotation),
 | Outbound HTTP (CLI / viewer) | **rustls** via `reqwest` | `crates/sl-daemon`, optional `sl-viewer` | TLS to remote HTTPS endpoints when configured; loopback daemon URL stays plain HTTP |
 | Release / supply-chain integrity | **SHA-256** checksums + optional **cosign** keyless signing | [`docs/ops/distribution.md`](distribution.md#release-integrity-signing-cosign) | Verifies downloaded binaries; separate from runtime app KMS |
 | Commit / branch governance | GPG or SSH commit signatures | [`docs/ops/commit-signing.md`](commit-signing.md) | Repository hygiene; not daemon data encryption |
-
+| Soft envelope (opt-in) | **SHA-256 keystream (soft)** (`sha2` keystream in `src/envelope.rs`) | [`src/envelope.rs`](../../src/envelope.rs) | `SL_ENVELOPE_KEY` 32-byte hex DEK; `v1:nonce:ct` blob; **not** wired into OKF/ETL paths |
 ### Explicit non-goals (today)
 
 - **No encryption-at-rest** for OKF bundles (`*.okf.json`), gzip archives, audit
@@ -42,16 +41,14 @@ application-level **envelope encryption** for OKF / audit / episodic stores are
 trusted computing base for data at rest is the **host OS and operator deploy
 layout**, not a SessionLedger crypto service.
 
-This page does **not** ship or stub a KMS SDK, DEK/KEK hierarchy, or ciphertext
-file format. Soft-goal gap notes that call out “no KMS/at-rest” mean **no
-in-tree implementation** — operators still get concrete host-side patterns below.
+A soft DEK helper lives in `src/envelope.rs` (feature-gated). There is still **no** cloud KMS SDK, KEK hierarchy, or automatic at-rest encryption of OKF/audit files — operators keep host-side FDE/ACL patterns below.
 
 ### Phase-0 deferred vs recommended deploy patterns
 
 | Concern | Phase-0 posture | Recommended deploy pattern (operator-owned) |
 |---------|-----------------|-----------------------------------------------|
 | Application encryption-at-rest (OKF, gzip archives, audit JSONL/SQLite, episodic DB) | **Deferred** — plaintext files under the data directory | Enable **OS full-disk / volume encryption** (BitLocker, FileVault, LUKS); restrict directory ACLs to the daemon user |
-| Envelope encryption (DEK wrapped by KEK) | **Deferred** — no in-tree DEK/KEK or ciphertext layout | Prefer volume/backup encryption; if a future product phase needs app-level crypto, introduce a versioned envelope **after** a dedicated ADR |
+| Envelope encryption (DEK wrapped by KEK) | **Soft stub** — SHA-256 keystream DEK via `envelope-crypto` + `SL_ENVELOPE_KEY`; no KEK/KMS wrap | Prefer volume/backup encryption for production; wire ETL paths only after a dedicated ADR |
 | Cloud / hardware KMS (AWS KMS, GCP KMS, Azure Key Vault, PKCS#11 HSM) | **Deferred** — no SDK, IAM roles, or sealed-secret client in-tree | Keep `SL_API_KEY` (and any future secrets) in the host **service manager secret** or org vault; inject as env at start — do not commit keys |
 | In-process TLS for `sl-daemon` | **Deferred** — plain HTTP on bind address | Terminate TLS at Caddy/nginx in front of loopback (see [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge)) |
 | Backup / export confidentiality | **Operator-owned** | Encrypt backup media or use encrypted backup tools; redact before export leaves the host ([`privacy-hygiene.md`](privacy-hygiene.md)) |
@@ -146,6 +143,19 @@ X-API-Key: <SL_API_KEY>
 | Repo hygiene | `scripts/env-example-check.ps1`, gitleaks, and TruffleHog in CI; do not commit live keys |
 | Threat model | Non-loopback without a key is a **startup deny**; with a key, all `/api/*` require it — details in [`local-trust-boundary.md`](local-trust-boundary.md) |
 
+## Soft envelope stub
+
+Opt-in feature (default off):
+
+```powershell
+cargo test -p session-ledger envelope
+```
+
+- Module: [`src/envelope.rs`](../../src/envelope.rs)
+- Key: `SL_ENVELOPE_KEY` — 64 hex chars (32 bytes). **Never commit live keys.**
+- Blob: `v1:<12-byte-nonce-hex>:<ciphertext-hex>`
+- Non-goals: not called from daemon ingest; not a substitute for host FDE.
+
 ## Machine verification (SelfCheck)
 
 Hermetic doc anchor check (no daemon, no network, no KMS SDK):
@@ -158,3 +168,5 @@ pwsh ./scripts/crypto-inventory-check.ps1 -SelfCheck
 encryption-at-rest disclaimers, the **Phase-0 deferred vs recommended deploy**
 KMS/at-rest section, TLS sample paths, and cross-links to `SECURITY.md` /
 `local-trust-boundary.md`.
+
+

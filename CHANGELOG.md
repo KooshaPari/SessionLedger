@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Soft AES-GCM envelope helper (`envelope-crypto` feature + `SL_ENVELOPE_KEY`) in `src/envelope.rs` (C02 L22; not a KMS).
+
 - `GET /readyz` readiness probe + process-compose probe switch; SLO stubs in observability docs.
 
 - Security pack (audit-v38 C04/C06 P0): `SECURITY.md`, `CODE_OF_CONDUCT.md`, `deny.toml`, `.github/workflows/security.yml` (cargo-deny + gitleaks), `.github/dependabot.yml`, `.pre-commit-config.yaml`.
@@ -17,3 +19,5 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 - proc-compose deploy stack with sl-viewer + Makefile + quickstart (#39).
 
 <!-- Prior history predates this changelog; reconstruct from git tags as versions are cut. -->
+
+

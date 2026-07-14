@@ -16,6 +16,7 @@ repository = "https://github.com/KooshaPari/SessionLedger"
 readme = "README.md"
 
 [features]
+# Soft envelope stub is always compiled (sha2 keystream in src/envelope.rs; C02 L22).
 # Enable reusable zstd compression adapters.
 compress = ["dep:zstd"]
 # Enable the rusqlite-backed Forge ingestion adapter and zstd decompression.
@@ -80,3 +81,5 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 [lints.clippy]
 all = { level = "deny", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
+
+

@@ -20,6 +20,7 @@
 
 pub mod distill;
 pub mod domain;
+pub mod envelope;
 pub mod export;
 pub mod i18n;
 pub mod ingestion;
@@ -89,3 +90,4 @@ pub fn process_jsonl_file<P: AsRef<std::path::Path>>(
     let sessions = read_jsonl_sessions(path)?;
     Ok(sessions.iter().map(process_session).collect())
 }
+

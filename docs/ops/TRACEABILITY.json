@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "343/402",
-    "pct": 85,
+    "score": "349/402",
+    "pct": 87,
     "grade": "B",
-    "commit": "1a45f2c",
-    "wave": "Wave-23"
+    "commit": "aa8267f",
+    "wave": "Wave-24"
   },
   "fr": [
     {
@@ -634,12 +634,31 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.34",
+      "status": "done",
+      "evidence": [
+        "tests/race_model.rs",
+        "scripts/env-example-check.ps1",
+        "docs/ops/local-trust-boundary.md",
+        "scripts/pprof-smoke.ps1",
+        "fuzz/fuzz_targets/jsonl_ingest.rs",
+        "crates/sl-viewer/src/search_view.rs"
+      ]
+    },
+    {
+      "id": "WBS-8.35",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
     {
       "id": "C00",
-      "score": "26/30",
+      "score": "27/30",
       "status": "partial",
       "evidence": [
         "docs/api/openapi.yaml",
@@ -653,17 +672,28 @@
         "scripts/openapi-drift-check.ps1",
         "tests/memory_budget.rs",
         "scripts/rss-budget-check.ps1",
-        "docs/ops/memory-budget.json"
+        "docs/ops/memory-budget.json",
+        "tests/race_model.rs",
+        "docs/ops/concurrency-safety.md",
+        ".github/workflows/race-smoke.yml"
       ]
     },
     {
       "id": "C01",
-      "score": "26/30",
-      "status": "partial"
+      "score": "27/30",
+      "status": "partial",
+      "evidence": [
+        ".env.example",
+        "scripts/env-example-check.ps1",
+        ".github/workflows/security.yml",
+        "SECURITY.md",
+        "CONTRIBUTING.md",
+        ".pre-commit-config.yaml"
+      ]
     },
     {
       "id": "C02",
-      "score": "23/30",
+      "score": "24/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/audit.rs",
@@ -701,7 +731,7 @@
     },
     {
       "id": "C05",
-      "score": "28/30",
+      "score": "29/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/metrics.rs",
@@ -711,7 +741,9 @@
         "scripts/ops-chaos-smoke.ps1",
         ".github/workflows/ops-gameday.yml",
         "docs/ops/alerts/sessionledger-slo.yaml",
-        "docs/ops/observability.md"
+        "docs/ops/observability.md",
+        "scripts/pprof-smoke.ps1",
+        ".github/workflows/ops-load.yml"
       ]
     },
     {
@@ -730,7 +762,7 @@
     },
     {
       "id": "C07",
-      "score": "26/30",
+      "score": "27/30",
       "status": "partial",
       "evidence": [
         "scripts/flake-tracker-check.ps1",
@@ -742,7 +774,9 @@
         ".github/workflows/race-smoke.yml",
         "docs/ops/cross-platform-ci.md",
         "tests/properties.rs",
-        "fuzz/"
+        "fuzz/",
+        "fuzz/fuzz_targets/jsonl_ingest.rs",
+        "fuzz/corpus/jsonl_ingest/two_sessions.jsonl"
       ]
     },
     {
@@ -758,7 +792,7 @@
     },
     {
       "id": "C09",
-      "score": "38/45",
+      "score": "39/45",
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/help_overlay.rs",
@@ -769,7 +803,8 @@
         "docs/ops/fixtures/native-webview-smoke.sample.json",
         "scripts/inclusive-language-check.ps1",
         "tests/visual/harness/a11y.spec.js",
-        "tests/fixtures/a11y/help_shortcuts.golden.tsv"
+        "tests/fixtures/a11y/help_shortcuts.golden.tsv",
+        "crates/sl-viewer/src/search_view.rs"
       ]
     },
     {

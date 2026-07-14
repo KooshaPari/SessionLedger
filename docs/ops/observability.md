@@ -23,7 +23,7 @@ Scheduled evidence:
 | Workflow | Cadence | What it proves |
 |----------|---------|----------------|
 | [`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml) | Weekdays 06:23 UTC + `workflow_dispatch` | Short ops/chaos smoke via [`scripts/ops-chaos-smoke.ps1`](../../scripts/ops-chaos-smoke.ps1): `/healthz` vs `/readyz` separation, metrics shape checks, light load burst, process-kill recovery. Smoke phases target **&lt;2 min** once the daemon binary is built. |
-| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch` | Heavier concurrent load against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics` via [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1). Soft `rss-budget` job also runs [`scripts/rss-budget-check.ps1`](../../scripts/rss-budget-check.ps1) against `POST /api/ingest` (see [`memory-budget.md`](memory-budget.md)). Soft `allocation-budget` job runs [`scripts/allocation-budget-check.ps1`](../../scripts/allocation-budget-check.ps1) (counting-allocator `process_session` smoke; see [`allocation-budget.md`](allocation-budget.md)). Soft `alloc-profile` job runs [`scripts/alloc-profile-check.ps1`](../../scripts/alloc-profile-check.ps1) (optional `dhat` `process_session` smoke; see [`alloc-profile.md`](alloc-profile.md)). `pprof-smoke` job exercises the gated loopback profiling surface via [`scripts/pprof-smoke.ps1`](../../scripts/pprof-smoke.ps1). |
+| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch` | Heavier concurrent load against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics` via [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1). Soft `rss-budget` job also runs [`scripts/rss-budget-check.ps1`](../../scripts/rss-budget-check.ps1) against `POST /api/ingest` (see [`memory-budget.md`](memory-budget.md)). Soft `allocation-budget` job runs [`scripts/allocation-budget-check.ps1`](../../scripts/allocation-budget-check.ps1) (counting-allocator `process_session` smoke; see [`allocation-budget.md`](allocation-budget.md)). Soft `alloc-profile` job runs [`scripts/alloc-profile-check.ps1`](../../scripts/alloc-profile-check.ps1) (optional `dhat` `process_session` smoke; see [`alloc-profile.md`](alloc-profile.md)). `pprof-smoke` job exercises the gated loopback profiling surface via [`scripts/pprof-smoke.ps1`](../../scripts/pprof-smoke.ps1). Soft `continuous-profiling-agent` job runs the L45 agent stub via [`scripts/continuous-profiling-agent.ps1`](../../scripts/continuous-profiling-agent.ps1) (see [`continuous-profiling.md`](continuous-profiling.md)). |
 | [`.github/workflows/ops-gameday.yml`](../../.github/workflows/ops-gameday.yml) | Quarterly (manual) + `workflow_dispatch` | Game-day evidence pass: same short chaos smoke with `-EvidencePath` → `gameday-evidence.json` artifact. See [Game-day cadence](#game-day-cadence). |
 
 Prometheus SLO alert rules live in
@@ -239,7 +239,10 @@ Operators without the `otel` feature continue to rely on `/healthz`, `/readyz`,
 
 Continuous profiling is intentionally local-only and off by default. The daemon's
 HTTP bind parser still rejects non-loopback addresses, and the debug routes are
-only registered when explicitly enabled.
+only registered when explicitly enabled. The **continuous profiling agent stub**
+([`continuous-profiling.md`](continuous-profiling.md)) documents the intended
+poll-and-retain loop, unpaid Pyroscope/OTLP export gaps, and soft scheduled
+evidence on top of on-demand unix sampling ([#232](https://github.com/KooshaPari/SessionLedger/pull/232)).
 
 ### Operator contract
 
@@ -288,6 +291,8 @@ Available debug paths:
 
 Scheduled evidence runs on the `pprof-smoke` job in
 [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
+The soft `continuous-profiling-agent` job on the same workflow exercises the
+one-shot agent stub (see [`continuous-profiling.md`](continuous-profiling.md)).
 
 The `pprof` dependency is unix-only (`cfg(unix)`), so Windows CI/release builds stay green while Linux smoke asserts a non-501 protobuf profile.
 

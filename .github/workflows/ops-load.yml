@@ -193,3 +193,35 @@ jobs:
             ConvertFrom-Json
           $daemon = Join-Path $metadata.target_directory "debug/sl-daemon"
           ./scripts/pprof-smoke.ps1 -DaemonPath $daemon -SkipBuild -AlsoAssertDisabled
+
+  # Soft L45 continuous profiling agent stub — unix-only; reuses pprof-smoke contract.
+  continuous-profiling-agent:
+    name: scheduled continuous profiling agent stub (soft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: crates/sl-daemon
+      - name: self-check continuous profiling agent stub
+        shell: pwsh
+        run: ./scripts/continuous-profiling-agent.ps1 -SelfCheck
+      - name: build sl-daemon workspace
+        working-directory: crates/sl-daemon
+        run: cargo build --locked
+      - name: run continuous profiling agent stub (one-shot)
+        shell: pwsh
+        env:
+          RUST_LOG: sl_daemon=info,tower_http=warn
+        run: |
+          $ErrorActionPreference = "Stop"
+          $metadata = cargo metadata `
+            --format-version 1 `
+            --no-deps `
+            --manifest-path crates/sl-daemon/Cargo.toml |
+            ConvertFrom-Json
+          $daemon = Join-Path $metadata.target_directory "debug/sl-daemon"
+          ./scripts/continuous-profiling-agent.ps1 -RunOnce -DaemonPath $daemon -SkipBuild

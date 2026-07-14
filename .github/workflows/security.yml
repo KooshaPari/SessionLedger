@@ -92,3 +92,14 @@ jobs:
         with:
           version: "3.95.9"
           extra_args: --results=verified,unknown
+
+  # Soft C04 L40 sandbox boundary evidence — hermetic SelfCheck only.
+  sandbox-boundary:
+    name: sandbox boundary smoke (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: self-check sandbox boundary checklist + Containerfile anchors
+        shell: pwsh
+        run: ./scripts/sandbox-boundary-check.ps1 -SelfCheck

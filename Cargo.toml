@@ -20,6 +20,8 @@ readme = "README.md"
 compress = ["dep:zstd"]
 # Enable the rusqlite-backed Forge ingestion adapter and zstd decompression.
 sqlite = ["dep:rusqlite", "compress"]
+# Optional dhat heap-profiling smoke (tests/alloc_profile_dhat.rs only).
+alloc-profile = []
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -43,6 +45,13 @@ proptest = "1.11.0"
 # Counting allocator for the L8 allocation-budget smoke (tests/allocation_budget.rs).
 # Keeps unsafe inside the dependency; production builds stay on the System allocator.
 stats_alloc = "0.1.10"
+# Optional dhat heap profiler for the L8 alloc-profile smoke (tests/alloc_profile_dhat.rs).
+dhat = "0.3.3"
+
+[[test]]
+name = "alloc_profile_dhat"
+path = "tests/alloc_profile_dhat.rs"
+required-features = ["alloc-profile"]
 
 [[bench]]
 name = "pipeline"

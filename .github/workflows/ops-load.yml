@@ -146,6 +146,23 @@ jobs:
         shell: pwsh
         run: ./scripts/allocation-budget-check.ps1 -RunTest
 
+  # Soft L8 alloc-profile evidence — optional dhat heap profiler, no jemalloc.
+  alloc-profile:
+    name: scheduled alloc-profile smoke · process_session (soft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - name: self-check alloc-profile script + config
+        shell: pwsh
+        run: ./scripts/alloc-profile-check.ps1 -SelfCheck
+      - name: run alloc-profile dhat smoke
+        shell: pwsh
+        run: ./scripts/alloc-profile-check.ps1 -RunTest
+
   # L45 loopback pprof surface — gated by SL_ENABLE_PPROF=1.
   pprof-smoke:
     name: scheduled pprof surface smoke · sl-daemon

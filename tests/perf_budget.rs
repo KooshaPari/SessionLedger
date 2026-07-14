@@ -21,9 +21,7 @@ fn perf_baseline_exposes_enforced_budgets() {
         "perf-baseline schema_version should be 2"
     );
     assert_eq!(
-        value
-            .pointer("/policy/enforced")
-            .and_then(serde_json::Value::as_bool),
+        value.pointer("/policy/enforced").and_then(serde_json::Value::as_bool),
         Some(true),
         "policy.enforced must be true for the blocking CI gate"
     );
@@ -37,19 +35,15 @@ fn perf_baseline_exposes_enforced_budgets() {
         "documented threshold is 25% (got {threshold})"
     );
 
-    let benchmarks = value
-        .get("benchmarks")
-        .and_then(serde_json::Value::as_object)
-        .expect("benchmarks object");
+    let benchmarks =
+        value.get("benchmarks").and_then(serde_json::Value::as_object).expect("benchmarks object");
     let required = [
         "pipeline/distill_compile_200_messages",
         "pipeline/okf_export_200_messages",
         "pipeline/inject_render_200_messages",
     ];
     for key in required {
-        let entry = benchmarks
-            .get(key)
-            .unwrap_or_else(|| panic!("missing benchmark {key}"));
+        let entry = benchmarks.get(key).unwrap_or_else(|| panic!("missing benchmark {key}"));
         let mean = entry
             .get("mean_ns")
             .and_then(serde_json::Value::as_f64)
@@ -73,12 +67,7 @@ fn bench_gate_self_check_validates_enforced_policy() {
     assert!(script.is_file(), "missing {}", script.display());
 
     let output = Command::new("pwsh")
-        .args([
-            "-NoProfile",
-            "-File",
-            script.to_str().expect("utf-8 script path"),
-            "-SelfCheck",
-        ])
+        .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()
         .unwrap_or_else(|error| panic!("failed to spawn pwsh for SelfCheck: {error}"));
 
@@ -88,12 +77,6 @@ fn bench_gate_self_check_validates_enforced_policy() {
         output.status.success(),
         "bench-gate.ps1 -SelfCheck failed\nstdout:\n{stdout}\nstderr:\n{stderr}"
     );
-    assert!(
-        stdout.contains("SelfCheck passed"),
-        "expected SelfCheck success line, got:\n{stdout}"
-    );
-    assert!(
-        stdout.contains("enforced=true"),
-        "expected enforced=true echo, got:\n{stdout}"
-    );
+    assert!(stdout.contains("SelfCheck passed"), "expected SelfCheck success line, got:\n{stdout}");
+    assert!(stdout.contains("enforced=true"), "expected enforced=true echo, got:\n{stdout}");
 }

@@ -18,6 +18,7 @@ losslessly. Turns ephemeral tool sessions into durable ledgers and injectable
 | [`docs/ops/feedback-budgets.md`](docs/ops/feedback-budgets.md) | Measured check/test/lint loop budgets |
 | [`docs/ops/observability.md`](docs/ops/observability.md) | Metrics + OTel soft goal |
 | [`docs/ops/AGILEPLUS.md`](docs/ops/AGILEPLUS.md) | AgilePlus bootstrap, FR/NFR mapping, and GitHub sync |
+| [`docs/adr/0005-no-serverless-edge.md`](docs/adr/0005-no-serverless-edge.md) | No serverless/edge deploy (C11 L114) |
 
 ## Key paths
 
@@ -47,3 +48,4 @@ make dev          # process-compose: daemon :8080 + viewer
 
 `GET /healthz` · `GET /api/bundles` · `GET /api/search` · `GET /api/stream` ·
 `GET /api/replay/:id` · `POST /api/ingest` · `GET /api/metrics`
+

@@ -24,11 +24,14 @@ docs/reference/conformance/
     ├── blank-entities-099.okf.json         ← edge: empty entities[]
     ├── context-grounds-004.okf.json        ← explicit grounds relations
     ├── factory-delegate-015.okf.json     ← factory-droid delegated refactor
-    └── tool-evidence-021.okf.json          ← claude-code tool-output acceptance
+    ├── tool-evidence-021.okf.json          ← claude-code tool-output acceptance
+    ├── codex-typescript-023.okf.json       ← codex TypeScript/npm toolchain acceptance
+    ├── cursor-python-029.okf.json          ← cursor Python pytest tool evidence
+    └── forge-go-module-026.okf.json        ← forge Go module gRPC health probe
 ```
 
-Eleven fixtures total — five from worked examples in `OKF-EXAMPLES.md` plus
-six hand-vetted edge and corpus-expansion shapes. Example fixtures are the
+Fourteen fixtures total — five from worked examples in `OKF-EXAMPLES.md` plus
+nine hand-vetted edge, corpus-expansion, and cross-language shapes. Example fixtures are the
 **exact JSON shown in the examples doc** (verbatim, byte-for-byte except for
 trailing whitespace). Anchored filenames are pinned in
 [`docs/ops/eval-manifest.json`](../../ops/eval-manifest.json).

@@ -9,7 +9,9 @@ use crate::bundle_list::{summarize, BundleSummary};
 use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
-use crate::fixture::{query_fixture_active, splash_hold_fixture_active, visual_fixture_active};
+#[cfg(feature = "web")]
+use crate::fixture::visual_fixture_active;
+use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
 use crate::help_overlay::HelpOverlay;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
@@ -318,6 +320,37 @@ pub fn App() -> Element {
                 let _ = document::eval(
                     r#"
                     window.requestAnimationFrame(() => {
+                      const el = document.getElementById('search-since')
+                        || document.getElementById('search-since-fixture');
+                      el?.focus();
+                    });
+                    "#,
+                );
+            }
+            PaletteAction::OpenHelp => {
+                open_help();
+            }
+            PaletteAction::NextTab => {
+                let idx = active_tab().index();
+                activate(Tab::from_index(idx + 1));
+            }
+            PaletteAction::PrevTab => {
+                let idx = active_tab().index();
+                let len = Tab::ALL.len();
+                activate(Tab::from_index(idx + len - 1));
+            }
+            PaletteAction::ClearSearch => {
+                active_tab.set(Tab::Search);
+                let _ = document::eval(
+                    r#"
+                    window.requestAnimationFrame(() => {
+                      const panel = document.getElementById('panel-search');
+                      const view = panel?.querySelector('.search-view');
+                      if (view) {
+                        view.dispatchEvent(
+                          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+                        );
+                      }
                       const el = document.getElementById('search-since')
                         || document.getElementById('search-since-fixture');
                       el?.focus();

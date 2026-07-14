@@ -135,8 +135,10 @@ Pin a release with `SL_VERSION=v0.1.0`; override the destination with
   (Gatekeeper / SmartScreen notes for unsigned builds)
 - Release CI publishes `SHA256SUMS` and attempts a best-effort GitHub OIDC
   cosign signature (`SHA256SUMS.sigstore.json`); signing failures do not block
-  the Release. This existing
+  the Release. The same soft-fail policy covers the GHCR `sl-daemon` OCI image
+  (build/push + keyless cosign + attestation). See the
   [cosign and attestation path](../docs/ops/distribution.md#release-integrity-signing-cosign)
-  also applies to installer assets, but does not replace platform signing
+  — installer assets are covered too, but that path does not replace platform
+  signing
 - Data root for local compose: `SL_DATA_DIR` (default `./.sl-data`); uninstall
   steps documented in the distribution guide

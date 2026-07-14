@@ -20,6 +20,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Channel | Status | Notes |
 |---------|--------|-------|
 | GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing |
+| GHCR OCI (`sl-daemon`) | **Best-effort on `v*` tags** | Builds `crates/sl-daemon/Containerfile`, pushes `ghcr.io/kooshapari/sl-daemon`, keyless cosign + GitHub attestation; failures never block portable Releases |
 | Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` or `cargo install --git … --path crates/sl-daemon` |
 | curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` Release archives |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
@@ -65,9 +66,9 @@ SHA256SUMS.sigstore.json
 
 `session-ledger.cdx.json` is the CycloneDX SBOM and is required for the Release
 job to succeed. GitHub build provenance is blocking on the canonical repository.
-`SHA256SUMS.sigstore.json` remains best-effort. Authenticode and Apple
-notarization stay deferred under ADR 0003 — published MSI/PKG artifacts are
-**unsigned**.
+`SHA256SUMS.sigstore.json` and the GHCR `sl-daemon` image cosign/attest path
+remain best-effort. Authenticode and Apple notarization stay deferred under
+ADR 0003 — published MSI/PKG artifacts are **unsigned**.
 
 **Windows matrix status:** release CI produces an unsigned portable ZIP and a
 real WiX v4 MSI (`SessionLedger-<ver>-x64.msi`), then `smoke-windows` runs ZIP
@@ -160,6 +161,20 @@ mkdir -p "$SL_WATCH_DIR" "$SL_OUT_DIR"
 Volumes are owned by non-root user `sl` (uid `10001`). The canonical daemon
 image defines an OCI `HEALTHCHECK` that probes `GET /healthz` on
 `127.0.0.1:8080` while `sl-daemon serve` is running.
+
+On each `v*` tag, `release.yml` job `oci-image` best-effort builds that
+Containerfile, pushes `ghcr.io/kooshapari/sl-daemon:<tag>` (and `latest` for
+non-prerelease tags), keyless-cosign signs the digest, and publishes GitHub
+build provenance to the registry. Soft failures leave the portable Release
+intact — same policy as `SHA256SUMS.sigstore.json`.
+
+Local build (no registry):
+
+```bash
+podman build -t sl-daemon:local -f crates/sl-daemon/Containerfile .
+```
+
+See [Verify an OCI image](#verify-an-oci-image-cosign) for deploy-time checks.
 
 ### Future XDG / AppData (not implemented)
 
@@ -416,6 +431,34 @@ entry in `SHA256SUMS` after cosign verifies the checksums file.
 
 Cosign proves the checksums file was signed by this repository's tag workflow;
 the checksum comparison then binds the downloaded archive to that signed file.
+
+### Verify an OCI image (cosign)
+
+When the best-effort `oci-image` job succeeds for a Release tag, pull by digest
+and verify the keyless signature before deploying. Replace `<tag>` and
+`<digest>` (for example `sha256:…` from `crane digest` or the Actions summary):
+
+```bash
+IMAGE=ghcr.io/kooshapari/sl-daemon
+TAG=<tag>
+
+digest="$(crane digest "${IMAGE}:${TAG}")"
+# or: digest="$(cosign triangulate "${IMAGE}:${TAG}" | sed 's/.*@//')"
+
+cosign verify \
+  --certificate-identity "https://github.com/KooshaPari/SessionLedger/.github/workflows/release.yml@refs/tags/${TAG}" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  "${IMAGE}@${digest}"
+
+gh attestation verify "oci://${IMAGE}@${digest}" \
+  --repo KooshaPari/SessionLedger
+```
+
+If cosign or `gh attestation verify` reports no signature/attestation, treat
+OCI provenance as unavailable for that tag and either rebuild locally from
+`crates/sl-daemon/Containerfile` or fall back to the portable `sl-daemon`
+archive path above. Do not treat a missing OCI signature as a successful
+verify-on-deploy check.
 
 ### Verify GitHub build provenance
 

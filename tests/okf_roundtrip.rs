@@ -95,7 +95,7 @@ fn validate_okf_v1(doc: &OkfDocument) -> Result<(), String> {
 }
 
 #[test]
-fn jsonl_to_okf_to_viewer_roundtrip_is_well_formed() {
+fn fr013_jsonl_to_okf_to_viewer_roundtrip_is_well_formed() {
     let tmp = tempdir().expect("tempdir");
     write_fixture_jsonl(tmp.path()).expect("write fixture");
 

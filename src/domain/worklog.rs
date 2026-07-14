@@ -119,6 +119,7 @@ fn summarize(content: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    // Traceability: unfinished-work detector + WorklogProjection → FR-011 (T-024).
     use super::*;
     use crate::domain::session::Message;
 
@@ -131,7 +132,7 @@ mod tests {
     }
 
     #[test]
-    fn unanswered_user_turn_is_unfinished() {
+    fn fr011_unanswered_user_turn_is_unfinished() {
         let session = session_with(&[(Role::User, "Implement crash recovery")]);
         let item = detect_unfinished(&session).expect("user work should be unfinished");
 

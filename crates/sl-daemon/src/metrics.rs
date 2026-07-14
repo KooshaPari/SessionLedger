@@ -204,6 +204,7 @@ pub fn compute_metrics(out_dir: &Path) -> MetricsSummary {
 
 #[cfg(test)]
 mod tests {
+    // Traceability: aggregate bundle metrics → FR-005; Prometheus RED snapshot → FR-015.
     use super::*;
     use std::io::Write;
 
@@ -224,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn counts_bundles() {
+    fn fr005_counts_bundles() {
         let d = tempfile::TempDir::new().unwrap();
         mkbundle(d.path(), "a", "m", 100, "2026-07-01");
         mkbundle(d.path(), "b", "m", 200, "2026-07-01");

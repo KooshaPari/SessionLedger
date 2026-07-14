@@ -169,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn valid_bundle_passes() {
+    fn fr002_valid_bundle_passes() {
         let result = validate_okf_bundle(&valid_bundle());
         assert!(result.valid, "unexpected errors: {:?}", result.errors);
         assert!(result.errors.is_empty());

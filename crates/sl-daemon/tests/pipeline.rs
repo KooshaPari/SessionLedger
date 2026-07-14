@@ -1,5 +1,8 @@
 //! Deterministic end-to-end test of the watcher→channel→ETL pipeline.
 //!
+//! Traceability: on-disk JSONL → compile → export is acceptance evidence for
+//! FR-001 (corpus ingest into normalized Session).
+//!
 //! Uses [`scan_once`] rather than the event-driven `notify` watcher so the test
 //! has NO dependency on OS event timing or sleeps — it is fully deterministic
 //! and cannot flake. The bounded channel is drained to completion after the
@@ -54,7 +57,7 @@ async fn scan_once(dir: &Path, tx: &mpsc::Sender<PathBuf>) -> std::io::Result<us
 }
 
 #[tokio::test]
-async fn watch_scan_channel_etl_produces_okf_files() {
+async fn fr001_watch_scan_channel_etl_produces_okf_files() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let jsonl = write_fixture(tmp.path(), &["alpha", "beta"]);
     assert!(jsonl.exists());

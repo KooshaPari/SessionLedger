@@ -253,11 +253,8 @@ pub fn SearchView() -> Element {
 
     let advanced_count = advanced_filter_active_count(&min_tokens(), &tags(), &limit());
     let advanced_expanded = advanced_open();
-    let toggle_label = if advanced_expanded {
-        "Hide advanced filters"
-    } else {
-        "Show advanced filters"
-    };
+    let toggle_label =
+        if advanced_expanded { "Hide advanced filters" } else { "Show advanced filters" };
     let chevron = if advanced_expanded { "▾" } else { "▸" };
 
     rsx! {

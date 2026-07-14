@@ -14,6 +14,15 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
+  source-date-epoch-policy:
+    name: release · SOURCE_DATE_EPOCH policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: verify SOURCE_DATE_EPOCH docs + release wiring
+        shell: pwsh
+        run: ./scripts/repro-check.ps1 -PolicyOnly
+
   sl-daemon-offline:
     name: sl-daemon · locked offline build
     runs-on: ubuntu-latest

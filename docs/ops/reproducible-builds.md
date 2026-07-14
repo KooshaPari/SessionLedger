@@ -4,6 +4,30 @@ SessionLedger checks whether two clean release builds of the same binary produce
 the same SHA-256 digest. This is reproducibility evidence, not a claim that the
 build is fully hermetic or SLSA Build Level 3.
 
+## Release packaging contract (`SOURCE_DATE_EPOCH`)
+
+Release packaging **must** set `SOURCE_DATE_EPOCH` to the Unix timestamp of the
+tagged commit (or the commit being packaged) before invoking `cargo build
+--release`. Tools that honor the variable then embed a stable timestamp instead
+of wall-clock time.
+
+Contract:
+
+1. `.github/workflows/release.yml` derives `SOURCE_DATE_EPOCH` from
+   `git log -1 --pretty=%ct` and exports it for every matrix build step, with
+   `CARGO_INCREMENTAL=0`.
+2. Local packaging scripts should export the same variable (or accept an
+   explicit epoch) before building release binaries.
+3. Consumers comparing rebuilds must use the same epoch, toolchain, target, and
+   lockfile; archive/ZIP metadata is out of scope for the binary digest check.
+
+Policy-only CI (cheap, no dual compile) verifies the docs mandate and the
+release workflow export:
+
+```powershell
+pwsh ./scripts/repro-check.ps1 -PolicyOnly
+```
+
 ## Quick check
 
 Requirements:
@@ -20,22 +44,27 @@ pwsh ./scripts/repro-check.ps1
 
 The script:
 
-1. derives `SOURCE_DATE_EPOCH` from the current commit timestamp;
-2. disables Cargo incremental compilation;
-3. builds `sl-daemon` twice with `--release --locked` into separate temporary
+1. asserts the release packaging `SOURCE_DATE_EPOCH` contract (docs + workflow);
+2. prefers an already-exported `SOURCE_DATE_EPOCH`, otherwise derives it from the
+   current commit timestamp;
+3. disables Cargo incremental compilation;
+4. builds `sl-daemon` twice with `--release --locked` into separate temporary
    target directories;
-4. hashes each release binary with SHA-256 and fails if the digests differ; and
-5. removes both build directories.
+5. hashes each release binary with SHA-256 and fails if the digests differ; and
+6. removes both build directories.
 
-To reproduce an earlier result, pass its epoch explicitly:
+To reproduce an earlier result, pass its epoch explicitly (or export
+`SOURCE_DATE_EPOCH` in the environment):
 
 ```powershell
 pwsh ./scripts/repro-check.ps1 -SourceDateEpoch 1783900000
 ```
 
-CI runs this check on Linux as a small, blocking pull-request smoke test. For a
-release candidate, run it on every release target and record the two hashes,
-commit, Rust version, target triple, and host image beside the release evidence.
+CI runs the dual-build check on Linux as a blocking pull-request smoke test, and
+runs `-PolicyOnly` from the hermetic workflow so release wiring stays enforced
+without a second full compile matrix. For a release candidate, run the dual-build
+check on every release target and record the two hashes, commit, Rust version,
+target triple, `SOURCE_DATE_EPOCH`, and host image beside the release evidence.
 The script accepts `-ManifestPath` and `-BinaryName` for another Rust binary.
 
 ## Interpretation and limits

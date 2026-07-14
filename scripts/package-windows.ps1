@@ -29,10 +29,27 @@ if (-not $DistDir) {
 }
 
 if (-not $SkipBuild) {
-    & cargo build --manifest-path (Join-Path $ProjectRoot "Cargo.toml") `
-        -p sl-viewer --release --locked --target $Target
-    if ($LASTEXITCODE -ne 0) {
-        throw "cargo build failed with exit code $LASTEXITCODE."
+    $originalSourceDateEpoch = $env:SOURCE_DATE_EPOCH
+    $originalCargoIncremental = $env:CARGO_INCREMENTAL
+    try {
+        if ($env:SOURCE_DATE_EPOCH -notmatch '^\d+$') {
+            $epoch = (& git -C $ProjectRoot log -1 --format=%ct).Trim()
+            if ($LASTEXITCODE -ne 0 -or $epoch -notmatch '^\d+$') {
+                throw "Could not derive SOURCE_DATE_EPOCH for release packaging."
+            }
+            $env:SOURCE_DATE_EPOCH = $epoch
+        }
+        $env:CARGO_INCREMENTAL = "0"
+        Write-Host "Building with SOURCE_DATE_EPOCH=$($env:SOURCE_DATE_EPOCH)"
+        & cargo build --manifest-path (Join-Path $ProjectRoot "Cargo.toml") `
+            -p sl-viewer --release --locked --target $Target
+        if ($LASTEXITCODE -ne 0) {
+            throw "cargo build failed with exit code $LASTEXITCODE."
+        }
+    }
+    finally {
+        $env:SOURCE_DATE_EPOCH = $originalSourceDateEpoch
+        $env:CARGO_INCREMENTAL = $originalCargoIncremental
     }
 }
 

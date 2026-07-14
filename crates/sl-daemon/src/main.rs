@@ -34,6 +34,7 @@ mod http;
 mod metrics;
 #[cfg(feature = "otel")]
 mod otel;
+mod shutdown;
 mod tag;
 mod validation;
 mod watcher;
@@ -538,6 +539,9 @@ async fn run_serve(
     // handler subscribes one receiver per connected client.
     let (bcast_tx, _bcast_rx) = broadcast::channel::<PathBuf>(BROADCAST_CAPACITY);
 
+    let shutdown = shutdown::ServeShutdown::new();
+    let _ctrl_c = shutdown.spawn_ctrl_c_handler();
+
     let (tx, mut rx) = mpsc::channel::<PathBuf>(CHANNEL_CAPACITY);
     let out_dir = out.clone();
     let data_dir = audit::data_dir_from_env_or(&out);
@@ -550,49 +554,61 @@ async fn run_serve(
     let audit_sink_for_consumer = audit_sink.clone();
     #[cfg(feature = "sqlite")]
     let memory_for_consumer = memory_store.clone();
+    let shutdown_for_consumer = shutdown.clone();
     let consumer = tokio::spawn(
         async move {
             let mut total = 0usize;
-            while let Some(path) = rx.recv().await {
-                let span = info_span!("etl.transform", path = %path.display());
-                async {
-                    #[cfg(feature = "sqlite")]
-                    let memory_ref = memory_for_consumer
-                        .as_ref()
-                        .map(|store| store.as_ref() as &dyn session_ledger::ports::MemoryStore);
-                    #[cfg(not(feature = "sqlite"))]
-                    let memory_ref: Option<&dyn session_ledger::ports::MemoryStore> = None;
-                    match etl::transform_file(&path, &out_dir, memory_ref) {
-                        Ok(written) => {
-                            total += written.len();
-                            for w in &written {
-                                let _ = bcast_for_consumer.send(w.clone());
-                                audit_event(
-                                    &audit_sink_for_consumer,
-                                    "export",
-                                    "succeeded",
-                                    &w.display(),
-                                );
+            loop {
+                tokio::select! {
+                    _ = shutdown_for_consumer.cancelled() => {
+                        info!("ETL consumer cancelled");
+                        break;
+                    }
+                    path = rx.recv() => {
+                        let Some(path) = path else {
+                            break;
+                        };
+                        let span = info_span!("etl.transform", path = %path.display());
+                        async {
+                            #[cfg(feature = "sqlite")]
+                            let memory_ref = memory_for_consumer
+                                .as_ref()
+                                .map(|store| store.as_ref() as &dyn session_ledger::ports::MemoryStore);
+                            #[cfg(not(feature = "sqlite"))]
+                            let memory_ref: Option<&dyn session_ledger::ports::MemoryStore> = None;
+                            match etl::transform_file(&path, &out_dir, memory_ref) {
+                                Ok(written) => {
+                                    total += written.len();
+                                    for w in &written {
+                                        let _ = bcast_for_consumer.send(w.clone());
+                                        audit_event(
+                                            &audit_sink_for_consumer,
+                                            "export",
+                                            "succeeded",
+                                            &w.display(),
+                                        );
+                                    }
+                                    info!(
+                                        path = %path.display(),
+                                        okf_docs = written.len(),
+                                        "ETL transform ok"
+                                    );
+                                }
+                                Err(err) => {
+                                    audit_event(
+                                        &audit_sink_for_consumer,
+                                        "export",
+                                        "failed",
+                                        &path.display(),
+                                    );
+                                    error!(path = %path.display(), error = %err, "ETL transform failed");
+                                }
                             }
-                            info!(
-                                path = %path.display(),
-                                okf_docs = written.len(),
-                                "ETL transform ok"
-                            );
                         }
-                        Err(err) => {
-                            audit_event(
-                                &audit_sink_for_consumer,
-                                "export",
-                                "failed",
-                                &path.display(),
-                            );
-                            error!(path = %path.display(), error = %err, "ETL transform failed");
-                        }
+                        .instrument(span)
+                        .await;
                     }
                 }
-                .instrument(span)
-                .await;
             }
             total
         }
@@ -617,10 +633,10 @@ async fn run_serve(
             #[cfg(feature = "sqlite")]
             memory_store: memory_store.clone(),
         };
-        let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+        let shutdown_for_http = shutdown.clone();
         let handle = tokio::spawn(async move {
             if let Err(e) = http::serve(addr, state, async move {
-                let _ = shutdown_rx.await;
+                shutdown_for_http.cancelled().await;
             })
             .await
             {
@@ -628,35 +644,34 @@ async fn run_serve(
             }
         });
         info!(%addr, "HTTP server listening");
-        Some((handle, shutdown_tx))
+        Some(handle)
     };
 
     if once {
-        let sent = watcher::scan_once(&watch, &tx).await?;
+        let sent = watcher::scan_once(&watch, &tx, shutdown.token()).await?;
         info!(enqueued = sent, "once: scan complete");
         drop(tx);
         let total = consumer.await?;
         info!(okf_docs = total, "once: ETL complete");
-        if let Some((handle, shutdown_tx)) = http_handle {
-            let _ = shutdown_tx.send(());
+        shutdown.cancel();
+        if let Some(handle) = http_handle {
             let _ = handle.await;
         }
         return Ok(());
     }
 
     // Long-running mode.
-    watcher::scan_once(&watch, &tx).await?;
+    watcher::scan_once(&watch, &tx, shutdown.token()).await?;
     let _watcher = watcher::spawn_fs_watcher(&watch, tx.clone())?;
     info!(watch = %watch.display(), out = %out.display(), "watching for sessions");
 
     drop(tx);
 
-    tokio::signal::ctrl_c().await?;
+    shutdown.cancelled().await;
     info!("shutting down");
     drop(_watcher);
 
-    if let Some((handle, shutdown_tx)) = http_handle {
-        let _ = shutdown_tx.send(());
+    if let Some(handle) = http_handle {
         let _ = handle.await;
     }
 

@@ -330,6 +330,10 @@ pub fn App() -> Element {
                 .sl-content-skeleton {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
                 .sl-content-skeleton-bundles {{ flex-direction: row; }}
                 .sl-content-skeleton-list {{ flex-direction: column; }}
+                .sl-content-skeleton-stream {{ flex-direction: column; flex: 1; padding: var(--sl-space-md) var(--sl-space-lg); box-sizing: border-box; }}
+                .sl-skeleton-stream-lines {{ display: flex; flex-direction: column; gap: var(--sl-space-sm); width: 100%; font-family: "SF Mono", "Menlo", "Consolas", monospace; }}
+                .sl-skeleton-stream-line-wrap {{ min-height: 16px; }}
+                .sl-skeleton-stream-line {{ height: 12px; }}
                 .sl-skeleton-list {{ width: 340px; min-width: 340px; max-width: 340px; border-right: 1px solid var(--sl-border); padding: var(--sl-space-sm) 0; box-sizing: border-box; }}
                 .sl-skeleton-row {{ padding: var(--sl-space-md) var(--sl-space-xl); border-bottom: 1px solid var(--sl-border); min-height: 72px; box-sizing: border-box; }}
                 .sl-skeleton-block {{ border-radius: var(--sl-radius-sm); background: linear-gradient(90deg, var(--sl-skeleton-base) 0%, var(--sl-skeleton-highlight) 50%, var(--sl-skeleton-base) 100%); background-size: 200% 100%; animation: sl-skeleton-shimmer var(--sl-motion-slow) var(--sl-ease-in-out) infinite; }}

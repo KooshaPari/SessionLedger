@@ -5,7 +5,7 @@
 
 use dioxus::prelude::*;
 
-use crate::async_states::{ErrorState, LoadingState};
+use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
 
 #[cfg_attr(any(target_arch = "wasm32", not(feature = "desktop")), allow(dead_code))]
 const DAEMON_SSE_URL: &str = "http://localhost:9001/api/stream";
@@ -134,7 +134,7 @@ pub fn LiveFeed() -> Element {
                 class: "live-feed-list",
                 "data-testid": "live-feed-list",
                 if status_val == FeedStatus::Connecting {
-                    LoadingState { message: "Connecting to bundle feed…".to_string() }
+                    ContentSkeleton { layout: SkeletonLayout::StreamFeed, list_rows: 5 }
                 } else if status_val == FeedStatus::Disconnected && feed_entries.is_empty() {
                     ErrorState {
                         message: "Live feed disconnected — daemon unreachable at localhost:9001.".to_string(),

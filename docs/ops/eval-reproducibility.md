@@ -19,7 +19,9 @@ The script asserts:
    lockfile changes intentionally).
 2. Host `rustc` meets `rust_msrv`.
 3. OKF conformance fixture count matches `fixture_count`.
-4. Bench policy (`perf-baseline.json`) and gate script exist.
+4. When present, every entry in `fixture_anchors` exists on disk and matches
+   the glob (no extras, no omissions).
+5. Bench policy (`perf-baseline.json`) and gate script exist.
 
 It prints the current Git commit SHA for human correlation; the commit is
 intentionally **not** pinned in the manifest because eval runs move with every
@@ -30,7 +32,7 @@ merge.
 | Change | Action |
 |--------|--------|
 | `Cargo.lock` updated | Recompute SHA-256 and bump `cargo_lock_sha256` |
-| Fixture added/removed | Bump `fixture_count` (and `fixture_seed` if corpus identity changes) |
+| Fixture added/removed | Bump `fixture_count`, update `fixture_anchors`, and bump `fixture_seed` only if corpus identity changes |
 | MSRV raised in workspace `Cargo.toml` | Bump `rust_msrv` |
 | Bench policy path changes | Update `bench_policy_path` / `bench_gate_script` |
 

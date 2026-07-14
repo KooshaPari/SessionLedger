@@ -42,9 +42,33 @@ if ([version]$rustcSemver -lt [version][string]$manifest.rust_msrv) {
     throw "rustc $rustcSemver is below eval manifest MSRV $($manifest.rust_msrv)."
 }
 
-$fixtureCount = (Get-ChildItem -LiteralPath $fixtureRoot -Filter *.okf.json -File).Count
+$fixtureFiles = @(Get-ChildItem -LiteralPath $fixtureRoot -Filter *.okf.json -File | Sort-Object Name)
+$fixtureCount = $fixtureFiles.Count
 if ($fixtureCount -ne [int]$manifest.fixture_count) {
     throw "Fixture count mismatch. Expected $($manifest.fixture_count); found $fixtureCount under '$fixtureRoot'."
+}
+
+$anchors = @()
+if ($manifest.PSObject.Properties.Name -contains "fixture_anchors") {
+    $anchors = @($manifest.fixture_anchors | ForEach-Object { [string]$_ })
+}
+if ($anchors.Count -gt 0) {
+    if ($anchors.Count -ne [int]$manifest.fixture_count) {
+        throw "fixture_anchors length ($($anchors.Count)) must match fixture_count ($($manifest.fixture_count))."
+    }
+
+    $onDisk = @($fixtureFiles | ForEach-Object { $_.Name })
+    foreach ($anchor in $anchors) {
+        if ($anchor -notin $onDisk) {
+            throw "Missing anchored fixture '$anchor' under '$fixtureRoot'."
+        }
+    }
+
+    foreach ($name in $onDisk) {
+        if ($name -notin $anchors) {
+            throw "Unexpected fixture '$name' not listed in eval-manifest.json fixture_anchors."
+        }
+    }
 }
 
 foreach ($required in @($benchPolicyPath, $benchGatePath)) {
@@ -56,6 +80,6 @@ foreach ($required in @($benchPolicyPath, $benchGatePath)) {
 $commit = (& git -C $repoRoot rev-parse HEAD).Trim()
 Write-Host "Eval reproducibility check passed."
 Write-Host "  commit=$commit"
-Write-Host "  fixture_seed=$($manifest.fixture_seed) fixture_count=$fixtureCount"
+Write-Host "  fixture_seed=$($manifest.fixture_seed) fixture_count=$fixtureCount anchor_count=$($anchors.Count)"
 Write-Host "  cargo_lock_sha256=$lockHash"
 Write-Host "  rustc=$rustcSemver bench_policy=$($manifest.bench_policy_path)"

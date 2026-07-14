@@ -180,6 +180,41 @@ fn process_session_is_idempotent() {
 }
 
 #[test]
+fn conformance_corpus_fixtures_validate_via_our_parser() {
+    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let fixture_root = manifest_dir.join("docs/reference/conformance/fixtures");
+    let mut paths: Vec<_> = std::fs::read_dir(&fixture_root)
+        .expect("read conformance fixtures dir")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension().is_some_and(|ext| ext == "json")
+                && path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.ends_with(".okf.json"))
+        })
+        .collect();
+    paths.sort();
+
+    assert!(
+        paths.len() >= 11,
+        "expected at least 11 conformance fixtures under {}",
+        fixture_root.display()
+    );
+
+    for path in paths {
+        let raw = std::fs::read_to_string(&path).expect("read fixture");
+        let doc: OkfDocument = serde_json::from_str(&raw).expect("parse fixture");
+        validate_okf_v1(&doc).expect("fixture must validate");
+
+        let round = serde_json::to_string_pretty(&doc).expect("serialize fixture");
+        let reparsed: OkfDocument = serde_json::from_str(&round).expect("round-trip fixture");
+        assert_eq!(doc, reparsed, "fixture {} must round-trip", path.display());
+    }
+}
+
+#[test]
 fn conformance_fixture_auth_fix_validates_via_our_parser() {
     // Loads the canonical fixture from docs/reference/conformance/fixtures/
     // and asserts our parser + serde shape accept it byte-for-byte.

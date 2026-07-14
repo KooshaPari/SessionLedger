@@ -12,7 +12,7 @@ use rusqlite::{params, Connection};
 use super::{MemoryStore, PortError};
 use crate::schema::migrate::{self, MigrateError};
 
-/// Durable [`MemoryStore`] backed by SQLite with forward-only migrations.
+/// Durable [`MemoryStore`] backed by `SQLite` with forward-only migrations.
 pub struct SqliteMemoryStore {
     conn: Mutex<Connection>,
     next_id: AtomicU64,
@@ -26,14 +26,15 @@ impl SqliteMemoryStore {
     /// Returns [`PortError::Backend`] when the database cannot be opened or
     /// migrations fail to apply.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, PortError> {
-        let conn = Connection::open(path).map_err(map_sqlite)?;
+        let conn = Connection::open(path).map_err(|error| map_sqlite(&error))?;
         conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")
-            .map_err(map_sqlite)?;
-        migrate::apply_all(&conn).map_err(map_migrate)?;
+            .map_err(|error| map_sqlite(&error))?;
+        migrate::apply_all(&conn).map_err(|error| map_migrate(&error))?;
 
-        let next_id = conn
-            .query_row("SELECT COUNT(*) FROM memory_facts", [], |row| row.get::<_, i64>(0))
-            .map_err(map_sqlite)? as u64;
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM memory_facts", [], |row| row.get(0))
+            .map_err(|error| map_sqlite(&error))?;
+        let next_id = u64::try_from(count).unwrap_or(0);
 
         Ok(Self { conn: Mutex::new(conn), next_id: AtomicU64::new(next_id) })
     }
@@ -44,8 +45,8 @@ impl SqliteMemoryStore {
     ///
     /// Returns [`PortError::Backend`] when migrations fail to apply.
     pub fn open_in_memory() -> Result<Self, PortError> {
-        let conn = Connection::open_in_memory().map_err(map_sqlite)?;
-        migrate::apply_all(&conn).map_err(map_migrate)?;
+        let conn = Connection::open_in_memory().map_err(|error| map_sqlite(&error))?;
+        migrate::apply_all(&conn).map_err(|error| map_migrate(&error))?;
         Ok(Self { conn: Mutex::new(conn), next_id: AtomicU64::new(0) })
     }
 }
@@ -68,7 +69,7 @@ impl MemoryStore for SqliteMemoryStore {
             "INSERT INTO memory_facts (id, session_id, kind, payload_json) VALUES (?1, ?2, 'EPISODIC', ?3)",
             params![id, session_id, payload_json],
         )
-        .map_err(map_sqlite)?;
+        .map_err(|error| map_sqlite(&error))?;
 
         Ok(id)
     }
@@ -92,17 +93,17 @@ impl MemoryStore for SqliteMemoryStore {
                  ORDER BY id ASC
                  LIMIT ?2",
             )
-            .map_err(map_sqlite)?;
+            .map_err(|error| map_sqlite(&error))?;
 
         let rows = stmt
             .query_map(params![pattern, i64::try_from(top_k).unwrap_or(i64::MAX)], |row| {
                 row.get::<_, String>(0)
             })
-            .map_err(map_sqlite)?;
+            .map_err(|error| map_sqlite(&error))?;
 
         let mut matches = Vec::new();
         for row in rows {
-            let payload_json = row.map_err(map_sqlite)?;
+            let payload_json = row.map_err(|error| map_sqlite(&error))?;
             let content = serde_json::from_str::<serde_json::Value>(&payload_json)
                 .ok()
                 .and_then(|value| {
@@ -116,11 +117,11 @@ impl MemoryStore for SqliteMemoryStore {
     }
 }
 
-fn map_sqlite(error: rusqlite::Error) -> PortError {
+fn map_sqlite(error: &rusqlite::Error) -> PortError {
     PortError::Backend(format!("sqlite memory store: {error}"))
 }
 
-fn map_migrate(error: MigrateError) -> PortError {
+fn map_migrate(error: &MigrateError) -> PortError {
     PortError::Backend(format!("sqlite memory store migration: {error}"))
 }
 

@@ -24,6 +24,7 @@ Scheduled evidence:
 |----------|---------|----------------|
 | [`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml) | Weekdays 06:23 UTC + `workflow_dispatch` | Short ops/chaos smoke via [`scripts/ops-chaos-smoke.ps1`](../../scripts/ops-chaos-smoke.ps1): `/healthz` vs `/readyz` separation, metrics shape checks, light load burst, process-kill recovery. Smoke phases target **&lt;2 min** once the daemon binary is built. |
 | [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch` | Heavier concurrent load against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics` via [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1). |
+| [`.github/workflows/ops-gameday.yml`](../../.github/workflows/ops-gameday.yml) | Quarterly (manual) + `workflow_dispatch` | Game-day evidence pass: same short chaos smoke with `-EvidencePath` → `gameday-evidence.json` artifact. See [Game-day cadence](#game-day-cadence). |
 
 Prometheus SLO alert rules live in
 [`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) and are meant
@@ -99,16 +100,28 @@ App-level JSON (`/api/metrics`) stays the product summary. RED exporters must
 
 ## Alert stubs
 
-Placeholders only — no pager routing wired. Severity policy for when alerts
-land; until then, operators use the runbook triage table.
+Severity policy for when alerts land. **Promoted** rules use shipped RED or
+scrape metrics and load from [`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml).
+**Stub** rules need ingest/replay counters or blackbox probes — see
+[`alerts.md`](alerts.md).
 
-| Alert ID | Condition (stub) | Severity | Route (stub) | Runbook |
-|----------|------------------|----------|--------------|---------|
-| `SL-READYZ-DOWN` | `/readyz` ≠ 200 for &gt; 2m while process up | P2 | Slack `#sessionledger-ops` (TBD) | [`runbook.md`](runbook.md) — Health check |
-| `SL-HEALTHZ-DOWN` | `/healthz` unreachable for &gt; 1m | P1 | PagerDuty service TBD | [`runbook.md`](runbook.md) — Common failures |
-| `SL-INGEST-ERROR-BUDGET` | Ingest error rate &gt; 5% over 15m | P2 | Slack (TBD) | friction-log + validate OKF |
-| `SL-REPLAY-LATENCY` | Replay TTFB p95 &gt; 2s (fixtures) | P3 | None (friction-log) | Manual fixture replay |
-| `SL-METRICS-STALE` | `/metrics` unavailable for &gt; 5m | P3 | Slack (TBD) | [`runbook.md`](runbook.md) — Metrics |
+| Alert ID | Condition | Severity | Route (evidence) | Status | Runbook |
+|----------|-----------|----------|------------------|--------|---------|
+| `SessionLedgerDaemonScrapeDown` | `up{job="sl-daemon"} == 0` for 2m | P1 / `warning` | Alertmanager → `sessionledger-webhook-placeholder` | **Promoted** | [`runbook.md`](runbook.md) — Common failures |
+| `SessionLedgerDaemonScrapeMissing` | `absent(up{job="sl-daemon"})` for 5m | P2 / `warning` | Alertmanager placeholder | **Promoted** | [`dashboards/README.md`](dashboards/README.md) |
+| `SessionLedgerFastErrorBudgetBurn` | HTTP error ratio &gt; 5% / 5m | P2 / `warning` | Alertmanager placeholder | **Promoted** | [`runbook.md`](runbook.md) — Common failures |
+| `SessionLedgerSlowErrorBudgetBurn` | HTTP error ratio &gt; 1% / 1h | P3 / `info` | Alertmanager placeholder | **Promoted** | friction-log |
+| `SessionLedgerHighMeanLatency` | mean HTTP latency &gt; 1s / 10m | P3 / `info` | Alertmanager placeholder | **Promoted** | [`runbook.md`](runbook.md) — Common failures |
+| `SessionLedgerRedMetricsMissing` | scrape up but no `sl_http_requests_total` | P2 / `warning` | Alertmanager placeholder | **Promoted** | [`runbook.md`](runbook.md) — Metrics |
+| `SL-READYZ-DOWN` | `/readyz` ≠ 200 while process up | P2 | Slack `#sessionledger-ops` (TBD) | **Stub** (no probe metric) | [`runbook.md`](runbook.md) — Health check |
+| `SL-HEALTHZ-DOWN` | `/healthz` unreachable | P1 | PagerDuty service TBD | **Stub** (use scrape-down) | [`runbook.md`](runbook.md) — Common failures |
+| `SL-INGEST-ERROR-BUDGET` | Ingest error rate &gt; 5% / 15m | P2 | Slack (TBD) | **Stub** (no ingest counters) | friction-log + validate OKF |
+| `SL-REPLAY-LATENCY` | Replay TTFB p95 &gt; 2s | P3 | None (friction-log) | **Stub** (no histogram) | Manual fixture replay |
+| `SL-METRICS-STALE` | `/metrics` unavailable &gt; 5m | P3 | Slack (TBD) | **Promoted** (scrape `up`) | [`runbook.md`](runbook.md) — Metrics |
+
+Liveness/readiness separation is proven by [`ops-chaos-smoke.ps1`](../../scripts/ops-chaos-smoke.ps1)
+and quarterly [`gameday-evidence.json`](fixtures/gameday-evidence.sample.json)
+until blackbox `probe_*` metrics exist.
 
 See also [`alerts.md`](alerts.md) for copy-paste stub definitions and
 [`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) for
@@ -143,7 +156,43 @@ alertmanager --config.file=/etc/alertmanager/alertmanager.yaml
 
 The in-tree placeholder routes `job="sl-daemon"` alerts to
 `sessionledger-webhook-placeholder`; it is evidence wiring, not a production
-receiver.
+receiver. Runnable PromQL and the severity→receiver mapping table live in
+[`alerts.md`](alerts.md#alert-routing-evidence).
+
+## Game-day cadence
+
+Automated weekday chaos smoke (#184) and weekly load smoke cover steady-state
+regression. **Game-day** is a quarterly, operator-led pass that proves alert
+routing intent against shipped RED metrics without a long multi-host soak.
+
+### Calendar
+
+| Cadence | When | Workflow / script | Artifact |
+|---------|------|-------------------|----------|
+| Weekday smoke | Mon–Fri 06:23 UTC | [`ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml) | CI job log |
+| Weekly load | Mon 09:17 UTC | [`ops-load.yml`](../../.github/workflows/ops-load.yml) | CI job log |
+| **Quarterly game-day** | First **Wednesday** of Jan, Apr, Jul, Oct (local ops TZ) | [`ops-gameday.yml`](../../.github/workflows/ops-gameday.yml) or local script below | `gameday-evidence.json` |
+
+Quarterly game-day does **not** add a cron — dispatch the workflow or run the
+script locally and archive the JSON with the friction log for the quarter.
+
+### Game-day checklist
+
+Run on a clean branch at or after the quarterly date. Target wall time **&lt;5 min**
+(build + short chaos smoke).
+
+| Step | Action | Pass criteria |
+|------|--------|---------------|
+| 1. Dispatch evidence | GitHub **Actions → Ops Game Day Evidence → Run workflow**, or locally: `pwsh ./scripts/ops-chaos-smoke.ps1 -DaemonPath <sl-daemon> -EvidencePath docs/ops/fixtures/gameday-evidence.json` after `cargo build -p sl-daemon` | Exit code 0; `outcome: pass` in JSON |
+| 2. Validate RED snapshot | Open uploaded `gameday-evidence.json` (sample: [`fixtures/gameday-evidence.sample.json`](fixtures/gameday-evidence.sample.json)) | `redMetrics` shows aggregate counters; `route_labels` / `histogram_buckets` true after load phases |
+| 3. Load Prometheus rules | `promtool check rules docs/ops/alerts/sessionledger-slo.yaml` (or Prometheus UI → Status → Rules) | Rules compile; `SessionLedger*` alerts present |
+| 4. Exercise PromQL | Paste aggregate queries from [`alerts.md`](alerts.md#promql-for-shipped-red-metrics) into Prometheus against a scraped `job="sl-daemon"` target | Queries return data (or `NaN` when idle — not an error) |
+| 5. Review routing placeholder | Inspect [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml) matchers vs [`alerts.md` routing table](alerts.md#alert-routing-evidence) | `job="sl-daemon"` routes to placeholder receiver; severity labels documented |
+| 6. Manual triage drill | Pick one promoted alert (e.g. `SessionLedgerFastErrorBudgetBurn`); walk [`runbook.md`](runbook.md#common-failures) | Operator can reach runbook anchor without a live page |
+| 7. Archive | Store JSON + friction-log note in release/ops notes | Quarter labeled (e.g. `2026-Q3-gameday`) |
+
+Multi-host steady-state hypothesis remains future work (issue #65); game-day
+evidence documents single-replica chaos + alert **intent**, not production paging.
 
 ## OpenTelemetry (feature-gated sketch — issue #65)
 

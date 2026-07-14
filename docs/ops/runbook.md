@@ -128,6 +128,30 @@ pwsh ./scripts/audit-review.ps1 -DataDir ./.sl-data -Since "2026-07-01" `
 Audit review does not use HTTP; keep `sl serve` on loopback and treat exported
 bundles like security-sensitive local metadata.
 
+### Game-day chaos evidence
+
+Quarterly game-day uses the same short smoke harness with machine-readable
+evidence (schema `sessionledger.gameday-evidence.v1`). Full calendar and
+checklist: [`observability.md`](observability.md#game-day-cadence).
+
+**CI (recommended):** GitHub **Actions → Ops Game Day Evidence → Run workflow**
+— uploads `gameday-evidence.json` as an artifact.
+
+**Local:**
+
+```powershell
+cargo build -p sl-daemon
+$daemon = Join-Path (cargo metadata --format-version 1 --no-deps --manifest-path crates/sl-daemon/Cargo.toml | ConvertFrom-Json).target_directory "debug/sl-daemon"
+pwsh ./scripts/ops-chaos-smoke.ps1 `
+  -DaemonPath $daemon `
+  -EvidencePath docs/ops/fixtures/gameday-evidence.json
+```
+
+Sample output shape: [`fixtures/gameday-evidence.sample.json`](fixtures/gameday-evidence.sample.json).
+After the run, exercise PromQL from [`alerts.md`](alerts.md#promql-for-shipped-red-metrics)
+against a scraped target and walk one row of the
+[routing table](alerts.md#alert-routing-evidence).
+
 ## Common failures
 
 | Symptom | Likely cause | Fix |
@@ -174,8 +198,8 @@ until each module reaches 85%.
 
 ## Related
 
-- [`observability.md`](observability.md) — SLO stubs, RED map, `/healthz` vs `/readyz`, OTel/#65
-- [`alerts.md`](alerts.md) — alert rule stubs (not wired)
+- [`observability.md`](observability.md) — SLO stubs, RED map, `/healthz` vs `/readyz`, game-day cadence, OTel/#65
+- [`alerts.md`](alerts.md) — PromQL, routing evidence, rule promotion status
 - [`WBS.md`](WBS.md) — phased project and organization work packages
 - [`GAP_QA_MATRIX.md`](GAP_QA_MATRIX.md) — current audit and acceptance gaps
 - [`TRACEABILITY.json`](TRACEABILITY.json) — machine-readable status SSOT

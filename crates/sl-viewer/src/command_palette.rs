@@ -157,6 +157,7 @@ pub fn CommandPalette(
                             "command-palette-option"
                         },
                         role: "option",
+                        "aria-label": "{cmd.label}",
                         "aria-selected": if active_idx() == i { "true" } else { "false" },
                         tabindex: if active_idx() == i { "0" } else { "-1" },
                         onclick: move |_| {

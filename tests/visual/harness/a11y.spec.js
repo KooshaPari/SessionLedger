@@ -118,8 +118,12 @@ test("command palette Focus search switches to Search and focuses the filter", a
   page,
 }) => {
   await page.goto("/");
+  const palette = page.locator('[data-testid="command-palette-dialog"]');
   await page.keyboard.press("Control+k");
-  await page.getByRole("option", { name: /Focus search/ }).click();
+  await expect(palette).toHaveCount(1);
+  const focusSearch = page.getByRole("option", { name: /Focus search/ });
+  await expect(focusSearch).toBeVisible();
+  await focusSearch.click();
   await expect(page.getByRole("tab", { name: "Search" })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -130,8 +134,12 @@ test("command palette Focus search switches to Search and focuses the filter", a
 test("command palette Open keyboard help opens the help overlay", async ({ page }) => {
   await page.goto("/");
   const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
+  const palette = page.locator('[data-testid="command-palette-dialog"]');
   await page.keyboard.press("Control+k");
-  await page.getByRole("option", { name: /Open keyboard help/ }).click();
+  await expect(palette).toHaveCount(1);
+  const openHelp = page.getByRole("option", { name: /Open keyboard help/ });
+  await expect(openHelp).toBeVisible();
+  await openHelp.click();
   await expect(helpDialog).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Keyboard shortcuts" })).toBeVisible();
 });
@@ -142,8 +150,12 @@ test("command palette Next view tab advances the active tab", async ({ page }) =
     "aria-selected",
     "true",
   );
+  const palette = page.locator('[data-testid="command-palette-dialog"]');
   await page.keyboard.press("Control+k");
-  await page.getByRole("option", { name: /Next view tab/ }).click();
+  await expect(palette).toHaveCount(1);
+  const nextTab = page.getByRole("option", { name: /Next view tab/ });
+  await expect(nextTab).toBeVisible();
+  await nextTab.click();
   await expect(page.getByRole("tab", { name: "History" })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -156,8 +168,12 @@ test("command palette Clear search resets filters on the Search tab", async ({ p
   await page.getByRole("tab", { name: "Search", exact: true }).click();
   const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
   await since.fill("2026-01-01");
+  const palette = page.locator('[data-testid="command-palette-dialog"]');
   await page.keyboard.press("Control+k");
-  await page.getByRole("option", { name: /Clear search/ }).click();
+  await expect(palette).toHaveCount(1);
+  const clearSearch = page.getByRole("option", { name: /Clear search/ });
+  await expect(clearSearch).toBeVisible();
+  await clearSearch.click();
   await expect(page.getByRole("tab", { name: "Search" })).toHaveAttribute(
     "aria-selected",
     "true",

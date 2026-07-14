@@ -89,11 +89,15 @@ fn urlencoding(s: &str) -> String {
         .collect()
 }
 
+/// Stable id for search fetch errors — paired with `aria-errormessage` on fields.
+const SEARCH_ERROR_ID: &str = "search-error-message";
+
 /// Search / filter panel.
 ///
 /// Input fields: `since`, `until`, `model`, `min_tokens`, `tags` (comma-
 /// separated), `limit`.  Clicking **Search** fires `GET /api/search` on the
-/// sl-daemon and renders results as bundle cards.  **Clear** resets all fields.
+/// sl-daemon and renders results as bundle cards.  **Clear** asks for a
+/// lightweight confirmation before wiping filters, results, and errors.
 #[component]
 pub fn SearchView() -> Element {
     let mut since = use_signal(String::new);
@@ -110,10 +114,11 @@ pub fn SearchView() -> Element {
 
     let mut search_tick: Signal<u32> = use_signal(|| 0u32);
     let mut zero_match: Signal<bool> = use_signal(|| false);
+    let mut clear_pending: Signal<bool> = use_signal(|| false);
 
     if query_fixture_active("search-empty") {
         return rsx! {
-            SearchFixtureChrome {}
+            SearchFixtureChrome { invalid: false }
             div { class: "search-results",
                 div {
                     class: "search-empty",
@@ -126,12 +131,13 @@ pub fn SearchView() -> Element {
 
     if query_fixture_active("search-error") {
         return rsx! {
-            SearchFixtureChrome {}
+            SearchFixtureChrome { invalid: true }
             div { class: "search-results",
                 ErrorState {
                     message: "daemon not reachable: connection refused (visual fixture)".to_owned(),
                     retryable: true,
                     on_retry: move |_| {},
+                    error_id: SEARCH_ERROR_ID.to_owned(),
                 }
             }
         };
@@ -149,9 +155,11 @@ pub fn SearchView() -> Element {
         let mut error = error;
         let mut loading = loading;
         let mut zero_match = zero_match;
+        let mut clear_pending = clear_pending;
 
         loading.set(true);
         error.set(None);
+        clear_pending.set(false);
 
         spawn(async move {
             match reqwest_search(&url).await {
@@ -170,7 +178,22 @@ pub fn SearchView() -> Element {
         });
     });
 
-    let on_clear = move |_| {
+    let on_clear_request = move |_| {
+        let clearable = !since().is_empty()
+            || !until().is_empty()
+            || !model().is_empty()
+            || !min_tokens().is_empty()
+            || !tags().is_empty()
+            || limit() != "50"
+            || !results.is_empty()
+            || error().is_some()
+            || zero_match();
+        if clearable {
+            clear_pending.set(true);
+        }
+    };
+
+    let on_clear_confirm = move |_| {
         since.set(String::new());
         until.set(String::new());
         model.set(String::new());
@@ -181,10 +204,18 @@ pub fn SearchView() -> Element {
         error.set(None);
         selected_idx.set(None);
         zero_match.set(false);
+        clear_pending.set(false);
+    };
+
+    let on_clear_cancel = move |_| {
+        clear_pending.set(false);
     };
 
     let result_count = results.len();
     let plural = if result_count == 1 { "" } else { "s" };
+    let has_error = error().is_some();
+    let invalid_attr = if has_error { "true" } else { "false" };
+    let errormessage_attr = if has_error { SEARCH_ERROR_ID } else { "" };
 
     rsx! {
         div {
@@ -192,6 +223,10 @@ pub fn SearchView() -> Element {
             onkeydown: move |evt: Event<KeyboardData>| {
                 if evt.key() == Key::Escape {
                     evt.prevent_default();
+                    if clear_pending() {
+                        clear_pending.set(false);
+                        return;
+                    }
                     since.set(String::new());
                     until.set(String::new());
                     model.set(String::new());
@@ -201,6 +236,7 @@ pub fn SearchView() -> Element {
                     results.set(Vec::new());
                     error.set(None);
                     selected_idx.set(None);
+                    zero_match.set(false);
                 }
             },
             // ---- Filter form ----
@@ -215,6 +251,8 @@ pub fn SearchView() -> Element {
                         class: "search-input",
                         placeholder: "2024-01-01",
                         value: "{since}",
+                        "aria-invalid": "{invalid_attr}",
+                        "aria-errormessage": "{errormessage_attr}",
                         oninput: move |e| since.set(e.value()),
                     }
                     label { class: "search-label", r#for: "search-until", "Until (YYYY-MM-DD)" }
@@ -223,6 +261,8 @@ pub fn SearchView() -> Element {
                         class: "search-input",
                         placeholder: "2024-12-31",
                         value: "{until}",
+                        "aria-invalid": "{invalid_attr}",
+                        "aria-errormessage": "{errormessage_attr}",
                         oninput: move |e| until.set(e.value()),
                     }
                     label { class: "search-label", r#for: "search-model", "Model (substring)" }
@@ -231,6 +271,8 @@ pub fn SearchView() -> Element {
                         class: "search-input",
                         placeholder: "claude",
                         value: "{model}",
+                        "aria-invalid": "{invalid_attr}",
+                        "aria-errormessage": "{errormessage_attr}",
                         oninput: move |e| model.set(e.value()),
                     }
                     label { class: "search-label", r#for: "search-min-tokens", "Min Tokens" }
@@ -240,6 +282,8 @@ pub fn SearchView() -> Element {
                         r#type: "number",
                         placeholder: "1000",
                         value: "{min_tokens}",
+                        "aria-invalid": "{invalid_attr}",
+                        "aria-errormessage": "{errormessage_attr}",
                         oninput: move |e| min_tokens.set(e.value()),
                     }
                     label { class: "search-label", r#for: "search-tags", "Tags (comma-separated)" }
@@ -248,6 +292,8 @@ pub fn SearchView() -> Element {
                         class: "search-input",
                         placeholder: "rust, ml",
                         value: "{tags}",
+                        "aria-invalid": "{invalid_attr}",
+                        "aria-errormessage": "{errormessage_attr}",
                         oninput: move |e| tags.set(e.value()),
                     }
                     label { class: "search-label", r#for: "search-limit", "Limit" }
@@ -256,6 +302,8 @@ pub fn SearchView() -> Element {
                         class: "search-input",
                         r#type: "number",
                         value: "{limit}",
+                        "aria-invalid": "{invalid_attr}",
+                        "aria-errormessage": "{errormessage_attr}",
                         oninput: move |e| limit.set(e.value()),
                     }
                 }
@@ -265,10 +313,44 @@ pub fn SearchView() -> Element {
                         onclick: move |_| search_tick.with_mut(|t| *t += 1),
                         if loading() { "Searching…" } else { "Search" }
                     }
-                    button {
-                        class: "search-btn",
-                        onclick: on_clear,
-                        "Clear"
+                    if clear_pending() {
+                        div {
+                            class: "search-clear-confirm",
+                            role: "alertdialog",
+                            "aria-modal": "false",
+                            "aria-labelledby": "search-clear-title",
+                            "aria-describedby": "search-clear-desc",
+                            "data-testid": "search-clear-confirm",
+                            p {
+                                id: "search-clear-title",
+                                style: "margin: 0 0 4px; font-size: 12px; font-weight: 600; color: #c8cdd6;",
+                                "Clear search?"
+                            }
+                            p {
+                                id: "search-clear-desc",
+                                style: "margin: 0 0 8px; font-size: 12px; color: #8b8fa3; max-width: 22rem;",
+                                "This removes filters, results, and any error message."
+                            }
+                            button {
+                                class: "search-btn search-btn-primary",
+                                "data-testid": "search-clear-confirm-btn",
+                                onclick: on_clear_confirm,
+                                "Confirm clear"
+                            }
+                            button {
+                                class: "search-btn",
+                                "data-testid": "search-clear-cancel-btn",
+                                onclick: on_clear_cancel,
+                                "Cancel"
+                            }
+                        }
+                    } else {
+                        button {
+                            class: "search-btn",
+                            "data-testid": "search-clear-btn",
+                            onclick: on_clear_request,
+                            "Clear"
+                        }
                     }
                 }
             }
@@ -280,6 +362,7 @@ pub fn SearchView() -> Element {
                         message: msg.clone(),
                         retryable: true,
                         on_retry: move |_| search_tick.with_mut(|t| *t += 1),
+                        error_id: SEARCH_ERROR_ID.to_owned(),
                     }
                 }
                 if loading() {
@@ -328,7 +411,9 @@ pub fn SearchView() -> Element {
 
 /// Static search chrome shared by visual fixture routes.
 #[component]
-fn SearchFixtureChrome() -> Element {
+fn SearchFixtureChrome(invalid: bool) -> Element {
+    let invalid_attr = if invalid { "true" } else { "false" };
+    let errormessage_attr = if invalid { SEARCH_ERROR_ID } else { "" };
     rsx! {
         div { class: "search-form",
             h2 { style: "padding: 16px 20px; margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8b8fa3; border-bottom: 1px solid #2a2d35;",
@@ -336,9 +421,23 @@ fn SearchFixtureChrome() -> Element {
             }
             div { class: "search-fields",
                 label { class: "search-label", r#for: "search-since-fixture", "Since (YYYY-MM-DD)" }
-                input { id: "search-since-fixture", class: "search-input", placeholder: "2024-01-01", readonly: true }
+                input {
+                    id: "search-since-fixture",
+                    class: "search-input",
+                    placeholder: "2024-01-01",
+                    readonly: true,
+                    "aria-invalid": "{invalid_attr}",
+                    "aria-errormessage": "{errormessage_attr}",
+                }
                 label { class: "search-label", r#for: "search-model-fixture", "Model (substring)" }
-                input { id: "search-model-fixture", class: "search-input", placeholder: "claude", readonly: true }
+                input {
+                    id: "search-model-fixture",
+                    class: "search-input",
+                    placeholder: "claude",
+                    readonly: true,
+                    "aria-invalid": "{invalid_attr}",
+                    "aria-errormessage": "{errormessage_attr}",
+                }
             }
             div { class: "search-actions",
                 button { class: "search-btn search-btn-primary", disabled: true, "Search" }

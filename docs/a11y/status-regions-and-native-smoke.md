@@ -8,6 +8,8 @@ Machine-claimable accessibility evidence for SessionLedger viewer **status visib
 | Check | Location | What it proves |
 |-------|----------|----------------|
 | Status region ARIA | `tests/visual/harness/a11y.spec.js` | `role=status` / `role=alert`, `aria-live`, `aria-busy` on fixture-driven loading, skeleton, and error surfaces |
+| Error-field association | `/?fixture=search-error` + Playwright | Search fields set `aria-invalid` / `aria-errormessage` to the alert id; Retry is `aria-describedby` the error detail |
+| Destructive clear confirm | Search tab Clear | Lightweight `alertdialog` before wiping filters/results/errors (Escape still clears immediately for keyboard recovery) |
 | Long-operation patience hint | `/?fixture=loading-long` + Playwright | Plain-language ETA-style copy for operations that may exceed ~10s |
 | Stream skeleton status | `/?fixture=stream-skeleton` + Playwright | Live Feed connecting state exposes content-shaped skeleton + labelled status badge |
 | Reduced motion | `a11y.spec.js` | Spinner animation flattened under `prefers-reduced-motion: reduce` (global guard in `app.rs`) |
@@ -31,7 +33,7 @@ npx playwright test a11y.spec.js
 |-------|-----|-------------------|
 | `/?fixture=skeleton` | Bundles | `ContentSkeleton` (`aria-busy`, `aria-label`) |
 | `/?fixture=loading-long` | Bundles | `LoadingState` + patience hint for long loads |
-| `/?fixture=search-error` | Search | `ErrorState` (`role=alert`, Retry) |
+| `/?fixture=search-error` | Search | `ErrorState` (`role=alert`, Retry); fields expose `aria-invalid` + `aria-errormessage` pointing at the alert `id` |
 | `/?fixture=stream-skeleton` | Live Feed | Stream skeleton + `aria-label` status badge |
 
 ## Native WebView smoke checklist (manual, ~5 min)

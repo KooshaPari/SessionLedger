@@ -7,9 +7,11 @@ daemon's watcher contract (bounded queue + cooperative cancel) conserves
 messages without CI flakes.
 
 A **soft nightly Miri smoke** exercises the same `race_model` subset under the
-interpreter (UB / provenance). Full `loom` / `shuttle` permutation checkers
-remain follow-ups. Workspace `unsafe_code = forbid` still holds; Miri is an
-early soft gate toward those checkers, not a claim of unsafe coverage.
+interpreter (UB / provenance). A **soft loom smoke** explores a tiny cancel +
+capacity conservation model under `RUSTFLAGS='--cfg loom'`. Full loom / shuttle
+permutation checkers (and blocking Miri) remain unpaid. Workspace
+`unsafe_code = forbid` still holds; these soft gates are early evidence toward
+those checkers, not a claim of unsafe coverage.
 
 ## What runs in CI
 
@@ -17,8 +19,11 @@ early soft gate toward those checkers, not a claim of unsafe coverage.
 |----------|------|
 | [`tests/race_smoke.rs`](../../tests/race_smoke.rs) | Threaded merge + OKF determinism across shuffled inputs |
 | [`tests/race_model.rs`](../../tests/race_model.rs) | Bounded `sync_channel` + cancel flag model of watcher `scan_once` |
-| [`.github/workflows/race-smoke.yml`](../../.github/workflows/race-smoke.yml) | Both tests, 3 OS × 3 repeats, `--test-threads=1` |
+| [`tests/loom_model.rs`](../../tests/loom_model.rs) | Tiny loom cancel/capacity model (`cfg(loom)` only) |
+| [`tests/loom_soft.rs`](../../tests/loom_soft.rs) | Hermetic SelfCheck for soft loom docs/workflow anchors |
+| [`.github/workflows/race-smoke.yml`](../../.github/workflows/race-smoke.yml) | Both race tests, 3 OS × 3 repeats, `--test-threads=1` |
 | [`.github/workflows/miri-smoke.yml`](../../.github/workflows/miri-smoke.yml) | Soft nightly / dispatch: `cargo miri test --test race_model` (`continue-on-error`) |
+| [`.github/workflows/loom-smoke.yml`](../../.github/workflows/loom-smoke.yml) | Soft SelfCheck + `RUSTFLAGS='--cfg loom'` `loom_model` (`continue-on-error`) |
 
 The model uses `try_send` (never blocks) and an `AtomicBool` cancel bit so
 assertions are conservation / capacity based — no sleeps, no OS event timing.
@@ -33,6 +38,26 @@ Daemon unit coverage for the same contract lives in
 `rusqlite`/`zstd` FFI via `[target.'cfg(not(miri))'.dev-dependencies]`.
 Schedule: nightly UTC; also `workflow_dispatch`. Failures surface as soft
 signals — they do not gate merges.
+
+### Soft loom smoke
+
+`loom-smoke.yml` is **non-blocking** (`continue-on-error: true`). It:
+
+1. Runs `scripts/loom-smoke-check.ps1 -SelfCheck` (docs/workflow/cfg anchors).
+2. Runs `cargo test --test loom_model --release` with `RUSTFLAGS='--cfg loom'`.
+
+Loom lives under `[target.'cfg(loom)'.dev-dependencies]` so ordinary
+`cargo test` never builds it. `tests/loom_model.rs` keeps a `#[cfg(not(loom))]`
+skip marker so the harness stays discoverable without special flags.
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| Soft loom SelfCheck | **done** | `scripts/loom-smoke-check.ps1 -SelfCheck` (+ `tests/loom_soft.rs`) |
+| Soft loom `loom_model` CI | **done** | `.github/workflows/loom-smoke.yml` (`continue-on-error`) |
+| Full loom / shuttle permutation checkers | **unpaid** | Broad broadcast/SSE/daemon graph still outside soft smoke |
+
+Schedule: nightly UTC + `pull_request` + `workflow_dispatch`. Soft failures do
+not gate merges.
 
 ## How to run locally
 
@@ -62,9 +87,22 @@ cargo +nightly miri setup
 cargo +nightly miri test --test race_model --locked -- --test-threads=1
 ```
 
+Soft loom SelfCheck (no loom download):
+
+```powershell
+pwsh ./scripts/loom-smoke-check.ps1 -SelfCheck
+```
+
+Soft loom permutation smoke (pulls loom under `--cfg loom` only):
+
+```powershell
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w31-c00-loom"
+$env:RUSTFLAGS = "--cfg loom"
+cargo test --test loom_model --release --locked -- --test-threads=1
+```
+
 ## Loom follow-up
 
-A `#[cfg(loom)]` permutation job is intentionally not wired yet: loom replaces
-`std` concurrency primitives and needs a dedicated `RUSTFLAGS='--cfg loom'`
-lane. When added, keep it off the default PR matrix so ordinary
-`cargo test` stays green without special flags.
+Full loom / shuttle coverage of daemon broadcast/SSE and a loom-native port of
+`race_model`'s `sync_channel` remain unpaid. Keep permutation jobs off the
+default PR matrix so ordinary `cargo test` stays green without special flags.

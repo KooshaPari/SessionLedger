@@ -49,8 +49,13 @@ Critical supply-chain or remote-code issues may be accelerated at maintainer dis
   verify the `main` tip is signed and to emit a branch-protection checklist.
   GitHub **Require signed commits** on `main` is the enforcement control; the
   checklist step is intentionally soft when admin API scope is unavailable in OSS.
+- Branch protection machine-verify:
+  [`scripts/branch-protection-check.ps1`](scripts/branch-protection-check.ps1) +
+  [`docs/ops/branch-protection.md`](docs/ops/branch-protection.md) +
+  [`.github/workflows/branch-protection.yml`](.github/workflows/branch-protection.yml)
+  (best-effort `gh api`; soft-skip without admin token; fork PRs continue-on-error).
 - Maintainer **2FA** is recommended org hygiene but is not attestable from this
-  repository (out of scope for commit-signing evidence).
+  repository (out of scope for commit-signing and branch-protection evidence).
 
 ## Supply Chain & SBOM
 

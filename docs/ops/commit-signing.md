@@ -54,8 +54,11 @@ configure the following in **Settings → Branches → Branch protection rules �
 - [ ] **Require a pull request before merging** (recommended)
 - [ ] **Do not allow bypassing the above settings** (recommended for admins)
 
-Record the date protection was enabled in an internal ops note; the repository
-ships a machine checklist (below) that queries GitHub when `gh` has admin scope.
+Record the date protection was enabled in an internal ops note. Dedicated
+machine-verify (best-effort `gh api`, skip without token/admin scope):
+[`branch-protection.md`](branch-protection.md) and
+`scripts/branch-protection-check.ps1`. The commit-signing checklist below remains
+a soft companion when `gh` has admin scope.
 
 ## Machine verification
 

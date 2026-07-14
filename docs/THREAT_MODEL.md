@@ -21,6 +21,7 @@ This is a **STRIDE-lite** model: each surface lists the relevant STRIDE categori
 
 - The host user who runs `sl-daemon` is trusted on that machine.
 - The product is **not** a multi-tenant or internet-facing service ([`docs/DESIGN.md`](DESIGN.md) non-goal).
+- Single-tenant privacy hygiene (PII in logs, retention, redaction before share, loopback trust) is documented in [`docs/ops/privacy-hygiene.md`](ops/privacy-hygiene.md) — not row-level isolation or in-tree redaction pipelines.
 - Network attackers on the LAN are **out of scope only if** the bind address stays loopback; binding to `0.0.0.0` changes the threat model.
 
 **Trust boundaries:**
@@ -142,6 +143,7 @@ Default bind: `127.0.0.1:8080` (`--http-bind`; `off` disables HTTP). CORS is **p
 ## 8. Related docs
 
 - [`SECURITY.md`](../SECURITY.md) — vulnerability reporting and disclosure
+- [`docs/ops/privacy-hygiene.md`](ops/privacy-hygiene.md) — single-tenant PII, retention, redaction, loopback trust
 - [`docs/DESIGN.md`](DESIGN.md) — architecture and non-goals
 - [`docs/reference/OKF-SPEC.md`](reference/OKF-SPEC.md) — OKF dialect
 - [`crates/sl-daemon/README.md`](../crates/sl-daemon/README.md) — daemon run modes

@@ -11,6 +11,10 @@ Cryptography inventory (hashing vs encryption-at-rest), Caddy/nginx TLS samples,
 and the explicit no-KMS posture:
 [`crypto-inventory.md`](crypto-inventory.md).
 
+Single-tenant privacy hygiene (PII in logs, transcript retention, redaction
+before export, loopback trust summary):
+[`privacy-hygiene.md`](privacy-hygiene.md).
+
 ## Bind modes and API-key gate
 
 | Bind | `SL_API_KEY` | Behavior |

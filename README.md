@@ -19,6 +19,33 @@
 - **Dark/light theme**: Lab-Coat #2563eb accent, #14b8a6 secondary
 - **Startup banner**: colored ANSI branding
 
+## Install
+
+Portable `sl-viewer` from [GitHub Releases](https://github.com/KooshaPari/SessionLedger/releases)
+(checksum-verified):
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scripts/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scripts/install.ps1 | iex
+```
+
+Pin a tag with `SL_VERSION=v0.1.0`. Review the script before piping it to a shell.
+
+Daemon / CLI from Git (developers):
+
+```bash
+cargo install --git https://github.com/KooshaPari/SessionLedger --locked --path crates/sl-daemon
+```
+
+Homebrew and winget manifests live under [`packaging/homebrew`](packaging/homebrew)
+and [`packaging/winget`](packaging/winget) (tap / winget-pkgs publish next). Channel
+status: [`packaging/channels.md`](packaging/channels.md).
+
 ## Quick Start
 ```
 make dev

@@ -20,11 +20,12 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Channel | Status | Notes |
 |---------|--------|-------|
 | GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing |
-| Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` installs the daemon/CLI from a checkout |
+| Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` or `cargo install --git … --path crates/sl-daemon` |
+| curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` Release archives |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
-| Installer script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS GitHub Release artifacts |
-| Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked on Release; PR CI runs unsigned clean-host portable install smoke on `windows-latest` (`clean-host-smoke-windows`) plus scaffold/doc checks on `ubuntu-latest`; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local |
-| Scoop / brew / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, formula, crate publication, DMG, or update automation exists yet |
+| Homebrew / winget | **Manifests in-repo, publish tap/PR next** | Formula template in `packaging/homebrew/`; Package/Installer/Locale YAML in `packaging/winget/` — fill digests from `SHA256SUMS`, then publish |
+| Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked on Release; PR CI runs unsigned clean-host portable install smoke on `windows-latest` (`clean-host-smoke-windows`) plus scaffold/doc checks on `ubuntu-latest`; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local. MSI/PKG lanes: see `packaging/` if concurrent |
+| Scoop / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, crate publication, DMG, or update automation exists yet |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 | Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
 
@@ -265,8 +266,8 @@ WiX MSI evaluation is documented in
 [`scripts/package-msi.md`](../../scripts/package-msi.md). See
 [`packaging/README.md`](../../packaging/README.md) for scaffold status.
 See [`packaging/channels.md`](../../packaging/channels.md) for the current
-cargo install path, GitHub Release archive channel, draft install script, and
-future Scoop/Homebrew placeholders.
+cargo install path, GitHub Release archive channel, curl/irm install scripts,
+Homebrew/winget in-repo manifests, and future Scoop placeholders.
 Run [`scripts/installer-lifecycle-smoke.ps1`](../../scripts/installer-lifecycle-smoke.ps1)
 for machine-checkable scaffold and lifecycle-documentation assertions. On
 `windows-latest` CI, pass `-WindowsInstallLifecycle` to exercise the unsigned
@@ -277,21 +278,30 @@ human/deferred steps under #66. See
 [Clean-host install/uninstall evidence (unsigned)](#clean-host-installuninstall-evidence-unsigned)
 for the manual checklist and CI artifact path.
 
-### Installer script draft (Linux / macOS)
+### Install scripts (Linux / macOS / Windows)
 
-The repository includes a documented but unpublished install-channel stub:
+Checksum-verified `sl-viewer` install from GitHub Releases:
 
 ```bash
+# Linux / macOS → ~/.local/bin/sl-viewer
 curl -fsSL https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scripts/install.sh | sh
 ```
 
-It resolves the latest GitHub Release, downloads the matching archive and
-`SHA256SUMS`, verifies the archive, and installs `sl-viewer` to
-`~/.local/bin`. Set `SL_VERSION=v0.1.0` to pin a release or `SL_INSTALL_DIR`
-to change the destination. Review the script before piping it to a shell.
+```powershell
+# Windows → %LOCALAPPDATA%\Programs\SessionLedger\sl-viewer.exe
+irm https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scripts/install.ps1 | iex
+```
 
-This is not a Homebrew formula or hosted installer service, and it does not
-enable automatic updates.
+Set `SL_VERSION=v0.1.0` to pin a release. On Unix, `SL_INSTALL_DIR` changes the
+destination; on Windows it defaults under LocalAppData. Review the script before
+piping it to a shell. These scripts do not enable automatic updates.
+
+Homebrew and winget packaging templates are in-repo
+([`packaging/homebrew/sessionledger.rb`](../../packaging/homebrew/sessionledger.rb),
+[`packaging/winget/`](../../packaging/winget/)); publish the tap / winget-pkgs PR
+after Release digests are filled. MSI/PKG work stays under `packaging/windows`
+and `packaging/macos` when those lanes are active — portable curl/irm install
+does not replace them.
 
 ### Traditional Linux systemd service
 

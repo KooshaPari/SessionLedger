@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "349/402",
-    "pct": 87,
+    "score": "353/402",
+    "pct": 88,
     "grade": "B",
-    "commit": "aa8267f",
-    "wave": "Wave-24"
+    "commit": "c60c205",
+    "wave": "Wave-25"
   },
   "fr": [
     {
@@ -653,6 +653,31 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.36",
+      "status": "done",
+      "evidence": [
+        "justfile",
+        "Taskfile.yml",
+        "scripts/runtime-up.sh",
+        "scripts/runtime-up.ps1",
+        "docs/ops/runtime-facade.md",
+        "scripts/install.sh",
+        "scripts/install.ps1",
+        "packaging/homebrew/sessionledger.rb",
+        "packaging/winget/",
+        "packaging/macos/",
+        "scripts/package-msi.ps1",
+        ".github/workflows/release.yml"
+      ]
+    },
+    {
+      "id": "WBS-8.37",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -831,12 +856,24 @@
     },
     {
       "id": "C11",
-      "score": "32/45",
+      "score": "36/45",
       "status": "partial",
       "evidence": [
         "docs/adr/0003-platform-code-signing.md",
         "Containerfile",
-        "scripts/installer-lifecycle-smoke.ps1"
+        "scripts/installer-lifecycle-smoke.ps1",
+        "justfile",
+        "Taskfile.yml",
+        "scripts/runtime-up.sh",
+        "scripts/runtime-up.ps1",
+        "docs/ops/runtime-facade.md",
+        "scripts/install.sh",
+        "scripts/install.ps1",
+        "packaging/homebrew/sessionledger.rb",
+        "packaging/winget/",
+        "packaging/macos/",
+        "scripts/package-msi.ps1",
+        ".github/workflows/release.yml"
       ]
     }
   ]

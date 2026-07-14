@@ -4,14 +4,17 @@ Status: **C02 L24** — operator guidance for a **single-user** local SessionLed
 install. This documents privacy hygiene on one host: what may contain PII, how
 long to keep it, how to scrub before sharing, and how loopback trust fits.
 
-This is **not** multi-tenant isolation, per-tenant row-level security, or an
-in-tree PII redaction pipeline. SessionLedger remains a local companion; see
-[`docs/DESIGN.md`](../DESIGN.md) non-goals.
+This is **not** multi-tenant isolation or per-tenant row-level security.
+SessionLedger remains a local companion; see [`docs/DESIGN.md`](../DESIGN.md)
+non-goals. A minimal opt-in string scrub helper lives in
+[`pii-redaction.md`](pii-redaction.md) (`src/pii_redact.rs`) — it is **not**
+wired into the ETL / HTTP pipeline automatically.
 
 Related: [`SECURITY.md`](../../SECURITY.md) (reporting + secret rotation),
 [`docs/THREAT_MODEL.md`](../THREAT_MODEL.md) (STRIDE-lite disclosure surfaces),
 [`local-trust-boundary.md`](local-trust-boundary.md) (bind + `SL_API_KEY` policy),
-[`observability.md`](observability.md) (log level discipline).
+[`observability.md`](observability.md) (log level discipline),
+[`pii-redaction.md`](pii-redaction.md) (in-tree email/API-key scrub helper).
 
 ## Single-tenant scope
 
@@ -64,14 +67,16 @@ Recommended single-user desktop policy:
 
 ## Redaction before export or share
 
-There is **no** automatic redaction pass in the ETL or HTTP API. Before OKF bundles,
-audit exports, or log excerpts leave the host:
+There is **no** automatic redaction pass in the ETL or HTTP API. An opt-in
+hermetic helper (`session_ledger::pii_redact::redact`) scrubs emails and common
+API-key shapes in strings — see [`pii-redaction.md`](pii-redaction.md). Before
+OKF bundles, audit exports, or log excerpts leave the host:
 
 | Step | Action |
 |------|--------|
 | 1. Scope | Export only the minimum `bundle_id` / date range required for the recipient. |
 | 2. Provenance | Strip or generalize `provenance`, `source_id`, and `corpus` when identifiers would leak who ran which session ([`OKF-SPEC.md` § Provenance leakage](../reference/OKF-SPEC.md#164-provenance-leakage)). |
-| 3. Entity text | Review `messages`, `labels`, and `properties` in OKF JSON for secrets, tokens, internal URLs, and customer data. |
+| 3. Entity text | Review `messages`, `labels`, and `properties` in OKF JSON for secrets, tokens, internal URLs, and customer data. Optionally run `pii_redact::redact` on text fields as a first pass. |
 | 4. Audit / logs | Use [`audit-review.ps1`](../../scripts/audit-review.ps1) filters; redact `resource` and `request_id` if they embed path or account hints. |
 | 5. Re-validate | Open the scrubbed file locally before upload; prefer encrypted transfer for anything still sensitive. |
 

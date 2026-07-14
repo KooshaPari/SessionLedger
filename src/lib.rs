@@ -24,6 +24,7 @@ pub mod export;
 pub mod i18n;
 pub mod ingestion;
 pub mod inject;
+pub mod pii_redact;
 pub mod ports;
 pub mod schema;
 pub mod viewer;

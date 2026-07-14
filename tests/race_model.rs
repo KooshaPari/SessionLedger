@@ -56,10 +56,7 @@ fn cancel_before_enqueue_emits_nothing() {
     drop(tx);
 
     assert_eq!(sent, 0, "pre-cancelled producer must not enqueue");
-    assert!(
-        rx.try_recv().is_err(),
-        "receiver must see an empty channel after pre-cancel"
-    );
+    assert!(rx.try_recv().is_err(), "receiver must see an empty channel after pre-cancel");
 }
 
 #[test]
@@ -68,16 +65,10 @@ fn bounded_capacity_is_respected_then_cancel_drains_exactly() {
     let cancel = AtomicBool::new(false);
 
     let sent = try_produce(&tx, &cancel, 0..(CAPACITY as u32 * 4));
-    assert_eq!(
-        sent, CAPACITY,
-        "try_send must stop at capacity without blocking"
-    );
+    assert_eq!(sent, CAPACITY, "try_send must stop at capacity without blocking");
 
     // Further enqueues fail while full; cancel then forbids retries.
-    assert!(matches!(
-        tx.try_send(99),
-        Err(TrySendError::Full(_))
-    ));
+    assert!(matches!(tx.try_send(99), Err(TrySendError::Full(_))));
     cancel.store(true, Ordering::Release);
     assert_eq!(try_produce(&tx, &cancel, 100..110), 0);
 
@@ -125,10 +116,8 @@ fn concurrent_producers_conserve_messages_under_cancel() {
         received.push(v);
     }
 
-    let per_worker: Vec<usize> = handles
-        .into_iter()
-        .map(|h| h.join().expect("producer must not panic"))
-        .collect();
+    let per_worker: Vec<usize> =
+        handles.into_iter().map(|h| h.join().expect("producer must not panic")).collect();
     let expected = sent_total.load(Ordering::Relaxed);
     assert_eq!(
         per_worker.iter().sum::<usize>(),
@@ -142,11 +131,7 @@ fn concurrent_producers_conserve_messages_under_cancel() {
     );
 
     let unique: HashSet<_> = received.iter().copied().collect();
-    assert_eq!(
-        unique.len(),
-        received.len(),
-        "message ids must be unique across producers"
-    );
+    assert_eq!(unique.len(), received.len(), "message ids must be unique across producers");
     // Outstanding buffered messages cannot exceed the sync_channel capacity
     // at any instant; total drained can exceed capacity because the consumer
     // ran concurrently with producers before drop(tx). Cap the loose bound by

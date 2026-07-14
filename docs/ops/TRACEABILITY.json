@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "362/402",
-    "pct": 90,
+    "score": "365/402",
+    "pct": 91,
     "grade": "A",
-    "commit": "495b3a8",
-    "wave": "Wave-28"
+    "commit": "0bc319d",
+    "wave": "Wave-29"
   },
   "fr": [
     {
@@ -725,6 +725,29 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.42",
+      "status": "done",
+      "evidence": [
+        "docs/ops/signing-readiness.md",
+        "scripts/signing-readiness-check.ps1",
+        ".github/workflows/release.yml",
+        "docs/ops/crypto-inventory.md",
+        "scripts/crypto-inventory-check.ps1",
+        "docs/ops/token-burn.json",
+        "scripts/token-burn-check.ps1",
+        "crates/sl-viewer/src/command_palette.rs",
+        "docs/ops/alloc-profile.md",
+        "scripts/alloc-profile-check.ps1"
+      ]
+    },
+    {
+      "id": "WBS-8.43",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -748,6 +771,9 @@
         "tests/allocation_budget.rs",
         "scripts/allocation-budget-check.ps1",
         "docs/ops/allocation-budget.json",
+        "docs/ops/alloc-profile.md",
+        "scripts/alloc-profile-check.ps1",
+        "tests/alloc_profile_dhat.rs",
         "tests/race_model.rs",
         "docs/ops/concurrency-safety.md",
         ".github/workflows/race-smoke.yml"
@@ -772,13 +798,16 @@
     },
     {
       "id": "C02",
-      "score": "26/30",
+      "score": "27/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/audit.rs",
         "crates/sl-daemon/src/http.rs",
         "crates/sl-daemon/src/main.rs",
+        "crates/sl-daemon/src/resilience.rs",
         "docs/ops/local-trust-boundary.md",
+        "docs/ops/crypto-inventory.md",
+        "scripts/crypto-inventory-check.ps1",
         "scripts/audit-review.ps1"
       ]
     },
@@ -843,7 +872,7 @@
         "scripts/oci-cosign-verify.ps1",
         "docs/ops/distribution.md"
       ],
-      "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and release-blocking OCI attest"
+      "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and unconditional release-blocking OCI attest"
     },
     {
       "id": "C07",
@@ -868,7 +897,7 @@
     },
     {
       "id": "C08",
-      "score": "25/30",
+      "score": "26/30",
       "status": "partial",
       "evidence": [
         "docs/ops/eval-manifest.json",
@@ -876,6 +905,9 @@
         "docs/reference/conformance/README.md",
         "docs/ops/eval-reproducibility.md",
         "docs/reference/conformance/fixtures/",
+        "docs/ops/token-burn.json",
+        "scripts/token-burn-check.ps1",
+        "tests/compression_eval.rs",
         ".github/workflows/bench-gate.yml",
         "docs/ops/perf-baseline.json",
         "scripts/bench-gate.ps1"
@@ -883,10 +915,11 @@
     },
     {
       "id": "C09",
-      "score": "40/45",
+      "score": "41/45",
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/help_overlay.rs",
+        "crates/sl-viewer/src/command_palette.rs",
         "docs/HELP.md",
         "docs/a11y/status-regions-and-native-smoke.md",
         "docs/a11y/screen-reader-smoke.md",
@@ -926,6 +959,8 @@
       "status": "partial",
       "evidence": [
         "docs/adr/0003-platform-code-signing.md",
+        "docs/ops/signing-readiness.md",
+        "scripts/signing-readiness-check.ps1",
         "Containerfile",
         "scripts/installer-lifecycle-smoke.ps1",
         "justfile",

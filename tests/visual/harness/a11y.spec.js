@@ -77,7 +77,9 @@ test("question mark opens keyboard help and Escape closes it", async ({ page }) 
   const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
   await expect(helpDialog).toHaveCount(0);
 
-  await page.keyboard.press("?");
+  // Focus the document shell, then send Shift+/ (produces "?" reliably in Chromium).
+  await page.locator("body").click({ position: { x: 8, y: 8 } });
+  await page.keyboard.press("Shift+/");
   await expect(helpDialog).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Keyboard shortcuts" })).toBeVisible();
 

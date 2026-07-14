@@ -7,7 +7,7 @@ use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::{query_fixture_active, visual_fixture_active};
-use crate::help_overlay::{typing_focus_active, HelpOverlay};
+use crate::help_overlay::HelpOverlay;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
@@ -190,57 +190,73 @@ pub fn App() -> Element {
         }
     };
 
+    // Drive help open/close from a document keydown bridge so Playwright/`?`
+    // updates run inside the Dioxus runtime (raw wasm_bindgen Closures do not).
     #[cfg(feature = "web")]
     {
-        let help_open = help_open;
-        use_effect(move || {
-            use wasm_bindgen::closure::Closure;
-            use wasm_bindgen::JsCast;
-            use web_sys::KeyboardEvent;
-
-            let mut help_open = help_open;
-            let listener = Closure::<dyn FnMut(KeyboardEvent)>::wrap(Box::new(
-                move |event: KeyboardEvent| {
-                    if typing_focus_active() {
-                        return;
+        let mut help_open = help_open;
+        use_future(move || async move {
+            let _ = document::eval(
+                r#"
+                if (!window.__slHelpKeyBridge) {
+                  window.__slHelpKeyBridge = true;
+                  document.addEventListener('keydown', (e) => {
+                    const el = document.activeElement;
+                    const tag = (el && el.tagName) || '';
+                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable)) {
+                      return;
                     }
-                    match event.key().as_str() {
-                        "?" => {
-                            event.prevent_default();
-                            let next = !help_open();
-                            help_open.set(next);
-                            if next {
-                                let _ = document::eval(
-                                    "window.requestAnimationFrame(() => document.querySelector('.help-overlay-close')?.focus());",
-                                );
-                            } else {
-                                let _ = document::eval(
-                                    "document.getElementById('viewer-help-button')?.focus();",
-                                );
-                            }
-                        }
-                        "Escape" if help_open() => {
-                            event.prevent_default();
-                            help_open.set(false);
+                    const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
+                    if (isHelp) {
+                      e.preventDefault();
+                      window.dispatchEvent(new CustomEvent('sl-help', { detail: 'toggle' }));
+                    } else if (e.key === 'Escape') {
+                      window.dispatchEvent(new CustomEvent('sl-help', { detail: 'escape' }));
+                    }
+                  }, true);
+                }
+                "#,
+            )
+            .await;
+
+            loop {
+                let mut eval = document::eval(
+                    r#"
+                    return await new Promise((resolve) => {
+                      window.addEventListener(
+                        'sl-help',
+                        (e) => resolve(String(e.detail || '')),
+                        { once: true },
+                      );
+                    });
+                    "#,
+                );
+                let Ok(action) = eval.recv::<String>().await else {
+                    break;
+                };
+                match action.as_str() {
+                    "toggle" => {
+                        let next = !help_open();
+                        help_open.set(next);
+                        if next {
+                            let _ = document::eval(
+                                "window.requestAnimationFrame(() => document.querySelector('.help-overlay-close')?.focus());",
+                            );
+                        } else {
                             let _ = document::eval(
                                 "document.getElementById('viewer-help-button')?.focus();",
                             );
                         }
-                        _ => {}
                     }
-                },
-            ));
-
-            let document = web_sys::window()
-                .and_then(|w| w.document())
-                .expect("document");
-            document
-                .add_event_listener_with_callback(
-                    "keydown",
-                    listener.as_ref().unchecked_ref(),
-                )
-                .expect("register global keydown listener");
-            listener.forget();
+                    "escape" if help_open() => {
+                        help_open.set(false);
+                        let _ = document::eval(
+                            "document.getElementById('viewer-help-button')?.focus();",
+                        );
+                    }
+                    _ => {}
+                }
+            }
         });
     }
 

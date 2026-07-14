@@ -55,3 +55,22 @@ continuation payloads usually imply less context transferred, stored, and
 eventually rehydrated into prompt material. The CI assertion is about byte
 ratio plus a positive token-burn proxy; the token estimate remains a coarse
 planning signal rather than a billing metric.
+
+## Per-Fixture Token Ledger
+
+Harbor per-eval token-burn ledgers stay **N/A** (see
+[`EVAL_SCOPE.md`](../EVAL_SCOPE.md)). SessionLedger instead pins a shallow
+**per-fixture planning ledger** on the compression/token OKF family: intent
+`token_estimate` fields must sum to the gate `total_token_estimate` recorded in
+each fixture and in [`token-burn.json`](token-burn.json).
+
+Hermetic smoke (no daemon):
+
+```powershell
+pwsh ./scripts/token-burn-check.ps1 -SelfCheck
+```
+
+Operator contract: [`token-burn.md`](token-burn.md). The Rust companion test
+`compress_token_fixtures_per_eval_token_ledger_matches_gate` in
+`tests/compression_eval.rs` re-checks the same sums inside the `compress`
+feature gate.

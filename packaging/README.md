@@ -7,7 +7,10 @@ Mobile presence is intentionally Soft / N-A for the current desktop-plus-daemon
 scope; see [`docs/adr/0002-mobile-presence.md`](../docs/adr/0002-mobile-presence.md).
 Install channel status is tracked in [`channels.md`](channels.md). A traditional
 Linux service unit lives at
-[`systemd/sessionledger-daemon.service`](systemd/sessionledger-daemon.service).
+[`systemd/sessionledger-daemon.service`](systemd/sessionledger-daemon.service);
+TLS edge samples are
+[`caddy/Caddyfile`](caddy/Caddyfile) and
+[`nginx/sessionledger.conf`](nginx/sessionledger.conf).
 
 ## Prerequisites
 

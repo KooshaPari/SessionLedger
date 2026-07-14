@@ -6,6 +6,7 @@ use crate::async_states::{
 };
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
+use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active, visual_fixture_active};
@@ -184,6 +185,7 @@ pub fn App() -> Element {
 
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let mut help_open: Signal<bool> = use_signal(|| false);
+    let mut palette_open: Signal<bool> = use_signal(|| false);
     let colors = ThemeColors::dark();
 
     let mut close_help = move || {
@@ -192,6 +194,7 @@ pub fn App() -> Element {
     };
 
     let mut open_help = move || {
+        palette_open.set(false);
         help_open.set(true);
         let _ = document::eval(
             "window.requestAnimationFrame(() => document.querySelector('.help-overlay-close')?.focus());",
@@ -206,8 +209,29 @@ pub fn App() -> Element {
         }
     };
 
-    // Global `?` / Escape: click the existing Help / close controls so Dioxus
-    // onclick handlers own state (avoids wasm Closure / eval bridge re-render gaps).
+    let mut close_palette = move || {
+        palette_open.set(false);
+        let _ = document::eval("document.getElementById('viewer-palette-button')?.focus();");
+    };
+
+    let mut open_palette = move || {
+        help_open.set(false);
+        palette_open.set(true);
+        let _ = document::eval(
+            "window.requestAnimationFrame(() => document.querySelector('.command-palette-option.is-active')?.focus());",
+        );
+    };
+
+    let mut toggle_palette = move || {
+        if palette_open() {
+            close_palette();
+        } else {
+            open_palette();
+        }
+    };
+
+    // Global `?` / Cmd+K / Escape: click existing controls so Dioxus onclick
+    // handlers own state (avoids wasm Closure / eval bridge re-render gaps).
     #[cfg(feature = "web")]
     use_effect(|| {
         let hold_splash = splash_hold_fixture_active();
@@ -232,7 +256,16 @@ pub fn App() -> Element {
               document.addEventListener('keydown', (e) => {{
                 const el = document.activeElement;
                 const tag = (el && el.tagName) || '';
-                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable)) {{
+                const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable);
+
+                // Cmd+K / Ctrl+K — open palette even while typing in fields.
+                if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {{
+                  e.preventDefault();
+                  document.getElementById('viewer-palette-button')?.click();
+                  return;
+                }}
+
+                if (typing) {{
                   return;
                 }}
                 const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
@@ -242,6 +275,12 @@ pub fn App() -> Element {
                   return;
                 }}
                 if (e.key === 'Escape') {{
+                  const paletteClose = document.querySelector('.command-palette-close');
+                  if (paletteClose) {{
+                    e.preventDefault();
+                    paletteClose.click();
+                    return;
+                  }}
                   const closeBtn = document.querySelector('.help-overlay-close');
                   if (closeBtn) {{
                     e.preventDefault();
@@ -269,6 +308,27 @@ pub fn App() -> Element {
     let mut activate = move |tab: Tab| {
         active_tab.set(tab);
         let _ = document::eval(&format!("document.getElementById('{}')?.focus();", tab.id()));
+    };
+
+    let mut run_palette_action = move |action: PaletteAction| {
+        palette_open.set(false);
+        match action {
+            PaletteAction::FocusSearch => {
+                active_tab.set(Tab::Search);
+                let _ = document::eval(
+                    r#"
+                    window.requestAnimationFrame(() => {
+                      const el = document.getElementById('search-since')
+                        || document.getElementById('search-since-fixture');
+                      el?.focus();
+                    });
+                    "#,
+                );
+            }
+            PaletteAction::ToggleTheme => {
+                let _ = document::eval("document.getElementById('viewer-theme-toggle')?.click();");
+            }
+        }
     };
 
     rsx! {
@@ -476,6 +536,22 @@ pub fn App() -> Element {
                 .help-overlay-table th {{ font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); }}
                 .help-overlay-keys kbd {{ display: inline-block; padding: 2px 6px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); font-family: var(--font-mono); font-size: 12px; }}
                 .help-overlay-footer {{ margin: var(--sl-space-md) 0 0; }}
+                .command-palette-backdrop {{ position: fixed; inset: 0; z-index: 1200; background: color-mix(in srgb, var(--sl-bg) 35%, transparent); }}
+                .command-palette {{ position: fixed; z-index: 1201; top: 18%; left: 50%; transform: translateX(-50%); width: min(480px, calc(100vw - 32px)); max-height: min(70vh, 420px); overflow: auto; margin: 0; padding: var(--sl-space-lg) var(--sl-space-xl); box-sizing: border-box; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-lg); background: var(--sl-surface); color: var(--sl-text); box-shadow: 0 16px 48px color-mix(in srgb, var(--sl-bg) 55%, transparent); }}
+                .command-palette-header {{ display: flex; align-items: center; justify-content: space-between; gap: var(--sl-space-md); margin-bottom: var(--sl-space-sm); }}
+                .command-palette-header h2 {{ margin: 0; font-family: var(--font-ui); font-size: 1rem; font-weight: 600; }}
+                .command-palette-close {{ padding: 6px 12px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
+                .command-palette-close:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
+                .command-palette-close:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .command-palette-lede {{ margin: 0 0 var(--sl-space-md); font-size: 13px; line-height: 1.5; color: var(--sl-text-muted); }}
+                .command-palette-lede kbd {{ display: inline-block; padding: 2px 6px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); font-family: var(--font-mono); font-size: 12px; }}
+                .command-palette-list {{ list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }}
+                .command-palette-option {{ display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid transparent; border-radius: var(--sl-radius-sm); cursor: pointer; }}
+                .command-palette-option.is-active, .command-palette-option:hover {{ border-color: var(--sl-accent); background: color-mix(in srgb, var(--sl-accent) 10%, transparent); }}
+                .command-palette-option:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .command-palette-option-label {{ font-size: 14px; font-weight: 600; }}
+                .command-palette-option-hint {{ font-size: 12px; color: var(--sl-text-muted); }}
+                .palette-trigger {{ position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }}
                 .search-input:focus-visible, .search-btn:focus-visible, .retry-btn:focus-visible, .btn:focus-visible, .replay-input:focus-visible, .speed-input:focus-visible, .compare-btn:focus-visible, .sl-error-retry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
                 .session-item:focus-visible, .feed-entry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; }}
                 .session-list {{ display: flex; flex-direction: column; height: 100%; }}
@@ -729,6 +805,18 @@ pub fn App() -> Element {
                     "Help (?)"
                 }
                 button {
+                    id: "viewer-palette-button",
+                    class: "palette-trigger",
+                    r#type: "button",
+                    "aria-haspopup": "dialog",
+                    "aria-expanded": if palette_open() { "true" } else { "false" },
+                    "aria-controls": "command-palette-dialog",
+                    "aria-label": "Open command palette",
+                    onclick: move |_| toggle_palette(),
+                    "Command palette (Ctrl+K)"
+                }
+                button {
+                    id: "viewer-theme-toggle",
                     class: "theme-toggle",
                     r#type: "button",
                     "aria-label": "Toggle light and dark theme",
@@ -749,6 +837,11 @@ pub fn App() -> Element {
             HelpOverlay {
                 open: help_open(),
                 on_close: move |_| close_help(),
+            }
+            CommandPalette {
+                open: palette_open(),
+                on_close: move |_| close_palette(),
+                on_run: move |action| run_palette_action(action),
             }
         }
     }

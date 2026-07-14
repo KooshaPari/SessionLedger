@@ -92,6 +92,37 @@ test("Help control opens keyboard help and Escape closes it", async ({ page }) =
   await expect(helpButton).toHaveAttribute("aria-expanded", "false");
 });
 
+test("Ctrl+K opens command palette and Escape closes it", async ({ page }) => {
+  await page.goto("/");
+  const palette = page.locator('[data-testid="command-palette-dialog"]');
+  await expect(palette).toHaveCount(0);
+
+  await page.keyboard.press("Control+k");
+  await expect(palette).toHaveCount(1);
+  await expect(palette).toHaveAttribute("role", "dialog");
+  await expect(palette).toHaveAttribute("aria-modal", "true");
+  await expect(page.getByRole("heading", { name: "Command palette" })).toBeVisible();
+  await expect(page.getByRole("listbox", { name: "Viewer commands" })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Focus search/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Toggle theme/ })).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(palette).toHaveCount(0);
+});
+
+test("command palette Focus search switches to Search and focuses the filter", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("Control+k");
+  await page.getByRole("option", { name: /Focus search/ }).click();
+  await expect(page.getByRole("tab", { name: "Search" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeFocused();
+});
+
 test("primary controls expose stable accessible names", async ({ page }) => {
   await page.goto("/");
 
@@ -247,7 +278,7 @@ test("help overlay lists every shortcut row for keyboard efficiency", async ({ p
   await page.goto("/");
   await page.getByRole("button", { name: "Help (?)" }).click();
   const rows = page.locator(".help-overlay-table tbody tr");
-  await expect(rows).toHaveCount(9);
+  await expect(rows).toHaveCount(11);
   await expect(page.getByRole("dialog")).toHaveAttribute("aria-labelledby", "help-overlay-title");
   await expect(page.getByRole("columnheader", { name: "Shortcut" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Action" })).toBeVisible();

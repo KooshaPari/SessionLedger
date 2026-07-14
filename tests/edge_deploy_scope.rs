@@ -12,11 +12,7 @@ fn repo_root() -> PathBuf {
 #[test]
 fn edge_deploy_scope_self_check_validates_anchors() {
     let script = repo_root().join("scripts/edge-deploy-scope-check.ps1");
-    assert!(
-        script.is_file(),
-        "expected edge deploy scope check script at {}",
-        script.display()
-    );
+    assert!(script.is_file(), "expected edge deploy scope check script at {}", script.display());
 
     let output = Command::new("pwsh")
         .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])

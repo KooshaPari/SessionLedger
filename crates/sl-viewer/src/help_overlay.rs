@@ -18,6 +18,11 @@ pub const SHORTCUTS: &[HelpShortcut] = &[
         action: "Open or close this keyboard help overlay.",
     },
     HelpShortcut {
+        keys: "Cmd+K / Ctrl+K",
+        scope: "Whole viewer",
+        action: "Open or close the command palette.",
+    },
+    HelpShortcut {
         keys: "Tab / Shift+Tab",
         scope: "Whole viewer",
         action: "Move through focus order. The active view tab is the only tab stop in the tablist before panel controls.",
@@ -41,6 +46,11 @@ pub const SHORTCUTS: &[HelpShortcut] = &[
         keys: "Escape",
         scope: "This help overlay",
         action: "Close the overlay and return focus to the Help control.",
+    },
+    HelpShortcut {
+        keys: "Escape",
+        scope: "Command palette",
+        action: "Close the palette.",
     },
     HelpShortcut {
         keys: "Escape",

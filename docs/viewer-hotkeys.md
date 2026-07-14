@@ -8,6 +8,7 @@ Status: user-facing keyboard contract for the current `sl-viewer` surface.
 |----------|-------|----------|
 | `?` | Whole viewer | Toggle the in-viewer keyboard help overlay (ignored while focus is in a text field). |
 | **Help (?)** button | Sidebar | Open or close the same keyboard help overlay. |
+| `Cmd+K` / `Ctrl+K` | Whole viewer | Toggle the command palette (works even while focus is in a text field). |
 | `Tab` / `Shift+Tab` | Whole viewer | Move through the browser or WebView focus order. The active view tab is the only tab stop in the tablist before focus enters the active panel controls. |
 | `ArrowRight` | Focused view tab | Select and focus the next view tab, wrapping from Replay to Bundles. |
 | `ArrowLeft` | Focused view tab | Select and focus the previous view tab, wrapping from Bundles to Replay. |
@@ -15,6 +16,7 @@ Status: user-facing keyboard contract for the current `sl-viewer` surface.
 | `End` | Focused view tab | Select and focus Replay. |
 | `Enter` / `Space` | Focused view tab | Activate the focused view tab. |
 | `Escape` | Keyboard help overlay | Close the overlay and return focus to the Help control. |
+| `Escape` | Command palette | Close the palette. |
 | `Escape` | Search view | Clear search filters, results, and errors without moving focus. |
 | `Escape` | Replay view | Clear replay output and return the replay panel to idle. |
 | `Escape` | Bundle comparison panel | Close the comparison panel. |
@@ -22,18 +24,15 @@ Status: user-facing keyboard contract for the current `sl-viewer` surface.
 The current view order is Bundles, History, Unfinished, Memory, Live Feed,
 Search, Timeline, and Replay.
 
-## Planned Efficiency Aids
+## Command palette
 
-`Cmd+K` on macOS and `Ctrl+K` on Windows/Linux are reserved for a future command
-or quick-focus overlay. Until that overlay ships, use the Search tab and normal
-tab navigation to reach filters and panel controls.
+`Cmd+K` (macOS) / `Ctrl+K` (Windows/Linux) opens a lightweight command palette
+(`role="dialog"` with a `listbox` of options). Current commands:
 
-The first overlay should include copy for:
+- **Focus search** — switch to the Search tab and focus the first filter field.
+- **Toggle theme** — switch between light and dark theme.
 
-- Jump to view by name.
-- Focus search filters.
-- Focus replay bundle ID.
-- Open this keyboard shortcut map (shipped: press `?` or use **Help (?)** in the sidebar).
+Arrow keys move the active option; Enter runs it. Escape closes the palette.
 
 ## In-app help
 
@@ -44,7 +43,8 @@ overlay. See [`docs/HELP.md`](HELP.md) for a short operator reference.
 
 `tests/visual/harness/a11y.spec.js` runs against the built Dioxus web viewer and
 covers the ARIA tab keyboard pattern, active-tab tab order, Search
-`Escape`-to-clear behavior, keyboard-help open/close via `?` and `Escape`, fixture-driven
-status regions (`skeleton`, `loading-long`, `search-error`, `stream-skeleton`), reduced-motion
+`Escape`-to-clear behavior, keyboard-help open/close via `?` and `Escape`, command
+palette open/close via `Ctrl+K` / `Escape`, fixture-driven status regions
+(`skeleton`, `loading-long`, `search-error`, `stream-skeleton`), reduced-motion
 spinner flattening, and landmark visibility. The same component source backs the desktop viewer,
 with native WebView and OS chrome covered by [`docs/a11y/status-regions-and-native-smoke.md`](a11y/status-regions-and-native-smoke.md).

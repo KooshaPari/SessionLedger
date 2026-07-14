@@ -56,6 +56,7 @@ Capture or eyeball each surface (store approved PNGs under `tests/visual/golden/
 - [ ] Live indicator may breathe; under **prefers-reduced-motion: reduce**, pulse stops (solid orange / static).
 - [ ] Skeletons / spinners do not animate under reduced motion (static or text-only).
 - [ ] Identity demo / animated mark: static first frame or paused when reduced motion is on (docs/demo surfaces).
+- [ ] Launch splash (`golden/s1-launch-splash.png`, `golden/s1-launch-splash-light.png`): branded mark + caption; hold fixtures pin visibility under reduced motion for capture.
 
 Emulate in Chromium DevTools → Rendering → Emulate CSS media feature `prefers-reduced-motion: reduce`.
 
@@ -139,9 +140,12 @@ tests/visual/
     e4-search-empty.png
     e5-first-run-empty.png
     l1-search-loading.png
+    l1-content-skeleton.png
     r1-search-error.png
     r2-replay-error.png
     r3-error-color.png
+    s1-launch-splash.png
+    s1-launch-splash-light.png
   harness/
     a11y.spec.js       ← axe across every built viewer tab + keyboard evidence
     responsive.spec.js ← document-level no-horizontal-overflow evidence

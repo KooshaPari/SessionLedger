@@ -161,10 +161,39 @@ test("viewer exposes caption and measure typography tokens", async ({ page }) =>
 });
 
 test("launch splash is present then dismisses", async ({ page }) => {
+  // Default harness uses reduced motion, which pins splash hidden; exercise
+  // the real dismiss path with motion allowed.
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
   const splash = page.locator(".launch-splash");
   await expect(splash).toBeVisible();
   await expect(splash).toHaveCount(0, { timeout: 5000 });
+});
+
+test("S1 launch splash matches its golden", async ({ page }) => {
+  await page.goto("/?fixture=launch-splash");
+  await expect(page.getByTestId("launch-splash")).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+    .toBe("dark");
+  await expect(page.getByText("SessionLedger", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Viewer", { exact: true }).first()).toBeVisible();
+  await expect(page).toHaveScreenshot("s1-launch-splash.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
+});
+
+test("S1 launch splash light theme matches its golden", async ({ page }) => {
+  await page.goto("/?fixture=launch-splash-light");
+  await expect(page.getByTestId("launch-splash")).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+    .toBe("light");
+  await expect(page).toHaveScreenshot("s1-launch-splash-light.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
 });
 
 test("content skeleton fixture exposes tokens and stable layout", async ({ page }) => {

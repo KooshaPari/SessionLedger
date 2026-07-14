@@ -16,3 +16,5 @@ Reserved names:
 - `r1-search-error.png`
 - `r2-replay-error.png`
 - `r3-error-color.png`
+- `s1-launch-splash.png`
+- `s1-launch-splash-light.png`

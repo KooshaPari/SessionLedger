@@ -8,7 +8,7 @@ use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
-use crate::fixture::{query_fixture_active, visual_fixture_active};
+use crate::fixture::{query_fixture_active, splash_hold_fixture_active, visual_fixture_active};
 use crate::help_overlay::HelpOverlay;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
@@ -141,7 +141,14 @@ fn initial_tab_for_viewer() -> Tab {
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
-        let _ = document::eval(
+        let force_light = query_fixture_active("launch-splash-light");
+        let script = if force_light {
+            r#"
+            document.documentElement.lang = 'en';
+            document.documentElement.dataset.theme = 'light';
+            window.localStorage.setItem('sl-viewer-theme', 'light');
+            "#
+        } else {
             r#"
             document.documentElement.lang = 'en';
             const stored = window.localStorage.getItem('sl-viewer-theme');
@@ -150,13 +157,16 @@ pub fn App() -> Element {
                 ? stored
                 : (prefersLight ? 'light' : 'dark');
             document.documentElement.dataset.theme = theme;
-            "#,
-        );
+            "#
+        };
+        let _ = document::eval(script);
     });
 
     #[cfg(feature = "web")]
     use_effect(|| {
-        if visual_fixture_active() {
+        // Other visual fixtures strip the splash so empty/error goldens stay clean.
+        // Splash hold fixtures keep it pinned for S1 capture.
+        if visual_fixture_active() && !splash_hold_fixture_active() {
             let _ = document::eval("document.querySelector('.launch-splash')?.remove();");
         }
     });
@@ -200,38 +210,49 @@ pub fn App() -> Element {
     // onclick handlers own state (avoids wasm Closure / eval bridge re-render gaps).
     #[cfg(feature = "web")]
     use_effect(|| {
-        let _ = document::eval(
+        let hold_splash = splash_hold_fixture_active();
+        let dismiss_script = if hold_splash {
+            // Hold fixture: do not auto-remove splash for golden capture.
+            String::new()
+        } else {
             r#"
             window.setTimeout(() => {
               const splash = document.querySelector('.launch-splash');
               if (splash) splash.remove();
             }, 1800);
+            "#
+            .to_owned()
+        };
+        let script = format!(
+            r#"
+            {dismiss_script}
 
-            if (!window.__slHelpKeyClickBridge) {
+            if (!window.__slHelpKeyClickBridge) {{
               window.__slHelpKeyClickBridge = true;
-              document.addEventListener('keydown', (e) => {
+              document.addEventListener('keydown', (e) => {{
                 const el = document.activeElement;
                 const tag = (el && el.tagName) || '';
-                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable)) {
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable)) {{
                   return;
-                }
+                }}
                 const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
-                if (isHelp) {
+                if (isHelp) {{
                   e.preventDefault();
                   document.getElementById('viewer-help-button')?.click();
                   return;
-                }
-                if (e.key === 'Escape') {
+                }}
+                if (e.key === 'Escape') {{
                   const closeBtn = document.querySelector('.help-overlay-close');
-                  if (closeBtn) {
+                  if (closeBtn) {{
                     e.preventDefault();
                     closeBtn.click();
-                  }
-                }
-              }, true);
-            }
-            "#,
+                  }}
+                }}
+              }}, true);
+            }}
+            "#
         );
+        let _ = document::eval(&script);
     });
 
     let tab_body = match active_tab() {
@@ -374,6 +395,12 @@ pub fn App() -> Element {
                     background: var(--sl-bg);
                     animation: splash-dismiss var(--sl-motion-medium) var(--sl-ease-out) forwards;
                     animation-delay: 1.2s;
+                }}
+                .launch-splash.launch-splash-hold {{
+                    animation: none;
+                    opacity: 1;
+                    visibility: visible;
+                    pointer-events: auto;
                 }}
                 .launch-splash-inner {{ text-align: center; }}
                 .launch-splash-mark {{
@@ -573,11 +600,17 @@ pub fn App() -> Element {
                         transition-duration: 0.01ms !important;
                         scroll-behavior: auto !important;
                     }}
-                    .launch-splash {{
+                    .launch-splash:not(.launch-splash-hold) {{
                         animation: none;
                         opacity: 0;
                         visibility: hidden;
                         pointer-events: none;
+                    }}
+                    .launch-splash.launch-splash-hold {{
+                        animation: none !important;
+                        opacity: 1 !important;
+                        visibility: visible !important;
+                        pointer-events: auto !important;
                     }}
                     .sl-loading-spinner {{
                         animation: none !important;
@@ -587,10 +620,23 @@ pub fn App() -> Element {
         }
         div {
             class: "app",
-            div { class: "launch-splash", role: "presentation",
-                div { class: "launch-splash-inner",
-                    span { class: "launch-splash-mark", "SessionLedger" }
-                    span { class: "launch-splash-caption", "Viewer" }
+            {
+                let splash_hold = splash_hold_fixture_active();
+                let splash_class = if splash_hold {
+                    "launch-splash launch-splash-hold"
+                } else {
+                    "launch-splash"
+                };
+                rsx! {
+                    div {
+                        class: "{splash_class}",
+                        role: "presentation",
+                        "data-testid": "launch-splash",
+                        div { class: "launch-splash-inner",
+                            span { class: "launch-splash-mark", "SessionLedger" }
+                            span { class: "launch-splash-caption", "Viewer" }
+                        }
+                    }
                 }
             }
             div { class: "sidebar",

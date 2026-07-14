@@ -6,9 +6,10 @@
 //! no wall-clock sleeps — so the suite stays CI-safe under
 //! `.github/workflows/race-smoke.yml` repeats.
 //!
-//! Full `loom` / `shuttle` permutation checkers remain a follow-up (heavy deps;
-//! enable via `RUSTFLAGS='--cfg loom'` when a dedicated job lands). See
-//! `docs/ops/concurrency-safety.md`.
+//! Soft loom smoke for a tiny cancel/capacity model lives in
+//! `tests/loom_model.rs` (`RUSTFLAGS='--cfg loom'`, `.github/workflows/loom-smoke.yml`).
+//! Full loom / shuttle coverage of this `sync_channel` model remains unpaid.
+//! See `docs/ops/concurrency-safety.md`.
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

@@ -48,6 +48,12 @@ stats_alloc = "0.1.10"
 # Optional dhat heap profiler for the L8 alloc-profile smoke (tests/alloc_profile_dhat.rs).
 dhat = "0.3.3"
 
+# Loom permutation checker — only resolved when RUSTFLAGS='--cfg loom'
+# (soft nightly / PR job in .github/workflows/loom-smoke.yml). Keeps default
+# `cargo test` free of the loom graph on Windows and the PR matrix.
+[target.'cfg(loom)'.dev-dependencies]
+loom = "0.7"
+
 [[test]]
 name = "alloc_profile_dhat"
 path = "tests/alloc_profile_dhat.rs"
@@ -69,6 +75,7 @@ webkit2gtk = { path = "vendor/webkit2gtk" }
 
 [lints.rust]
 unsafe_code = "forbid"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 [lints.clippy]
 all = { level = "deny", priority = -1 }

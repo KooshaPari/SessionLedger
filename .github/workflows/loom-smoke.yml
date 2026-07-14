@@ -1,0 +1,50 @@
+# Soft / nightly loom permutation smoke for C00 L7 concurrency evidence.
+# Runs tests/loom_model.rs under RUSTFLAGS='--cfg loom' only.
+# continue-on-error: soft gate toward full loom/shuttle/blocking miri checkers.
+# Default cargo test stays free of loom (cfg-gated + not(loom) skip marker).
+name: loom smoke
+
+on:
+  schedule:
+    - cron: "42 4 * * *" # nightly 04:42 UTC (offset from miri-smoke)
+  workflow_dispatch:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  loom-selfcheck:
+    name: soft loom · SelfCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: loom soft SelfCheck
+        shell: pwsh
+        run: ./scripts/loom-smoke-check.ps1 -SelfCheck
+
+  loom-model:
+    name: soft loom · loom_model
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          key: loom-cfg
+      - name: loom_model (soft)
+        env:
+          # loom replaces std concurrency primitives; keep off default RUSTFLAGS.
+          RUSTFLAGS: "--cfg loom"
+        run: cargo test --test loom_model --release --locked -- --test-threads=1

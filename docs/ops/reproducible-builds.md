@@ -79,3 +79,50 @@ closer to that bar:
 
 Consumers must verify `SHA256SUMS`, its Sigstore bundle when present, and GitHub
 attestations as described in [`distribution.md`](distribution.md).
+
+## SLSA materials metadata (partial L3)
+
+SessionLedger does not claim full SLSA Build Level 3. The release workflow does
+require GitHub build provenance that binds each published archive **subject**
+(name + SHA-256 digest) to **materials** describing the source inputs GitHub
+Actions consumed (notably the tagged repository checkout). This is partial
+material-metadata evidence: it documents what was built and from which commit, but
+it does not prove hermetic isolation, reusable-workflow signing, or complete
+dependency closure.
+
+### Contract and fixture
+
+The blocking contract is enforced by
+[`scripts/provenance-contract-check.ps1`](../../scripts/provenance-contract-check.ps1)
+and [`.github/workflows/provenance-contract.yml`](../../.github/workflows/provenance-contract.yml).
+The script asserts that:
+
+1. each matrix `build` job and the aggregate `release` job call
+   `attest-build-provenance` with an explicit `subject-path` binding; and
+2. [`docs/ops/fixtures/slsa-materials-contract.sample.json`](fixtures/slsa-materials-contract.sample.json)
+   remains a valid in-toto statement containing both `subject` and materials
+   (`predicate.materials` or `predicate.buildDefinition.resolvedDependencies`).
+
+The fixture uses placeholder digests only; it documents the fields consumers and
+maintainers should expect from canonical Release attestations without requiring
+Sigstore certificates in CI.
+
+### What to verify on a Release
+
+After downloading an archive from a canonical Release:
+
+1. confirm the archive SHA-256 matches `SHA256SUMS`;
+2. run `gh attestation verify <archive> --repo KooshaPari/SessionLedger` and
+   confirm the attestation subject digest matches the archive; and
+3. inspect the attestation predicate for materials linking the build to
+   `KooshaPari/SessionLedger` at the Release tag commit (SLSA v1
+   `buildDefinition.resolvedDependencies`, or v0.2 `materials` when present).
+
+Cross-check `session-ledger.cdx.json` when you need component-level dependency
+metadata; the CycloneDX SBOM complements but does not replace provenance
+materials on the archive subject.
+
+Remaining gaps toward full SLSA-L3 include reusable-workflow provenance,
+environment isolation proofs, and mandatory SBOM-to-subject attestations for
+every matrix artifact. Platform code-signing remains deferred per
+[`0003-platform-code-signing.md`](../adr/0003-platform-code-signing.md).

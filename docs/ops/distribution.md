@@ -341,6 +341,15 @@ result verifies the artifact digest and its GitHub Actions provenance. It does
 not replace the cosign + `SHA256SUMS` checks above, platform code signing, or
 review of the source.
 
+Inspect the attestation predicate for **materials metadata** that binds the build
+to this repository at the Release tag commit. GitHub's SLSA v1 provenance lists
+source inputs under `buildDefinition.resolvedDependencies` (older attestations
+may use a top-level `materials` array). The subject block must name the archive
+and carry a matching SHA-256 digest. See
+[`reproducible-builds.md`](reproducible-builds.md#slsa-materials-metadata-partial-l3)
+and the sample fixture at
+[`docs/ops/fixtures/slsa-materials-contract.sample.json`](fixtures/slsa-materials-contract.sample.json).
+
 Provenance is intentionally fail-soft during this rollout. If
 `gh attestation verify` reports that no attestation exists, treat provenance as
 unavailable for that Release and rely on cosign/checksum verification; do not

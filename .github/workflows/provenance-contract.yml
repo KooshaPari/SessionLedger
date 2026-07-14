@@ -7,6 +7,7 @@ on:
       - ".github/workflows/provenance-contract.yml"
       - "scripts/provenance-contract-check.ps1"
       - "docs/ops/reproducible-builds.md"
+      - "docs/ops/fixtures/slsa-materials-contract.sample.json"
   push:
     branches: [main]
     paths:
@@ -14,6 +15,7 @@ on:
       - ".github/workflows/provenance-contract.yml"
       - "scripts/provenance-contract-check.ps1"
       - "docs/ops/reproducible-builds.md"
+      - "docs/ops/fixtures/slsa-materials-contract.sample.json"
   workflow_dispatch:
 
 permissions:

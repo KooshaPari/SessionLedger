@@ -56,18 +56,41 @@ current clients retain actionable field diagnostics.
 ## Structured audit events
 
 Mutating or persistence-adjacent local operations emit `tracing` events and append
-the same actor/action record to a local JSONL audit file. The durable sink is:
+the same actor/action record to a durable local audit sink. The sink is append-only:
+the daemon never truncates, updates, or deletes historical records.
 
-- `$SL_DATA_DIR/audit/events.jsonl` when `SL_DATA_DIR` is set.
+### Backend selection
+
+| Environment variable | Default | Meaning |
+|---|---|---|
+| `SL_AUDIT_BACKEND` | `jsonl` | `jsonl` writes newline-delimited JSON; `sqlite` uses an append-only SQLite table (requires `sl-daemon` built with `--features sqlite`) |
+
+### Storage paths
+
+When `SL_DATA_DIR` is set, audit files live under that directory. Otherwise paths
+are relative to the command output directory (`serve --out`, archive/restore
+`--data-dir`, etc.).
+
+| Backend | Path |
+|---|---|
+| `jsonl` (default) | `<data_dir>/audit/events.jsonl` |
+| `sqlite` | `<data_dir>/audit/events.db` |
+
+Concrete examples:
+
+- `$SL_DATA_DIR/audit/events.jsonl` when `SL_DATA_DIR` is set and backend is `jsonl`.
 - `<serve --out>/audit/events.jsonl` for `sl serve` when `SL_DATA_DIR` is unset.
 - `<data_dir>/audit/events.jsonl` for archive/restore commands that already take
   a `--data-dir`.
 
-Each line is a standalone JSON object written with append/create semantics and a
-flush plus `sync_data` call. The daemon never truncates or rewrites this file.
+### Record shape and durability
+
+Each JSONL line is a standalone JSON object written with append/create semantics,
+a flush, and `sync_data`. The SQLite backend uses WAL mode and `INSERT` only into
+`audit_events`; there are no daemon-driven `UPDATE` or `DELETE` statements.
 Records include:
 
-- `event_kind="audit"`
+- `event_kind="audit"` in structured logs (not duplicated in the JSONL/SQLite payload)
 - `actor="local"`
 - `action` such as `ingest`, `export`, `archive`, or `restore`
 - `outcome` and a non-payload `reason` or `resource`
@@ -76,5 +99,5 @@ Records include:
 Enable newline-delimited JSON with the `json-logs` feature and
 `SL_LOG_FORMAT=json`. Events deliberately omit transcript and ingest-body
 contents. Operators own retention, rotation, backup, and access control for the
-JSONL audit path; rotation should move or copy the file without asking
-`sl-daemon` to rewrite historical records.
+audit store; rotation should move or copy files without asking `sl-daemon` to
+rewrite historical records.

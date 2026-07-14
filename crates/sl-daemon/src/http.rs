@@ -1001,7 +1001,7 @@ mod tests {
             http_metrics: Arc::new(HttpMetrics::default()),
             ingest_admission: IngestAdmission::from_values(None, None).unwrap(),
             api_key_auth: ApiKeyAuth::default(),
-            audit_sink: Arc::new(AuditSink::new(out_dir)),
+            audit_sink: Arc::new(AuditSink::open(out_dir).expect("audit sink")),
             idempotency_cache: IngestIdempotencyCache::default(),
             #[cfg(feature = "sqlite")]
             memory_store: None,
@@ -1311,11 +1311,43 @@ mod tests {
     #[traced_test]
     fn audit_event_contains_actor_action_and_outcome() {
         let dir = tempfile::TempDir::new().unwrap();
-        let sink = AuditSink::new(dir.path());
+        let sink = AuditSink::open(dir.path()).unwrap();
         audit_event(&sink, "ingest", "accepted", "validation", "req-test");
         assert!(logs_contain("actor=\"local\"") || logs_contain("actor=local"));
         assert!(logs_contain("action=\"ingest\""));
         assert!(logs_contain("outcome=\"accepted\""));
+
+        let contents = std::fs::read_to_string(sink.path()).unwrap();
+        let line: serde_json::Value = serde_json::from_str(contents.lines().next().unwrap()).unwrap();
+        assert_eq!(line["actor"], "local");
+        assert_eq!(line["action"], "ingest");
+        assert_eq!(line["outcome"], "accepted");
+        assert_eq!(line["request_id"], "req-test");
+    }
+
+    #[tokio::test]
+    async fn ingest_appends_durable_audit_record() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) = start_test_server(test_state(out_dir.path())).await;
+
+        let response = reqwest::Client::new()
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        server.abort();
+
+        let audit_path = out_dir.path().join(crate::audit::AUDIT_JSONL_RELATIVE_PATH);
+        let contents = std::fs::read_to_string(audit_path).unwrap();
+        let last: serde_json::Value =
+            serde_json::from_str(contents.lines().last().unwrap()).unwrap();
+        assert_eq!(last["actor"], "local");
+        assert_eq!(last["action"], "ingest");
+        assert_eq!(last["outcome"], "accepted");
+        assert_eq!(last["reason"], "validation");
     }
 
     #[tokio::test]

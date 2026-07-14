@@ -34,6 +34,7 @@ opentelemetry_sdk = { version = "0.32.1", default-features = false, features = [
 tracing-opentelemetry = { version = "0.33.0", default-features = false, optional = true }
 opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["trace", "grpc-tonic"], optional = true }
 clap_complete = "4.6.7"
+rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 
 [dev-dependencies]
 tempfile = "3"
@@ -52,7 +53,7 @@ unsafe_code = "forbid"
 
 [features]
 default = []
-sqlite = ["session-ledger/sqlite"]
+sqlite = ["session-ledger/sqlite", "dep:rusqlite"]
 json-logs = ["tracing-subscriber/json"]
 otel = [
     "dep:opentelemetry",

@@ -96,5 +96,38 @@ By signing off, you certify that you have the right to submit the work under thi
 repository's dual MIT OR Apache-2.0 license. PRs should confirm the DCO checkbox
 in the pull request template.
 
+## Cryptographic commit signing (GPG / SSH)
+
+DCO sign-off is **not** a substitute for Git commit signatures. Configure signing
+before your first commit on a feature branch:
+
+**GPG**
+
+```bash
+git config --global user.signingkey <KEY_ID>
+git config --global commit.gpgsign true
+git commit -S -s -m "your message"
+```
+
+**SSH** (Git 2.34+)
+
+```bash
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519_sign.pub
+git config --global commit.gpgsign true
+git commit -S -s -m "your message"
+```
+
+Publish your public key to GitHub (GPG key or SSH **signing** key). Maintainers
+enable **Require signed commits** on `main`; see
+[`docs/ops/commit-signing.md`](docs/ops/commit-signing.md) and
+[ADR 0004](docs/adr/0004-commit-signing-policy.md).
+
+Verify locally:
+
+```powershell
+pwsh -NoProfile -File scripts/commit-signing-check.ps1 -Ref HEAD -Count 5
+```
+
 ## Governance
 This repository follows governance guidelines defined in ~/.claude/CLAUDE.md at a high level.

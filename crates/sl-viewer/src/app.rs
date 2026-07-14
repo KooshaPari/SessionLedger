@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 
-use crate::async_states::{ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, SkeletonLayout};
+use crate::async_states::{
+    ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, SkeletonLayout,
+};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};

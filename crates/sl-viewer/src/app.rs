@@ -190,76 +190,8 @@ pub fn App() -> Element {
         }
     };
 
-    // Drive help open/close from a document keydown bridge so Playwright/`?`
-    // updates run inside the Dioxus runtime (raw wasm_bindgen Closures do not).
-    #[cfg(feature = "web")]
-    {
-        let mut help_open = help_open;
-        use_future(move || async move {
-            let _ = document::eval(
-                r#"
-                if (!window.__slHelpKeyBridge) {
-                  window.__slHelpKeyBridge = true;
-                  document.addEventListener('keydown', (e) => {
-                    const el = document.activeElement;
-                    const tag = (el && el.tagName) || '';
-                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable)) {
-                      return;
-                    }
-                    const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
-                    if (isHelp) {
-                      e.preventDefault();
-                      window.dispatchEvent(new CustomEvent('sl-help', { detail: 'toggle' }));
-                    } else if (e.key === 'Escape') {
-                      window.dispatchEvent(new CustomEvent('sl-help', { detail: 'escape' }));
-                    }
-                  }, true);
-                }
-                "#,
-            )
-            .await;
-
-            loop {
-                let mut eval = document::eval(
-                    r#"
-                    return await new Promise((resolve) => {
-                      window.addEventListener(
-                        'sl-help',
-                        (e) => resolve(String(e.detail || '')),
-                        { once: true },
-                      );
-                    });
-                    "#,
-                );
-                let Ok(action) = eval.recv::<String>().await else {
-                    break;
-                };
-                match action.as_str() {
-                    "toggle" => {
-                        let next = !help_open();
-                        help_open.set(next);
-                        if next {
-                            let _ = document::eval(
-                                "window.requestAnimationFrame(() => document.querySelector('.help-overlay-close')?.focus());",
-                            );
-                        } else {
-                            let _ = document::eval(
-                                "document.getElementById('viewer-help-button')?.focus();",
-                            );
-                        }
-                    }
-                    "escape" if help_open() => {
-                        help_open.set(false);
-                        let _ = document::eval(
-                            "document.getElementById('viewer-help-button')?.focus();",
-                        );
-                    }
-                    _ => {}
-                }
-            }
-        });
-    }
-
+    // Global `?` / Escape: click the existing Help / close controls so Dioxus
+    // onclick handlers own state (avoids wasm Closure / eval bridge re-render gaps).
     #[cfg(feature = "web")]
     use_effect(|| {
         let _ = document::eval(
@@ -268,6 +200,30 @@ pub fn App() -> Element {
               const splash = document.querySelector('.launch-splash');
               if (splash) splash.remove();
             }, 1800);
+
+            if (!window.__slHelpKeyClickBridge) {
+              window.__slHelpKeyClickBridge = true;
+              document.addEventListener('keydown', (e) => {
+                const el = document.activeElement;
+                const tag = (el && el.tagName) || '';
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable)) {
+                  return;
+                }
+                const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
+                if (isHelp) {
+                  e.preventDefault();
+                  document.getElementById('viewer-help-button')?.click();
+                  return;
+                }
+                if (e.key === 'Escape') {
+                  const closeBtn = document.querySelector('.help-overlay-close');
+                  if (closeBtn) {
+                    e.preventDefault();
+                    closeBtn.click();
+                  }
+                }
+              }, true);
+            }
             "#,
         );
     });

@@ -78,3 +78,17 @@ groups:
           summary: "SessionLedger mean HTTP latency is high"
           description: "Mean daemon HTTP latency is above 1s for 10 minutes on {{ $labels.instance }}. Current RED metrics do not expose p95/p99."
           runbook: "docs/ops/observability.md"
+
+      - alert: SessionLedgerRedMetricsMissing
+        expr: |
+          up{job="sl-daemon"} == 1
+          unless
+          sl_http_requests_total{job="sl-daemon"}
+        for: 5m
+        labels:
+          severity: warning
+          slo: availability
+        annotations:
+          summary: "SessionLedger scrape succeeds but RED metrics are missing"
+          description: "Prometheus can reach {{ $labels.instance }} but sl_http_requests_total is absent. Check /metrics exporter."
+          runbook: "docs/ops/runbook.md#metrics"

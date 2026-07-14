@@ -1,43 +1,103 @@
 # Alert queries — SessionLedger (C05)
 
-**Status:** copy-paste PromQL examples; no Alertmanager or pager routing is
-enabled by this repository. The daemon exposes aggregate HTTP RED counters at
-`/metrics`, and an importable Grafana dashboard is available in
-[`dashboards/`](dashboards/). Endpoint-specific ingest and replay signals
-remain future work.
+**Status:** PromQL examples and routing evidence for shipped RED metrics.
+Alertmanager paging is **not** enabled by this repository — operators replace
+the webhook placeholder in [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml)
+before production use.
 
-Canonical severity + routing table: [`observability.md`](observability.md#alert-stubs).
-Operator triage: [`runbook.md`](runbook.md).
+Canonical severity + promotion table:
+[`observability.md`](observability.md#alert-stubs). Operator triage:
+[`runbook.md`](runbook.md). Game-day cadence:
+[`observability.md`](observability.md#game-day-cadence).
 
 ## PromQL for shipped RED metrics
 
-The Wave-6 metrics have no `route`, `method`, or `status` labels. These queries
-are intentionally service-wide. They aggregate across replicas selected by the
-`job="sl-daemon"` label and use `rate`, which safely handles counter resets.
+The daemon exports aggregate HTTP RED counters at `/metrics` on every scrape.
+After traffic, Wave-19 also emits per-route `route` labels and histogram
+`_bucket` series (see [`dashboards/README.md`](dashboards/README.md)). Prometheus
+adds `job="sl-daemon"` at scrape time — include that label in deployed queries.
+
+These aggregate queries work even when no per-route series exist yet. They use
+`rate`, which safely handles counter resets.
 
 | Signal | PromQL |
 |--------|--------|
-| Request rate | `sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m]))` |
+| Request rate (completed) | `sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m]))` |
 | Error rate | `sum(rate(sl_http_errors_total{job="sl-daemon"}[5m]))` |
 | Error ratio | `sum(rate(sl_http_errors_total{job="sl-daemon"}[5m])) / clamp_min(sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m])), 1e-9)` |
 | Mean duration | `sum(rate(sl_http_request_duration_seconds_sum{job="sl-daemon"}[5m])) / clamp_min(sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m])), 1e-9)` |
 | Started requests | `sum(rate(sl_http_requests_total{job="sl-daemon"}[5m]))` |
+| Scrape up | `max(up{job="sl-daemon"})` |
+| RED series present | `count(sl_http_requests_total{job="sl-daemon"})` |
 
 `sl_http_requests_total` increments when a request starts, while
 `sl_http_request_duration_seconds_count` increments when it completes. Use the
 completed count as the denominator for both error ratio and mean duration.
-Their difference can help identify in-flight or interrupted requests, but is
-not a stable concurrency gauge.
 
-The exporter exposes only `_sum` and `_count` for duration. Do not use
-`histogram_quantile` with this metric: p95/p99 require future `_bucket` series.
+### Per-route queries (after traffic)
+
+Per-route series appear only after requests hit labeled paths. Use these in
+Grafana or game-day PromQL drills once load smoke has run:
+
+| Signal | PromQL |
+|--------|--------|
+| Route request rate | `sum by (route) (rate(sl_http_requests_total{job="sl-daemon",route!=""}[5m]))` |
+| Route error ratio | `sum by (route) (rate(sl_http_errors_total{job="sl-daemon",route!=""}[5m])) / clamp_min(sum by (route) (rate(sl_http_request_duration_seconds_count{job="sl-daemon",route!=""}[5m])), 1e-9)` |
+| Route p95 latency | `histogram_quantile(0.95, sum by (route, le) (rate(sl_http_request_duration_seconds_bucket{job="sl-daemon",route!=""}[5m])))` |
+
+Aggregate `_sum` / `_count` without `route` remain valid for service-wide SLO
+alerts. Do **not** run `histogram_quantile` on the unlabeled aggregate summary
+lines — only on `route`-labeled `_bucket` series.
+
+## Alert routing evidence
+
+Maps promoted alerts to runnable PromQL, Alertmanager intent, and load status.
+Replace webhook URL and receiver names before paging.
+
+| Alert | PromQL / expr (runnable) | `severity` label | Intended route | Loaded |
+|-------|--------------------------|------------------|----------------|--------|
+| `SessionLedgerDaemonScrapeDown` | `up{job="sl-daemon"} == 0` | `warning` (P1 intent) | PagerDuty / on-call (TBD) via placeholder | [`sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) |
+| `SessionLedgerDaemonScrapeMissing` | `absent(up{job="sl-daemon"})` | `warning` | Slack `#sessionledger-ops` (TBD) | `sessionledger-slo.yaml` |
+| `SessionLedgerFastErrorBudgetBurn` | error ratio &gt; 5% over 5m (see rule file) | `warning` | Slack `#sessionledger-ops` (TBD) | `sessionledger-slo.yaml` |
+| `SessionLedgerSlowErrorBudgetBurn` | error ratio &gt; 1% over 1h | `info` | friction-log only | `sessionledger-slo.yaml` |
+| `SessionLedgerHighMeanLatency` | mean latency &gt; 1s over 10m | `info` | friction-log | `sessionledger-slo.yaml` |
+| `SessionLedgerRedMetricsMissing` | `up == 1 unless sl_http_requests_total` | `warning` | Slack (TBD) | `sessionledger-slo.yaml` |
+| `SL-METRICS-STALE` | `max(up{job="sl-daemon"}) == 0 or absent(up{job="sl-daemon"})` | `info` | Slack (TBD) | docs (overlaps scrape-down) |
+
+Alertmanager placeholder ([`alertmanager.yaml`](alerts/alertmanager.yaml)):
+
+```yaml
+route:
+  receiver: sessionledger-webhook-placeholder
+  routes:
+    - receiver: sessionledger-webhook-placeholder
+      matchers:
+        - job="sl-daemon"
+```
+
+Production mapping (fill before go-live):
+
+| `severity` / intent | Receiver | Notes |
+|---------------------|----------|-------|
+| `warning` + P1 scrape-down | PagerDuty service (TBD) | Inhibits fast error burn on same instance |
+| `warning` + P2 error budget | Slack `#sessionledger-ops` (TBD) | |
+| `info` / `ticket` | friction-log or ticket queue | No page |
+
+Validate rules locally:
+
+```bash
+promtool check rules docs/ops/alerts/sessionledger-slo.yaml
+```
 
 ## Rules using shipped metrics
 
 These examples can be placed under a Prometheus rule group's `rules` array.
 Tune thresholds and `for` durations against observed traffic before paging.
 
-### `SL-HTTP-HIGH-ERROR-RATIO` (P2)
+### `SL-HTTP-HIGH-ERROR-RATIO` (P2) — alias of fast burn
+
+Same expression as `SessionLedgerFastErrorBudgetBurn` in
+[`sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml).
 
 ```yaml
 alert: SL-HTTP-HIGH-ERROR-RATIO
@@ -55,6 +115,7 @@ expr: |
 for: 15m
 labels:
   severity: ticket
+  job: sl-daemon
 annotations:
   summary: "sl-daemon HTTP error ratio exceeded 5%"
   runbook: docs/ops/runbook.md#common-failures
@@ -78,6 +139,7 @@ expr: |
 for: 15m
 labels:
   severity: info
+  job: sl-daemon
 annotations:
   summary: "sl-daemon mean HTTP latency exceeded 1 second"
   runbook: docs/ops/runbook.md#common-failures
@@ -85,7 +147,7 @@ annotations:
 
 ### `SL-RED-METRICS-MISSING` (P2)
 
-This distinguishes a reachable scrape target from an exporter that no longer
+Distinguishes a reachable scrape target from an exporter that no longer
 publishes the expected application series.
 
 ```yaml
@@ -97,17 +159,39 @@ expr: |
 for: 5m
 labels:
   severity: ticket
+  job: sl-daemon
 annotations:
   summary: "sl-daemon scrape succeeds but RED metrics are missing"
   runbook: docs/ops/runbook.md#metrics
 ```
 
+### `SL-METRICS-STALE` (P3) — promoted via scrape `up`
+
+```yaml
+alert: SL-METRICS-STALE
+expr: |
+  max(up{job="sl-daemon"}) == 0
+  or
+  absent(up{job="sl-daemon"})
+for: 5m
+labels:
+  severity: info
+  job: sl-daemon
+annotations:
+  summary: "Prometheus cannot scrape sl-daemon /metrics"
+  runbook: docs/ops/runbook.md#metrics
+```
+
 ## Future-signal rule sketches
+
+Do **not** load until the listed metrics exist.
 
 ### `SL-HEALTHZ-DOWN` (P1)
 
+Use `SessionLedgerDaemonScrapeDown` today. Blackbox probe variant:
+
 ```yaml
-# STUB — not loaded by any system
+# STUB — requires probe_success{path="/healthz"}
 alert: SL-HEALTHZ-DOWN
 expr: up{job="sl-daemon"} == 0 or probe_success{path="/healthz"} == 0
 for: 1m
@@ -120,8 +204,11 @@ annotations:
 
 ### `SL-READYZ-DOWN` (P2)
 
+Manual evidence: [`ops-chaos-smoke.ps1`](../../scripts/ops-chaos-smoke.ps1) phase 1
+and game-day JSON `readiness_fault` step.
+
 ```yaml
-# STUB — not loaded by any system
+# STUB — requires probe_success{path="/readyz"}
 alert: SL-READYZ-DOWN
 expr: probe_success{path="/readyz"} == 0 and probe_success{path="/healthz"} == 1
 for: 2m
@@ -161,31 +248,15 @@ annotations:
   summary: "replay TTFB p95 above 2s fixture SLO stub"
 ```
 
-### `SL-METRICS-STALE` (P3)
-
-```yaml
-alert: SL-METRICS-STALE
-expr: |
-  max(up{job="sl-daemon"}) == 0
-  or
-  absent(up{job="sl-daemon"})
-for: 5m
-labels:
-  severity: info
-annotations:
-  summary: "Prometheus /metrics unavailable while daemon expected up"
-  runbook: docs/ops/runbook.md#metrics
-```
-
 ## Promotion checklist
 
-1. Import the RED dashboard and validate the queries against each deployed
-   replica.
+1. Import the RED dashboard and validate aggregate + route queries against each
+   deployed replica.
 2. Tune aggregate error-ratio and mean-latency thresholds from production
    baselines.
-3. Add route-labelled ingest/replay counters before enabling their alert
-   stubs.
-4. Replace `probe_*` stubs with real blackbox metrics.
-5. Fill Slack / PagerDuty route IDs in the observability alert table.
-6. Close remaining #65 exporter items; keep these files as the source of truth
+3. Run quarterly game-day workflow; archive `gameday-evidence.json`.
+4. Add route-labelled ingest/replay counters before enabling their alert stubs.
+5. Replace `probe_*` stubs with real blackbox metrics.
+6. Fill Slack / PagerDuty route IDs in the routing table above.
+7. Close remaining #65 exporter items; keep these files as the source of truth
    for rule intent.

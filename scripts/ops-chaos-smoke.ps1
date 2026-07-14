@@ -26,7 +26,9 @@ param(
     [int]$LoadConcurrency = 6,
 
     [ValidateRange(4, 120)]
-    [int]$RecoveryRequests = 16
+    [int]$RecoveryRequests = 16,
+
+    [string]$EvidencePath = ""
 )
 
 Set-StrictMode -Version Latest
@@ -42,6 +44,8 @@ if ([string]::IsNullOrWhiteSpace($WorkRoot)) {
 
 $scriptRoot = $PSScriptRoot
 $loadSmokeScript = Join-Path $scriptRoot "load-smoke.ps1"
+$script:EvidenceSteps = @()
+$script:RedMetricSeries = @()
 if (-not (Test-Path -LiteralPath $loadSmokeScript -PathType Leaf)) {
     throw "Missing load smoke script at '$loadSmokeScript'."
 }
@@ -70,6 +74,83 @@ function Remove-PathForce {
     if (Test-Path -LiteralPath $Path) {
         Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue
     }
+}
+
+function Add-EvidenceStep {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][ValidateSet("pass", "fail", "skip")]
+        [string]$Outcome,
+        [string]$Detail = ""
+    )
+
+    $script:EvidenceSteps += [ordered]@{
+        name    = $Name
+        outcome = $Outcome
+        detail  = $Detail
+        at      = (Get-Date).ToUniversalTime().ToString("o")
+    }
+}
+
+function Get-RedMetricSeries {
+    param([Parameter(Mandatory = $true)][string]$MetricsBody)
+
+    $series = [ordered]@{}
+    foreach ($name in @(
+            "sl_http_requests_total",
+            "sl_http_errors_total",
+            "sl_http_request_duration_seconds_sum",
+            "sl_http_request_duration_seconds_count"
+        )) {
+        $series[$name] = [bool]($MetricsBody -match [regex]::Escape($name))
+    }
+
+    $series["route_labels"] = [bool]($MetricsBody -match 'sl_http_requests_total\{route=')
+    $series["histogram_buckets"] = [bool]($MetricsBody -match 'sl_http_request_duration_seconds_bucket\{route=')
+    return $series
+}
+
+function Write-GameDayEvidence {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][ValidateSet("pass", "fail")]
+        [string]$Outcome,
+        [Parameter(Mandatory = $true)][string]$HttpBind,
+        [int]$LoadRequests,
+        [int]$LoadConcurrency,
+        [int]$RecoveryRequests
+    )
+
+    $evidence = [ordered]@{
+        schema       = "sessionledger.gameday-evidence.v1"
+        outcome      = $Outcome
+        httpBind     = $HttpBind
+        loadRequests = $LoadRequests
+        loadConcurrency = $LoadConcurrency
+        recoveryRequests = $RecoveryRequests
+        host         = [ordered]@{
+            os       = if ($IsWindows -or $env:OS -eq "Windows_NT") { "windows" } else { "linux" }
+            ci       = [bool]($env:GITHUB_ACTIONS -eq "true")
+            runner   = $env:RUNNER_OS
+            workflow = $env:GITHUB_WORKFLOW
+            run_id   = $env:GITHUB_RUN_ID
+            run_url  = @($env:GITHUB_SERVER_URL, $env:GITHUB_REPOSITORY, "actions/runs", $env:GITHUB_RUN_ID) -join "/"
+        }
+        generatedAt  = (Get-Date).ToUniversalTime().ToString("o")
+        redMetrics   = $script:RedMetricSeries
+        steps        = @($script:EvidenceSteps)
+        notes        = @(
+            "Short chaos smoke only; does not prove multi-host steady state or live pager delivery.",
+            "Prometheus job=sl-daemon and Alertmanager routing are documented in docs/ops/alerts.md."
+        )
+    }
+
+    $parent = Split-Path -Parent $Path
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    }
+    $evidence | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $Path -Encoding utf8
+    Write-Host "ok: game-day evidence written to $Path"
 }
 
 function Start-SlDaemon {
@@ -172,6 +253,8 @@ function Assert-MetricsShape {
     Write-Host "ok: /api/metrics JSON shape"
 }
 
+$overallOutcome = "pass"
+
 try {
     Remove-PathForce -Path $watchDir
     Remove-PathForce -Path $outDir
@@ -190,6 +273,7 @@ try {
     }
     Invoke-StatusProbe -Path "/healthz" -ExpectedStatus 200
     Invoke-StatusProbe -Path "/readyz" -ExpectedStatus 503
+    Add-EvidenceStep -Name "readiness_fault" -Outcome "pass" -Detail "/healthz=200 /readyz=503"
 
     Write-Host "Phase 2: recover readiness"
     Stop-SlDaemon -Process $daemonProc
@@ -200,6 +284,10 @@ try {
     $daemonProc = Start-SlDaemon -Watch $watchDir -Out $outDir
     Wait-ReadyzHealthy -Process $daemonProc
     Assert-MetricsShape
+    Add-EvidenceStep -Name "readiness_recovery" -Outcome "pass"
+    $prometheusBody = (Invoke-WebRequest -Uri "$baseUrl/metrics" -Method Get -TimeoutSec 5).Content
+    $script:RedMetricSeries = Get-RedMetricSeries -MetricsBody $prometheusBody
+    Add-EvidenceStep -Name "red_metrics_shape" -Outcome "pass" -Detail ($script:RedMetricSeries | ConvertTo-Json -Compress)
 
     Write-Host "Phase 3: light load burst"
     & $loadSmokeScript `
@@ -208,6 +296,7 @@ try {
         -Concurrency $LoadConcurrency `
         -MinSuccessRate 99 `
         -MaxP95Ms 500
+    Add-EvidenceStep -Name "load_burst" -Outcome "pass" -Detail "requests=$LoadRequests concurrency=$LoadConcurrency"
 
     Write-Host "Phase 4: process-kill recovery"
     Stop-SlDaemon -Process $daemonProc
@@ -217,6 +306,7 @@ try {
     $daemonProc = Start-SlDaemon -Watch $watchDir -Out $outDir
     Wait-ReadyzHealthy -Process $daemonProc
     Invoke-StatusProbe -Path "/healthz" -ExpectedStatus 200
+    Add-EvidenceStep -Name "process_kill_recovery" -Outcome "pass"
 
     Write-Host "Phase 5: post-recovery mini load"
     & $loadSmokeScript `
@@ -225,10 +315,25 @@ try {
         -Concurrency 4 `
         -MinSuccessRate 99 `
         -MaxP95Ms 500
+    Add-EvidenceStep -Name "post_recovery_load" -Outcome "pass" -Detail "requests=$RecoveryRequests"
 
     Write-Host "Ops chaos smoke passed."
 }
+catch {
+    $overallOutcome = "fail"
+    Add-EvidenceStep -Name "chaos_smoke" -Outcome "fail" -Detail $_.Exception.Message
+    throw
+}
 finally {
+    if (-not [string]::IsNullOrWhiteSpace($EvidencePath)) {
+        Write-GameDayEvidence `
+            -Path $EvidencePath `
+            -Outcome $overallOutcome `
+            -HttpBind $HttpBind `
+            -LoadRequests $LoadRequests `
+            -LoadConcurrency $LoadConcurrency `
+            -RecoveryRequests $RecoveryRequests
+    }
     Stop-SlDaemon -Process $daemonProc
     if ($null -eq $previousDataDir) {
         Remove-Item Env:SL_DATA_DIR -ErrorAction SilentlyContinue

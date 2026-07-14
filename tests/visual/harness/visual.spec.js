@@ -12,6 +12,36 @@ test("E1 bundle detail empty state matches its golden", async ({ page }) => {
   });
 });
 
+test("E2 history detail empty state matches its golden", async ({ page }) => {
+  await page.goto("/?fixture=history-empty");
+  await expect(page.getByRole("tab", { name: "History", selected: true })).toBeVisible();
+  await expect(page.getByText("Select a session from the timeline to inspect")).toBeVisible();
+  await expect(page).toHaveScreenshot("e2-history-empty.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
+});
+
+test("E4 search zero-match empty state matches its golden", async ({ page }) => {
+  await page.goto("/?fixture=search-empty");
+  await expect(page.getByRole("tab", { name: "Search", selected: true })).toBeVisible();
+  await expect(page.getByTestId("search-zero-match")).toBeVisible();
+  await expect(page).toHaveScreenshot("e4-search-empty.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
+});
+
+test("R1 search error state matches its golden", async ({ page }) => {
+  await page.goto("/?fixture=search-error");
+  await expect(page.getByRole("tab", { name: "Search", selected: true })).toBeVisible();
+  await expect(page.getByText("daemon not reachable")).toBeVisible();
+  await expect(page).toHaveScreenshot("r1-search-error.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.03,
+  });
+});
+
 test("viewer exposes type tokens and persists theme preference", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Toggle light and dark theme" })).toBeVisible();

@@ -12,8 +12,8 @@ fn memory_budget_config_exposes_positive_ceiling() {
     let path = repo_root().join("docs/ops/memory-budget.json");
     let raw = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
-    let value: serde_json::Value =
-        serde_json::from_str(&raw).unwrap_or_else(|error| panic!("parse {}: {error}", path.display()));
+    let value: serde_json::Value = serde_json::from_str(&raw)
+        .unwrap_or_else(|error| panic!("parse {}: {error}", path.display()));
 
     assert_eq!(
         value.get("schema").and_then(|v| v.as_str()),
@@ -37,12 +37,7 @@ fn rss_budget_script_self_check_parses_args_and_ceiling() {
     assert!(script.is_file(), "missing {}", script.display());
 
     let output = Command::new("pwsh")
-        .args([
-            "-NoProfile",
-            "-File",
-            script.to_str().expect("utf-8 script path"),
-            "-SelfCheck",
-        ])
+        .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()
         .unwrap_or_else(|error| panic!("failed to spawn pwsh for self-check: {error}"));
 
@@ -56,8 +51,5 @@ fn rss_budget_script_self_check_parses_args_and_ceiling() {
         stdout.contains("Self-check passed"),
         "expected self-check success line, got:\n{stdout}"
     );
-    assert!(
-        stdout.contains("Ceiling:"),
-        "expected ceiling echo, got:\n{stdout}"
-    );
+    assert!(stdout.contains("Ceiling:"), "expected ceiling echo, got:\n{stdout}");
 }

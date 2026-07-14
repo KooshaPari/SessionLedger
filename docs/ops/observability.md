@@ -23,7 +23,7 @@ Scheduled evidence:
 | Workflow | Cadence | What it proves |
 |----------|---------|----------------|
 | [`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml) | Weekdays 06:23 UTC + `workflow_dispatch` | Short ops/chaos smoke via [`scripts/ops-chaos-smoke.ps1`](../../scripts/ops-chaos-smoke.ps1): `/healthz` vs `/readyz` separation, metrics shape checks, light load burst, process-kill recovery. Smoke phases target **&lt;2 min** once the daemon binary is built. |
-| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch` | Heavier concurrent load against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics` via [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1). Soft `rss-budget` job also runs [`scripts/rss-budget-check.ps1`](../../scripts/rss-budget-check.ps1) against `POST /api/ingest` (see [`memory-budget.md`](memory-budget.md)). |
+| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch` | Heavier concurrent load against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics` via [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1). Soft `rss-budget` job also runs [`scripts/rss-budget-check.ps1`](../../scripts/rss-budget-check.ps1) against `POST /api/ingest` (see [`memory-budget.md`](memory-budget.md)). `pprof-smoke` job exercises the gated loopback profiling surface via [`scripts/pprof-smoke.ps1`](../../scripts/pprof-smoke.ps1). |
 | [`.github/workflows/ops-gameday.yml`](../../.github/workflows/ops-gameday.yml) | Quarterly (manual) + `workflow_dispatch` | Game-day evidence pass: same short chaos smoke with `-EvidencePath` → `gameday-evidence.json` artifact. See [Game-day cadence](#game-day-cadence). |
 
 Prometheus SLO alert rules live in
@@ -235,10 +235,29 @@ Operators without the `otel` feature continue to rely on `/healthz`, `/readyz`,
 
 Continuous profiling is intentionally local-only and off by default. The daemon's
 HTTP bind parser still rejects non-loopback addresses, and the debug routes are
-only registered when explicitly enabled:
+only registered when explicitly enabled.
+
+### Operator contract
+
+| Rule | Detail |
+|------|--------|
+| Gate | Exact env match: `SL_ENABLE_PPROF=1` (trimmed). Any other value leaves routes unregistered. |
+| Bind | Loopback only (`127.0.0.0/8` or `::1`). Non-loopback `--http-bind` is rejected at startup. |
+| Default | Gate unset → `GET /debug/pprof/*` returns `404` (routes not mounted). |
+| Enable | Gate set → cmdline + profile paths mount on the same HTTP listener as `/healthz`. |
+| CPU sample | Default cross-platform build returns `501` on `/debug/pprof/profile` (stub surface). Do not expect a protobuf CPU profile yet. |
+| Auth | Same local trust model as other debug surfaces; no separate pprof API key. Prefer never exposing beyond loopback. |
+| OpenAPI | Debug routes are intentionally omitted from `docs/api/openapi.yaml`. |
 
 ```bash
 SL_ENABLE_PPROF=1 sl serve --http-bind 127.0.0.1:8080
+
+# cmdline: 200 application/octet-stream (null-delimited argv)
+curl -fsS "http://127.0.0.1:8080/debug/pprof/cmdline" | xxd | head
+
+# profile: 501 text stub until a feature-gated sampler lands
+curl -sS -o /tmp/sl-profile.txt -w "%{http_code}\n" \
+  "http://127.0.0.1:8080/debug/pprof/profile"
 ```
 
 Available debug paths:
@@ -247,6 +266,24 @@ Available debug paths:
 |------|--------|-------|
 | `GET /debug/pprof/cmdline` | `200` | Returns null-delimited process argv bytes, matching the pprof-style cmdline surface. |
 | `GET /debug/pprof/profile` | `501` | CPU sampling is not implemented in the default cross-platform build. The endpoint exists as the gated profiling surface and returns explanatory bytes. |
+
+### Smoke evidence
+
+[`scripts/pprof-smoke.ps1`](../../scripts/pprof-smoke.ps1) is the operator/CI probe:
+
+```powershell
+# Start a local daemon with the gate on and assert cmdline/profile contract
+./scripts/pprof-smoke.ps1 -DaemonPath path/to/sl-daemon -AlsoAssertDisabled
+
+# Probe an already-running daemon; exits 0 with "skip" when the gate is off
+./scripts/pprof-smoke.ps1 -AttachOnly -BaseUrl http://127.0.0.1:8080
+
+# Arg/doc self-check (no daemon)
+./scripts/pprof-smoke.ps1 -SelfCheck
+```
+
+Scheduled evidence runs on the `pprof-smoke` job in
+[`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
 
 The default build avoids pulling in a sampler that would make Windows + Linux CI
 fragile. If deeper profiling becomes a hard requirement, prefer adding a

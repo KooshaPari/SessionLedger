@@ -117,6 +117,9 @@ in [`SECURITY.md`](SECURITY.md#api-keys-and-secret-rotation).
 - Verify no regressions
 - CI runs Linux-only (per billing constraints)
 - Reference the existing [qgate.yml](.github/workflows/qgate.yml) quality gate
+- The reusable `quality-gate.yml` call is pinned to a phenotype-tooling commit
+  SHA (not `@main`); see [docs/ops/qgate-pin.md](docs/ops/qgate-pin.md) before
+  bumping the pin
 
 ## Developer Certificate of Origin (DCO)
 All contributions must be signed off under the [Developer Certificate of Origin](https://developercertificate.org/).

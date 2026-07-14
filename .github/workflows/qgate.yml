@@ -1,10 +1,13 @@
 # qgate quality gate for SessionLedger.
 #
-# Runs the reusable qgate workflow from KooshaPari/phenotype-tooling on a
+# Calls the reusable quality-gate workflow from KooshaPari/phenotype-tooling on a
 # Linux standard runner. Non-blocking until per-module coverage reaches
 # the .qgate.toml threshold (per the "1 via 2" protocol).
 #
-# Spectrum categories exercised (when PR #198 lands on phenotype-tooling):
+# Pin policy: both the workflow ref and qgate-ref must be full commit SHAs
+# (never @main / floating tags). See docs/ops/qgate-pin.md.
+#
+# Spectrum categories exercised:
 #   - sast:  semgrep config=auto (Rust + Python ruleset)
 #   - sbom:  cargo-cyclonedx generates target/sbom.cdx.json + per-crate
 #            *.cdx.json; uploaded as the sbom-cyclonedx workflow artifact
@@ -24,9 +27,9 @@ permissions:
   contents: read
 
 jobs:
-  qgate:
-    continue-on-error: true   # remove once per-module coverage ≥85%
-
+  # Local coverage + SBOM evidence (artifacts for review). The reusable gate
+  # job below is the immutable phenotype-tooling entrypoint.
+  prepare:
     runs-on: ubuntu-latest   # Linux standard only — no billed runners
 
     steps:
@@ -79,13 +82,17 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # qgate reusable workflow — pinned to phenotype-tooling commit for supply-chain hygiene.
-      - name: qgate quality gate
-        uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad # main 2026-07-13
-        with:
-          coverage-report: coverage/lcov.info
-          coverage-format: lcov
-          threshold: 85
-          not-applicable: 'a11y,e2e,dast'
-          sast-config: 'auto'
-        secrets: inherit
+  # Reusable workflow — job-level call, pinned to phenotype-tooling commit SHA.
+  # Pin: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad (phenotype-tooling main 2026-07-13)
+  quality-gate:
+    continue-on-error: true   # remove once per-module coverage ≥85%
+    uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad # main 2026-07-13
+    with:
+      coverage-report: coverage/lcov.info
+      coverage-format: lcov
+      threshold: 85
+      not-applicable: 'a11y,e2e,dast'
+      sast-config: 'auto'
+      # Same SHA as the workflow pin — do not leave qgate-ref on floating main.
+      qgate-ref: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad
+    secrets: inherit

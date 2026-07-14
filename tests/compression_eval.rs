@@ -19,31 +19,15 @@ const COMPRESS_TOKEN_FIXTURES: &[&str] = &[
 
 /// Per-fixture token ledger rows: intent token_estimate sum must match gate total.
 const TOKEN_LEDGER_FIXTURES: &[(&str, u32, &[u32])] = &[
-    (
-        "docs/reference/conformance/fixtures/task-family-token-budget-032.okf.json",
-        370,
-        &[210, 160],
-    ),
+    ("docs/reference/conformance/fixtures/task-family-token-budget-032.okf.json", 370, &[210, 160]),
     (
         "docs/reference/conformance/fixtures/task-family-compress-resume-033.okf.json",
         360,
         &[240, 120],
     ),
-    (
-        "docs/reference/conformance/fixtures/compress-token-proxy-034.okf.json",
-        270,
-        &[180, 90],
-    ),
-    (
-        "docs/reference/conformance/fixtures/token-slice-budget-035.okf.json",
-        280,
-        &[160, 120],
-    ),
-    (
-        "docs/reference/conformance/fixtures/archive-gzip-resume-036.okf.json",
-        310,
-        &[200, 110],
-    ),
+    ("docs/reference/conformance/fixtures/compress-token-proxy-034.okf.json", 270, &[180, 90]),
+    ("docs/reference/conformance/fixtures/token-slice-budget-035.okf.json", 280, &[160, 120]),
+    ("docs/reference/conformance/fixtures/archive-gzip-resume-036.okf.json", 310, &[200, 110]),
 ];
 
 #[test]
@@ -121,25 +105,25 @@ fn compress_token_fixtures_per_eval_token_ledger_matches_gate() {
             .find_map(|entity| entity["properties"]["total_token_estimate"].as_u64())
             .map(|value| value as u32)
             .unwrap_or_else(|| {
-                panic!(
-                    "{} missing gate.properties.total_token_estimate",
-                    path.display()
-                )
+                panic!("{} missing gate.properties.total_token_estimate", path.display())
             });
 
         let config_sum: u32 = expected_intents.iter().sum();
         assert_eq!(
-            config_sum, *expected_total,
+            config_sum,
+            *expected_total,
             "pinned ledger config mismatch for {}",
             path.display()
         );
         assert_eq!(
-            intent_sum, *expected_total,
+            intent_sum,
+            *expected_total,
             "intent token_estimate sum mismatch on {}",
             path.display()
         );
         assert_eq!(
-            gate_total, *expected_total,
+            gate_total,
+            *expected_total,
             "gate total_token_estimate mismatch on {}",
             path.display()
         );
@@ -153,10 +137,6 @@ fn compress_token_fixtures_per_eval_token_ledger_matches_gate() {
         observed.sort_unstable();
         let mut expected = expected_intents.to_vec();
         expected.sort_unstable();
-        assert_eq!(
-            observed, expected,
-            "intent token_estimate list mismatch on {}",
-            path.display()
-        );
+        assert_eq!(observed, expected, "intent token_estimate list mismatch on {}", path.display());
     }
 }

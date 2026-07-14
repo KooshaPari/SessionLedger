@@ -2,14 +2,16 @@
 
 Status: **C08 L75 expanded** — OKF conformance fixtures stay aligned across
 programming-language shapes already present in the corpus (Python, TypeScript,
-Go), plus a thin structural-invariant harness that compares shared OKF v1.0
-core shape across those fixtures. This is **fixture + structural parity**, not
-a multi-language runtime SDK and **not** Harbor / agent-eval.
+Go), plus a thin structural-invariant harness and a **language-agnostic OKF
+adapter interface** with one Python reference implementation that can
+validate/emit a non-Rust fixture path. This is **fixture + structural + adapter
+stub** evidence, not a multi-language runtime SDK and **not** Harbor / agent-eval.
 
 Related: [`docs/EVAL_SCOPE.md`](../EVAL_SCOPE.md) (eval boundary),
 [`docs/reference/conformance/README.md`](../reference/conformance/README.md)
 (corpus layout), [`eval-manifest.json`](eval-manifest.json) (fixture anchors),
-[`OKF-SPEC.md`](../reference/OKF-SPEC.md) (structural rules).
+[`OKF-SPEC.md`](../reference/OKF-SPEC.md) (structural rules),
+[`adapters/README.md`](../../adapters/README.md) (adapter interface).
 
 ## What "parity" means here
 
@@ -22,11 +24,15 @@ in the corpus README (parse → validate → round-trip).
 Beyond tag presence, the SelfCheck **structural invariant harness** parses each
 matrix fixture and asserts the same OKF v1.0 core invariants (version, ids,
 required entity types, relation endpoints, provenance alignment). That is a
-thin cross-language adapter over fixtures — not a shipped language SDK.
+thin cross-language check over fixtures.
+
+Wave-33 adds a documented **adapter stub**: a language-agnostic
+`load` / `validate` / `emit` contract plus a Python reference CLI that exercises
+the Python matrix fixture path end-to-end (still not a shipped SDK).
 
 Parity does **not** require:
 
-- Native Python / TypeScript / Go SessionLedger ports
+- Full native Python / TypeScript / Go SessionLedger ports or package releases
 - Per-language agent harnesses or Harbor env providers
 - Identical toolchains or acceptance-command strings across fixtures
 
@@ -71,13 +77,34 @@ Optional entity types (e.g. TypeScript `criteria`) may differ per language row;
 only the shared core fingerprint must match. This harness is the Wave-32
 expansion beyond fixture-tag SSOT toward consumer-facing structural parity.
 
+## Native language adapter stub
+
+Language-agnostic contract (see [`adapters/README.md`](../../adapters/README.md)):
+
+| Operation | Role |
+|-----------|------|
+| `load(path)` | Read UTF-8 OKF JSON |
+| `validate(doc)` | Enforce the same v1.0 structural rules as the harness |
+| `emit(doc)` | Pretty-print validated OKF JSON |
+
+Reference implementation (Python, stdlib only):
+
+| Path | CLI |
+|------|-----|
+| [`adapters/python/okf_adapter.py`](../../adapters/python/okf_adapter.py) | `validate` / `emit` against a fixture path |
+
+SelfCheck runs the Python adapter against the Python matrix fixture
+(`cursor-python-029.okf.json`) to prove validate + emit beyond PowerShell-only
+structural comparison. Additional host languages may mirror the same interface
+later; this wave ships one reference impl only.
+
 ## Explicit non-goals
 
 | Item | Status | Rationale |
 |------|--------|-----------|
 | Harbor / Portage / Terminal-Bench | **N/A** | Product boundary — see [`EVAL_SCOPE.md`](../EVAL_SCOPE.md) |
 | Multi-env agent scoring | **N/A** | SessionLedger is ingest → distill → OKF → view |
-| Shipping language SDKs | **out of scope** | Parity is fixture/SSOT + structural harness evidence only |
+| Shipping language SDKs / package releases | **out of scope** | Adapter stub + fixture/SSOT evidence only |
 
 ## Done gates
 
@@ -87,19 +114,20 @@ expansion beyond fixture-tag SSOT toward consumer-facing structural parity.
 
 ## Machine verification (SelfCheck)
 
-Hermetic doc + fixture path + structural harness check (no daemon, no network,
-no cargo):
+Hermetic doc + fixture path + structural harness + Python adapter stub check
+(no daemon, no network, no cargo; uses host `python`/`python3` stdlib only):
 
 ```powershell
 pwsh ./scripts/cross-language-parity-check.ps1 -SelfCheck
 ```
 
 `-SelfCheck` asserts this page keeps the parity matrix, language-tag rule,
-structural invariant harness section, EVAL_SCOPE / Harbor N/A boundary, that
-each matrix fixture exists with a matching `source_id` language tag, and that
-the structural harness finds an identical shared-core fingerprint across rows.
-`tests/cross_language_parity.rs` wraps the same command for optional
-`cargo test` proof.
+structural invariant harness section, native language adapter stub section,
+EVAL_SCOPE / Harbor N/A boundary, that each matrix fixture exists with a
+matching `source_id` language tag, that the structural harness finds an
+identical shared-core fingerprint across rows, and that the Python reference
+adapter validates and emits the Python fixture. `tests/cross_language_parity.rs`
+wraps the same command for optional `cargo test` proof.
 
 CI: [`.github/workflows/eval-compression.yml`](../../.github/workflows/eval-compression.yml)
 runs the SelfCheck on PR/push (blocking, hermetic).

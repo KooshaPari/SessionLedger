@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "365/402",
-    "pct": 91,
+    "score": "368/402",
+    "pct": 92,
     "grade": "A",
-    "commit": "0bc319d",
-    "wave": "Wave-29"
+    "commit": "27435e5",
+    "wave": "Wave-30"
   },
   "fr": [
     {
@@ -748,6 +748,29 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.44",
+      "status": "done",
+      "evidence": [
+        "docs/ops/privacy-hygiene.md",
+        "scripts/privacy-hygiene-check.ps1",
+        "docs/ops/test-pyramid.md",
+        "scripts/test-pyramid-check.ps1",
+        "docs/ops/continuous-profiling.md",
+        "scripts/continuous-profiling-agent.ps1",
+        "docs/ops/sandbox-boundary.md",
+        "scripts/sandbox-boundary-check.ps1",
+        "docs/ops/perf-baseline.json",
+        "docs/a11y/overlay-escape.md"
+      ]
+    },
+    {
+      "id": "WBS-8.45",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -774,6 +797,8 @@
         "docs/ops/alloc-profile.md",
         "scripts/alloc-profile-check.ps1",
         "tests/alloc_profile_dhat.rs",
+        "docs/ops/perf-baseline.json",
+        "scripts/bench-gate.ps1",
         "tests/race_model.rs",
         "docs/ops/concurrency-safety.md",
         ".github/workflows/race-smoke.yml"
@@ -798,7 +823,7 @@
     },
     {
       "id": "C02",
-      "score": "27/30",
+      "score": "28/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/audit.rs",
@@ -808,6 +833,8 @@
         "docs/ops/local-trust-boundary.md",
         "docs/ops/crypto-inventory.md",
         "scripts/crypto-inventory-check.ps1",
+        "docs/ops/privacy-hygiene.md",
+        "scripts/privacy-hygiene-check.ps1",
         "scripts/audit-review.ps1"
       ]
     },
@@ -837,6 +864,8 @@
         "scripts/commit-signing-check.ps1",
         "scripts/branch-protection-check.ps1",
         "docs/ops/branch-protection.md",
+        "docs/ops/sandbox-boundary.md",
+        "scripts/sandbox-boundary-check.ps1",
         "CONTRIBUTING.md"
       ]
     },
@@ -855,6 +884,8 @@
         "docs/ops/alerts/sessionledger-slo.yaml",
         "docs/ops/observability.md",
         "scripts/pprof-smoke.ps1",
+        "docs/ops/continuous-profiling.md",
+        "scripts/continuous-profiling-agent.ps1",
         ".github/workflows/ops-load.yml"
       ]
     },
@@ -876,9 +907,12 @@
     },
     {
       "id": "C07",
-      "score": "27/30",
+      "score": "28/30",
       "status": "partial",
       "evidence": [
+        "docs/ops/test-pyramid.md",
+        "scripts/test-pyramid-check.ps1",
+        "tests/test_pyramid.rs",
         "scripts/flake-tracker-check.ps1",
         "scripts/flake-rerun-stats.ps1",
         "scripts/flake-quarantine-apply.ps1",
@@ -915,12 +949,13 @@
     },
     {
       "id": "C09",
-      "score": "41/45",
+      "score": "42/45",
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/help_overlay.rs",
         "crates/sl-viewer/src/command_palette.rs",
         "docs/HELP.md",
+        "docs/a11y/overlay-escape.md",
         "docs/a11y/status-regions-and-native-smoke.md",
         "docs/a11y/screen-reader-smoke.md",
         "scripts/record-native-webview-smoke.ps1",

@@ -70,6 +70,33 @@ default `60` requests per second when the env is unset. Excess `/api/*` traffic
 returns `429` with `error.code="rate_limited"`. `/healthz`, `/readyz`, and
 `/metrics` are not throttled.
 
+## General `/api/*` circuit breaker
+
+Beyond rate limiting, `sl-daemon` can apply a process-wide closed/open/half-open
+circuit breaker to `/api/*`. Consecutive handler `5xx` responses trip the
+breaker; while open, further `/api/*` calls return `503` with
+`error.code="circuit_open"` and a `Retry-After` header. After the open window,
+one half-open probe is allowed; success closes the breaker, failure re-opens it.
+Client `4xx` responses do not trip the breaker. Probes and `/metrics` stay open.
+
+| Environment variable | Default | Meaning |
+|---|---:|---|
+| `SL_API_CIRCUIT_BREAKER` | unset → **off** on open loopback; **on** when `SL_API_KEY` is set or bind is non-loopback | `on`/`1` enables; `off`/`0` disables |
+| `SL_API_CIRCUIT_FAILURE_THRESHOLD` | `5` | Consecutive `/api/*` 5xx before opening |
+| `SL_API_CIRCUIT_OPEN_MS` | `30000` | Open duration before a half-open probe |
+
+## Outbound CLI retry policy
+
+`sl-daemon status` / `list` (and other client subcommands that call the HTTP API)
+apply a bounded exponential-backoff retry on transient `reqwest` failures
+(connect/timeout/request). Connection-refused for `status` still maps to
+"daemon not running" without spinning retries.
+
+| Environment variable | Default | Meaning |
+|---|---:|---|
+| `SL_HTTP_RETRY_MAX` | `2` | Extra attempts after the first (`0` / `off` disables) |
+| `SL_HTTP_RETRY_BASE_MS` | `50` | Base backoff; doubles each attempt (capped shift) |
+
 Clients may send `Idempotency-Key` on `POST /api/ingest` to safely retry a
 successful request while the daemon process is still running. The daemon stores
 the key, raw-body hash, and success response in memory only: same key plus same

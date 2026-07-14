@@ -43,6 +43,7 @@ use crate::audit::{self, AuditSink};
 use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
 use crate::metrics::{compute_metrics, normalize_http_route, HttpMetrics};
+use crate::resilience::ApiCircuitBreaker;
 use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 #[cfg(feature = "otel")]
 use opentelemetry::trace::{
@@ -331,6 +332,8 @@ pub(crate) struct AppState {
     pub ingest_admission: IngestAdmission,
     /// Process-wide `/api/*` rate throttle (tower-style; shared across connections).
     pub api_rate_limit: ApiRateLimit,
+    /// Process-wide `/api/*` circuit breaker (trips on consecutive 5xx).
+    pub api_circuit_breaker: ApiCircuitBreaker,
     /// Optional shared-secret authentication for HTTP API routes.
     pub api_key_auth: ApiKeyAuth,
     /// Durable local audit sink for structured actor/action events.
@@ -352,10 +355,12 @@ fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
     let http_metrics = state.http_metrics.clone();
     let api_auth_state = state.clone();
     let api_rate_state = state.clone();
+    let api_circuit_state = state.clone();
 
     // Ingest admission (body size + semaphore bulkhead) stays in the handler.
     // General `/api/*` throttle uses [`ApiRateLimit`] (Arc-shared fixed window),
     // not tower `RateLimitLayer`, so the budget is process-wide across connections.
+    // Circuit breaker is likewise Arc-shared and trips on consecutive 5xx.
     let router = Router::new()
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
@@ -380,6 +385,10 @@ fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
         .with_state(state)
         .layer(middleware::from_fn_with_state(api_auth_state, enforce_api_key_policy))
         .layer(middleware::from_fn_with_state(api_rate_state, enforce_api_rate_limit))
+        .layer(middleware::from_fn_with_state(
+            api_circuit_state,
+            enforce_api_circuit_breaker,
+        ))
         .layer(middleware::from_fn_with_state(http_metrics, observe_request))
         .layer(cors)
 }
@@ -425,6 +434,50 @@ async fn enforce_api_rate_limit(
         );
     }
     next.run(request).await
+}
+
+/// Process-wide circuit breaker for `/api/*` (probes and `/metrics` stay open).
+///
+/// Trips after consecutive handler 5xx responses; while open, returns `503`
+/// with `Retry-After` and `error.code="circuit_open"`. Half-open allows a single
+/// probe after the cooldown. Client 4xx responses do not trip the breaker.
+async fn enforce_api_circuit_breaker(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    let is_api = request.uri().path().starts_with("/api/");
+    if is_api {
+        if let Some(retry_after) = state.api_circuit_breaker.deny_if_open() {
+            let request_id = request_id_from_headers(request.headers());
+            let secs = retry_after.as_secs().max(1);
+            let mut response = api_error(
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                "circuit_open",
+                format!(
+                    "API circuit breaker open after {} consecutive 5xx; retry after {}s",
+                    state.api_circuit_breaker.failure_threshold, secs
+                ),
+                &request_id,
+            );
+            if let Ok(value) = HeaderValue::from_str(&secs.to_string()) {
+                response.headers_mut().insert(axum::http::header::RETRY_AFTER, value);
+            }
+            return response;
+        }
+    }
+
+    let response = next.run(request).await;
+    if is_api {
+        let status = response.status();
+        if status.is_server_error() {
+            state.api_circuit_breaker.record_failure();
+        } else if status.is_success() || status.is_client_error() {
+            // Treat 2xx/4xx as healthy from the server's perspective.
+            state.api_circuit_breaker.record_success();
+        }
+    }
+    response
 }
 
 fn pprof_enabled_from_env() -> bool {
@@ -1281,6 +1334,7 @@ mod tests {
             http_metrics: Arc::new(HttpMetrics::default()),
             ingest_admission: IngestAdmission::from_values(None, None).unwrap(),
             api_rate_limit: ApiRateLimit::disabled(),
+            api_circuit_breaker: ApiCircuitBreaker::disabled(),
             api_key_auth: ApiKeyAuth::default(),
             audit_sink: Arc::new(AuditSink::open(out_dir).expect("audit sink")),
             idempotency_cache: IngestIdempotencyCache::default(),
@@ -1616,6 +1670,46 @@ mod tests {
         assert!(limit.try_acquire());
         assert!(limit.try_acquire());
         assert!(!limit.try_acquire());
+    }
+
+    #[tokio::test]
+    async fn api_circuit_breaker_returns_503_after_consecutive_5xx_keeps_healthz_open() {
+        use crate::resilience::BreakerState;
+
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let mut state = test_state(out_dir.path());
+        // Trip after a single synthetic 5xx recorded against the shared breaker.
+        state.api_circuit_breaker = ApiCircuitBreaker::enabled(1, Duration::from_secs(60));
+        state.api_circuit_breaker.record_failure();
+        assert_eq!(state.api_circuit_breaker.state(), BreakerState::Open);
+
+        let (addr, server) = start_test_server(state).await;
+        let client = reqwest::Client::new();
+
+        let blocked = client.get(format!("http://{addr}/api/bundles")).send().await.unwrap();
+        assert_eq!(blocked.status(), axum::http::StatusCode::SERVICE_UNAVAILABLE);
+        assert!(blocked.headers().get(axum::http::header::RETRY_AFTER).is_some());
+        let body: Value = blocked.json().await.unwrap();
+        assert_eq!(body["error"]["code"], "circuit_open");
+
+        let health = client.get(format!("http://{addr}/healthz")).send().await.unwrap();
+        assert_eq!(health.status(), axum::http::StatusCode::OK);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn api_circuit_breaker_disabled_allows_traffic() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let state = test_state(out_dir.path());
+        assert!(!state.api_circuit_breaker.is_enabled());
+        let (addr, server) = start_test_server(state).await;
+        let response = reqwest::Client::new()
+            .get(format!("http://{addr}/api/bundles"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        server.abort();
     }
 
     #[test]

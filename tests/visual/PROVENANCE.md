@@ -13,6 +13,8 @@ visual contract in `tests/visual/harness/visual.spec.js`.
 | `golden/r2-replay-error.png` | Replay tab, SSE stream failure | `/?fixture=replay-error` | 1280x720 Chromium | `prefers-reduced-motion: reduce` | Locks VISUAL_SPEC R2: `.status-error` copy + Retry on replay surface. |
 | `golden/r3-error-color.png` | Bundles tab, error color contract | `/?fixture=error-color` | 1280x720 Chromium | `prefers-reduced-motion: reduce` | Locks VISUAL_SPEC R3: warm red error foreground on slate panel, distinct from live orange. |
 | `golden/l1-content-skeleton.png` | Bundles tab, content-shaped loading skeleton | `/?fixture=skeleton` on the Bundles tab | 1280x720 Chromium | `prefers-reduced-motion: reduce` | Locks VISUAL_SPEC L99: list + detail shimmer blocks preserve layout without CLS. |
+| `golden/s1-launch-splash.png` | Viewer launch splash (dark theme) | `/?fixture=launch-splash` | 1280x720 Chromium | `prefers-reduced-motion: reduce` | Locks L103: branded SessionLedger mark + Viewer caption held via `.launch-splash-hold` (no dismiss timer). |
+| `golden/s1-launch-splash-light.png` | Viewer launch splash (light theme) | `/?fixture=launch-splash-light` | 1280x720 Chromium | `prefers-reduced-motion: reduce` | Locks L103 theme variant: same splash chrome on lab-white / cobalt light tokens. |
 
 Refresh with:
 

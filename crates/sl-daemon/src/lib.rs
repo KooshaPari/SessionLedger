@@ -7,6 +7,8 @@
 //!
 //! Worker tasks emit [`tracing`] spans (`worker` / `process_session`) so operators
 //! can follow ETL progress via `RUST_LOG` (see the `sl` binary subscriber).
+//! Optional W3C [`traceparent`](crate::traceparent) sidecars (`{path}.traceparent`)
+//! continue distributed parentage across the file pipeline.
 //!
 //! # Architecture
 //!
@@ -41,10 +43,12 @@
 //! ```
 
 pub mod shutdown;
+pub mod traceparent;
 pub mod watcher;
 pub mod worker;
 
 pub use shutdown::ServeShutdown;
+pub use traceparent::{TraceParent, HEADER as TRACEPARENT_HEADER};
 pub use watcher::list_jsonl;
 pub use watcher::scan_once;
 pub use watcher::spawn_fs_watcher;

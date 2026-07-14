@@ -385,10 +385,7 @@ fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
         .with_state(state)
         .layer(middleware::from_fn_with_state(api_auth_state, enforce_api_key_policy))
         .layer(middleware::from_fn_with_state(api_rate_state, enforce_api_rate_limit))
-        .layer(middleware::from_fn_with_state(
-            api_circuit_state,
-            enforce_api_circuit_breaker,
-        ))
+        .layer(middleware::from_fn_with_state(api_circuit_state, enforce_api_circuit_breaker))
         .layer(middleware::from_fn_with_state(http_metrics, observe_request))
         .layer(cors)
 }
@@ -612,11 +609,10 @@ async fn pprof_profile(Query(params): Query<PprofProfileParams>) -> Response {
     #[cfg(unix)]
     {
         match sample_cpu_profile(seconds).await {
-            Ok(body) => (
-                [(CONTENT_TYPE, HeaderValue::from_static("application/octet-stream"))],
-                body,
-            )
-                .into_response(),
+            Ok(body) => {
+                ([(CONTENT_TYPE, HeaderValue::from_static("application/octet-stream"))], body)
+                    .into_response()
+            }
             Err(PprofSampleError::Busy) => (
                 axum::http::StatusCode::SERVICE_UNAVAILABLE,
                 [(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
@@ -683,60 +679,25 @@ async fn sample_cpu_profile(seconds: u64) -> Result<Vec<u8>, PprofSampleError> {
             .report()
             .build()
             .map_err(|error| PprofSampleError::Failed(error.to_string()))?;
-        let profile = report
-            .pprof()
-            .map_err(|error| PprofSampleError::Failed(error.to_string()))?;
+        let profile =
+            report.pprof().map_err(|error| PprofSampleError::Failed(error.to_string()))?;
 
         let mut body = Vec::new();
-        profile
-            .encode(&mut body)
-            .map_err(|error| PprofSampleError::Failed(error.to_string()))?;
+        profile.encode(&mut body).map_err(|error| PprofSampleError::Failed(error.to_string()))?;
         Ok(body)
     })
     .await
     .map_err(|error| PprofSampleError::Failed(error.to_string()))?
 }
 
-const TRACEPARENT: &str = "traceparent";
+use sl_daemon::traceparent::{TraceParent, HEADER as TRACEPARENT};
+
 #[cfg(feature = "otel")]
 const TRACESTATE: &str = "tracestate";
 const X_REQUEST_ID: &str = "x-request-id";
 
-#[derive(Debug, PartialEq, Eq)]
-struct TraceParent {
-    trace_id: String,
-    parent_id: String,
-    flags: String,
-}
-
-/// Parse the commonly deployed W3C trace-context version (`00`).
 fn parse_traceparent(value: &str) -> Option<TraceParent> {
-    if value.len() != 55 || !value.is_ascii() {
-        return None;
-    }
-    let bytes = value.as_bytes();
-    if &bytes[0..3] != b"00-" || bytes[35] != b'-' || bytes[52] != b'-' {
-        return None;
-    }
-    let trace_id = &value[3..35];
-    let parent_id = &value[36..52];
-    let flags = &value[53..55];
-    let is_lower_hex = |part: &str| {
-        part.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    };
-    if !is_lower_hex(trace_id)
-        || !is_lower_hex(parent_id)
-        || !is_lower_hex(flags)
-        || trace_id.bytes().all(|byte| byte == b'0')
-        || parent_id.bytes().all(|byte| byte == b'0')
-    {
-        return None;
-    }
-    Some(TraceParent {
-        trace_id: trace_id.to_owned(),
-        parent_id: parent_id.to_owned(),
-        flags: flags.to_owned(),
-    })
+    TraceParent::parse(value)
 }
 
 fn request_id_from_headers(headers: &HeaderMap) -> String {
@@ -1589,26 +1550,6 @@ mod tests {
         assert!(delay_ms_for_speed(1000.0) >= 1);
     }
 
-    #[test]
-    fn parses_valid_traceparent() {
-        let parsed =
-            parse_traceparent("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01").unwrap();
-        assert_eq!(parsed.trace_id, "4bf92f3577b34da6a3ce929d0e0e4736");
-        assert_eq!(parsed.parent_id, "00f067aa0ba902b7");
-        assert_eq!(parsed.flags, "01");
-    }
-
-    #[test]
-    fn rejects_malformed_or_zero_traceparent() {
-        assert!(parse_traceparent("not-a-traceparent").is_none());
-        assert!(
-            parse_traceparent("00-00000000000000000000000000000000-00f067aa0ba902b7-01").is_none()
-        );
-        assert!(
-            parse_traceparent("00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01").is_none()
-        );
-    }
-
     #[cfg(feature = "otel")]
     #[test]
     fn builds_remote_otel_parent_context_from_trace_context_headers() {
@@ -1703,11 +1644,8 @@ mod tests {
         let state = test_state(out_dir.path());
         assert!(!state.api_circuit_breaker.is_enabled());
         let (addr, server) = start_test_server(state).await;
-        let response = reqwest::Client::new()
-            .get(format!("http://{addr}/api/bundles"))
-            .send()
-            .await
-            .unwrap();
+        let response =
+            reqwest::Client::new().get(format!("http://{addr}/api/bundles")).send().await.unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
         server.abort();
     }

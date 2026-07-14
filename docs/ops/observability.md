@@ -211,7 +211,7 @@ are addressed here; **remaining code work**:
 | `tracing` subscriber + env log discipline | **Done** | fmt subscriber + `RUST_LOG` |
 | Optional production JSON logs | **Done** | `json-logs` feature + `SL_LOG_FORMAT=json` |
 | Soft-goal OTLP export sketch | **Feature-gated sketch** | `otel` Cargo feature; traces only |
-| W3C `traceparent` propagation | **Done for HTTP ingress** | Valid v00 context parsed, set as OTel parent when `otel` is enabled, echoed on response |
+| W3C `traceparent` propagation | **Done (HTTP + ETL sidecar)** | Shared parse/propagate helper; HTTP ingress + `{path}.traceparent` worker parentage |
 | Prometheus / OTLP RED exporters | **Prometheus HTTP RED subset done** | `/metrics`, parallel to `/api/metrics` |
 
 Build the optional exporter without changing the default dependency graph:
@@ -229,8 +229,8 @@ neither variable is set, the daemon keeps its normal fmt subscriber and
 
 Remaining future work:
 
-1. Continue W3C context across ingest → compile → export when adapters land.
-2. Bridge labeled RED signals to OTLP and add process gauges.
+1. Bridge labeled RED signals to OTLP and add process gauges.
+2. Optional channel-carried `WorkItem` parent (today: sidecar file convention).
 
 Operators without the `otel` feature continue to rely on `/healthz`, `/readyz`,
 `/api/metrics`, `/metrics`, and process logs.
@@ -304,8 +304,34 @@ to the `http.request` tracing span as `trace_id`, `parent_span_id`, and
 `trace_flags`, then echoed on the response. When the `otel` feature is enabled,
 the same parsed context becomes the remote OpenTelemetry parent context for the
 request span; `tracestate` is preserved when present and valid. Invalid headers
-are ignored. This does not create a replacement trace ID and does not yet
-connect context to ETL adapter spans.
+are ignored. This does not create a replacement trace ID.
+
+Parse / format / child-span helpers live in
+[`crates/sl-daemon/src/traceparent.rs`](../../crates/sl-daemon/src/traceparent.rs)
+(`sl_daemon::traceparent`). HTTP middleware and the worker pool share that
+module so ingress and ETL stay on the same wire format.
+
+### Cross-process ETL parentage {#w3c-etl-sidecar}
+
+File-watcher → worker hops do not carry HTTP headers. For true cross-process
+parentage on the JSONL pipeline:
+
+1. Upstream writer drops `{session}.jsonl` and a sibling
+   `{session}.jsonl.traceparent` containing one W3C header line.
+2. `process_session` loads the sidecar (when valid), records `trace_id` /
+   `parent_span_id` / `trace_flags` / `traceparent` on the span, and emits a
+   **child** header as `{session-id}.okf.json.traceparent` beside each OKF
+   document so the next hop can continue the same `trace_id`.
+
+Operators can verify the helper without a collector:
+
+```bash
+cargo test -p sl-daemon traceparent -- --nocapture
+```
+
+<a id="w3c-traceparent"></a>
+See also: [OpenTelemetry](#opentelemetry-feature-gated-sketch--issue-65) soft
+goal and the HTTP ingress behavior above.
 
 ## Production log format
 

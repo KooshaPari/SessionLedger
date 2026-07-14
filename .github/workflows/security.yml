@@ -1,6 +1,8 @@
 # P0 security + supply-chain checks for SessionLedger.
 # cargo-deny (deny.toml at repo root) + cargo-audit + gitleaks + trufflehog +
 # .env.example secret hygiene. Keep green on PRs.
+# Weekly schedule covers L33 "scheduled full scan beyond PR"; gitleaks SARIF
+# uploads to code scanning when security-events write is available.
 
 name: Security
 
@@ -8,6 +10,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    # Monday 06:00 UTC — full scan outside PR pressure
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -52,6 +58,12 @@ jobs:
   gitleaks:
     name: gitleaks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for SARIF upload to GitHub code scanning (L33).
+      security-events: write
+      # gitleaks-action may comment on PRs when licensed; harmless if unused.
+      pull-requests: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
@@ -59,6 +71,15 @@ jobs:
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Explicit SARIF upload so findings land in the Security tab even when
+      # the action skips its built-in upload (fork PRs: continue-on-error).
+      - name: Upload gitleaks SARIF
+        if: always() && hashFiles('results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        continue-on-error: true
+        with:
+          sarif_file: results.sarif
+          category: gitleaks
 
   trufflehog:
     name: trufflehog

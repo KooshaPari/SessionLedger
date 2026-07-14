@@ -55,7 +55,8 @@ Critical supply-chain or remote-code issues may be accelerated at maintainer dis
 ## Supply Chain & SBOM
 
 - Dependency policy is enforced by [`deny.toml`](deny.toml) via `cargo deny check` (see [`.github/workflows/security.yml`](.github/workflows/security.yml)).
-- Secret scanning runs with gitleaks and TruffleHog (dual-scan) in the same workflow on PRs and pushes to `main`. Local pre-commit hooks use gitleaks only.
+- Secret scanning runs with gitleaks and TruffleHog (dual-scan) in the same workflow on PRs and pushes to `main` (plus a weekly scheduled full scan). Gitleaks uploads SARIF to GitHub code scanning when `security-events` write is available. Local pre-commit hooks use gitleaks only.
+- Dependency updates: [`renovate.json`](renovate.json) groups Cargo and GitHub Actions PRs and automerges **patch** (and Actions digest) updates after required CI checks pass. Weekly Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) remains as a secondary CVE/update surface until Renovate is the sole bot. Prefer reviewing Renovate majors manually.
 - CycloneDX SBOMs are produced in the qgate path as `target/sbom.cdx.json` and per-crate `*.cdx.json` artifacts (see [`.github/workflows/qgate.yml`](.github/workflows/qgate.yml) header comments). Packaging notes: [`packaging/README.md`](packaging/README.md).
 
 - Advisory scanning: `cargo audit` job in .github/workflows/security.yml.

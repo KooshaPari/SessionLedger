@@ -16,13 +16,13 @@ fn memory_budget_config_exposes_positive_ceiling() {
         .unwrap_or_else(|error| panic!("parse {}: {error}", path.display()));
 
     assert_eq!(
-        value.get("schema").and_then(|v| v.as_str()),
+        value.get("schema").and_then(serde_json::Value::as_str),
         Some("sessionledger.memory-budget.v1")
     );
 
     let ceiling = value
         .get("ingest_rss_ceiling_bytes")
-        .and_then(|v| v.as_u64())
+        .and_then(serde_json::Value::as_u64)
         .expect("ingest_rss_ceiling_bytes must be a positive integer");
     assert!(ceiling > 0, "ceiling must be positive");
     assert!(

@@ -18,8 +18,13 @@ P0 product work. Remaining deep-obs work tracks [issue #65](https://github.com/K
 
 Default bind: port **8080** (`SL_PORT`). See [`runbook.md`](runbook.md).
 
-Scheduled evidence: `.github/workflows/ops-load.yml` runs a weekly and manual
-daemon load smoke against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics`.
+Scheduled evidence:
+
+| Workflow | Cadence | What it proves |
+|----------|---------|----------------|
+| [`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml) | Weekdays 06:23 UTC + `workflow_dispatch` | Short ops/chaos smoke via [`scripts/ops-chaos-smoke.ps1`](../../scripts/ops-chaos-smoke.ps1): `/healthz` vs `/readyz` separation, metrics shape checks, light load burst, process-kill recovery. Smoke phases target **&lt;2 min** once the daemon binary is built. |
+| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch` | Heavier concurrent load against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics` via [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1). |
+
 Prometheus SLO alert rules live in
 [`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) and are meant
 to be loaded with Prometheus `rule_files`. The Alertmanager routing placeholder

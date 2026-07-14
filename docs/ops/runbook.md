@@ -103,6 +103,12 @@ used as a non-blocking nightly or pre-release smoke check. A `503` from
 `/readyz` counts as a failure; ensure the directory passed to `--out` exists
 before testing.
 
+For a shorter operational chaos pass (readiness fault, metrics shape, kill +
+recovery, mini load), run `scripts/ops-chaos-smoke.ps1` after building
+`sl-daemon`. CI runs this on weekdays via
+[`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml);
+see [`observability.md`](observability.md) for the scheduled-evidence table.
+
 ## Common failures
 
 | Symptom | Likely cause | Fix |

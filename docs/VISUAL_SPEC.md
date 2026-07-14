@@ -168,6 +168,8 @@ Errors are recoverable by default; show message + path forward.
 
 Do **not** use `--lc-orange` as the sole error signal (orange = live). Do **not** use cobalt for failure text.
 
+**Non-color cues (L81.15):** every recoverable error panel (`ErrorState`) must pair color with at least one of: a warning glyph (`aria-hidden`), a distinct left border, `role="alert"`, and/or `aria-invalid="true"`. Color alone is never sufficient.
+
 ### Surfaces
 
 | Surface | Behavior |

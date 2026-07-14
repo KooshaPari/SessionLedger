@@ -1,7 +1,7 @@
 //! Integration tests for the HTTP SSE bridge (`http.rs`).
 //!
-//! Traceability: the liveness HTTP assertion is acceptance evidence for
-//! FR-014; the bundle/SSE assertions cover adjacent daemon HTTP contracts.
+//! Traceability: liveness HTTP assertion → FR-014; replay/stream SSE bridge
+//! contracts → FR-004 (and adjacent FR-009/FR-010 viewer paths).
 //!
 //! Each test binds on an ephemeral port (`:0`), starts the axum server, then
 //! uses `reqwest` to verify the endpoints. No sleeps: a tiny poll loop with a
@@ -146,7 +146,7 @@ where
 
 /// `/healthz` returns 200 with body "ok".
 #[tokio::test]
-async fn healthz_returns_200_ok() {
+async fn fr014_healthz_returns_200_ok() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let (bcast_tx, _) = broadcast::channel::<PathBuf>(16);
     let (addr, shutdown_tx) = start_server(Arc::new(tmp.path().to_path_buf()), bcast_tx).await;

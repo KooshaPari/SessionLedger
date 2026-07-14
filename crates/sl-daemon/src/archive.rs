@@ -1,5 +1,7 @@
 //! Bundle compression and archival.
 //!
+//! Traceability: gzip archive/restore acceptance → FR-006.
+//!
 //! `archive_bundles` gzips OKF bundle JSON files whose `created_at` date is
 //! before a given cutoff into `<data_dir>/archive/<year>/<month>/`.
 //! `restore_bundle` decompresses a `.json.gz` archive entry back to plain JSON.
@@ -293,7 +295,7 @@ mod tests {
 
     // 3. restore decompresses correctly.
     #[test]
-    fn restore_decompresses() {
+    fn fr006_restore_decompresses() {
         let src_dir = TempDir::new().unwrap();
         let dst_dir = TempDir::new().unwrap();
         let _bundle_path = make_bundle(src_dir.path(), "bundle-003", "2023-05-01");

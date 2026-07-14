@@ -1,3 +1,8 @@
+//! Merge / lost-work recovery acceptance (FR-011).
+//!
+//! Traceability: localizes unfinished work after merge — maps to FR-011 crash
+//! recovery / unfinished-work surface (also T-035 / T-024).
+
 use session_ledger::{
     distill, Corpus, LostWorkLocalizer, MergeExecutor, Message, Role, Session, UnfinishedReason,
 };
@@ -17,7 +22,7 @@ fn scoped_session(id: &str, corpus: Corpus, messages: &[(Role, &str, i64)]) -> S
 }
 
 #[test]
-fn merged_scope_localizes_unfinished_work_from_one_of_many_sessions() {
+fn fr011_merged_scope_localizes_unfinished_work_from_one_of_many_sessions() {
     let completed_one = scoped_session(
         "session-a",
         Corpus::Forge,

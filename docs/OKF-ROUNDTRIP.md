@@ -70,7 +70,7 @@ test process_session_is_idempotent ... ok
 test conformance_fixture_auth_fix_validates_via_our_parser ... ok
 test viewer_bundle_list_metadata_matches_okf ... ok
 test roundtripped_okk_supports_live_feed_metadata_contract ... ok
-test jsonl_to_okf_to_viewer_roundtrip_is_well_formed ... ok
+test fr013_jsonl_to_okf_to_viewer_roundtrip_is_well_formed ... ok
 
 test result: ok. 6 passed; 0 failed
 ```

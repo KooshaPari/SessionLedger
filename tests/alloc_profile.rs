@@ -21,10 +21,7 @@ fn load_profile() -> (u64, u64) {
         value.get("schema").and_then(serde_json::Value::as_str),
         Some("sessionledger.alloc-profile.v1")
     );
-    assert_eq!(
-        value.get("profiler").and_then(serde_json::Value::as_str),
-        Some("dhat")
-    );
+    assert_eq!(value.get("profiler").and_then(serde_json::Value::as_str), Some("dhat"));
 
     let max_bytes = value
         .get("max_bytes_ceiling")
@@ -81,8 +78,5 @@ fn alloc_profile_script_self_check_parses_args_and_ceilings() {
         stdout.contains("Total blocks ceiling:"),
         "expected total blocks ceiling echo, got:\n{stdout}"
     );
-    assert!(
-        stdout.contains("Profiler: dhat"),
-        "expected profiler echo, got:\n{stdout}"
-    );
+    assert!(stdout.contains("Profiler: dhat"), "expected profiler echo, got:\n{stdout}");
 }

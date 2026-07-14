@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "353/402",
-    "pct": 88,
+    "score": "356/402",
+    "pct": 89,
     "grade": "B",
-    "commit": "c60c205",
-    "wave": "Wave-25"
+    "commit": "cbf54d1",
+    "wave": "Wave-26"
   },
   "fr": [
     {
@@ -307,7 +307,12 @@
       "evidence": [
         "tests/properties.rs",
         "fuzz/fuzz_targets/okf_roundtrip.rs",
+        "fuzz/fuzz_targets/jsonl_ingest.rs",
         ".github/workflows/ci.yml",
+        ".github/workflows/bench-gate.yml",
+        "docs/ops/perf-baseline.json",
+        "scripts/bench-gate.ps1",
+        "benches/pipeline.rs",
         "CONTRIBUTING.md"
       ]
     },
@@ -678,6 +683,28 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.38",
+      "status": "done",
+      "evidence": [
+        "renovate.json",
+        ".github/workflows/security.yml",
+        "docs/ops/eval-manifest.json",
+        "docs/reference/conformance/fixtures/",
+        "crates/sl-daemon/src/http.rs",
+        ".github/workflows/bench-gate.yml",
+        "docs/ops/perf-baseline.json",
+        ".github/workflows/release.yml",
+        ".github/workflows/qgate.yml"
+      ]
+    },
+    {
+      "id": "WBS-8.39",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -711,6 +738,7 @@
         ".env.example",
         "scripts/env-example-check.ps1",
         ".github/workflows/security.yml",
+        ".github/workflows/qgate.yml",
         "SECURITY.md",
         "CONTRIBUTING.md",
         ".pre-commit-config.yaml"
@@ -718,7 +746,7 @@
     },
     {
       "id": "C02",
-      "score": "24/30",
+      "score": "25/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/audit.rs",
@@ -744,11 +772,12 @@
     },
     {
       "id": "C04",
-      "score": "24/30",
+      "score": "25/30",
       "status": "partial",
       "evidence": [
         ".pre-commit-config.yaml",
         ".github/workflows/security.yml",
+        "renovate.json",
         "docs/adr/0004-commit-signing-policy.md",
         "scripts/commit-signing-check.ps1",
         "CONTRIBUTING.md"
@@ -773,7 +802,7 @@
     },
     {
       "id": "C06",
-      "score": "24/30",
+      "score": "25/30",
       "status": "partial",
       "evidence": [
         "scripts/provenance-contract-check.ps1",
@@ -783,7 +812,7 @@
         "docs/ops/reproducible-builds.md",
         "scripts/repro-check.ps1"
       ],
-      "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and container provenance"
+      "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and OCI verify-on-deploy"
     },
     {
       "id": "C07",
@@ -801,7 +830,9 @@
         "tests/properties.rs",
         "fuzz/",
         "fuzz/fuzz_targets/jsonl_ingest.rs",
-        "fuzz/corpus/jsonl_ingest/two_sessions.jsonl"
+        "fuzz/corpus/jsonl_ingest/two_sessions.jsonl",
+        ".github/workflows/bench-gate.yml",
+        "docs/ops/perf-baseline.json"
       ]
     },
     {
@@ -812,7 +843,11 @@
         "docs/ops/eval-manifest.json",
         "scripts/eval-repro-check.ps1",
         "docs/reference/conformance/README.md",
-        "docs/ops/eval-reproducibility.md"
+        "docs/ops/eval-reproducibility.md",
+        "docs/reference/conformance/fixtures/",
+        ".github/workflows/bench-gate.yml",
+        "docs/ops/perf-baseline.json",
+        "scripts/bench-gate.ps1"
       ]
     },
     {

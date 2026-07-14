@@ -144,6 +144,16 @@ pwsh ./scripts/fill-packaging-checksums.ps1 -Sha256Sums ./SHA256SUMS -Version v0
 
 Channel status: [`channels.md`](channels.md).
 
+## Versioning (SemVer + compat)
+
+- Release tags use `v*` SemVer (`v0.1.0`); CI strips the `v` for MSI/PKG file names
+  (`SessionLedger-0.1.0-x64.msi`). Keep root `Cargo.toml` `version` aligned with
+  the tag before pushing.
+- OKF exports use a separate `[major].[minor]` policy — see
+  [`docs/reference/OKF-SPEC.md`](../docs/reference/OKF-SPEC.md#13-versioning--compatibility).
+- Full release/install compatibility notes:
+  [`docs/ops/distribution.md`](../docs/ops/distribution.md#versioning--compatibility-policy).
+
 ## Notes
 
 - Binaries are built with `cargo build --release`

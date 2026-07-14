@@ -523,10 +523,39 @@ Provenance is intentionally fail-soft during this rollout. If
 unavailable for that Release and rely on cosign/checksum verification; do not
 interpret the absence as a successful provenance check.
 
+## Versioning & compatibility policy
+
+SessionLedger release and data-surface versioning follow distinct rules:
+
+| Surface | Policy | Source of truth |
+|---------|--------|-----------------|
+| **Git tags / desktop binaries** | [SemVer](https://semver.org/) on `v*` tags (`v0.1.0` → version `0.1.0`) | Root `Cargo.toml` `version` must match the tag body before tagging; [`CHANGELOG.md`](../../CHANGELOG.md) follows Keep a Changelog |
+| **Release asset names** | Tag-derived `VER` in CI (`sl-viewer-v<tag>-<target>`, `SessionLedger-<ver>-x64.msi`, `SessionLedger-<ver>-<arch>.pkg`) | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) `derive version` step |
+| **OKF export documents** | `[major].[minor]` tuple with major-bump rejection rules | [`docs/reference/OKF-SPEC.md`](../reference/OKF-SPEC.md#13-versioning--compatibility) |
+| **SQLite schema** | Forward-only migrations; consumers on older schema revisions upgrade via `sl-daemon` migrate | [`docs/ops/schema-migrations.md`](schema-migrations.md) |
+
+**Compatibility expectations for installers and archives:**
+
+- Patch and minor SemVer releases should remain installable side-by-side only when
+  documented (per-user MSI scope under `%LOCALAPPDATA%`; portable ZIP extracts are
+  user-chosen paths). Major bumps may change default data locations or CLI contracts —
+  read `CHANGELOG.md` before upgrading production data dirs.
+- OKF major version mismatches are a hard reject at parse time; minor bumps are
+  accepted with warnings per OKF-SPEC §13.
+- Release CI does not auto-migrate user databases; run explicit migrate commands
+  after upgrading `sl-daemon`.
+
+Pin a specific desktop build with `SL_VERSION=v0.1.0` in
+[`scripts/install.sh`](../../scripts/install.sh) or download the matching GitHub
+Release assets for that tag.
+
 ## Platform code-signing & notarization — DEFERRED
 
 See [`docs/adr/0003-platform-code-signing.md`](../adr/0003-platform-code-signing.md)
 for the accepted deferral decision, portable trust model, and reconsider triggers.
+Signing readiness checklist (unsigned MSI/PKG matrix, unpaid credential gates,
+CI prerequisites without secret claims):
+[`docs/ops/signing-readiness.md`](signing-readiness.md).
 
 Release CI ships **unsigned binaries, MSI/PKG installers, and `.app` bundles**.
 The following platform trust paths remain deferred under #66:

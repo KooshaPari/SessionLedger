@@ -82,3 +82,16 @@ Revisit platform signing only when **all** of the following are true:
 
 Until then, record platform signing as **deferred / N/A** rather than an open
 implementation gap without credentials.
+
+## Signing readiness checklist
+
+Operational detail — current unsigned artifact matrix, unpaid credential gates,
+and what CI would need when certificates land (without storing secrets in the
+repo) — lives in
+[`docs/ops/signing-readiness.md`](../ops/signing-readiness.md).
+
+Machine-checkable anchors (ADR + `release.yml` unsigned MSI/PKG path):
+
+```powershell
+pwsh ./scripts/signing-readiness-check.ps1 -SelfCheck
+```

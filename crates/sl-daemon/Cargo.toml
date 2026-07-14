@@ -36,6 +36,10 @@ opentelemetry-otlp = { version = "0.32.0", default-features = false, features = 
 clap_complete = "4.6.7"
 rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 
+# CPU sampling uses SIGPROF / setitimer; pprof-rs does not build on Windows.
+[target.'cfg(unix)'.dependencies]
+pprof = { version = "0.15.0", default-features = false, features = ["prost-codec"] }
+
 [dev-dependencies]
 tempfile = "3"
 tracing-test = "0.2.6"

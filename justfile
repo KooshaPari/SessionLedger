@@ -64,6 +64,10 @@ bench-gate:
 bench-gate-check:
     pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/bench-gate.ps1 -SelfCheck
 
+# Soft C00 L6 latency baseline SelfCheck (no cargo bench)
+bench-gate-latency:
+    pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/bench-gate.ps1 -SoftLatencyCheck
+
 # ----- runtime stack -----
 
 # Bring up the local runtime (runtime-up script if present, else process-compose)

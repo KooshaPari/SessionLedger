@@ -4,12 +4,17 @@ SessionLedger **enforces** a blocking pipeline Criterion budget gate against the
 checked-in baseline at [`perf-baseline.json`](perf-baseline.json).
 
 The GitHub Actions workflow [`.github/workflows/bench-gate.yml`](../../.github/workflows/bench-gate.yml)
-runs on every pull request and push to `main`. The job is **blocking**: it does
-**not** set `continue-on-error`. A budget overrun fails the check.
+runs on every pull request and push to `main`. The mean-budget job is **blocking**:
+it does **not** set `continue-on-error`. A mean budget overrun fails the check.
+
+A separate **soft** job validates checked-in **p95 latency** baselines (C00 L6) with
+`continue-on-error: true`.
 
 ## Thresholds (SSOT)
 
-Policy lives in `docs/ops/perf-baseline.json` (`policy.enforced=true`):
+Policy lives in `docs/ops/perf-baseline.json`:
+
+### Blocking mean budgets (`policy.enforced=true`)
 
 | Field | Value | Meaning |
 |---|---|---|
@@ -26,7 +31,29 @@ Per-benchmark absolute ceilings (`budget_mean_ns` = `mean_ns × (1 + threshold_p
 | `pipeline/okf_export_200_messages` | 6,607.678 | 8,259.598 |
 | `pipeline/inject_render_200_messages` | 13,362.599 | 16,703.249 |
 
-Units are Criterion mean point estimates in **nanoseconds**.
+### Soft p95 latency budgets (`latency.enforced=false`)
+
+| Field | Value | Meaning |
+|---|---|---|
+| `latency.threshold_percent` | **25%** | Max allowed slowdown vs checked-in `p95_ns` |
+| `latency.metric` | `criterion_sample_p95` | p95 of per-iteration times from Criterion `sample.json` |
+| `latency.http_load_smoke.max_p95_ms` | **500** | Aligns with `scripts/load-smoke.ps1 -MaxP95Ms` |
+
+Per-benchmark soft ceilings (`budget_p95_ns` = `p95_ns × (1 + latency.threshold_percent/100)`):
+
+| Benchmark | Baseline `p95_ns` | Soft `budget_p95_ns` |
+|---|---:|---:|
+| `pipeline/distill_compile_200_messages` | 1,243,655.851 | 1,554,569.814 |
+| `pipeline/okf_export_200_messages` | 7,598.830 | 9,498.538 |
+| `pipeline/inject_render_200_messages` | 15,366.989 | 19,208.737 |
+
+Provisional `p95_ns` values start at ≈ `mean_ns × 1.15` until refreshed with
+`-UpdateBaseline`. Soft overruns **warn** and appear in
+`artifacts/pipeline-perf-gate.json` under `latency`; they do **not** fail the
+blocking mean gate while `latency.enforced` remains `false`.
+
+Units for pipeline benches are Criterion estimates in **nanoseconds**. HTTP
+load-smoke latency is in **milliseconds**.
 
 ## What The Gate Measures
 
@@ -34,9 +61,10 @@ Policy / doc smoke (no cargo bench):
 
 ```powershell
 ./scripts/bench-gate.ps1 -SelfCheck
+./scripts/bench-gate.ps1 -SoftLatencyCheck   # C00 L6 soft latency baselines only
 ```
 
-Full enforced gate:
+Full enforced gate (also records soft p95 comparisons when samples exist):
 
 ```powershell
 ./scripts/bench-gate.ps1
@@ -68,10 +96,19 @@ current_mean_ns > budget_mean_ns
 ```
 
 Equivalently: when the run is more than `policy.threshold_percent` slower than
-the checked-in `mean_ns`. Soft / advisory mode is not supported —
+the checked-in `mean_ns`. Soft / advisory mode is not supported for means —
 `policy.enforced` must remain `true`.
 
-On failure the script exits **1**, prints each overrun, writes
+Soft p95 latency (C00 L6):
+
+```text
+current_p95_ns > budget_p95_ns
+```
+
+While `latency.enforced=false`, that condition emits a **WARN** only. Promote to
+blocking later by setting `latency.enforced=true`.
+
+On mean failure the script exits **1**, prints each overrun, writes
 `artifacts/pipeline-perf-gate.json`, and appends a GitHub step summary when
 `GITHUB_STEP_SUMMARY` is set.
 
@@ -92,14 +129,15 @@ Run:
 ```
 
 Review the printed Criterion output, inspect the JSON diff in
-`docs/ops/perf-baseline.json` (both `mean_ns` and derived `budget_mean_ns`), and
+`docs/ops/perf-baseline.json` (means, p95 latency, and derived budgets), and
 commit the baseline update with the code or benchmark change that justified it.
 Do not refresh the baseline just to hide an unexplained pull-request regression.
 
 ## Local task aliases
 
 ```text
-just bench-gate          # full Criterion gate
-just bench-gate-check    # SelfCheck only
-make bench-gate          # Makefile fallback → scripts/bench-gate.ps1
+just bench-gate              # full Criterion gate
+just bench-gate-check        # SelfCheck (mean + latency schema)
+just bench-gate-latency      # SoftLatencyCheck only
+make bench-gate              # Makefile fallback → scripts/bench-gate.ps1
 ```

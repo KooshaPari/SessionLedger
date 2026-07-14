@@ -198,8 +198,8 @@ fn conformance_corpus_fixtures_validate_via_our_parser() {
     paths.sort();
 
     assert!(
-        paths.len() >= 11,
-        "expected at least 11 conformance fixtures under {}",
+        paths.len() >= 14,
+        "expected at least 14 conformance fixtures under {}",
         fixture_root.display()
     );
 

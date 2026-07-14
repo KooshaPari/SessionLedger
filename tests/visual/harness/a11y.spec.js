@@ -71,3 +71,17 @@ test("Escape clears the search without moving focus", async ({ page }) => {
   await expect(since).toHaveValue("");
   await expect(since).toBeFocused();
 });
+
+test("question mark opens keyboard help and Escape closes it", async ({ page }) => {
+  await page.goto("/");
+  const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
+  await expect(helpDialog).toHaveCount(0);
+
+  await page.keyboard.press("?");
+  await expect(helpDialog).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Keyboard shortcuts" })).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(helpDialog).toHaveCount(0);
+  await expect(page.locator("#viewer-help-button")).toBeFocused();
+});

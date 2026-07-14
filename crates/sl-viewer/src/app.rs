@@ -7,6 +7,7 @@ use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::{query_fixture_active, visual_fixture_active};
+use crate::help_overlay::{typing_focus_active, HelpOverlay};
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
@@ -166,7 +167,28 @@ pub fn App() -> Element {
     use_context_provider(|| SessionContext(sessions));
 
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
+    let mut help_open: Signal<bool> = use_signal(|| false);
     let colors = ThemeColors::dark();
+
+    let mut close_help = move || {
+        help_open.set(false);
+        let _ = document::eval("document.getElementById('viewer-help-button')?.focus();");
+    };
+
+    let mut open_help = move || {
+        help_open.set(true);
+        let _ = document::eval(
+            "window.requestAnimationFrame(() => document.querySelector('.help-overlay-close')?.focus());",
+        );
+    };
+
+    let mut toggle_help = move || {
+        if help_open() {
+            close_help();
+        } else {
+            open_help();
+        }
+    };
 
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -379,6 +401,22 @@ pub fn App() -> Element {
                 .theme-toggle {{ width: calc(100% - 32px); margin: 10px 16px; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
                 .theme-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
                 .theme-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .help-toggle {{ width: calc(100% - 32px); margin: 10px 16px 0; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
+                .help-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
+                .help-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .help-overlay-backdrop {{ position: fixed; inset: 0; z-index: 1100; background: color-mix(in srgb, var(--sl-bg) 35%, transparent); }}
+                .help-overlay {{ position: fixed; z-index: 1101; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 32px)); max-height: min(80vh, 720px); overflow: auto; margin: 0; padding: var(--sl-space-lg) var(--sl-space-xl); box-sizing: border-box; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-lg); background: var(--sl-surface); color: var(--sl-text); box-shadow: 0 16px 48px color-mix(in srgb, var(--sl-bg) 55%, transparent); }}
+                .help-overlay-header {{ display: flex; align-items: center; justify-content: space-between; gap: var(--sl-space-md); margin-bottom: var(--sl-space-md); }}
+                .help-overlay-header h2 {{ margin: 0; font-family: var(--font-ui); font-size: 1rem; font-weight: 600; }}
+                .help-overlay-close {{ padding: 6px 12px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
+                .help-overlay-close:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
+                .help-overlay-close:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .help-overlay-lede {{ margin: 0 0 var(--sl-space-md); font-size: 13px; line-height: 1.5; color: var(--sl-text-muted); max-width: var(--sl-measure-max); }}
+                .help-overlay-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+                .help-overlay-table th, .help-overlay-table td {{ padding: 8px 10px; border-bottom: 1px solid var(--sl-border); text-align: left; vertical-align: top; }}
+                .help-overlay-table th {{ font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); }}
+                .help-overlay-keys kbd {{ display: inline-block; padding: 2px 6px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); font-family: var(--font-mono); font-size: 12px; }}
+                .help-overlay-footer {{ margin: var(--sl-space-md) 0 0; }}
                 .search-input:focus-visible, .search-btn:focus-visible, .retry-btn:focus-visible, .btn:focus-visible, .replay-input:focus-visible, .speed-input:focus-visible, .compare-btn:focus-visible, .sl-error-retry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
                 .session-item:focus-visible, .feed-entry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; }}
                 .session-list {{ display: flex; flex-direction: column; height: 100%; }}
@@ -456,7 +494,7 @@ pub fn App() -> Element {
                         justify-content: center;
                         box-sizing: border-box;
                     }}
-                    .theme-toggle {{
+                    .theme-toggle, .help-toggle {{
                         min-height: 44px;
                         padding: 12px 16px;
                         box-sizing: border-box;
@@ -506,7 +544,20 @@ pub fn App() -> Element {
                 }}
             "#,
         }
-        div { class: "app",
+        div {
+            class: "app",
+            onkeydown: move |evt: Event<KeyboardData>| {
+                if help_open() && evt.key() == Key::Escape {
+                    evt.prevent_default();
+                    evt.stop_propagation();
+                    close_help();
+                    return;
+                }
+                if matches!(evt.key(), Key::Character(ref ch) if ch == "?") && !typing_focus_active() {
+                    evt.prevent_default();
+                    toggle_help();
+                }
+            },
             div { class: "launch-splash", role: "presentation",
                 div { class: "launch-splash-inner",
                     span { class: "launch-splash-mark", "SessionLedger" }
@@ -593,6 +644,16 @@ pub fn App() -> Element {
                 }
                 // After tabpanel so Tab from the active tab reaches panel controls first.
                 button {
+                    id: "viewer-help-button",
+                    class: "help-toggle",
+                    r#type: "button",
+                    "aria-haspopup": "dialog",
+                    "aria-expanded": if help_open() { "true" } else { "false" },
+                    "aria-controls": "keyboard-help-dialog",
+                    onclick: move |_| toggle_help(),
+                    "Help (?)"
+                }
+                button {
                     class: "theme-toggle",
                     r#type: "button",
                     "aria-label": "Toggle light and dark theme",
@@ -609,6 +670,10 @@ pub fn App() -> Element {
                     },
                     "Toggle Theme"
                 }
+            }
+            HelpOverlay {
+                open: help_open(),
+                on_close: move |_| close_help(),
             }
         }
     }

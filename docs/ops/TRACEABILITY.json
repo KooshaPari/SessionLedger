@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "368/402",
-    "pct": 92,
+    "score": "372/402",
+    "pct": 93,
     "grade": "A",
-    "commit": "27435e5",
-    "wave": "Wave-30"
+    "commit": "a7d1a8e",
+    "wave": "Wave-31"
   },
   "fr": [
     {
@@ -771,6 +771,28 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.46",
+      "status": "done",
+      "evidence": [
+        "docs/ops/cve-feed-subscription.md",
+        "scripts/cve-feed-check.ps1",
+        "docs/ops/cross-language-parity.md",
+        "scripts/cross-language-parity-check.ps1",
+        "tests/properties.rs",
+        "docs/ops/crypto-inventory.md",
+        "docs/a11y/design-tokens.md",
+        "crates/sl-viewer/src/tokens.rs",
+        ".github/workflows/loom-smoke.yml"
+      ]
+    },
+    {
+      "id": "WBS-8.47",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -801,7 +823,10 @@
         "scripts/bench-gate.ps1",
         "tests/race_model.rs",
         "docs/ops/concurrency-safety.md",
-        ".github/workflows/race-smoke.yml"
+        ".github/workflows/race-smoke.yml",
+        "tests/loom_model.rs",
+        ".github/workflows/loom-smoke.yml",
+        "scripts/loom-smoke-check.ps1"
       ]
     },
     {
@@ -854,7 +879,7 @@
     },
     {
       "id": "C04",
-      "score": "25/30",
+      "score": "26/30",
       "status": "partial",
       "evidence": [
         ".pre-commit-config.yaml",
@@ -866,6 +891,8 @@
         "docs/ops/branch-protection.md",
         "docs/ops/sandbox-boundary.md",
         "scripts/sandbox-boundary-check.ps1",
+        "docs/ops/cve-feed-subscription.md",
+        "scripts/cve-feed-check.ps1",
         "CONTRIBUTING.md"
       ]
     },
@@ -907,7 +934,7 @@
     },
     {
       "id": "C07",
-      "score": "28/30",
+      "score": "29/30",
       "status": "partial",
       "evidence": [
         "docs/ops/test-pyramid.md",
@@ -931,7 +958,7 @@
     },
     {
       "id": "C08",
-      "score": "26/30",
+      "score": "27/30",
       "status": "partial",
       "evidence": [
         "docs/ops/eval-manifest.json",
@@ -944,18 +971,24 @@
         "tests/compression_eval.rs",
         ".github/workflows/bench-gate.yml",
         "docs/ops/perf-baseline.json",
-        "scripts/bench-gate.ps1"
+        "scripts/bench-gate.ps1",
+        "docs/ops/cross-language-parity.md",
+        "scripts/cross-language-parity-check.ps1",
+        "tests/cross_language_parity.rs"
       ]
     },
     {
       "id": "C09",
-      "score": "42/45",
+      "score": "43/45",
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/help_overlay.rs",
         "crates/sl-viewer/src/command_palette.rs",
         "docs/HELP.md",
         "docs/a11y/overlay-escape.md",
+        "docs/a11y/design-tokens.md",
+        "crates/sl-viewer/src/tokens.rs",
+        "scripts/design-tokens-check.ps1",
         "docs/a11y/status-regions-and-native-smoke.md",
         "docs/a11y/screen-reader-smoke.md",
         "scripts/record-native-webview-smoke.ps1",

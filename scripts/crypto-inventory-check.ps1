@@ -4,8 +4,10 @@
 
 .DESCRIPTION
   Verifies docs/ops/crypto-inventory.md documents the cryptography inventory,
-  explicit no-KMS / no-encryption-at-rest posture, TLS reverse-proxy samples,
-  and API-key handling cross-links. Hermetic: no daemon, no network, no cargo.
+  explicit no-KMS / no-encryption-at-rest posture, Phase-0 deferred vs
+  recommended deploy KMS/at-rest guidance, TLS reverse-proxy samples, and
+  API-key handling cross-links. Hermetic: no daemon, no network, no cargo,
+  no KMS SDK.
 
 .PARAMETER SelfCheck
   Explicit docs/path smoke (CI unit proof). Same checks as the default path.
@@ -28,6 +30,7 @@ $trustPath = Join-Path $repoRoot "docs/ops/local-trust-boundary.md"
 $caddyPath = Join-Path $repoRoot "packaging/caddy/Caddyfile"
 $nginxPath = Join-Path $repoRoot "packaging/nginx/sessionledger.conf"
 $checkScript = Join-Path $repoRoot "scripts/crypto-inventory-check.ps1"
+$rustWrapper = Join-Path $repoRoot "tests/crypto_inventory.rs"
 
 function Assert-File {
     param(
@@ -61,11 +64,12 @@ function Test-DocContains {
 
 Write-Host "Crypto inventory checklist check (C02 L22)"
 if ($SelfCheck) {
-    Write-Host "Mode: SelfCheck (docs + evidence paths; no cargo / no network)"
+    Write-Host "Mode: SelfCheck (docs + evidence paths; no cargo / no network / no KMS)"
 }
 
 Assert-File -Path $docPath -Label "crypto inventory doc"
 Assert-File -Path $checkScript -Label "crypto inventory check script"
+Assert-File -Path $rustWrapper -Label "crypto inventory rust SelfCheck wrapper"
 Assert-File -Path $securityPath -Label "SECURITY.md"
 Assert-File -Path $trustPath -Label "local trust boundary doc"
 Assert-File -Path $caddyPath -Label "Caddy sample"
@@ -82,8 +86,18 @@ Test-DocContains -Doc $doc -Needle "SHA-256" `
     -Label "SHA-256 inventory row"
 Test-DocContains -Doc $doc -Needle "No encryption-at-rest" `
     -Label "no encryption-at-rest disclaimer"
-Test-DocContains -Doc $doc -Needle "not** a claim of full key-management service" `
+Test-DocContains -Doc $doc -Needle "not** a claim of an in-tree key-management service" `
     -Label "no KMS disclaimer"
+Test-DocContains -Doc $doc -Needle "## KMS and encryption-at-rest (Phase-0 decision)" `
+    -Label "KMS / at-rest Phase-0 section"
+Test-DocContains -Doc $doc -Needle "Phase-0 deferred vs recommended deploy patterns" `
+    -Label "deferred vs recommended deploy heading"
+Test-DocContains -Doc $doc -Needle "envelope encryption" `
+    -Label "envelope encryption guidance"
+Test-DocContains -Doc $doc -Needle "Full-disk or volume encryption" `
+    -Label "host FDE recommended control"
+Test-DocContains -Doc $doc -Needle "deferred (Phase-0)" `
+    -Label "Phase-0 deferred checklist status"
 Test-DocContains -Doc $doc -Needle "packaging/caddy/Caddyfile" `
     -Label "Caddy sample link"
 Test-DocContains -Doc $doc -Needle "packaging/nginx/sessionledger.conf" `
@@ -94,6 +108,8 @@ Test-DocContains -Doc $doc -Needle "scripts/crypto-inventory-check.ps1" `
     -Label "SelfCheck script reference"
 Test-DocContains -Doc $doc -Needle "-SelfCheck" `
     -Label "SelfCheck invocation"
+Test-DocContains -Doc $doc -Needle "Crypto inventory SelfCheck | **done**" `
+    -Label "SelfCheck gate marked done"
 
 Write-Host "Cross-links:"
 Test-DocContains -Doc $security -Needle "docs/ops/crypto-inventory.md" `
@@ -101,4 +117,4 @@ Test-DocContains -Doc $security -Needle "docs/ops/crypto-inventory.md" `
 Test-DocContains -Doc $trust -Needle "crypto-inventory.md" `
     -Label "local-trust-boundary -> crypto-inventory"
 
-Write-Host "Crypto inventory SelfCheck passed (C02 L22 doc anchors present; no KMS claim)."
+Write-Host "Crypto inventory SelfCheck passed (C02 L22 doc anchors + Phase-0 KMS/at-rest guidance; no in-tree KMS)."

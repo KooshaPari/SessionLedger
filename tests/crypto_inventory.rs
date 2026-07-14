@@ -1,6 +1,9 @@
 //! Hermetic `SelfCheck` for docs/ops/crypto-inventory.md anchors (C02 L22).
 //!
 //! Local: `pwsh ./scripts/crypto-inventory-check.ps1 -SelfCheck`
+//!
+//! Covers inventory + Phase-0 KMS/at-rest deferred vs recommended deploy
+//! guidance (no in-tree KMS implementation).
 
 use std::path::PathBuf;
 use std::process::Command;

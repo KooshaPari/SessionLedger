@@ -1,13 +1,15 @@
 # Cryptography inventory and remote TLS guidance
 
-Status: **C02 L22 aspirational (1→2)** — documents what cryptography SessionLedger
-uses today and how operators terminate TLS for a remote-style daemon deploy.
-This is **not** a claim of full key-management service (KMS), envelope encryption,
-or encryption-at-rest for application data.
+Status: **C02 L22** — documents what cryptography SessionLedger uses today, how
+operators terminate TLS for a remote-style daemon deploy, and the **Phase-0
+decision** on KMS / encryption-at-rest (deferred in-tree vs recommended host
+deploy patterns). This is **not** a claim of an in-tree key-management service
+(KMS), envelope encryption, or application-level encryption-at-rest.
 
 Related: [`SECURITY.md`](../../SECURITY.md) (reporting + API-key rotation),
 [`docs/THREAT_MODEL.md`](../THREAT_MODEL.md) (STRIDE-lite surfaces),
-[`local-trust-boundary.md`](local-trust-boundary.md) (bind + `SL_API_KEY` policy).
+[`local-trust-boundary.md`](local-trust-boundary.md) (bind + `SL_API_KEY` policy),
+[`privacy-hygiene.md`](privacy-hygiene.md) (PII / export hygiene).
 
 ## Cryptography inventory
 
@@ -24,12 +26,78 @@ Related: [`SECURITY.md`](../../SECURITY.md) (reporting + API-key rotation),
 
 - **No encryption-at-rest** for OKF bundles (`*.okf.json`), gzip archives, audit
   JSONL/SQLite, or episodic memory DB files. Protect data with OS filesystem ACLs,
-  full-disk encryption, and backup policy on the host.
+  full-disk encryption, and backup policy on the host (see
+  [KMS and encryption-at-rest](#kms-and-encryption-at-rest-phase-0-decision)).
 - **No in-process TLS** on `sl-daemon` HTTP. The daemon speaks plain HTTP on its
   bind address; operators own TLS termination.
 - **No KMS, sealed secrets, or HSM integration** in-tree. `SL_API_KEY` is a
   single shared secret in the process environment — treat it like a host-local
   credential, not a managed vault record.
+
+## KMS and encryption-at-rest (Phase-0 decision)
+
+**Decision:** in-tree KMS, sealed-secret clients, HSM integration, and
+application-level **envelope encryption** for OKF / audit / episodic stores are
+**Phase-0 deferred**. SessionLedger remains a single-user local companion; the
+trusted computing base for data at rest is the **host OS and operator deploy
+layout**, not a SessionLedger crypto service.
+
+This page does **not** ship or stub a KMS SDK, DEK/KEK hierarchy, or ciphertext
+file format. Soft-goal gap notes that call out “no KMS/at-rest” mean **no
+in-tree implementation** — operators still get concrete host-side patterns below.
+
+### Phase-0 deferred vs recommended deploy patterns
+
+| Concern | Phase-0 posture | Recommended deploy pattern (operator-owned) |
+|---------|-----------------|-----------------------------------------------|
+| Application encryption-at-rest (OKF, gzip archives, audit JSONL/SQLite, episodic DB) | **Deferred** — plaintext files under the data directory | Enable **OS full-disk / volume encryption** (BitLocker, FileVault, LUKS); restrict directory ACLs to the daemon user |
+| Envelope encryption (DEK wrapped by KEK) | **Deferred** — no in-tree DEK/KEK or ciphertext layout | Prefer volume/backup encryption; if a future product phase needs app-level crypto, introduce a versioned envelope **after** a dedicated ADR |
+| Cloud / hardware KMS (AWS KMS, GCP KMS, Azure Key Vault, PKCS#11 HSM) | **Deferred** — no SDK, IAM roles, or sealed-secret client in-tree | Keep `SL_API_KEY` (and any future secrets) in the host **service manager secret** or org vault; inject as env at start — do not commit keys |
+| In-process TLS for `sl-daemon` | **Deferred** — plain HTTP on bind address | Terminate TLS at Caddy/nginx in front of loopback (see [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge)) |
+| Backup / export confidentiality | **Operator-owned** | Encrypt backup media or use encrypted backup tools; redact before export leaves the host ([`privacy-hygiene.md`](privacy-hygiene.md)) |
+
+### Recommended host-side at-rest controls (today)
+
+1. **Full-disk or volume encryption** on every machine that stores SessionLedger
+   data directories — primary control for stolen-disk / cold-storage risk.
+2. **Filesystem ACLs** so only the service account running `sl-daemon` (and
+   interactive admins) can read OKF, audit, and episodic paths.
+3. **Secret injection outside the repo** — systemd/`EnvironmentFile`, Windows
+   service secrets, or an org vault agent that writes `SL_API_KEY` into the
+   process environment at start. Never commit live keys.
+4. **Encrypted backups** of the data directory when backups leave the host;
+   treat archives as sensitive even though gzip is not encryption.
+5. **TLS at the edge** for any non-loopback exposure — transport confidentiality
+   is separate from at-rest controls; both are operator-owned in Phase 0.
+
+### Reconsider triggers (when Phase-0 deferral ends)
+
+Revisit in-tree KMS / envelope encryption only when **all** of the following are
+true (record an ADR before code):
+
+| Trigger | Why it matters |
+|---------|----------------|
+| Multi-user or multi-tenant hosted deploy is in scope | Host ACLs alone no longer match the threat model |
+| Compliance requires application-level ciphertext independent of OS FDE | Need audit evidence beyond BitLocker/FileVault/LUKS |
+| Maintainers commit to a KMS product + key-rotation runbook | Avoid half-integrated SDKs without rotation and disaster recovery |
+| Envelope format + migration for existing plaintext OKF/audit is designed | Prevent irreversible lock-in or silent data loss |
+
+Until then, record KMS / app-level encryption-at-rest as **deferred / N/A** —
+not an open implementation gap without product scope.
+
+### KMS / at-rest evidence checklist
+
+| Gate | Status | Evidence / prerequisite |
+|------|--------|-------------------------|
+| Crypto inventory + hashing vs encryption clarified | **done** | Inventory table above |
+| Explicit no in-tree KMS / envelope / app encryption-at-rest | **done** | Non-goals + this section |
+| Phase-0 deferred vs recommended deploy table | **done** | Table in this section |
+| Host FDE / ACL / secret-injection guidance | **done** | Recommended host-side controls |
+| TLS-at-edge samples (Caddy/nginx) | **done** | [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge) |
+| Crypto inventory SelfCheck | **done** | `scripts/crypto-inventory-check.ps1 -SelfCheck` |
+| In-tree KMS / sealed-secret / HSM client | **deferred (Phase-0)** | No SDK; reconsider triggers above |
+| Application envelope encryption for OKF/audit | **deferred (Phase-0)** | No DEK/KEK format; host FDE is the control |
+| In-process daemon TLS | **deferred** | Proxy termination remains the deploy path |
 
 ## Remote daemon deploy: TLS at the edge
 
@@ -80,11 +148,13 @@ X-API-Key: <SL_API_KEY>
 
 ## Machine verification (SelfCheck)
 
-Hermetic doc anchor check (no daemon, no network):
+Hermetic doc anchor check (no daemon, no network, no KMS SDK):
 
 ```powershell
 pwsh ./scripts/crypto-inventory-check.ps1 -SelfCheck
 ```
 
-`-SelfCheck` asserts this page keeps the inventory table, the no-KMS disclaimer,
-TLS sample paths, and cross-links to `SECURITY.md` / `local-trust-boundary.md`.
+`-SelfCheck` asserts this page keeps the inventory table, the no-KMS / no
+encryption-at-rest disclaimers, the **Phase-0 deferred vs recommended deploy**
+KMS/at-rest section, TLS sample paths, and cross-links to `SECURITY.md` /
+`local-trust-boundary.md`.

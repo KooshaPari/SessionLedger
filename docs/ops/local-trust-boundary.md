@@ -8,7 +8,8 @@ policy-enforcing proxy in front of any LAN/WAN exposure and treat the shared
 secret as host-local credential material.
 
 Cryptography inventory (hashing vs encryption-at-rest), Caddy/nginx TLS samples,
-and the explicit no-KMS posture:
+Phase-0 deferred KMS / envelope encryption, and recommended host at-rest
+deploy patterns:
 [`crypto-inventory.md`](crypto-inventory.md).
 
 Single-tenant privacy hygiene (PII in logs, transcript retention, redaction

@@ -147,16 +147,20 @@ alerting:
             - alertmanager:9093
 ```
 
-Start Alertmanager with the SessionLedger placeholder config after replacing
-the webhook URL with an operator-owned endpoint:
+Start Alertmanager with the SessionLedger config after replacing Slack/PagerDuty
+stubs with operator-owned route IDs (see
+[`alerts/route-ids.stub.env`](alerts/route-ids.stub.env)):
 
 ```bash
 alertmanager --config.file=/etc/alertmanager/alertmanager.yaml
+pwsh -NoProfile -File scripts/alert-route-ids-check.ps1          # stubs OK
+pwsh -NoProfile -File scripts/alert-route-ids-check.ps1 -Strict  # needs SL_ALERT_* env
 ```
 
-The in-tree placeholder routes `job="sl-daemon"` alerts to
-`sessionledger-webhook-placeholder`; it is evidence wiring, not a production
-receiver. Runnable PromQL and the severity→receiver mapping table live in
+In-tree receivers: loopback `sessionledger-webhook-placeholder` (default), plus
+stub `sessionledger-slack-ops` / `sessionledger-pagerduty` with `REPLACE_ME_*`
+tokens — evidence wiring, not live paging. Runnable PromQL and the
+severity→receiver mapping table live in
 [`alerts.md`](alerts.md#alert-routing-evidence).
 
 ## Game-day cadence

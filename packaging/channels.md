@@ -101,8 +101,14 @@ install paths until a tap / winget-pkgs merge exists.
    pwsh ./scripts/fill-packaging-checksums.ps1 -Sha256Sums ./SHA256SUMS -Version v0.1.0
    ```
 
-2. Follow the external publish checklist:
+2. Follow the external publish checklist (live tap / winget-pkgs remain
+   **unpaid** until those gates flip):
    [`docs/ops/brew-winget-publish.md`](../docs/ops/brew-winget-publish.md).
+3. Hermetic SelfCheck (no brew/winget/network):
+
+   ```powershell
+   pwsh ./scripts/brew-winget-publish-check.ps1 -SelfCheck
+   ```
 
 - Homebrew template: [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb)
   (`sl-viewer` from Release tarballs; daemon via Cargo in caveats).

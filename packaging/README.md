@@ -133,8 +133,9 @@ Pin a release with `SL_VERSION=v0.1.0`; override the destination with
 
 In-repo formula + winget YAML live under [`homebrew/`](homebrew/) and
 [`winget/`](winget/). They are templates only — there is no published tap and
-no `winget-pkgs` listing until you follow
-[`docs/ops/brew-winget-publish.md`](../docs/ops/brew-winget-publish.md).
+no `winget-pkgs` listing until unpaid gates in
+[`docs/ops/brew-winget-publish.md`](../docs/ops/brew-winget-publish.md) flip.
+Hermetic proof: `pwsh ./scripts/brew-winget-publish-check.ps1 -SelfCheck`.
 
 After a `v*` Release, fill digests from that Release's `SHA256SUMS`:
 

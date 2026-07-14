@@ -25,7 +25,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` Release archives |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
 | Native installers (unsigned) | **Active, CI-smoked** | Release CI publishes unsigned MSI + macOS PKG, best-effort Linux `.deb`/AppImage, and portable viewer/daemon archives; Release smoke covers Windows ZIP + MSI silent install and macOS PKG expand; PR CI still runs unsigned portable clean-host smoke on `windows-latest` |
-| Homebrew / winget | **Manifests in-repo (not live)** | Formula + winget YAML templates; fill via `scripts/fill-packaging-checksums.ps1`, then [`brew-winget-publish.md`](brew-winget-publish.md) — no live tap / winget listing claimed |
+| Homebrew / winget | **Manifests in-repo (not live)** | Formula + winget YAML templates; fill via `scripts/fill-packaging-checksums.ps1`, then [`brew-winget-publish.md`](brew-winget-publish.md) publish-readiness checklist + `scripts/brew-winget-publish-check.ps1 -SelfCheck` — live tap / winget-pkgs remain **unpaid** |
 | Scoop / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, crate publication, DMG, or update automation exists yet |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 | Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
@@ -330,9 +330,12 @@ Homebrew and winget packaging templates are in-repo
 [`packaging/winget/`](../../packaging/winget/)) and are **not** a live tap or
 winget listing. Fill digests with
 [`scripts/fill-packaging-checksums.ps1`](../../scripts/fill-packaging-checksums.ps1),
-then follow [`brew-winget-publish.md`](brew-winget-publish.md). MSI/PKG work
-stays under `packaging/windows` and `packaging/macos` when those lanes are
-active — portable curl/irm install does not replace them.
+then follow the publish-readiness checklist in
+[`brew-winget-publish.md`](brew-winget-publish.md) (SelfCheck:
+`pwsh ./scripts/brew-winget-publish-check.ps1 -SelfCheck`). Live tap and
+`microsoft/winget-pkgs` merge remain **unpaid**. MSI/PKG work stays under
+`packaging/windows` and `packaging/macos` when those lanes are active —
+portable curl/irm install does not replace them.
 
 ### Traditional Linux systemd service
 

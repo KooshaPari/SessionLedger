@@ -19,8 +19,8 @@ if ($recordsRaw.Trim() -eq '[]') {
     return
 }
 
-$records = $recordsRaw | ConvertFrom-Json
-if ($null -eq $records) {
+$records = @($recordsRaw | ConvertFrom-Json)
+if ($records.Count -eq 0) {
     return
 }
 
@@ -31,9 +31,10 @@ foreach ($entry in $records) {
 
     $test = [string]$entry.test
     if ($test -match '(?:^|\s)([A-Za-z_][A-Za-z0-9_]*)\s*$') {
+        $skipName = $Matches[1]
         Write-Output '--skip'
-        Write-Output $Matches[1]
-        Write-Host "flake quarantine: skipping '$($Matches[1])' from $($entry.id)" 1>&2
+        Write-Output $skipName
+        Write-Warning "flake quarantine: skipping '$skipName' from $($entry.id)"
     } else {
         throw "quarantined flake '$($entry.id)' test field must end with a Rust test name: $test"
     }

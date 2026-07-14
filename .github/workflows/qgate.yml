@@ -16,6 +16,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -75,10 +79,9 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # qgate reusable workflow — org-owned reusable workflow intentionally
-      # floats on main so repository gates receive centralized updates.
+      # qgate reusable workflow — pinned to phenotype-tooling commit for supply-chain hygiene.
       - name: qgate quality gate
-        uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@main
+        uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad # main 2026-07-13
         with:
           coverage-report: coverage/lcov.info
           coverage-format: lcov

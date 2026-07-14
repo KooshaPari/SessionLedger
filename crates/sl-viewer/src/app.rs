@@ -256,10 +256,6 @@ pub fn App() -> Element {
             if (!window.__slHelpKeyClickBridge) {{
               window.__slHelpKeyClickBridge = true;
               document.addEventListener('keydown', (e) => {{
-                const el = document.activeElement;
-                const tag = (el && el.tagName) || '';
-                const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable);
-
                 // Cmd+K / Ctrl+K — open palette even while typing in fields.
                 if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {{
                   e.preventDefault();
@@ -267,15 +263,8 @@ pub fn App() -> Element {
                   return;
                 }}
 
-                if (typing) {{
-                  return;
-                }}
-                const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
-                if (isHelp) {{
-                  e.preventDefault();
-                  document.getElementById('viewer-help-button')?.click();
-                  return;
-                }}
+                // Modal overlays close on Escape before the typing guard so focus
+                // in a text field cannot trap the user behind help or the palette.
                 if (e.key === 'Escape') {{
                   const paletteClose = document.querySelector('.command-palette-close');
                   if (paletteClose) {{
@@ -287,7 +276,22 @@ pub fn App() -> Element {
                   if (closeBtn) {{
                     e.preventDefault();
                     closeBtn.click();
+                    return;
                   }}
+                }}
+
+                const el = document.activeElement;
+                const tag = (el && el.tagName) || '';
+                const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable);
+
+                if (typing) {{
+                  return;
+                }}
+                const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
+                if (isHelp) {{
+                  e.preventDefault();
+                  document.getElementById('viewer-help-button')?.click();
+                  return;
                 }}
               }}, true);
             }}

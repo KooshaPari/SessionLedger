@@ -21,6 +21,14 @@ Status: user-facing keyboard contract for the current `sl-viewer` surface.
 | `Escape` | Replay view | Clear replay output and return the replay panel to idle. |
 | `Escape` | Bundle comparison panel | Close the comparison panel. |
 
+### Overlay escape hatch
+
+`Escape` always closes the topmost modal overlay (command palette, then keyboard
+help) before view-level recovery runs. Search **Clear** confirmation dismisses on
+`Escape` without wiping fields; a second `Escape` (or the live Search path) clears
+filters, results, and errors. Full precedence and implementation map:
+[`docs/a11y/overlay-escape.md`](a11y/overlay-escape.md).
+
 The current view order is Bundles, History, Unfinished, Memory, Live Feed,
 Search, Timeline, and Replay.
 
@@ -48,7 +56,9 @@ overlay. See [`docs/HELP.md`](HELP.md) for a short operator reference.
 `tests/visual/harness/a11y.spec.js` runs against the built Dioxus web viewer and
 covers the ARIA tab keyboard pattern, active-tab tab order, Search
 `Escape`-to-clear behavior, keyboard-help open/close via `?` and `Escape`, command
-palette open/close via `Ctrl+K` / `Escape`, fixture-driven status regions
+palette open/close via `Ctrl+K` / `Escape`, overlay precedence (help closes while
+focus stays in Search), clear-confirm and search-error `Escape` recovery,
+fixture-driven status regions
 (`skeleton`, `loading-long`, `search-error`, `stream-skeleton`), reduced-motion
 spinner flattening, and landmark visibility. The same component source backs the desktop viewer,
 with native WebView and OS chrome covered by [`docs/a11y/status-regions-and-native-smoke.md`](a11y/status-regions-and-native-smoke.md).

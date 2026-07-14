@@ -9,7 +9,8 @@ Machine-claimable accessibility evidence for SessionLedger viewer **status visib
 |-------|----------|----------------|
 | Status region ARIA | `tests/visual/harness/a11y.spec.js` | `role=status` / `role=alert`, `aria-live`, `aria-busy` on fixture-driven loading, skeleton, and error surfaces |
 | Error-field association | `/?fixture=search-error` + Playwright | Search fields set `aria-invalid` / `aria-errormessage` to the alert id; Retry is `aria-describedby` the error detail |
-| Destructive clear confirm | Search tab Clear | Lightweight `alertdialog` before wiping filters/results/errors (Escape still clears immediately for keyboard recovery) |
+| Destructive clear confirm | Search tab Clear | Lightweight `alertdialog` before wiping filters/results/errors (Escape dismisses confirm; second Escape clears immediately for keyboard recovery) |
+| Overlay escape precedence | `a11y.spec.js` + [`overlay-escape.md`](overlay-escape.md) | Palette/help close on Escape even with focus in a text field; search-error fixture dismisses on Escape |
 | Long-operation patience hint | `/?fixture=loading-long` + Playwright | Plain-language ETA-style copy for operations that may exceed ~10s |
 | Stream skeleton status | `/?fixture=stream-skeleton` + Playwright | Live Feed connecting state exposes content-shaped skeleton + labelled status badge |
 | Reduced motion | `a11y.spec.js` | Spinner animation flattened under `prefers-reduced-motion: reduce` (global guard in `app.rs`) |
@@ -112,5 +113,6 @@ see [`docs/a11y/screen-reader-smoke.md`](screen-reader-smoke.md).
 
 - [`docs/a11y/screen-reader-smoke.md`](screen-reader-smoke.md) — L81.4 SR procedure
 - [`docs/viewer-hotkeys.md`](../viewer-hotkeys.md) — keyboard contract
+- [`docs/a11y/overlay-escape.md`](overlay-escape.md) — Escape precedence for overlays and recovery
 - [`docs/HELP.md`](../HELP.md) — operator help
 - [`docs/VISUAL_SPEC.md`](../VISUAL_SPEC.md) §3–5 — loading, skeleton, and error anatomy

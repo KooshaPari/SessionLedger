@@ -130,14 +130,26 @@ pub fn SearchView() -> Element {
     }
 
     if query_fixture_active("search-error") {
+        let mut show_error = use_signal(|| true);
         return rsx! {
-            SearchFixtureChrome { invalid: true }
-            div { class: "search-results",
-                ErrorState {
-                    message: "daemon not reachable: connection refused (visual fixture)".to_owned(),
-                    retryable: true,
-                    on_retry: move |_| {},
-                    error_id: SEARCH_ERROR_ID.to_owned(),
+            div {
+                class: "search-view",
+                onkeydown: move |evt: Event<KeyboardData>| {
+                    if evt.key() == Key::Escape && show_error() {
+                        evt.prevent_default();
+                        show_error.set(false);
+                    }
+                },
+                SearchFixtureChrome { invalid: show_error() }
+                div { class: "search-results",
+                    if show_error() {
+                        ErrorState {
+                            message: "daemon not reachable: connection refused (visual fixture)".to_owned(),
+                            retryable: true,
+                            on_retry: move |_| {},
+                            error_id: SEARCH_ERROR_ID.to_owned(),
+                        }
+                    }
                 }
             }
         };

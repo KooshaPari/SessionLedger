@@ -27,11 +27,15 @@ docs/reference/conformance/
     ├── tool-evidence-021.okf.json          ← claude-code tool-output acceptance
     ├── codex-typescript-023.okf.json       ← codex TypeScript/npm toolchain acceptance
     ├── cursor-python-029.okf.json          ← cursor Python pytest tool evidence
-    └── forge-go-module-026.okf.json        ← forge Go module gRPC health probe
+    ├── forge-go-module-026.okf.json        ← forge Go module gRPC health probe
+    ├── task-family-multiturn-031.okf.json  ← multi-turn discover/compress/verify family
+    ├── task-family-token-budget-032.okf.json ← token-budget / metrics family
+    └── task-family-compress-resume-033.okf.json ← zstd compress → resume family
 ```
 
-Fourteen fixtures total — five from worked examples in `OKF-EXAMPLES.md` plus
-nine hand-vetted edge, corpus-expansion, and cross-language shapes. Example fixtures are the
+Seventeen fixtures total — five from worked examples in `OKF-EXAMPLES.md` plus
+twelve hand-vetted edge, corpus-expansion, cross-language, and task-family
+shapes (multi-turn / token-budget / compress-resume). Example fixtures are the
 **exact JSON shown in the examples doc** (verbatim, byte-for-byte except for
 trailing whitespace). Anchored filenames are pinned in
 [`docs/ops/eval-manifest.json`](../../ops/eval-manifest.json).

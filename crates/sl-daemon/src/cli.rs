@@ -8,6 +8,8 @@
 
 use reqwest::Client;
 
+use crate::resilience::{reqwest_error_is_retryable, RetryPolicy};
+
 /// Successful command completion.
 pub const EXIT_OK: i32 = 0;
 /// Daemon unreachable, validation failed, or empty search results.
@@ -75,15 +77,26 @@ pub enum HealthStatus {
 /// Returns `Ok(HealthStatus::Running)` when the daemon is reachable.
 /// Returns `Ok(HealthStatus::NotRunning)` when the connection is refused.
 /// Returns `Err` for other network / parse failures.
+///
+/// Transient connect/timeout/request failures are retried per [`RetryPolicy`]
+/// (`SL_HTTP_RETRY_MAX` / `SL_HTTP_RETRY_BASE_MS`).
 pub async fn fetch_health(client: &Client, base_url: &str) -> Result<HealthStatus, reqwest::Error> {
-    let url = build_url(base_url, "/healthz");
-    let resp = match client.get(&url).send().await {
-        Ok(r) => r,
-        Err(e) if e.is_connect() => return Ok(HealthStatus::NotRunning),
-        Err(e) => return Err(e),
-    };
-    let body = resp.text().await?;
-    Ok(HealthStatus::Running { body })
+    let policy = RetryPolicy::from_env().unwrap_or_else(|_| RetryPolicy::default_policy());
+    policy
+        .run(
+            |_| async {
+                let url = build_url(base_url, "/healthz");
+                let resp = match client.get(&url).send().await {
+                    Ok(r) => r,
+                    Err(e) if e.is_connect() => return Ok(HealthStatus::NotRunning),
+                    Err(e) => return Err(e),
+                };
+                let body = resp.text().await?;
+                Ok(HealthStatus::Running { body })
+            },
+            |err| reqwest_error_is_retryable(err) && !err.is_connect(),
+        )
+        .await
 }
 
 /// Fetch bundle list from the daemon.
@@ -91,23 +104,33 @@ pub async fn fetch_health(client: &Client, base_url: &str) -> Result<HealthStatu
 /// The daemon's `/api/bundles` returns a JSON array of parsed OKF documents;
 /// we extract just the file path from the `"path"` field of each object when
 /// present, falling back to a serialized representation otherwise.
+///
+/// Transient connect/timeout/request failures are retried per [`RetryPolicy`].
 pub async fn fetch_bundle_paths(
     client: &Client,
     base_url: &str,
 ) -> Result<Vec<String>, reqwest::Error> {
-    let url = build_url(base_url, "/api/bundles");
-    let resp = client.get(&url).send().await?;
-    let values: Vec<serde_json::Value> = resp.json().await?;
-    let paths = values
-        .into_iter()
-        .map(|v| {
-            v.get("path")
-                .and_then(|p| p.as_str())
-                .map(|s| s.to_owned())
-                .unwrap_or_else(|| v.to_string())
-        })
-        .collect();
-    Ok(paths)
+    let policy = RetryPolicy::from_env().unwrap_or_else(|_| RetryPolicy::default_policy());
+    policy
+        .run(
+            |_| async {
+                let url = build_url(base_url, "/api/bundles");
+                let resp = client.get(&url).send().await?;
+                let values: Vec<serde_json::Value> = resp.json().await?;
+                let paths = values
+                    .into_iter()
+                    .map(|v| {
+                        v.get("path")
+                            .and_then(|p| p.as_str())
+                            .map(|s| s.to_owned())
+                            .unwrap_or_else(|| v.to_string())
+                    })
+                    .collect();
+                Ok(paths)
+            },
+            reqwest_error_is_retryable,
+        )
+        .await
 }
 
 // ---------------------------------------------------------------------------

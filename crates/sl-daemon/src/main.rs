@@ -32,6 +32,7 @@ mod export;
 mod filter;
 mod http;
 mod metrics;
+mod resilience;
 #[cfg(feature = "otel")]
 mod otel;
 mod shutdown;
@@ -688,12 +689,22 @@ async fn run_serve(
                 "HTTP /api/* rate limit enabled"
             );
         }
+        let api_circuit_breaker =
+            resilience::ApiCircuitBreaker::from_env(enforce_api_rate_default)?;
+        if api_circuit_breaker.is_enabled() {
+            info!(
+                failure_threshold = api_circuit_breaker.failure_threshold,
+                open_ms = api_circuit_breaker.open_for.as_millis() as u64,
+                "HTTP /api/* circuit breaker enabled"
+            );
+        }
         let state = http::AppState {
             out_dir: Arc::new(out.clone()),
             broadcast_tx: bcast_tx.clone(),
             http_metrics: Arc::new(metrics::HttpMetrics::default()),
             ingest_admission,
             api_rate_limit,
+            api_circuit_breaker,
             api_key_auth,
             audit_sink: audit_sink.clone(),
             idempotency_cache: http::IngestIdempotencyCache::default(),

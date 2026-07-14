@@ -68,10 +68,14 @@ The HTTP listener defaults to loopback (`127.0.0.0/8` or `::1`) with optional
 (default `8`). Shared-key / non-loopback binds also enable a process-wide
 `/api/*` rate limit (`SL_API_RATE_LIMIT`, default `60` per
 `SL_API_RATE_WINDOW_MS` default `1000`); open loopback leaves it off for DX.
-See
+Shared-key / non-loopback binds also enable an `/api/*` circuit breaker
+(`SL_API_CIRCUIT_BREAKER`, failure threshold `SL_API_CIRCUIT_FAILURE_THRESHOLD`
+default `5`, open window `SL_API_CIRCUIT_OPEN_MS` default `30000`) that returns
+`503` + `Retry-After` after consecutive 5xx. CLI outbound calls retry transient
+failures via `SL_HTTP_RETRY_MAX` / `SL_HTTP_RETRY_BASE_MS`. See
 [`docs/ops/local-trust-boundary.md`](../../docs/ops/local-trust-boundary.md) for
-the bind/auth matrix, rate limit, error envelope, audit fields, and operational
-boundary.
+the bind/auth matrix, rate limit, circuit breaker, error envelope, audit fields,
+and operational boundary.
 
 ## Shell completions
 

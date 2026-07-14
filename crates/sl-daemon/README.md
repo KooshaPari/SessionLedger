@@ -35,6 +35,16 @@ OTLP **metrics** push is a soft stub (`--features otel-metrics`, optional
 `SL_OTLP_METRICS=1` acknowledgment). Default Prometheus `GET /metrics` is
 unchanged — see [`docs/ops/otlp-metrics.md`](../../docs/ops/otlp-metrics.md).
 
+Optional jemalloc (`tikv-jemallocator`) is also feature-gated and **Unix-only**.
+Default builds (including Windows) keep the system allocator:
+
+```bash
+cargo build -p sl-daemon --features jemalloc
+```
+
+See [`docs/ops/jemalloc.md`](../../docs/ops/jemalloc.md) and
+`pwsh ./scripts/jemalloc-check.ps1 -SelfCheck`.
+
 ## Run options
 
 ### 1. Native process-compose (preferred for local dev — no container)

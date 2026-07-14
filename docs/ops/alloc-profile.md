@@ -6,7 +6,8 @@ This document covers the **optional `dhat` heap-profiling smoke**: score-1 evide
 that records real allocator statistics beyond `stats_alloc` region deltas.
 
 It is **feature-gated** (`alloc-profile`) and **never** installs a production
-`#[global_allocator]`. jemalloc is not required (and is not wired on Windows).
+`#[global_allocator]`. Optional jemalloc for `sl-daemon` is a separate soft
+feature ([`jemalloc.md`](jemalloc.md)) — off by default and not wired on Windows.
 
 ## Ceiling
 

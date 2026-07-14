@@ -163,6 +163,26 @@ jobs:
         shell: pwsh
         run: ./scripts/alloc-profile-check.ps1 -RunTest
 
+  # Soft L8 optional jemalloc — Unix feature build; default/Windows unchanged.
+  jemalloc:
+    name: scheduled jemalloc feature build · sl-daemon (soft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: crates/sl-daemon
+          key: jemalloc-feature
+      - name: self-check jemalloc feature anchors
+        shell: pwsh
+        run: ./scripts/jemalloc-check.ps1 -SelfCheck
+      - name: soft cargo build --features jemalloc
+        shell: pwsh
+        run: ./scripts/jemalloc-check.ps1 -Build
+
   # L45 loopback pprof surface — gated by SL_ENABLE_PPROF=1.
   pprof-smoke:
     name: scheduled pprof surface smoke · sl-daemon

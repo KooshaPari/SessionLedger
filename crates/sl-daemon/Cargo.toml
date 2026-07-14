@@ -37,8 +37,10 @@ clap_complete = "4.6.7"
 rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 
 # CPU sampling uses SIGPROF / setitimer; pprof-rs does not build on Windows.
+# jemalloc (tikv-jemallocator) is Unix-only — keep it off the default/Windows graph.
 [target.'cfg(unix)'.dependencies]
 pprof = { version = "0.15.0", default-features = false, features = ["prost-codec"] }
+tikv-jemallocator = { version = "0.6", optional = true }
 
 [dev-dependencies]
 tempfile = "3"
@@ -68,3 +70,7 @@ otel = [
 # Soft stub: compile-time acknowledgment of unpaid OTLP metrics push.
 # Does not pull OpenTelemetry metrics deps; Prometheus GET /metrics stays default.
 otel-metrics = []
+# Soft optional jemalloc global allocator (Unix). Default builds stay on the
+# system allocator — Windows-safe / unchanged. Enable: --features jemalloc
+jemalloc = ["dep:tikv-jemallocator"]
+

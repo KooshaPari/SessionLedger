@@ -168,6 +168,22 @@ Requires `--features alloc-profile` for the full measurement; default CI only ru
 the hermetic wiring via `cargo test --test alloc_profile`. Soft scheduled job:
 `alloc-profile` in [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
 
+## Optional jemalloc (`sl-daemon`, soft)
+
+Unix-only optional `#[global_allocator]` behind `--features jemalloc` (contract:
+[`jemalloc.md`](jemalloc.md)). Default and Windows builds stay on the system
+allocator.
+
+```powershell
+pwsh ./scripts/jemalloc-check.ps1 -SelfCheck
+# Unix soft CI / local:
+# cargo build --manifest-path crates/sl-daemon/Cargo.toml --features jemalloc --locked
+```
+
+Soft scheduled job: `jemalloc` in
+[`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml)
+(`continue-on-error: true`).
+
 ## Audit retention and review
 
 The durable audit sink is append-only JSONL (default) or SQLite under

@@ -12,7 +12,11 @@ fn repo_root() -> PathBuf {
 #[test]
 fn cross_language_parity_doc_self_check_validates_anchors() {
     let script = repo_root().join("scripts/cross-language-parity-check.ps1");
-    assert!(script.is_file(), "expected cross-language parity check script at {}", script.display());
+    assert!(
+        script.is_file(),
+        "expected cross-language parity check script at {}",
+        script.display()
+    );
 
     let output = Command::new("pwsh")
         .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])

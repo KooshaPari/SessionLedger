@@ -61,3 +61,21 @@ Critical supply-chain or remote-code issues may be accelerated at maintainer dis
 - Advisory scanning: `cargo audit` job in .github/workflows/security.yml.
 - SBOM upload: qgate uploads `sbom-cyclonedx` artifact from `target/sbom.cdx.json`.
 
+## API keys and secret rotation
+
+SessionLedger is a single-user local companion. Do not commit real secrets.
+
+| Surface | Guidance |
+| ------- | -------- |
+| Local env sample | Copy [`.env.example`](.env.example) into your shell or local env manager. Keep `SL_API_KEY` unset for default loopback trust, or set a local-only value outside the repo. |
+| Optional write gate | When `SL_API_KEY` is set, mutating HTTP routes require `Authorization: Bearer …` or `X-API-Key: …`. Details: [`docs/ops/local-trust-boundary.md`](docs/ops/local-trust-boundary.md). |
+| Rotation | Stop callers using the old key → replace `SL_API_KEY` in the daemon environment → restart `sl-daemon` → update automation headers. Treat the previous key as burned; do not reuse it. |
+| Repo hygiene | Never put live keys in `.env.example`, docs, fixtures, or commits. CI runs [`scripts/env-example-check.ps1`](scripts/env-example-check.ps1) (required keys + no high-entropy secret patterns) and gitleaks/TruffleHog on the tree. |
+
+Local verify:
+
+```powershell
+pwsh -NoProfile -File scripts/env-example-check.ps1
+pre-commit run gitleaks
+```
+

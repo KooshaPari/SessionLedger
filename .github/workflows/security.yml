@@ -1,5 +1,6 @@
 # P0 security + supply-chain checks for SessionLedger.
-# cargo-deny (deny.toml at repo root) + cargo-audit + gitleaks + trufflehog. Keep green on PRs.
+# cargo-deny (deny.toml at repo root) + cargo-audit + gitleaks + trufflehog +
+# .env.example secret hygiene. Keep green on PRs.
 
 name: Security
 
@@ -16,6 +17,15 @@ permissions:
   contents: read
 
 jobs:
+  env-example:
+    name: env.example hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: assert .env.example keys and no high-entropy secrets
+        shell: pwsh
+        run: ./scripts/env-example-check.ps1
+
   cargo-deny:
     name: cargo deny check
     runs-on: ubuntu-latest

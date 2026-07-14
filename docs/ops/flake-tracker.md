@@ -6,7 +6,8 @@ to reproduce or remove the quarantine.
 
 ## Required Record
 
-Track confirmed flakes in `docs/ops/flakes.json`. Each entry includes:
+Track confirmed flakes in `docs/ops/flakes-records.json`. The JSON schema lives in
+[`flakes.json`](flakes.json). Each entry includes:
 
 - `id`: stable issue or tracker id.
 - `test`: exact test target or test name.
@@ -22,7 +23,10 @@ Track confirmed flakes in `docs/ops/flakes.json`. Each entry includes:
 Quarantine is temporary and must have an owner, linked issue, evidence, and a
 deadline. Prefer reducing nondeterminism or committing a regression fixture over
 adding retries. If a repeat job catches a failure, preserve the seed/output in
-the tracker before rerunning locally.
+the tracker before rerunning locally. CI publishes rerun stats from
+[`scripts/flake-rerun-stats.ps1`](../../scripts/flake-rerun-stats.ps1) as
+`docs/ops/flake-rerun-stats.json` and uploads the artifact from the
+`flake-tracker` job.
 
 Resolved flakes stay in the file with `status: "resolved"` until the next
 release cycle, so reviewers can see when a quarantine was removed.

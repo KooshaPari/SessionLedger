@@ -56,6 +56,30 @@ jobs:
       - name: apply schema migrations in sqlite tests
         run: cargo test --features sqlite schema --locked
 
+  flake-tracker:
+    name: flake tracker records + rerun stats
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - name: validate flake tracker records
+        shell: pwsh
+        run: ./scripts/flake-tracker-check.ps1
+      - name: property rerun stats (3 repeats)
+        shell: pwsh
+        env:
+          PROPTEST_CASES: 64
+          FLAKE_RERUN_REPEATS: 3
+        run: ./scripts/flake-rerun-stats.ps1
+      - name: upload flake rerun stats
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: flake-rerun-stats
+          path: docs/ops/flake-rerun-stats.json
+          if-no-files-found: error
+
   reproducible-build:
     name: reproducible build · sl-daemon
     runs-on: ubuntu-latest

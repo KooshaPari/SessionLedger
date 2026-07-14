@@ -83,10 +83,7 @@ mod tests {
     #[test]
     fn tokens_css_declares_required_vars() {
         for var in REQUIRED_CSS_VARS {
-            assert!(
-                TOKENS_CSS.contains(var),
-                "assets/tokens.css missing required token {var}"
-            );
+            assert!(TOKENS_CSS.contains(var), "assets/tokens.css missing required token {var}");
         }
     }
 
@@ -102,15 +99,10 @@ mod tests {
             ("--lc-teal-on-dark", TEAL_ON_DARK),
         ];
         for (var, hex) in pairs {
-            assert!(
-                TOKENS_CSS.contains(hex),
-                "tokens.css missing hex {hex} for {var}"
-            );
+            assert!(TOKENS_CSS.contains(hex), "tokens.css missing hex {hex} for {var}");
             // Variable assignment line should mention both name and hex nearby.
             assert!(
-                TOKENS_CSS
-                    .lines()
-                    .any(|line| line.contains(var) && line.contains(hex)),
+                TOKENS_CSS.lines().any(|line| line.contains(var) && line.contains(hex)),
                 "tokens.css does not assign {var} to {hex} on the same line"
             );
         }
@@ -156,10 +148,7 @@ mod tests {
     fn app_chrome_embeds_tokens_css_not_ad_hoc_accent() {
         // app.rs must embed TOKENS_CSS and must not re-declare --sl-accent hexes.
         let app_src = include_str!("app.rs");
-        assert!(
-            app_src.contains("TOKENS_CSS"),
-            "app.rs must embed crate::tokens::TOKENS_CSS"
-        );
+        assert!(app_src.contains("TOKENS_CSS"), "app.rs must embed crate::tokens::TOKENS_CSS");
         assert!(
             !app_src.contains("--sl-accent: #"),
             "app.rs must not re-declare --sl-accent with ad-hoc hex; use tokens.css"

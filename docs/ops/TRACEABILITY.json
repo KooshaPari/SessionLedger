@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "356/402",
+    "score": "358/402",
     "pct": 89,
     "grade": "B",
-    "commit": "cbf54d1",
-    "wave": "Wave-26"
+    "commit": "114428a",
+    "wave": "Wave-27"
   },
   "fr": [
     {
@@ -705,6 +705,26 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.40",
+      "status": "done",
+      "evidence": [
+        "packaging/caddy/Caddyfile",
+        "packaging/nginx/sessionledger.conf",
+        "scripts/branch-protection-check.ps1",
+        "scripts/oci-cosign-verify.ps1",
+        "crates/sl-daemon/completions/",
+        "tests/allocation_budget.rs",
+        "crates/sl-daemon/src/http.rs"
+      ]
+    },
+    {
+      "id": "WBS-8.41",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -725,6 +745,9 @@
         "tests/memory_budget.rs",
         "scripts/rss-budget-check.ps1",
         "docs/ops/memory-budget.json",
+        "tests/allocation_budget.rs",
+        "scripts/allocation-budget-check.ps1",
+        "docs/ops/allocation-budget.json",
         "tests/race_model.rs",
         "docs/ops/concurrency-safety.md",
         ".github/workflows/race-smoke.yml"
@@ -741,7 +764,10 @@
         ".github/workflows/qgate.yml",
         "SECURITY.md",
         "CONTRIBUTING.md",
-        ".pre-commit-config.yaml"
+        ".pre-commit-config.yaml",
+        "crates/sl-daemon/completions/",
+        "scripts/install-sl-daemon-completions.ps1",
+        "crates/sl-daemon/tests/completions.rs"
       ]
     },
     {
@@ -780,6 +806,8 @@
         "renovate.json",
         "docs/adr/0004-commit-signing-policy.md",
         "scripts/commit-signing-check.ps1",
+        "scripts/branch-protection-check.ps1",
+        "docs/ops/branch-protection.md",
         "CONTRIBUTING.md"
       ]
     },
@@ -789,6 +817,7 @@
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/metrics.rs",
+        "crates/sl-daemon/src/http.rs",
         "docs/ops/dashboards/sessionledger-red.json",
         "scripts/dashboard-provision-check.ps1",
         ".github/workflows/ops-chaos-smoke.yml",
@@ -802,7 +831,7 @@
     },
     {
       "id": "C06",
-      "score": "25/30",
+      "score": "26/30",
       "status": "partial",
       "evidence": [
         "scripts/provenance-contract-check.ps1",
@@ -810,9 +839,11 @@
         "docs/ops/fixtures/slsa-materials-contract.sample.json",
         ".github/workflows/release.yml",
         "docs/ops/reproducible-builds.md",
-        "scripts/repro-check.ps1"
+        "scripts/repro-check.ps1",
+        "scripts/oci-cosign-verify.ps1",
+        "docs/ops/distribution.md"
       ],
-      "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and OCI verify-on-deploy"
+      "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and release-blocking OCI attest"
     },
     {
       "id": "C07",
@@ -891,7 +922,7 @@
     },
     {
       "id": "C11",
-      "score": "36/45",
+      "score": "37/45",
       "status": "partial",
       "evidence": [
         "docs/adr/0003-platform-code-signing.md",
@@ -907,6 +938,8 @@
         "packaging/homebrew/sessionledger.rb",
         "packaging/winget/",
         "packaging/macos/",
+        "packaging/caddy/Caddyfile",
+        "packaging/nginx/sessionledger.conf",
         "scripts/package-msi.ps1",
         ".github/workflows/release.yml"
       ]

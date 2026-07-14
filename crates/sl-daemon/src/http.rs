@@ -23,7 +23,7 @@ use std::hash::{Hash, Hasher};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use axum::body::to_bytes;
 use axum::extract::Request;
@@ -57,6 +57,12 @@ use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 const DEFAULT_INGEST_MAX_BODY_BYTES: usize = 1_048_576;
 const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
+/// Default `/api/*` throttle when the shared-key / non-loopback path is active.
+const DEFAULT_API_RATE_LIMIT: u64 = 60;
+/// Default throttle window (tower-style: N requests per period).
+const DEFAULT_API_RATE_WINDOW: Duration = Duration::from_secs(1);
+const SL_API_RATE_LIMIT: &str = "SL_API_RATE_LIMIT";
+const SL_API_RATE_WINDOW_MS: &str = "SL_API_RATE_WINDOW_MS";
 /// HTTP methods and paths documented in `docs/api/openapi.yaml`.
 ///
 /// Debug-only pprof routes are intentionally omitted. Keep in sync with the
@@ -158,6 +164,110 @@ impl IngestAdmission {
     }
 }
 
+/// Process-wide tower-style rate throttle for `/api/*` (beyond ingest bulkhead).
+///
+/// Native `tower::limit::RateLimitLayer` is not used: axum clones layers per
+/// connection, so those counters would not share process-wide state. This type
+/// keeps an `Arc`-shared fixed window so every connection sees the same budget.
+#[derive(Clone)]
+pub(crate) struct ApiRateLimit {
+    /// `None` disables the throttle (loopback DX default when no shared key).
+    inner: Option<Arc<Mutex<RateWindow>>>,
+    pub(crate) limit: u64,
+    pub(crate) window: Duration,
+}
+
+#[derive(Debug)]
+struct RateWindow {
+    window_start: Instant,
+    count: u64,
+}
+
+impl ApiRateLimit {
+    /// Build from env.
+    ///
+    /// When `enforce_default` is true (non-loopback bind or `SL_API_KEY` set),
+    /// an unset `SL_API_RATE_LIMIT` enables the default tower-style budget.
+    /// Loopback without a shared key leaves the throttle off unless the env is
+    /// set explicitly. `SL_API_RATE_LIMIT=0` (or `off`) disables it.
+    pub(crate) fn from_env(enforce_default: bool) -> Result<Self, String> {
+        Self::from_values(
+            enforce_default,
+            std::env::var(SL_API_RATE_LIMIT).ok(),
+            std::env::var(SL_API_RATE_WINDOW_MS).ok(),
+        )
+    }
+
+    fn from_values(
+        enforce_default: bool,
+        rate_limit: Option<String>,
+        window_ms: Option<String>,
+    ) -> Result<Self, String> {
+        let window = match window_ms.as_deref() {
+            None => DEFAULT_API_RATE_WINDOW,
+            Some(raw) => {
+                let ms = parse_positive_limit(SL_API_RATE_WINDOW_MS, Some(raw), 0)?;
+                Duration::from_millis(ms as u64)
+            }
+        };
+
+        let limit = match rate_limit.as_deref().map(str::trim) {
+            None if enforce_default => DEFAULT_API_RATE_LIMIT,
+            None => return Ok(Self::disabled()),
+            Some("0") | Some("off") | Some("Off") | Some("OFF") => return Ok(Self::disabled()),
+            Some(raw) => parse_positive_u64(SL_API_RATE_LIMIT, raw)?,
+        };
+
+        Ok(Self::enabled(limit, window))
+    }
+
+    fn disabled() -> Self {
+        Self { inner: None, limit: 0, window: DEFAULT_API_RATE_WINDOW }
+    }
+
+    fn enabled(limit: u64, window: Duration) -> Self {
+        Self {
+            inner: Some(Arc::new(Mutex::new(RateWindow {
+                window_start: Instant::now(),
+                count: 0,
+            }))),
+            limit,
+            window,
+        }
+    }
+
+    pub(crate) fn is_enabled(&self) -> bool {
+        self.inner.is_some()
+    }
+
+    fn try_acquire(&self) -> bool {
+        let Some(inner) = &self.inner else {
+            return true;
+        };
+        let mut state = inner.lock().expect("api rate limit poisoned");
+        let now = Instant::now();
+        if now.duration_since(state.window_start) >= self.window {
+            state.window_start = now;
+            state.count = 0;
+        }
+        if state.count >= self.limit {
+            return false;
+        }
+        state.count += 1;
+        true
+    }
+}
+
+fn parse_positive_u64(name: &str, value: &str) -> Result<u64, String> {
+    let parsed = value
+        .parse::<u64>()
+        .map_err(|_| format!("{name} must be a positive integer, got {value:?}"))?;
+    if parsed == 0 {
+        return Err(format!("{name} must be greater than zero (use 0/off only as the full value)"));
+    }
+    Ok(parsed)
+}
+
 /// Process-local replay cache for successful `POST /api/ingest` idempotency keys.
 #[derive(Clone, Default)]
 pub(crate) struct IngestIdempotencyCache {
@@ -219,6 +329,8 @@ pub(crate) struct AppState {
     pub http_metrics: Arc<HttpMetrics>,
     /// Body-size and in-flight request limits for ingest.
     pub ingest_admission: IngestAdmission,
+    /// Process-wide `/api/*` rate throttle (tower-style; shared across connections).
+    pub api_rate_limit: ApiRateLimit,
     /// Optional shared-secret authentication for HTTP API routes.
     pub api_key_auth: ApiKeyAuth,
     /// Durable local audit sink for structured actor/action events.
@@ -239,10 +351,11 @@ fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
     let http_metrics = state.http_metrics.clone();
     let api_auth_state = state.clone();
+    let api_rate_state = state.clone();
 
     // Ingest admission (body size + semaphore bulkhead) stays in the handler.
-    // Tower RateLimitLayer is intentionally avoided: axum clones layers per
-    // connection, so native tower rate counters do not share process-wide state.
+    // General `/api/*` throttle uses [`ApiRateLimit`] (Arc-shared fixed window),
+    // not tower `RateLimitLayer`, so the budget is process-wide across connections.
     let router = Router::new()
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
@@ -266,6 +379,7 @@ fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
         .fallback(not_found)
         .with_state(state)
         .layer(middleware::from_fn_with_state(api_auth_state, enforce_api_key_policy))
+        .layer(middleware::from_fn_with_state(api_rate_state, enforce_api_rate_limit))
         .layer(middleware::from_fn_with_state(http_metrics, observe_request))
         .layer(cors)
 }
@@ -285,6 +399,28 @@ async fn enforce_api_key_policy(
             axum::http::StatusCode::UNAUTHORIZED,
             "unauthorized",
             "missing or invalid API key",
+            &request_id,
+        );
+    }
+    next.run(request).await
+}
+
+/// Tower-style process-wide throttle for `/api/*` (probes and `/metrics` stay open).
+async fn enforce_api_rate_limit(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if request.uri().path().starts_with("/api/") && !state.api_rate_limit.try_acquire() {
+        let request_id = request_id_from_headers(request.headers());
+        return api_error(
+            axum::http::StatusCode::TOO_MANY_REQUESTS,
+            "rate_limited",
+            format!(
+                "API rate limit exceeded ({} requests per {}ms)",
+                state.api_rate_limit.limit,
+                state.api_rate_limit.window.as_millis()
+            ),
             &request_id,
         );
     }
@@ -1045,6 +1181,7 @@ mod tests {
             broadcast_tx,
             http_metrics: Arc::new(HttpMetrics::default()),
             ingest_admission: IngestAdmission::from_values(None, None).unwrap(),
+            api_rate_limit: ApiRateLimit::disabled(),
             api_key_auth: ApiKeyAuth::default(),
             audit_sink: Arc::new(AuditSink::open(out_dir).expect("audit sink")),
             idempotency_cache: IngestIdempotencyCache::default(),
@@ -1350,6 +1487,39 @@ mod tests {
     }
 
     #[test]
+    fn api_rate_limit_defaults_and_parses_env_values() {
+        let loopback_dx = ApiRateLimit::from_values(false, None, None).unwrap();
+        assert!(!loopback_dx.is_enabled());
+
+        let shared_key_default = ApiRateLimit::from_values(true, None, None).unwrap();
+        assert!(shared_key_default.is_enabled());
+        assert_eq!(shared_key_default.limit, DEFAULT_API_RATE_LIMIT);
+        assert_eq!(shared_key_default.window, DEFAULT_API_RATE_WINDOW);
+
+        let disabled = ApiRateLimit::from_values(true, Some("off".into()), None).unwrap();
+        assert!(!disabled.is_enabled());
+        let zero = ApiRateLimit::from_values(true, Some("0".into()), None).unwrap();
+        assert!(!zero.is_enabled());
+
+        let custom =
+            ApiRateLimit::from_values(false, Some("3".into()), Some("250".into())).unwrap();
+        assert!(custom.is_enabled());
+        assert_eq!(custom.limit, 3);
+        assert_eq!(custom.window, Duration::from_millis(250));
+
+        assert!(ApiRateLimit::from_values(true, Some("nope".into()), None).is_err());
+        assert!(ApiRateLimit::from_values(true, Some("5".into()), Some("0".into())).is_err());
+    }
+
+    #[test]
+    fn api_rate_limit_try_acquire_enforces_fixed_window() {
+        let limit = ApiRateLimit::enabled(2, Duration::from_secs(60));
+        assert!(limit.try_acquire());
+        assert!(limit.try_acquire());
+        assert!(!limit.try_acquire());
+    }
+
+    #[test]
     fn api_key_auth_ignores_unset_or_empty_env_values() {
         assert!(ApiKeyAuth::from_value(None).allows(&HeaderMap::new()));
         assert!(ApiKeyAuth::from_value(Some("  ".into())).allows(&HeaderMap::new()));
@@ -1630,6 +1800,45 @@ mod tests {
         assert_eq!(response.status(), axum::http::StatusCode::TOO_MANY_REQUESTS);
         let body: Value = response.json().await.unwrap();
         assert_eq!(body["error"]["code"], "ingest_busy");
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn api_rate_limit_returns_429_on_api_routes_but_keeps_healthz_open() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let mut state = test_state(out_dir.path());
+        state.api_rate_limit = ApiRateLimit::enabled(2, Duration::from_secs(60));
+        let (addr, server) = start_test_server(state).await;
+        let client = reqwest::Client::new();
+
+        for _ in 0..2 {
+            let ok = client.get(format!("http://{addr}/api/bundles")).send().await.unwrap();
+            assert_eq!(ok.status(), axum::http::StatusCode::OK);
+        }
+
+        let limited = client.get(format!("http://{addr}/api/bundles")).send().await.unwrap();
+        assert_eq!(limited.status(), axum::http::StatusCode::TOO_MANY_REQUESTS);
+        let body: Value = limited.json().await.unwrap();
+        assert_eq!(body["error"]["code"], "rate_limited");
+        assert!(body["error"]["message"].as_str().unwrap().contains("2 requests"));
+
+        let health = client.get(format!("http://{addr}/healthz")).send().await.unwrap();
+        assert_eq!(health.status(), axum::http::StatusCode::OK);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn api_rate_limit_disabled_allows_burst_on_loopback_dx() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let state = test_state(out_dir.path());
+        assert!(!state.api_rate_limit.is_enabled());
+        let (addr, server) = start_test_server(state).await;
+        let client = reqwest::Client::new();
+
+        for _ in 0..8 {
+            let response = client.get(format!("http://{addr}/api/bundles")).send().await.unwrap();
+            assert_eq!(response.status(), axum::http::StatusCode::OK);
+        }
         server.abort();
     }
 

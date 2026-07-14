@@ -65,9 +65,13 @@ The HTTP listener defaults to loopback (`127.0.0.0/8` or `::1`) with optional
 `SL_API_KEY` on mutating routes. Non-loopback `--http-bind` requires a non-empty
 `SL_API_KEY` and gates all `/api/*` routes. Ingest admission is configured with
 `SL_INGEST_MAX_BODY_BYTES` (default `1048576`) and `SL_INGEST_MAX_CONCURRENCY`
-(default `8`). See
+(default `8`). Shared-key / non-loopback binds also enable a process-wide
+`/api/*` rate limit (`SL_API_RATE_LIMIT`, default `60` per
+`SL_API_RATE_WINDOW_MS` default `1000`); open loopback leaves it off for DX.
+See
 [`docs/ops/local-trust-boundary.md`](../../docs/ops/local-trust-boundary.md) for
-the bind/auth matrix, error envelope, audit fields, and operational boundary.
+the bind/auth matrix, rate limit, error envelope, audit fields, and operational
+boundary.
 
 ## Shell completions
 

@@ -1,24 +1,33 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "suite": "benches/pipeline.rs",
   "criterion_baseline": "current",
   "units": "nanoseconds",
   "policy": {
+    "enforced": true,
     "threshold_percent": 25.0,
     "sample_size": 10,
     "warm_up_seconds": 1.0,
     "measurement_seconds": 2.0,
-    "update_command": "./scripts/bench-gate.ps1 -UpdateBaseline"
+    "update_command": "./scripts/bench-gate.ps1 -UpdateBaseline",
+    "self_check_command": "./scripts/bench-gate.ps1 -SelfCheck",
+    "notes": [
+      "CI job 'pipeline perf regression gate' is blocking (no continue-on-error).",
+      "A run fails when any current mean exceeds budget_mean_ns (baseline mean + threshold_percent)."
+    ]
   },
   "benchmarks": {
     "pipeline/distill_compile_200_messages": {
-      "mean_ns": 1081439.87
+      "mean_ns": 1081439.87,
+      "budget_mean_ns": 1351799.838
     },
     "pipeline/okf_export_200_messages": {
-      "mean_ns": 6607.678
+      "mean_ns": 6607.678,
+      "budget_mean_ns": 8259.598
     },
     "pipeline/inject_render_200_messages": {
-      "mean_ns": 13362.599
+      "mean_ns": 13362.599,
+      "budget_mean_ns": 16703.249
     }
   }
 }

@@ -56,6 +56,14 @@ package:
 seed:
     pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/seed-sample.ps1
 
+# Enforced pipeline Criterion perf-budget gate (blocking CI equivalent)
+bench-gate:
+    pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/bench-gate.ps1
+
+# Validate enforced budget policy / thresholds without cargo bench
+bench-gate-check:
+    pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/bench-gate.ps1 -SelfCheck
+
 # ----- runtime stack -----
 
 # Bring up the local runtime (runtime-up script if present, else process-compose)

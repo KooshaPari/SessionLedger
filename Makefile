@@ -8,7 +8,7 @@ DAEMON_MANIFEST := crates/sl-daemon/Cargo.toml
 # Use `just` when available (GNU make / POSIX shells).
 JUST := $(shell command -v just 2>/dev/null)
 
-.PHONY: help build test lint fmt clippy package seed dev dev-down up
+.PHONY: help build test lint fmt clippy package seed bench-gate bench-gate-check dev dev-down up
 
 ifdef JUST
 
@@ -36,6 +36,12 @@ package:
 seed:
 	@$(JUST) seed
 
+bench-gate:
+	@$(JUST) bench-gate
+
+bench-gate-check:
+	@$(JUST) bench-gate-check
+
 up:
 	@$(JUST) up
 
@@ -56,6 +62,8 @@ help:
 	@echo "  lint      fmt --check + clippy (CI-equivalent gate)"
 	@echo "  package   desktop packaging (packaging/Makefile)"
 	@echo "  seed      copy a sample OKF fixture into SL_DATA_DIR (default .sl-data)"
+	@echo "  bench-gate        enforced pipeline Criterion perf-budget gate"
+	@echo "  bench-gate-check  perf-budget policy SelfCheck (no cargo bench)"
 	@echo "  up        runtime-up script if present, else process-compose up"
 	@echo "  dev       build then up"
 	@echo "  dev-down  process-compose down"
@@ -94,6 +102,14 @@ package:
 ## seed - copy a sample OKF fixture into SL_DATA_DIR (default .sl-data)
 seed:
 	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/seed-sample.ps1
+
+## bench-gate - enforced pipeline Criterion perf-budget gate (blocking)
+bench-gate:
+	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/bench-gate.ps1
+
+## bench-gate-check - validate enforced budget policy without cargo bench
+bench-gate-check:
+	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/bench-gate.ps1 -SelfCheck
 
 ## up - runtime-up script if present, else process-compose
 up:

@@ -31,7 +31,10 @@ rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 zstd = { version = "0.13", optional = true }
 tracing = "0.1"
 
-[dev-dependencies]
+# FFI / native build scripts (rusqlite bundled, zstd) cannot run under Miri.
+# Keep them off the miri graph so `cargo miri test --test race_model` stays a
+# pure-std smoke (see .github/workflows/miri-smoke.yml).
+[target.'cfg(not(miri))'.dev-dependencies]
 rusqlite = { version = "0.40", features = ["bundled"] }
 zstd = { version = "0.13" }
 tempfile = "3"

@@ -130,6 +130,8 @@ $SL_DATA_DIR/
   sessions/          # optional watch input
   out/               # OKF bundles (*.okf.json)
   archive/YYYY/MM/   # gzip archives from `sl archive`
+  audit/             # append-only audit sink (events.jsonl or events.db)
+    archive/         # operator-rotated copies (not created by sl-daemon)
 ```
 
 Map with:

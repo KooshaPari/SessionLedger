@@ -98,6 +98,79 @@ Records include:
 
 Enable newline-delimited JSON with the `json-logs` feature and
 `SL_LOG_FORMAT=json`. Events deliberately omit transcript and ingest-body
-contents. Operators own retention, rotation, backup, and access control for the
-audit store; rotation should move or copy files without asking `sl-daemon` to
-rewrite historical records.
+contents.
+
+### Retention and rotation policy
+
+`sl-daemon` does not enforce retention windows, quotas, or automatic pruning.
+The sink grows until an operator rotates or archives it. That is intentional:
+the daemon stays append-only and never rewrites historical audit rows.
+
+| Knob | Default | Effect on audit retention |
+|---|---|---|
+| `SL_DATA_DIR` | unset (command-specific) | When set, pins `<SL_DATA_DIR>/audit/*` across `serve`, archive, and restore |
+| `SL_AUDIT_BACKEND` | `jsonl` | Selects `events.jsonl` vs `events.db`; does not change retention duration |
+| `serve --out` / `--data-dir` | command default | Audit path root when `SL_DATA_DIR` is unset |
+
+Recommended operator policy for a single-user desktop install:
+
+1. **Retention window** — keep the active audit file until a calendar boundary
+   (for example 90 days or one quarter) or until disk budget requires rotation.
+   There is no daemon-side TTL; document the chosen window in your local ops
+   notes if compliance requires one.
+2. **Rotation** — stop or restart `sl-daemon`, then **move or copy** the active
+   file to a dated archive such as
+   `<data_dir>/audit/archive/events-2026-07.jsonl`. Do not truncate
+   `events.jsonl` in place while the daemon is running. After rotation, create
+   an empty `events.jsonl` (or let the next append recreate it) before restart.
+3. **SQLite** — rotate by copying `events.db` plus any `-wal`/`-shm` siblings,
+   then starting with a fresh database path or renamed archive file. The daemon
+   only appends with `INSERT`; pruning requires an offline copy, not an in-process
+   `DELETE`.
+4. **Backup** — include `<data_dir>/audit/` in the same backup scope as OKF
+   bundles. Treat exported audit copies like security-sensitive metadata (actor,
+   action, resource names) even though payloads are omitted.
+5. **Access control** — rely on OS file permissions and the loopback-only HTTP
+   bind. Audit files are not exposed over `/api/*`; local filesystem access is
+   the trust boundary.
+
+### Export and compliance review
+
+Audit review is a **local file operation**. No HTTP route serves the durable
+sink; remote review requires copying files off the host through your normal
+secure channel.
+
+Quick checks from repo root (PowerShell 7):
+
+```powershell
+# Last 20 structured audit records (default JSONL backend)
+pwsh ./scripts/audit-review.ps1 -DataDir ./.sl-data -Tail 20
+
+# Records since a calendar date into a review bundle
+pwsh ./scripts/audit-review.ps1 -DataDir ./.sl-data -Since "2026-07-01" `
+  -Export ./review/audit-export.jsonl
+```
+
+Equivalent manual paths:
+
+| Backend | Tail / inspect | Export for review |
+|---|---|---|
+| `jsonl` | `Get-Content -Tail 20 $env:SL_DATA_DIR/audit/events.jsonl` | Copy or `audit-review.ps1 -Export <path>` |
+| `sqlite` | `sqlite3 $env:SL_DATA_DIR/audit/events.db "SELECT * FROM audit_events ORDER BY id DESC LIMIT 20;"` | `audit-review.ps1 -Backend sqlite -Export <path>.jsonl` (requires `sqlite3` on `PATH`) |
+
+Review checklist:
+
+1. Resolve the active data root (`SL_DATA_DIR`, `serve --out`, or `--data-dir`).
+2. Confirm backend (`SL_AUDIT_BACKEND` or default `jsonl`) and open the matching
+   path under `audit/`.
+3. Filter by `timestamp` (Unix milliseconds), `action`, or `outcome` when
+   investigating a specific ingest/export/archive event.
+4. Correlate `request_id` with same-day `tracing` logs (`RUST_LOG`,
+   `SL_LOG_FORMAT=json`) when process logs are also retained.
+5. Store exported JSONL under your evidence retention policy; do not re-import
+   into `sl-daemon` — the sink is write-only from the daemon's perspective.
+
+For scheduled rotation automation, use OS tooling (Task Scheduler, cron,
+logrotate in **copytruncate off** / move-then-create mode) against
+`<data_dir>/audit/events.jsonl`. See also [`runbook.md`](runbook.md#audit-retention-and-review)
+and [`distribution.md`](distribution.md) for data-root layout.

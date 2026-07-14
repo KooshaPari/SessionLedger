@@ -6,7 +6,8 @@ evidence only: it catches gross regressions, not allocator-level waste.
 
 A cheap counting-allocator companion lives in
 [`allocation-budget.md`](allocation-budget.md) (`process_session` heap deltas via
-`stats_alloc`). Continuous `dhat` / jemalloc profiling and optional
+`stats_alloc`). Optional feature-gated `dhat` heap smoke lives in
+[`alloc-profile.md`](alloc-profile.md). Continuous jemalloc profiling and optional
 `bytes::Bytes` / `Cow` zero-copy work remain follow-ups.
 
 ## Ceiling

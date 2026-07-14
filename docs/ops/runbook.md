@@ -153,6 +153,21 @@ Default ceilings are **1 MiB** bytes allocated and **5 000** allocations for t
 8-message fixture. Soft scheduled job: `allocation-budget` in
 [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
 
+## Allocator profile smoke (optional `dhat`)
+
+Optional L8 companion beyond the counting-allocator smoke — `dhat` heap statistics
+over one `process_session()` pass (contract: [`alloc-profile.md`](alloc-profile.md)):
+
+```powershell
+pwsh ./scripts/alloc-profile-check.ps1 -SelfCheck
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w29-c00-dhat"
+pwsh ./scripts/alloc-profile-check.ps1
+```
+
+Requires `--features alloc-profile` for the full measurement; default CI only runs
+the hermetic wiring via `cargo test --test alloc_profile`. Soft scheduled job:
+`alloc-profile` in [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
+
 ## Audit retention and review
 
 The durable audit sink is append-only JSONL (default) or SQLite under

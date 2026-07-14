@@ -6,7 +6,8 @@ This document covers the **cheap counting-allocator companion**: a score-1 heap
 allocation budget over one in-process `process_session()` pass.
 
 It catches gross allocation regressions without enabling jemalloc, continuous
-`dhat`, or a production `#[global_allocator]`.
+daemon `dhat`, or a production `#[global_allocator]`. Optional `dhat` heap
+evidence lives in [`alloc-profile.md`](alloc-profile.md).
 
 ## Ceiling
 

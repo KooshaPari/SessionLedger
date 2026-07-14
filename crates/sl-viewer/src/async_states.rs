@@ -108,6 +108,9 @@ pub fn LoadingState(
     /// Human-readable status (defaults to a generic bundle-load message).
     #[props(default = "Loading bundles…".to_string())]
     message: String,
+    /// Plain-language reassurance for operations that may exceed ~10 seconds.
+    #[props(default)]
+    patience_hint: bool,
 ) -> Element {
     let c = ThemeColors::dark();
     rsx! {
@@ -121,11 +124,16 @@ pub fn LoadingState(
             div {
                 class: "sl-loading-spinner",
                 "aria-hidden": "true",
-                style: "width:28px;height:28px;border:3px solid {c.border};border-top-color:{c.focus};border-radius:50%;animation:sl-spin 0.8s linear infinite;",
+                style: "width:28px;height:28px;border:3px solid {c.border};border-top-color:{c.focus};border-radius:50%;",
             }
             span { "{message}" }
-            style {
-                "@keyframes sl-spin {{ to {{ transform: rotate(360deg); }} }}"
+            if patience_hint {
+                span {
+                    class: "sl-loading-patience",
+                    "data-testid": "loading-patience-hint",
+                    style: "max-width:28rem;text-align:center;color:{c.muted};font-size:12px;line-height:1.45;",
+                    "Large archives can take up to a minute. You can switch tabs while this finishes."
+                }
             }
         }
     }

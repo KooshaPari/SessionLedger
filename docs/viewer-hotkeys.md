@@ -44,5 +44,7 @@ overlay. See [`docs/HELP.md`](HELP.md) for a short operator reference.
 
 `tests/visual/harness/a11y.spec.js` runs against the built Dioxus web viewer and
 covers the ARIA tab keyboard pattern, active-tab tab order, Search
-`Escape`-to-clear behavior, and keyboard-help open/close via `?` and `Escape`. The same component source backs the desktop viewer,
-with native WebView and OS chrome remaining outside that browser harness.
+`Escape`-to-clear behavior, keyboard-help open/close via `?` and `Escape`, fixture-driven
+status regions (`skeleton`, `loading-long`, `search-error`, `stream-skeleton`), reduced-motion
+spinner flattening, and landmark visibility. The same component source backs the desktop viewer,
+with native WebView and OS chrome covered by [`docs/a11y/status-regions-and-native-smoke.md`](a11y/status-regions-and-native-smoke.md).

@@ -1,6 +1,10 @@
 [CmdletBinding()]
 param(
-    [string[]]$Paths = @("docs", "CONTRIBUTING.md")
+    [string[]]$Paths = @("docs", "CONTRIBUTING.md"),
+    [string[]]$CopyFiles = @(
+        "crates/sl-viewer/src/help_overlay.rs",
+        "crates/sl-viewer/src/async_states.rs"
+    )
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,6 +33,14 @@ foreach ($path in $Paths) {
     }
 }
 
+foreach ($relative in $CopyFiles) {
+    $fullPath = Join-Path $repoRoot $relative
+    if (-not (Test-Path -LiteralPath $fullPath)) {
+        throw "Inclusive language copy file not found: $relative"
+    }
+    $files.Add((Resolve-Path -LiteralPath $fullPath).Path)
+}
+
 $findings = New-Object System.Collections.Generic.List[string]
 foreach ($file in $files) {
     foreach ($term in $terms) {
@@ -46,4 +58,4 @@ if ($findings.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Inclusive language seed check passed for docs/ and CONTRIBUTING.md."
+Write-Host "Inclusive language seed check passed for docs/, CONTRIBUTING.md, and viewer user-copy sources."

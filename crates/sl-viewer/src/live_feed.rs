@@ -6,6 +6,7 @@
 use dioxus::prelude::*;
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
+use crate::fixture::query_fixture_active;
 
 #[cfg_attr(any(target_arch = "wasm32", not(feature = "desktop")), allow(dead_code))]
 const DAEMON_SSE_URL: &str = "http://localhost:9001/api/stream";
@@ -99,14 +100,19 @@ pub fn LiveFeed() -> Element {
         }
     });
 
-    let status_val = status();
-    let (status_label, status_class) = match &status_val {
-        FeedStatus::Live => ("● Live", "feed-status live"),
-        FeedStatus::Disconnected => ("○ Disconnected", "feed-status disconnected"),
-        FeedStatus::Connecting => ("◌ Connecting…", "feed-status connecting"),
+    let fixture_stream_skeleton = query_fixture_active("stream-skeleton");
+    let status_val = if fixture_stream_skeleton { FeedStatus::Connecting } else { status() };
+    let (status_label, status_class, status_aria) = match &status_val {
+        FeedStatus::Live => ("● Live", "feed-status live", "Live feed connected"),
+        FeedStatus::Disconnected => {
+            ("○ Disconnected", "feed-status disconnected", "Live feed disconnected")
+        }
+        FeedStatus::Connecting => {
+            ("◌ Connecting…", "feed-status connecting", "Connecting to bundle feed")
+        }
     };
 
-    let feed_entries = entries();
+    let feed_entries = if fixture_stream_skeleton { Vec::new() } else { entries() };
 
     rsx! {
         div {
@@ -116,6 +122,9 @@ pub fn LiveFeed() -> Element {
                 span { class: "live-feed-title", "Live Feed" }
                 span {
                     class: "{status_class}",
+                    role: "status",
+                    "aria-live": "polite",
+                    "aria-label": "{status_aria}",
                     "data-testid": "live-feed-status",
                     "{status_label}"
                 }

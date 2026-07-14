@@ -6,9 +6,9 @@ use crate::async_states::{
 };
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
+use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
-use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active, visual_fixture_active};
 use crate::help_overlay::HelpOverlay;
 use crate::history_tab::HistoryTimeline;

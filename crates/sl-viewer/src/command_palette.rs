@@ -150,12 +150,8 @@ mod tests {
 
     #[test]
     fn commands_include_focus_search_and_theme() {
-        assert!(COMMANDS
-            .iter()
-            .any(|c| c.action == PaletteAction::FocusSearch));
-        assert!(COMMANDS
-            .iter()
-            .any(|c| c.action == PaletteAction::ToggleTheme));
+        assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::FocusSearch));
+        assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::ToggleTheme));
         assert_eq!(COMMANDS.len(), 2);
     }
 

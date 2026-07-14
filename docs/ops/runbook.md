@@ -109,6 +109,25 @@ recovery, mini load), run `scripts/ops-chaos-smoke.ps1` after building
 [`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml);
 see [`observability.md`](observability.md) for the scheduled-evidence table.
 
+## Audit retention and review
+
+The durable audit sink is append-only JSONL (default) or SQLite under
+`<data_dir>/audit/`. `sl-daemon` never prunes it; operators rotate by moving or
+copying files while the process is stopped. Full policy:
+[`local-trust-boundary.md`](local-trust-boundary.md#retention-and-rotation-policy).
+
+```powershell
+# Tail recent audit events from the compose data root
+pwsh ./scripts/audit-review.ps1 -DataDir ./.sl-data -Tail 20
+
+# Export a date-bounded bundle for compliance review (local files only)
+pwsh ./scripts/audit-review.ps1 -DataDir ./.sl-data -Since "2026-07-01" `
+  -Export ./review/audit-export.jsonl
+```
+
+Audit review does not use HTTP; keep `sl serve` on loopback and treat exported
+bundles like security-sensitive local metadata.
+
 ## Common failures
 
 | Symptom | Likely cause | Fix |

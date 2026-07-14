@@ -103,3 +103,14 @@ jobs:
       - name: self-check sandbox boundary checklist + Containerfile anchors
         shell: pwsh
         run: ./scripts/sandbox-boundary-check.ps1 -SelfCheck
+
+  # Soft C04 L38 CVE feed subscription evidence — hermetic SelfCheck only.
+  cve-feed:
+    name: CVE feed subscription smoke (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: self-check GHSA+OSV+NVD subscription docs + deny/audit/Dependabot anchors
+        shell: pwsh
+        run: ./scripts/cve-feed-check.ps1 -SelfCheck

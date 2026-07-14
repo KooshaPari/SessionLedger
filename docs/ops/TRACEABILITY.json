@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "329/402",
-    "pct": 82,
+    "score": "333/402",
+    "pct": 83,
     "grade": "B",
-    "commit": "8ed65d9",
-    "wave": "Wave-20"
+    "commit": "92b2792",
+    "wave": "Wave-21"
   },
   "fr": [
     {
@@ -575,6 +575,27 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.28",
+      "status": "done",
+      "evidence": [
+        ".github/workflows/ci.yml",
+        "crates/sl-daemon/src/audit.rs",
+        "docs/adr/0004-commit-signing-policy.md",
+        ".github/workflows/ops-chaos-smoke.yml",
+        "docs/ops/fixtures/slsa-materials-contract.sample.json",
+        "docs/ops/eval-manifest.json",
+        "crates/sl-viewer/src/help_overlay.rs",
+        "scripts/installer-lifecycle-smoke.ps1"
+      ]
+    },
+    {
+      "id": "WBS-8.29",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -602,6 +623,7 @@
       "score": "23/30",
       "status": "partial",
       "evidence": [
+        "crates/sl-daemon/src/audit.rs",
         "crates/sl-daemon/src/http.rs",
         "crates/sl-daemon/src/main.rs",
         "docs/ops/local-trust-boundary.md"
@@ -614,22 +636,26 @@
     },
     {
       "id": "C04",
-      "score": "23/30",
+      "score": "24/30",
       "status": "partial",
       "evidence": [
         ".pre-commit-config.yaml",
         ".github/workflows/security.yml",
+        "docs/adr/0004-commit-signing-policy.md",
+        "scripts/commit-signing-check.ps1",
         "CONTRIBUTING.md"
       ]
     },
     {
       "id": "C05",
-      "score": "26/30",
+      "score": "27/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/metrics.rs",
         "docs/ops/dashboards/sessionledger-red.json",
         "scripts/dashboard-provision-check.ps1",
+        ".github/workflows/ops-chaos-smoke.yml",
+        "scripts/ops-chaos-smoke.ps1",
         "docs/ops/observability.md"
       ]
     },
@@ -640,10 +666,11 @@
       "evidence": [
         "scripts/provenance-contract-check.ps1",
         ".github/workflows/provenance-contract.yml",
+        "docs/ops/fixtures/slsa-materials-contract.sample.json",
         ".github/workflows/release.yml",
         "docs/ops/reproducible-builds.md"
       ],
-      "remaining": "SLSA-L3 material metadata, cross-host/Windows proof, and container provenance"
+      "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and container provenance"
     },
     {
       "id": "C07",
@@ -664,18 +691,24 @@
     },
     {
       "id": "C08",
-      "score": "23/30",
+      "score": "24/30",
       "status": "partial",
       "evidence": [
         "docs/ops/eval-manifest.json",
         "scripts/eval-repro-check.ps1",
+        "docs/reference/conformance/README.md",
         "docs/ops/eval-reproducibility.md"
       ]
     },
     {
       "id": "C09",
-      "score": "34/45",
-      "status": "partial"
+      "score": "35/45",
+      "status": "partial",
+      "evidence": [
+        "crates/sl-viewer/src/help_overlay.rs",
+        "docs/HELP.md",
+        "tests/visual/harness/a11y.spec.js"
+      ]
     },
     {
       "id": "C10",

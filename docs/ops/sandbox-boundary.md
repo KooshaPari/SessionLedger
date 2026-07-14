@@ -61,7 +61,7 @@ docker compose -f packaging/oci/compose.sl-daemon.soft-hardening.yml up
 | Capabilities | `--cap-drop ALL` (compose `cap_drop: [ALL]`) | Daemon needs no Linux capabilities for loopback ETL |
 | Network | Prefer loopback bind; optional `network_mode: none` for offline ETL smoke | `none` breaks HEALTHCHECK / HTTP clients — use only for file-watch-only runs |
 
-This is **soft** guidance: checked-in profile + docs + SelfCheck anchors. CI does not build the image or enforce seccomp on hosted runners.
+Operator guidance remains soft for runtime seccomp (profile + compose are opt-in). The hermetic **SelfCheck CI job is blocking**. CI still does not build the image or enforce seccomp on hosted runners.
 
 ### Soft no-net policy (CI / offline)
 
@@ -90,7 +90,7 @@ The daemon rejects non-loopback `--http-bind` without a non-empty `SL_API_KEY`
 |---------|--------|----------|
 | Least-privilege workflow permissions | **done** | [`.github/workflows/security.yml`](../../.github/workflows/security.yml) `permissions: contents: read` |
 | No privileged containers on runners | **done** | No `privileged: true` in `.github/workflows/*` |
-| Soft sandbox SelfCheck (no network beyond checkout) | **done** | `sandbox-boundary` job runs hermetic SelfCheck with `continue-on-error: true` |
+| Blocking sandbox SelfCheck (no network beyond checkout) | **done** | `sandbox-boundary` job runs hermetic SelfCheck (**blocking**; no `continue-on-error`) |
 | Hard no-network job sandbox | **unpaid** | Hosted runners still reach the network for `cargo install` / registry fetches |
 | Hard seccomp for CI steps | **unpaid** | Not configured; standard GitHub-hosted isolation only |
 
@@ -129,8 +129,17 @@ The script asserts:
 - Trust-boundary cross-links to `THREAT_MODEL.md` and `local-trust-boundary.md`
 - CI workflows keep least-privilege defaults (no `privileged: true`)
 
-Soft CI may run the same SelfCheck with `continue-on-error: true` from
-[`.github/workflows/security.yml`](../../.github/workflows/security.yml).
+The same SelfCheck runs as a **blocking** `sandbox-boundary` job in
+[`.github/workflows/security.yml`](../../.github/workflows/security.yml) (hermetic docs/path smoke only — still unpaid: hard no-net / rootless-only runner matrix).
+
+## Hard vs soft (Wave-34)
+
+| Layer | Soft (operator opt-in) | Hard / blocking (in-repo) |
+|-------|------------------------|---------------------------|
+| Seccomp profile + compose | Checked-in JSON + compose sample | Not enforced on GitHub-hosted runners |
+| Hermetic SelfCheck | Docs/profile/Containerfile anchors | **Blocking** `sandbox-boundary` job |
+| Rootless-only OCI | Documented | **Unpaid** runner matrix |
+| No-net security jobs | Soft `network_mode: none` note | **Unpaid** (would break cargo/deny fetches) |
 
 ## Related
 
@@ -140,3 +149,4 @@ Soft CI may run the same SelfCheck with `continue-on-error: true` from
 - [`crates/sl-daemon/README.md`](../../crates/sl-daemon/README.md) — run modes
 - [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) — soft seccomp profile
 - [`packaging/oci/compose.sl-daemon.soft-hardening.yml`](../../packaging/oci/compose.sl-daemon.soft-hardening.yml) — compose sample
+

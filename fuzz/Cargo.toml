@@ -19,4 +19,11 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "jsonl_ingest"
+path = "fuzz_targets/jsonl_ingest.rs"
+test = false
+doc = false
+bench = false
+
 [workspace]

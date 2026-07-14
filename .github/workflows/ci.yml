@@ -179,6 +179,8 @@ jobs:
           tool: cargo-fuzz
       - name: fuzz OKF parse and roundtrip
         run: cargo +nightly fuzz run okf_roundtrip --sanitizer address --target x86_64-unknown-linux-gnu -- -max_total_time=10
+      - name: fuzz JSONL ingest parse
+        run: cargo +nightly fuzz run jsonl_ingest --sanitizer address --target x86_64-unknown-linux-gnu -- -max_total_time=10
 
   coverage:
     name: coverage (85% gate)

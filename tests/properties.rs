@@ -4,7 +4,8 @@ use std::collections::HashSet;
 
 use proptest::prelude::*;
 use session_ledger::{
-    process_session, Corpus, DedupKey, MergeExecutor, Message, OkfDocument, Role, Session,
+    parse_jsonl_sessions, process_session, Corpus, DedupKey, MergeError, MergeExecutor, Message,
+    OkfDocument, Role, Session,
 };
 
 fn session_with_messages(
@@ -166,5 +167,121 @@ proptest! {
             prop_assert!(entity_ids.contains(relation.source.as_str()));
             prop_assert!(entity_ids.contains(relation.target.as_str()));
         }
+    }
+
+    #[test]
+    fn dedup_keys_differ_for_distinct_normalized_scopes(
+        left_cwd in "[a-zA-Z0-9_./-]{1,64}",
+        right_cwd in "[a-zA-Z0-9_./-]{1,64}",
+        left_topic in "[a-zA-Z0-9_-]{1,48}",
+        right_topic in "[a-zA-Z0-9_-]{1,48}",
+    ) {
+        let left_scope = left_cwd.trim().to_lowercase();
+        let right_scope = right_cwd.trim().to_lowercase();
+        let left_slug = left_topic.trim().to_lowercase();
+        let right_slug = right_topic.trim().to_lowercase();
+        prop_assume!(left_scope != right_scope || left_slug != right_slug);
+
+        let mut left = Session::new("left", Corpus::Forge);
+        left.cwd = Some(left_cwd);
+        let mut right = Session::new("right", Corpus::Cursor);
+        right.cwd = Some(right_cwd);
+
+        prop_assert_ne!(
+            DedupKey::derive(&left, &left_topic),
+            DedupKey::derive(&right, &right_topic)
+        );
+    }
+
+    #[test]
+    fn merge_with_derived_key_matches_plain_merge(
+        topic in "[a-zA-Z0-9_-]{1,48}",
+        wrong_topic in "[a-zA-Z0-9_-]{1,48}",
+        alpha_messages in prop::collection::vec(
+            ("[ -~]{0,80}", prop::option::of(any::<i64>())),
+            0..8,
+        ),
+        beta_messages in prop::collection::vec(
+            ("[ -~]{0,80}", prop::option::of(any::<i64>())),
+            0..8,
+        ),
+    ) {
+        prop_assume!(topic.trim().to_lowercase() != wrong_topic.trim().to_lowercase());
+
+        let alpha = session_with_messages(
+            "alpha",
+            Corpus::Forge,
+            "/same/scope",
+            alpha_messages,
+        );
+        let beta = session_with_messages(
+            "beta",
+            Corpus::Cursor,
+            "/same/scope",
+            beta_messages,
+        );
+        let sessions = [alpha, beta];
+        let expected_key = DedupKey::derive(&sessions[0], &topic);
+
+        let plain = MergeExecutor::default()
+            .merge(&sessions, &topic)
+            .expect("same-scope sessions merge");
+        let keyed = MergeExecutor::default()
+            .merge_with_key(&sessions, &topic, &expected_key)
+            .expect("derived key matches merge scope");
+        prop_assert_eq!(&plain, &keyed);
+        prop_assert_eq!(&plain.session.id, expected_key.as_str());
+        prop_assert_eq!(&plain.manifest.dedup_key, &expected_key);
+
+        let wrong_key = DedupKey::derive(&sessions[0], &wrong_topic);
+        let mismatch = MergeExecutor::default()
+            .merge_with_key(&sessions, &topic, &wrong_key)
+            .expect_err("wrong key must be rejected");
+        let is_key_mismatch = matches!(mismatch, MergeError::KeyMismatch { .. });
+        prop_assert!(is_key_mismatch);
+    }
+
+    #[test]
+    fn okf_pipeline_is_deterministic_and_jsonl_roundtrips(
+        id in "[a-zA-Z0-9_-]{1,24}",
+        cwd in prop::option::of("[a-zA-Z0-9_./ -]{0,64}"),
+        title in prop::option::of("[ -~]{0,80}"),
+        messages in prop::collection::vec(
+            (
+                0u8..5,
+                "[ -~]{0,120}",
+                prop::option::of(any::<i64>()),
+            ),
+            0..12,
+        ),
+        peer_id in "[a-zA-Z0-9_-]{1,24}",
+    ) {
+        let mut session = Session::new(id, Corpus::Codex);
+        session.cwd = cwd;
+        session.title = title;
+        session.messages = messages
+            .into_iter()
+            .map(|(role_index, content, ts_ms)| Message {
+                role: role(role_index),
+                content,
+                ts_ms,
+            })
+            .collect();
+
+        let first = process_session(&session);
+        let second = process_session(&session);
+        prop_assert_eq!(&first, &second);
+        prop_assert_eq!(&first.source_id, &session.id);
+        prop_assert_eq!(&first.provenance.source_id, &session.id);
+        prop_assert_eq!(first.provenance.corpus.as_str(), session.corpus.as_str());
+
+        let peer = Session::new(peer_id, Corpus::Cursor);
+        let jsonl = format!(
+            "{}\n\n{}\n",
+            serde_json::to_string(&session).expect("session serializes"),
+            serde_json::to_string(&peer).expect("peer serializes"),
+        );
+        let parsed = parse_jsonl_sessions(jsonl.as_bytes()).expect("valid JSONL parses");
+        prop_assert_eq!(parsed, vec![session, peer]);
     }
 }

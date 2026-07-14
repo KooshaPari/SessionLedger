@@ -196,6 +196,8 @@ pub fn ErrorColorFixture() -> Element {
 ///
 /// Exposes a stable DOM `id` so form controls can point
 /// `aria-errormessage` at this alert (WCAG 3.3.1 / 3.3.3 association).
+/// Non-color cues: warning glyph (`aria-hidden`), left danger border, and
+/// `role="alert"` — color alone is never the sole error signal (L81.15).
 #[component]
 pub fn ErrorState(
     /// Error message shown to the user.
@@ -217,11 +219,22 @@ pub fn ErrorState(
             class: "sl-error-state",
             role: "alert",
             "aria-live": "assertive",
+            "aria-invalid": "true",
             "data-testid": "error-state",
             style: "display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:20px 16px;margin:8px 0;background:{c.surface};border:1px solid {c.border};border-left:3px solid {c.danger};border-radius:6px;color:{c.text};font-size:13px;line-height:1.5;",
-            p {
-                style: "margin:0;color:{c.danger};font-weight:600;",
-                "Something went wrong"
+            div {
+                style: "display:flex;align-items:center;gap:8px;",
+                span {
+                    class: "sl-error-icon",
+                    "aria-hidden": "true",
+                    "data-testid": "error-state-icon",
+                    style: "flex-shrink:0;font-size:16px;font-weight:700;line-height:1;color:{c.danger};",
+                    "⚠"
+                }
+                p {
+                    style: "margin:0;color:{c.danger};font-weight:600;",
+                    "Something went wrong"
+                }
             }
             p {
                 id: "{error_id}-detail",

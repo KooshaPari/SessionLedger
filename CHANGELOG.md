@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Viewer `ErrorState` non-color cues: warning glyph + `aria-invalid` (C09 L81.15).
+
 - Versioning policy SSOT + CHANGELOG tagged-section SelfCheck (C11 L119).
 - ADR 0005: explicit no Workers/Vercel/edge deploy target (C11 L114) + `edge-deploy-scope` SelfCheck.
 - Blocking `sandbox-boundary` SelfCheck job in `security.yml` (C04 L40; hard no-net/rootless still unpaid).

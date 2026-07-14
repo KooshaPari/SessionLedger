@@ -526,7 +526,7 @@ pub fn App() -> Element {
                 .command-palette-option-label {{ font-size: 14px; font-weight: 600; }}
                 .command-palette-option-hint {{ font-size: 12px; color: var(--sl-text-muted); }}
                 .palette-trigger {{ position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }}
-                .search-input:focus-visible, .search-btn:focus-visible, .retry-btn:focus-visible, .btn:focus-visible, .replay-input:focus-visible, .speed-input:focus-visible, .compare-btn:focus-visible, .sl-error-retry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .search-input:focus-visible, .search-btn:focus-visible, .search-advanced-toggle:focus-visible, .retry-btn:focus-visible, .btn:focus-visible, .replay-input:focus-visible, .speed-input:focus-visible, .compare-btn:focus-visible, .sl-error-retry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
                 .session-item:focus-visible, .feed-entry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; }}
                 .session-list {{ display: flex; flex-direction: column; height: 100%; }}
                 .search-input {{ width: 100%; padding: 10px 16px; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: 6px; color: var(--sl-text); font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
@@ -543,13 +543,25 @@ pub fn App() -> Element {
                 .badge-contract {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); }}
                 .search-view {{ display: flex; flex-direction: column; height: 100%; overflow-y: auto; }}
                 .search-form {{ padding: 0 0 8px 0; border-bottom: 1px solid var(--sl-border); }}
+                .search-form-title {{ padding: var(--sl-space-lg) var(--sl-space-xl); margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-text-muted); border-bottom: 1px solid var(--sl-border); }}
+                .search-form-hint {{ margin: 0; padding: var(--sl-space-sm) var(--sl-space-xl) 0; font-size: 12px; line-height: 1.45; color: var(--sl-text-muted); }}
                 .search-fields {{ display: flex; flex-direction: column; gap: 4px; padding: 10px 16px; }}
                 .search-label {{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); }}
-                .search-actions {{ display: flex; gap: 8px; padding: 8px 16px 10px; }}
+                .search-advanced-toggle {{ display: inline-flex; align-items: center; gap: var(--sl-space-sm); margin: var(--sl-space-sm) 0 0; padding: var(--sl-space-sm) var(--sl-space-md); min-height: 44px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); color: var(--sl-accent); font-size: 12px; font-weight: 600; cursor: pointer; transition: background var(--sl-motion-fast) var(--sl-ease-out), border-color var(--sl-motion-fast) var(--sl-ease-out); }}
+                .search-advanced-toggle:hover {{ background: color-mix(in srgb, var(--sl-accent) 10%, transparent); border-color: var(--sl-accent); }}
+                .search-advanced-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .search-advanced-chevron {{ display: inline-block; width: 0.85em; color: var(--sl-text-muted); }}
+                .search-advanced-badge {{ margin-left: var(--sl-space-xs); padding: 1px 6px; border-radius: var(--sl-radius-sm); background: color-mix(in srgb, var(--sl-accent-secondary) 18%, transparent); color: var(--sl-accent-secondary); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }}
+                .search-advanced-panel {{ display: flex; flex-direction: column; gap: 4px; margin-top: var(--sl-space-sm); padding-top: var(--sl-space-sm); border-top: 1px solid var(--sl-border); }}
+                .search-advanced-panel.is-collapsed {{ display: none; }}
+                .search-actions {{ display: flex; gap: 8px; padding: 8px 16px 10px; flex-wrap: wrap; align-items: center; }}
                 .search-btn {{ padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; border: 1px solid var(--sl-border); background: var(--sl-surface-muted); color: var(--sl-text-muted); }}
                 .search-btn:hover {{ background: color-mix(in srgb, var(--sl-accent) 8%, transparent); color: var(--sl-text); }}
                 .search-btn-primary {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); border-color: var(--sl-accent); }}
                 .search-btn-primary:hover {{ background: color-mix(in srgb, var(--sl-accent) 24%, transparent); color: var(--sl-accent); }}
+                .search-clear-title {{ margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--sl-text); }}
+                .search-clear-desc {{ margin: 0 0 8px; font-size: 12px; color: var(--sl-text-muted); max-width: 22rem; }}
+                .session-meta-muted {{ color: var(--sl-text-muted); }}
                 .search-results {{ flex: 1; overflow-y: auto; }}
                 .search-error {{ padding: 10px 16px; font-size: 13px; color: var(--sl-danger); background: var(--sl-danger-surface); border-bottom: 1px solid var(--sl-border); }}
                 .search-empty {{ padding: var(--sl-space-lg) var(--sl-space-xl); font-size: 13px; color: var(--sl-text-muted); }}
@@ -608,7 +620,7 @@ pub fn App() -> Element {
                         padding: 12px 16px;
                         box-sizing: border-box;
                     }}
-                    .search-btn, .retry-btn {{
+                    .search-btn, .retry-btn, .search-advanced-toggle {{
                         min-height: 44px;
                         min-width: 44px;
                         padding: 10px 16px;

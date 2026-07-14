@@ -92,11 +92,31 @@ fn urlencoding(s: &str) -> String {
 /// Stable id for search fetch errors — paired with `aria-errormessage` on fields.
 const SEARCH_ERROR_ID: &str = "search-error-message";
 
+/// Region id for the collapsible advanced-filter panel (`aria-controls`).
+const SEARCH_ADVANCED_ID: &str = "search-advanced-filters";
+
+/// Count of advanced filters that differ from defaults (recognition cue).
+pub fn advanced_filter_active_count(min_tokens: &str, tags: &str, limit: &str) -> usize {
+    let mut n = 0;
+    if !min_tokens.trim().is_empty() {
+        n += 1;
+    }
+    if !tags.trim().is_empty() {
+        n += 1;
+    }
+    if limit.trim() != "50" {
+        n += 1;
+    }
+    n
+}
+
 /// Search / filter panel.
 ///
-/// Input fields: `since`, `until`, `model`, `min_tokens`, `tags` (comma-
-/// separated), `limit`.  Clicking **Search** fires `GET /api/search` on the
-/// sl-daemon and renders results as bundle cards.  **Clear** asks for a
+/// Primary fields (`since`, `until`, `model`) stay visible. Advanced filters
+/// (`min_tokens`, `tags`, `limit`) live behind a progressive-disclosure
+/// control so operators recognize common actions without recalling every
+/// query parameter. Clicking **Search** fires `GET /api/search` on the
+/// sl-daemon and renders results as bundle cards. **Clear** asks for a
 /// lightweight confirmation before wiping filters, results, and errors.
 #[component]
 pub fn SearchView() -> Element {
@@ -115,6 +135,7 @@ pub fn SearchView() -> Element {
     let mut search_tick: Signal<u32> = use_signal(|| 0u32);
     let mut zero_match: Signal<bool> = use_signal(|| false);
     let mut clear_pending: Signal<bool> = use_signal(|| false);
+    let mut advanced_open: Signal<bool> = use_signal(|| false);
 
     if query_fixture_active("search-empty") {
         return rsx! {
@@ -217,6 +238,7 @@ pub fn SearchView() -> Element {
         selected_idx.set(None);
         zero_match.set(false);
         clear_pending.set(false);
+        advanced_open.set(false);
     };
 
     let on_clear_cancel = move |_| {
@@ -228,6 +250,15 @@ pub fn SearchView() -> Element {
     let has_error = error().is_some();
     let invalid_attr = if has_error { "true" } else { "false" };
     let errormessage_attr = if has_error { SEARCH_ERROR_ID } else { "" };
+
+    let advanced_count = advanced_filter_active_count(&min_tokens(), &tags(), &limit());
+    let advanced_expanded = advanced_open();
+    let toggle_label = if advanced_expanded {
+        "Hide advanced filters"
+    } else {
+        "Show advanced filters"
+    };
+    let chevron = if advanced_expanded { "▾" } else { "▸" };
 
     rsx! {
         div {
@@ -249,12 +280,16 @@ pub fn SearchView() -> Element {
                     error.set(None);
                     selected_idx.set(None);
                     zero_match.set(false);
+                    advanced_open.set(false);
                 }
             },
             // ---- Filter form ----
             div { class: "search-form",
-                h2 { style: "padding: 16px 20px; margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8b8fa3; border-bottom: 1px solid #2a2d35;",
+                h2 { class: "search-form-title",
                     "Search Bundles"
+                }
+                p { class: "search-form-hint",
+                    "Date and model stay visible. Open advanced filters only when you need tokens, tags, or limit."
                 }
                 div { class: "search-fields",
                     label { class: "search-label", r#for: "search-since", "Since (YYYY-MM-DD)" }
@@ -287,36 +322,68 @@ pub fn SearchView() -> Element {
                         "aria-errormessage": "{errormessage_attr}",
                         oninput: move |e| model.set(e.value()),
                     }
-                    label { class: "search-label", r#for: "search-min-tokens", "Min Tokens" }
-                    input {
-                        id: "search-min-tokens",
-                        class: "search-input",
-                        r#type: "number",
-                        placeholder: "1000",
-                        value: "{min_tokens}",
-                        "aria-invalid": "{invalid_attr}",
-                        "aria-errormessage": "{errormessage_attr}",
-                        oninput: move |e| min_tokens.set(e.value()),
+                    button {
+                        class: "search-advanced-toggle",
+                        r#type: "button",
+                        "data-testid": "search-advanced-toggle",
+                        "aria-expanded": if advanced_expanded { "true" } else { "false" },
+                        "aria-controls": SEARCH_ADVANCED_ID,
+                        onclick: move |_| advanced_open.with_mut(|open| *open = !*open),
+                        span { class: "search-advanced-chevron", "aria-hidden": "true", "{chevron}" }
+                        span { "{toggle_label}" }
+                        if advanced_count > 0 {
+                            span {
+                                class: "search-advanced-badge",
+                                "data-testid": "search-advanced-badge",
+                                "{advanced_count} active"
+                            }
+                        }
                     }
-                    label { class: "search-label", r#for: "search-tags", "Tags (comma-separated)" }
-                    input {
-                        id: "search-tags",
-                        class: "search-input",
-                        placeholder: "rust, ml",
-                        value: "{tags}",
-                        "aria-invalid": "{invalid_attr}",
-                        "aria-errormessage": "{errormessage_attr}",
-                        oninput: move |e| tags.set(e.value()),
-                    }
-                    label { class: "search-label", r#for: "search-limit", "Limit" }
-                    input {
-                        id: "search-limit",
-                        class: "search-input",
-                        r#type: "number",
-                        value: "{limit}",
-                        "aria-invalid": "{invalid_attr}",
-                        "aria-errormessage": "{errormessage_attr}",
-                        oninput: move |e| limit.set(e.value()),
+                    div {
+                        id: SEARCH_ADVANCED_ID,
+                        class: if advanced_expanded {
+                            "search-advanced-panel"
+                        } else {
+                            "search-advanced-panel is-collapsed"
+                        },
+                        "data-testid": "search-advanced-panel",
+                        role: "group",
+                        "aria-label": "Advanced search filters",
+                        hidden: !advanced_expanded,
+                        label { class: "search-label", r#for: "search-min-tokens", "Min Tokens" }
+                        input {
+                            id: "search-min-tokens",
+                            class: "search-input",
+                            r#type: "number",
+                            placeholder: "1000",
+                            value: "{min_tokens}",
+                            "aria-invalid": "{invalid_attr}",
+                            "aria-errormessage": "{errormessage_attr}",
+                            tabindex: if advanced_expanded { "0" } else { "-1" },
+                            oninput: move |e| min_tokens.set(e.value()),
+                        }
+                        label { class: "search-label", r#for: "search-tags", "Tags (comma-separated)" }
+                        input {
+                            id: "search-tags",
+                            class: "search-input",
+                            placeholder: "rust, ml",
+                            value: "{tags}",
+                            "aria-invalid": "{invalid_attr}",
+                            "aria-errormessage": "{errormessage_attr}",
+                            tabindex: if advanced_expanded { "0" } else { "-1" },
+                            oninput: move |e| tags.set(e.value()),
+                        }
+                        label { class: "search-label", r#for: "search-limit", "Limit" }
+                        input {
+                            id: "search-limit",
+                            class: "search-input",
+                            r#type: "number",
+                            value: "{limit}",
+                            "aria-invalid": "{invalid_attr}",
+                            "aria-errormessage": "{errormessage_attr}",
+                            tabindex: if advanced_expanded { "0" } else { "-1" },
+                            oninput: move |e| limit.set(e.value()),
+                        }
                     }
                 }
                 div { class: "search-actions",
@@ -335,12 +402,12 @@ pub fn SearchView() -> Element {
                             "data-testid": "search-clear-confirm",
                             p {
                                 id: "search-clear-title",
-                                style: "margin: 0 0 4px; font-size: 12px; font-weight: 600; color: #c8cdd6;",
+                                class: "search-clear-title",
                                 "Clear search?"
                             }
                             p {
                                 id: "search-clear-desc",
-                                style: "margin: 0 0 8px; font-size: 12px; color: #8b8fa3; max-width: 22rem;",
+                                class: "search-clear-desc",
                                 "This removes filters, results, and any error message."
                             }
                             button {
@@ -407,7 +474,7 @@ pub fn SearchView() -> Element {
                                 div { class: "session-goal", "model: {r.model}" }
                                 div { class: "session-meta",
                                     span { class: "meta-bundles", "{r.token_count} tokens" }
-                                    span { style: "color: #8b8fa3;", "{r.created_at}" }
+                                    span { class: "session-meta-muted", "{r.created_at}" }
                                     if !tags_display.is_empty() {
                                         span { class: "badge badge-ok", "{tags_display}" }
                                     }
@@ -428,8 +495,11 @@ fn SearchFixtureChrome(invalid: bool) -> Element {
     let errormessage_attr = if invalid { SEARCH_ERROR_ID } else { "" };
     rsx! {
         div { class: "search-form",
-            h2 { style: "padding: 16px 20px; margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8b8fa3; border-bottom: 1px solid #2a2d35;",
+            h2 { class: "search-form-title",
                 "Search Bundles"
+            }
+            p { class: "search-form-hint",
+                "Date and model stay visible. Open advanced filters only when you need tokens, tags, or limit."
             }
             div { class: "search-fields",
                 label { class: "search-label", r#for: "search-since-fixture", "Since (YYYY-MM-DD)" }
@@ -449,6 +519,16 @@ fn SearchFixtureChrome(invalid: bool) -> Element {
                     readonly: true,
                     "aria-invalid": "{invalid_attr}",
                     "aria-errormessage": "{errormessage_attr}",
+                }
+                button {
+                    class: "search-advanced-toggle",
+                    r#type: "button",
+                    "data-testid": "search-advanced-toggle",
+                    "aria-expanded": "false",
+                    "aria-controls": SEARCH_ADVANCED_ID,
+                    disabled: true,
+                    span { class: "search-advanced-chevron", "aria-hidden": "true", "▸" }
+                    span { "Show advanced filters" }
                 }
             }
             div { class: "search-actions",
@@ -522,5 +602,17 @@ mod tests {
         let q = build_query("", "", "", "", "rust,ml", "50");
         // Comma is encoded as %2C in the tag list.
         assert!(q.contains("tags=rust%2Cml"), "comma encoded in tags");
+    }
+
+    #[test]
+    fn advanced_filter_count_defaults_to_zero() {
+        assert_eq!(advanced_filter_active_count("", "", "50"), 0);
+    }
+
+    #[test]
+    fn advanced_filter_count_sums_non_defaults() {
+        assert_eq!(advanced_filter_active_count("1000", "rust", "10"), 3);
+        assert_eq!(advanced_filter_active_count("", "rust", "50"), 1);
+        assert_eq!(advanced_filter_active_count(" ", "  ", "50"), 0);
     }
 }

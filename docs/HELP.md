@@ -24,12 +24,22 @@ The palette ships six commands — focus search, open keyboard help, next/previo
 view tab, clear search, and toggle theme — in
 `crates/sl-viewer/src/command_palette.rs`.
 
+## Progressive disclosure (Search)
+
+Beyond the command palette, the Search tab keeps date and model filters visible
+and hides **Min Tokens**, **Tags**, and **Limit** behind **Show advanced
+filters**. An **N active** badge appears when collapsed advanced criteria still
+apply. See [`a11y/progressive-disclosure.md`](a11y/progressive-disclosure.md).
+
 ## Related references
 
 - [`viewer-hotkeys.md`](viewer-hotkeys.md) — canonical shortcut table and test evidence.
+- [`a11y/progressive-disclosure.md`](a11y/progressive-disclosure.md) — Search advanced-filter disclosure.
 - [`guides/quick-start/QUICKSTART.md`](guides/quick-start/QUICKSTART.md) — first-run stack setup.
 
 ## Automated checks
 
 `tests/visual/harness/a11y.spec.js` asserts that `?` opens help, `Ctrl+K` opens the
-command palette, and `Escape` closes either overlay against the production Dioxus web build.
+command palette, `Escape` closes either overlay, and Search advanced filters
+expand/collapse with correct `aria-expanded` state against the production Dioxus
+web build.

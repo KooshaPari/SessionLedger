@@ -55,10 +55,13 @@ overlay. See [`docs/HELP.md`](HELP.md) for a short operator reference.
 
 `tests/visual/harness/a11y.spec.js` runs against the built Dioxus web viewer and
 covers the ARIA tab keyboard pattern, active-tab tab order, Search
-`Escape`-to-clear behavior, keyboard-help open/close via `?` and `Escape`, command
+`Escape`-to-clear behavior, Search advanced-filter progressive disclosure
+(`aria-expanded` / active badge), keyboard-help open/close via `?` and `Escape`, command
 palette open/close via `Ctrl+K` / `Escape`, overlay precedence (help closes while
 focus stays in Search), clear-confirm and search-error `Escape` recovery,
 fixture-driven status regions
 (`skeleton`, `loading-long`, `search-error`, `stream-skeleton`), reduced-motion
 spinner flattening, and landmark visibility. The same component source backs the desktop viewer,
 with native WebView and OS chrome covered by [`docs/a11y/status-regions-and-native-smoke.md`](a11y/status-regions-and-native-smoke.md).
+
+See also [`docs/a11y/progressive-disclosure.md`](a11y/progressive-disclosure.md).

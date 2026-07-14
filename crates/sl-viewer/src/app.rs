@@ -6,7 +6,7 @@ use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
-use crate::fixture::query_fixture_active;
+use crate::fixture::{query_fixture_active, visual_fixture_active};
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
@@ -110,6 +110,16 @@ fn resolve_data_source() -> DataSource {
     DataSource::Mock
 }
 
+fn initial_tab_for_viewer() -> Tab {
+    if query_fixture_active("history-empty") {
+        Tab::History
+    } else if query_fixture_active("search-empty") || query_fixture_active("search-error") {
+        Tab::Search
+    } else {
+        Tab::Bundles
+    }
+}
+
 /// Root application component.
 ///
 /// Three-tab layout:
@@ -137,6 +147,13 @@ pub fn App() -> Element {
         );
     });
 
+    #[cfg(feature = "web")]
+    use_effect(|| {
+        if visual_fixture_active() {
+            let _ = document::eval("document.querySelector('.launch-splash')?.remove();");
+        }
+    });
+
     // Load sessions once at the root; propagate via context.
     let source = resolve_data_source();
     let (sessions, corpus_error) = match load_sessions(&source) {
@@ -148,7 +165,7 @@ pub fn App() -> Element {
     };
     use_context_provider(|| SessionContext(sessions));
 
-    let mut active_tab: Signal<Tab> = use_signal(|| Tab::Bundles);
+    let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let colors = ThemeColors::dark();
 
     #[cfg(feature = "web")]
@@ -388,6 +405,7 @@ pub fn App() -> Element {
                 .search-btn-primary:hover {{ background: color-mix(in srgb, var(--sl-accent) 24%, transparent); color: var(--sl-accent); }}
                 .search-results {{ flex: 1; overflow-y: auto; }}
                 .search-error {{ padding: 10px 16px; font-size: 13px; color: var(--sl-danger); background: var(--sl-danger-surface); border-bottom: 1px solid var(--sl-border); }}
+                .search-empty {{ padding: var(--sl-space-lg) var(--sl-space-xl); font-size: 13px; color: var(--sl-text-muted); }}
                 .live-feed {{ display: flex; flex-direction: column; height: 100%; }}
                 .live-feed-header {{ display: flex; align-items: center; gap: var(--sl-space-md); padding: var(--sl-space-md) var(--sl-space-lg); border-bottom: 1px solid var(--sl-border); background: var(--sl-bg); }}
                 .live-feed-title {{ font-size: 13px; font-weight: 600; color: var(--sl-text); flex: 1; }}

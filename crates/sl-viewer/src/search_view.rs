@@ -8,6 +8,7 @@ use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
+use crate::fixture::query_fixture_active;
 
 /// Slim bundle metadata returned by `GET /api/search`.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -108,6 +109,33 @@ pub fn SearchView() -> Element {
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
 
     let mut search_tick: Signal<u32> = use_signal(|| 0u32);
+    let mut zero_match: Signal<bool> = use_signal(|| false);
+
+    if query_fixture_active("search-empty") {
+        return rsx! {
+            SearchFixtureChrome {}
+            div { class: "search-results",
+                div {
+                    class: "search-empty",
+                    "data-testid": "search-zero-match",
+                    "No bundles matched your filters. Adjust the fields above or choose Clear."
+                }
+            }
+        };
+    }
+
+    if query_fixture_active("search-error") {
+        return rsx! {
+            SearchFixtureChrome {}
+            div { class: "search-results",
+                ErrorState {
+                    message: "daemon not reachable: connection refused (visual fixture)".to_owned(),
+                    retryable: true,
+                    on_retry: move |_| {},
+                }
+            }
+        };
+    }
 
     // Shared Search / Retry path — bump `search_tick` to fire a fetch.
     use_effect(move || {
@@ -120,6 +148,7 @@ pub fn SearchView() -> Element {
         let mut results = results;
         let mut error = error;
         let mut loading = loading;
+        let mut zero_match = zero_match;
 
         loading.set(true);
         error.set(None);
@@ -127,11 +156,14 @@ pub fn SearchView() -> Element {
         spawn(async move {
             match reqwest_search(&url).await {
                 Ok(data) => {
+                    let empty = data.is_empty();
                     results.set(data);
                     error.set(None);
+                    zero_match.set(empty);
                 }
                 Err(e) => {
                     error.set(Some(e));
+                    zero_match.set(false);
                 }
             }
             loading.set(false);
@@ -148,6 +180,7 @@ pub fn SearchView() -> Element {
         results.set(Vec::new());
         error.set(None);
         selected_idx.set(None);
+        zero_match.set(false);
     };
 
     let result_count = results.len();
@@ -252,6 +285,13 @@ pub fn SearchView() -> Element {
                 if loading() {
                     ContentSkeleton { layout: SkeletonLayout::ListDetail, list_rows: 5 }
                 }
+                if zero_match() && !loading() && error().is_none() {
+                    div {
+                        class: "search-empty",
+                        "data-testid": "search-zero-match",
+                        "No bundles matched your filters. Adjust the fields above or choose Clear."
+                    }
+                }
                 if !results.is_empty() && !loading() {
                     div { class: "session-count",
                         "{result_count} result{plural}"
@@ -281,6 +321,28 @@ pub fn SearchView() -> Element {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/// Static search chrome shared by visual fixture routes.
+#[component]
+fn SearchFixtureChrome() -> Element {
+    rsx! {
+        div { class: "search-form",
+            h2 { style: "padding: 16px 20px; margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8b8fa3; border-bottom: 1px solid #2a2d35;",
+                "Search Bundles"
+            }
+            div { class: "search-fields",
+                label { class: "search-label", r#for: "search-since-fixture", "Since (YYYY-MM-DD)" }
+                input { id: "search-since-fixture", class: "search-input", placeholder: "2024-01-01", readonly: true }
+                label { class: "search-label", r#for: "search-model-fixture", "Model (substring)" }
+                input { id: "search-model-fixture", class: "search-input", placeholder: "claude", readonly: true }
+            }
+            div { class: "search-actions",
+                button { class: "search-btn search-btn-primary", disabled: true, "Search" }
+                button { class: "search-btn", disabled: true, "Clear" }
             }
         }
     }

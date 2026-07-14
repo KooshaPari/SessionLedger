@@ -74,7 +74,7 @@ static EN_CATALOG: OnceLock<Catalog> = OnceLock::new();
 ///
 /// # Panics
 /// Panics only if the checked-in `locales/en.json` is invalid JSON — a
-/// packaging bug caught by unit tests and SelfCheck.
+/// packaging bug caught by unit tests and `SelfCheck`.
 #[must_use]
 pub fn en_catalog() -> &'static Catalog {
     EN_CATALOG.get_or_init(|| {
@@ -88,7 +88,7 @@ pub fn en_catalog() -> &'static Catalog {
 /// Missing keys return the key string so callers stay resilient while catalogs
 /// grow. Future: accept a locale argument and fall back `requested → en → key`.
 #[must_use]
-pub fn t<'a>(key: &'a str) -> &'a str {
+pub fn t(key: &str) -> &str {
     en_catalog().get(key).unwrap_or(key)
 }
 

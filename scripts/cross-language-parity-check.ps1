@@ -1,17 +1,20 @@
 <#
 .SYNOPSIS
-  Machine-check the C08 L75 cross-language OKF fixture parity SSOT + structural harness.
+  Machine-check the C08 L75 cross-language OKF fixture parity SSOT + structural
+  harness + Python adapter stub.
 
 .DESCRIPTION
   Verifies docs/ops/cross-language-parity.md documents the Python / TypeScript /
-  Go parity matrix, language-tag rule, and Harbor N/A boundary; that each matrix
-  fixture exists with a matching source_id language tag; and that a thin
-  structural-invariant harness finds the same OKF v1.0 core shape across those
-  fixtures. Hermetic: no daemon, no network, no cargo.
+  Go parity matrix, language-tag rule, Harbor N/A boundary, and native language
+  adapter stub; that each matrix fixture exists with a matching source_id
+  language tag; that a thin structural-invariant harness finds the same OKF
+  v1.0 core shape across those fixtures; and that the Python reference adapter
+  can validate + emit the Python fixture path. Hermetic: no daemon, no network,
+  no cargo (stdlib python only).
 
 .PARAMETER SelfCheck
-  Explicit docs/fixture/structural smoke (CI unit proof). Same checks as the
-  default path.
+  Explicit docs/fixture/structural/adapter smoke (CI unit proof). Same checks as
+  the default path.
 
 .EXAMPLE
   pwsh ./scripts/cross-language-parity-check.ps1 -SelfCheck
@@ -32,6 +35,9 @@ $checkScript = Join-Path $repoRoot "scripts/cross-language-parity-check.ps1"
 $rustWrapper = Join-Path $repoRoot "tests/cross_language_parity.rs"
 $workflowPath = Join-Path $repoRoot ".github/workflows/eval-compression.yml"
 $fixturesDir = Join-Path $repoRoot "docs/reference/conformance/fixtures"
+$adapterReadme = Join-Path $repoRoot "adapters/README.md"
+$pythonAdapter = Join-Path $repoRoot "adapters/python/okf_adapter.py"
+$pythonFixture = Join-Path $fixturesDir "cursor-python-029.okf.json"
 
 $parityRows = @(
     @{ Language = "Python"; Tag = "python"; Fixture = "cursor-python-029.okf.json" }
@@ -178,9 +184,36 @@ function Assert-OkfStructuralInvariants {
     return ($corePresent -join ",")
 }
 
+function Resolve-Python {
+    foreach ($candidate in @("python3", "python")) {
+        $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($null -ne $cmd) {
+            return $cmd.Source
+        }
+    }
+    throw "python3/python not found on PATH (needed for adapters/python/okf_adapter.py SelfCheck)."
+}
+
+function Invoke-PythonAdapter {
+    param(
+        [Parameter(Mandatory = $true)][string]$Python,
+        [Parameter(Mandatory = $true)][string]$AdapterPath,
+        [Parameter(Mandatory = $true)][string]$Command,
+        [Parameter(Mandatory = $true)][string]$FixturePath
+    )
+
+    $output = & $Python $AdapterPath $Command $FixturePath 2>&1
+    $exitCode = $LASTEXITCODE
+    $text = ($output | Out-String).TrimEnd()
+    if ($exitCode -ne 0) {
+        throw "Python OKF adapter '$Command' failed (exit $exitCode): $text"
+    }
+    return $text
+}
+
 Write-Host "Cross-language parity checklist check (C08 L75)"
 if ($SelfCheck) {
-    Write-Host "Mode: SelfCheck (docs + fixture tags + structural harness; no cargo / no network)"
+    Write-Host "Mode: SelfCheck (docs + fixture tags + structural harness + Python adapter; no cargo / no network)"
 }
 
 Assert-File -Path $docPath -Label "cross-language parity doc"
@@ -189,11 +222,16 @@ Assert-File -Path $rustWrapper -Label "cross-language parity rust SelfCheck wrap
 Assert-File -Path $evalScopePath -Label "EVAL_SCOPE.md"
 Assert-File -Path $manifestPath -Label "eval-manifest.json"
 Assert-File -Path $workflowPath -Label "eval-compression workflow"
+Assert-File -Path $adapterReadme -Label "adapters README (language-agnostic interface)"
+Assert-File -Path $pythonAdapter -Label "Python OKF adapter reference"
+Assert-File -Path $pythonFixture -Label "Python matrix fixture for adapter SelfCheck"
 
 $doc = Get-Content -LiteralPath $docPath -Raw
 $evalScope = Get-Content -LiteralPath $evalScopePath -Raw
 $manifest = Get-Content -LiteralPath $manifestPath -Raw
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
+$adapterDoc = Get-Content -LiteralPath $adapterReadme -Raw
+$adapterSrc = Get-Content -LiteralPath $pythonAdapter -Raw
 
 Write-Host "Doc anchors:"
 Test-DocContains -Doc $doc -Needle "# Cross-language OKF fixture parity (SSOT)" `
@@ -204,6 +242,8 @@ Test-DocContains -Doc $doc -Needle "### Fixture language-tag rule" `
     -Label "language-tag rule"
 Test-DocContains -Doc $doc -Needle "## Structural invariant harness" `
     -Label "structural invariant harness section"
+Test-DocContains -Doc $doc -Needle "## Native language adapter stub" `
+    -Label "native language adapter stub section"
 Test-DocContains -Doc $doc -Needle "cursor-python-029.okf.json" `
     -Label "Python fixture row"
 Test-DocContains -Doc $doc -Needle "codex-typescript-023.okf.json" `
@@ -220,12 +260,49 @@ Test-DocContains -Doc $doc -Needle "Cross-language parity SelfCheck | **done**" 
     -Label "SelfCheck gate row"
 Test-DocContains -Doc $doc -Needle "tests/cross_language_parity.rs" `
     -Label "rust wrapper reference"
+Test-DocContains -Doc $doc -Needle "adapters/python/okf_adapter.py" `
+    -Label "Python adapter path reference"
+
+Write-Host "Adapter interface anchors:"
+$ifaceOk = $adapterDoc.Contains("load(path)") -and `
+    $adapterDoc.Contains("validate(doc)") -and `
+    $adapterDoc.Contains("emit(doc)")
+[void](Write-Check -Label "adapters/README.md load/validate/emit contract" -Ok $ifaceOk)
+if (-not $ifaceOk) {
+    throw "adapters/README.md missing load/validate/emit interface anchors"
+}
+$harborOk = $adapterDoc.Contains("not") -and $adapterDoc.ToLowerInvariant().Contains("harbor")
+[void](Write-Check -Label "adapters/README.md Harbor non-goal" -Ok $harborOk)
+if (-not $harborOk) {
+    throw "adapters/README.md must keep Harbor out of scope"
+}
+
+$pyAnchors = @(
+    @{ Needle = "def load("; Label = "Python load()" }
+    @{ Needle = "def validate("; Label = "Python validate()" }
+    @{ Needle = "def emit("; Label = "Python emit()" }
+    @{ Needle = 'OKF_DIALECT = "1.0"'; Label = "Python OKF dialect 1.0" }
+    @{ Needle = '"validate"'; Label = "Python validate CLI" }
+    @{ Needle = '"emit"'; Label = "Python emit CLI" }
+)
+foreach ($anchor in $pyAnchors) {
+    $ok = $adapterSrc.Contains($anchor.Needle)
+    [void](Write-Check -Label $anchor.Label -Ok $ok)
+    if (-not $ok) {
+        throw "adapters/python/okf_adapter.py missing anchor: '$($anchor.Needle)'"
+    }
+}
 
 Write-Host "Cross-links:"
 $evalOk = $evalScope.Contains("cross-language-parity.md")
 [void](Write-Check -Label "EVAL_SCOPE -> cross-language-parity" -Ok $evalOk)
 if (-not $evalOk) {
     throw "docs/EVAL_SCOPE.md missing link to cross-language-parity.md"
+}
+$evalAdapterOk = $evalScope.Contains("adapters/README.md")
+[void](Write-Check -Label "EVAL_SCOPE -> adapters README" -Ok $evalAdapterOk)
+if (-not $evalAdapterOk) {
+    throw "docs/EVAL_SCOPE.md missing link to adapters/README.md"
 }
 
 Write-Host "Parity fixtures + language tags:"
@@ -268,6 +345,26 @@ if ($uniqueFp.Count -ne 1) {
 }
 [void](Write-Check -Label "Python/TS/Go share identical core entity fingerprint" -Ok $true)
 
+Write-Host "Python reference adapter (validate + emit on non-Rust fixture path):"
+$python = Resolve-Python
+$validateOut = Invoke-PythonAdapter -Python $python -AdapterPath $pythonAdapter `
+    -Command "validate" -FixturePath $pythonFixture
+if ($validateOut -notmatch "OKF validate ok") {
+    throw "Python adapter validate missing success line: $validateOut"
+}
+[void](Write-Check -Label "python okf_adapter.py validate cursor-python-029" -Ok $true)
+
+$emitOut = Invoke-PythonAdapter -Python $python -AdapterPath $pythonAdapter `
+    -Command "emit" -FixturePath $pythonFixture
+$emitted = $emitOut | ConvertFrom-Json
+if ([string]$emitted.okf -ne "1.0") {
+    throw "Python adapter emit produced unexpected okf dialect '$($emitted.okf)'."
+}
+if ([string]$emitted.source_id -ne "cursor-python-029") {
+    throw "Python adapter emit produced unexpected source_id '$($emitted.source_id)'."
+}
+[void](Write-Check -Label "python okf_adapter.py emit cursor-python-029" -Ok $true)
+
 Write-Host "Workflow anchors:"
 $wfOk = $workflow.Contains("cross-language-parity-check.ps1")
 [void](Write-Check -Label "eval-compression.yml SelfCheck step" -Ok $wfOk)
@@ -275,4 +372,4 @@ if (-not $wfOk) {
     throw ".github/workflows/eval-compression.yml missing cross-language-parity-check.ps1"
 }
 
-Write-Host "Cross-language parity SelfCheck passed (C08 L75 SSOT + structural invariant harness)."
+Write-Host "Cross-language parity SelfCheck passed (C08 L75 SSOT + structural invariant harness + Python adapter stub)."

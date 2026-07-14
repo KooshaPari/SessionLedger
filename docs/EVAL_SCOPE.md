@@ -83,6 +83,6 @@ Until then, treat Harbor-scale agent-eval asks as **out of scope**.
 ## Related
 
 - Soft goal: issue #68 — eval corpus depth (C08)
-- Cross-language OKF fixture parity (C08 L75): [`docs/ops/cross-language-parity.md`](ops/cross-language-parity.md)
+- Cross-language OKF fixture parity + adapter stub (C08 L75): [`docs/ops/cross-language-parity.md`](ops/cross-language-parity.md), [`adapters/README.md`](../adapters/README.md)
 - Conformance process: [`docs/reference/conformance/README.md`](reference/conformance/README.md)
 - Observability soft goals (separate): [`docs/ops/observability.md`](ops/observability.md)

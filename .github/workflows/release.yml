@@ -10,8 +10,11 @@
 # Platform signing / notarization: DEFERRED (unsigned binaries + installers).
 # Authenticode and Apple notarization stay out of scope per ADR 0003.
 # Release checksums are signed with cosign keyless signing on a best-effort
-# basis. Release assets receive blocking GitHub build provenance in the
-# canonical KooshaPari/SessionLedger repository; forks skip that OIDC step.
+# basis. The sl-daemon OCI image (crates/sl-daemon/Containerfile → GHCR) is
+# built, keyless-cosign-signed, and attested on a best-effort basis and never
+# blocks portable Release publication. Release assets receive blocking GitHub
+# build provenance in the canonical KooshaPari/SessionLedger repository; forks
+# skip that OIDC step.
 #
 # Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-daemon/Cargo.toml
 #      packaging/README.md  ·  docs/ops/distribution.md
@@ -487,6 +490,10 @@ jobs:
             is required for canonical KooshaPari/SessionLedger releases and can be
             verified with `gh attestation`.
 
+            CI also best-effort builds and pushes `ghcr.io/kooshapari/sl-daemon`
+            from `crates/sl-daemon/Containerfile`, then keyless-cosign signs and
+            attests the image digest. OCI failures do not block this Release.
+
             See [`docs/ops/distribution.md`](https://github.com/KooshaPari/SessionLedger/blob/main/docs/ops/distribution.md).
           draft: false
           prerelease: false
@@ -538,4 +545,112 @@ jobs:
           else
             echo "::notice::Cosign signing was skipped or failed; the unsigned release remains valid. download=${{ steps.download.outcome }}, install=${{ steps.cosign.outcome }}, sign=${{ steps.sign.outcome }}, publish=${{ steps.publish.outcome }}"
             echo "### Cosign signing: skipped or unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  oci-image:
+    name: OCI image · build + cosign (best effort)
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # Soft-fail: portable Release archives must remain available even when GHCR
+    # push, keyless cosign, or OCI attestation fails.
+    continue-on-error: true
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: normalize image name (GHCR requires lowercase)
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "name=ghcr.io/${owner}/sl-daemon" >> "$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        continue-on-error: true
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        if: steps.meta.outcome == 'success'
+        continue-on-error: true
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        id: login
+        if: steps.buildx.outcome == 'success'
+        continue-on-error: true
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push sl-daemon OCI image
+        id: build
+        if: steps.login.outcome == 'success'
+        continue-on-error: true
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: crates/sl-daemon/Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
+
+      - name: install cosign
+        id: cosign
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: cosign sign image (keyless)
+        id: sign
+        if: steps.cosign.outcome == 'success'
+        continue-on-error: true
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          IMAGE="${{ steps.image.outputs.name }}"
+          test -n "${DIGEST}"
+          cosign sign --yes "${IMAGE}@${DIGEST}"
+
+      - name: attest OCI image
+        id: attest
+        if: steps.build.outcome == 'success' && github.repository == 'KooshaPari/SessionLedger'
+        continue-on-error: true
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: report OCI signing status
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.sign.outcome }}" = "success" ]; then
+            echo "::notice::Published keyless cosign signature for ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}."
+            echo "### OCI cosign: published" >> "$GITHUB_STEP_SUMMARY"
+            if [ "${{ steps.attest.outcome }}" = "success" ]; then
+              echo "### OCI attestation: published" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "### OCI attestation: skipped or unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "::notice::OCI build/sign was skipped or failed (non-blocking). meta=${{ steps.meta.outcome }}, buildx=${{ steps.buildx.outcome }}, login=${{ steps.login.outcome }}, build=${{ steps.build.outcome }}, cosign=${{ steps.cosign.outcome }}, sign=${{ steps.sign.outcome }}, attest=${{ steps.attest.outcome }}"
+            echo "### OCI cosign: skipped or unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
           fi

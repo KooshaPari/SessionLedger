@@ -79,13 +79,14 @@ sl-viewer-<tag>-x86_64-pc-windows-msvc.zip
 ```
 
 Each Release also publishes `SHA256SUMS`, `session-ledger.cdx.json`, and a
-best-effort `SHA256SUMS.sigstore.json`. Verify archives with the checksum and
-provenance flow in [`docs/ops/distribution.md`](../docs/ops/distribution.md).
+best-effort `SHA256SUMS.sigstore.json`. On the same tag, CI best-effort pushes
+`ghcr.io/kooshapari/sl-daemon` and keyless-cosign signs it. Verify archives and
+OCI digests with the checksum / cosign flow in
+[`docs/ops/distribution.md`](../docs/ops/distribution.md).
 
 GitHub Releases are the current user-facing archive channel for `sl-viewer`.
-The daemon remains installable from source (`cargo install --git` / `--path`)
-or container/local process-compose until a dedicated daemon release artifact is
-added.
+The daemon is also available as a best-effort GHCR image, from source
+(`cargo install --git` / `--path`), or via local process-compose / Containerfile.
 
 ## Homebrew And winget (next: publish)
 

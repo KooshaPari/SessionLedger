@@ -75,3 +75,17 @@ runs affordable `cargo build --locked` checks for the root workspace and the
 isolated `sl-daemon` workspace on `ubuntu-latest`, `windows-latest`, and
 `macos-latest`. This complements the Linux-only `build-test` job in `ci.yml`
 without executing the full test matrix on every host family.
+
+## Exotic Linux targets (PR)
+
+The same workflow also runs an `exotic-cargo-check` job on `ubuntu-latest` that
+cross-checks two non-host Linux targets with `cargo check --locked`:
+
+| Target | Linker package | What is checked |
+|--------|----------------|-----------------|
+| `aarch64-unknown-linux-gnu` | `gcc-aarch64-linux-gnu` | `-p session-ledger` and `crates/sl-daemon` |
+| `x86_64-unknown-linux-musl` | `musl-tools` | `-p session-ledger` and `crates/sl-daemon` |
+
+These jobs intentionally skip `sl-viewer` (webkit / native UI graph). They exist
+to catch arch/ABI drift (aarch64 Linux, musl) without paying for full exotic
+runners or release artifact builds on every PR.

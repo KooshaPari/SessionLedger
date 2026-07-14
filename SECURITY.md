@@ -67,6 +67,15 @@ Critical supply-chain or remote-code issues may be accelerated at maintainer dis
 - Advisory scanning: `cargo audit` job in .github/workflows/security.yml.
 - SBOM upload: qgate uploads `sbom-cyclonedx` artifact from `target/sbom.cdx.json`.
 
+## Cryptography inventory
+
+SessionLedger uses **SHA-256 content hashing** (`sha2`) for dedup keys and
+**operator-owned TLS** at a reverse proxy for remote-style daemon deploys. There
+is **no encryption-at-rest** for OKF bundles or audit files and **no in-tree
+KMS** — see the full inventory, TLS samples (Caddy/nginx), and explicit
+non-goals in [`docs/ops/crypto-inventory.md`](docs/ops/crypto-inventory.md).
+STRIDE-lite context: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
+
 ## API keys and secret rotation
 
 SessionLedger is a single-user local companion. Do not commit real secrets.

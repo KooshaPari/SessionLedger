@@ -1,9 +1,10 @@
-//! Hermetic `SelfCheck` for C01 L16 i18n scaffold (catalog + helper + docs).
+//! Hermetic `SelfCheck` for C01 L16 i18n scaffold (en+es catalogs + helper + docs).
 //!
 //! Local: `pwsh ./scripts/i18n-check.ps1 -SelfCheck`
 //!
-//! Proves the English JSON catalog, `src/i18n.rs` lookup API, and Phase-0
-//! English-only / future-hooks doc anchors. Does not claim full localization.
+//! Proves the English + Spanish soft JSON catalogs, `src/i18n.rs` lookup API
+//! (`SL_LOCALE` / `t_locale`), and Phase-0 / Fluent-ICU future-hooks doc anchors.
+//! Does not claim full Fluent localization.
 
 use std::path::PathBuf;
 use std::process::Command;

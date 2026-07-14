@@ -6,6 +6,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Soft multi-locale i18n: `locales/es.json` + `SL_LOCALE` / `t_locale` selection (C01 L16; Fluent/ICU still deferred).
 - Blocking `sandbox-boundary` SelfCheck job in `security.yml` (C04 L40; hard no-net/rootless still unpaid).
 
 - `GET /readyz` readiness probe + process-compose probe switch; SLO stubs in observability docs.
@@ -19,4 +20,3 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 - proc-compose deploy stack with sl-viewer + Makefile + quickstart (#39).
 
 <!-- Prior history predates this changelog; reconstruct from git tags as versions are cut. -->
-

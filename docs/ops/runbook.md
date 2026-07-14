@@ -5,12 +5,23 @@ How to run the daemon + viewer stack and verify liveness / readiness.
 ## Prerequisites
 
 - Rust toolchain from `rust-toolchain.toml` (MSRV 1.85+)
-- [`process-compose`](https://github.com/F1bonacc1/process-compose) on `PATH`
+- [`process-compose`](https://github.com/F1bonacc1/process-compose) on `PATH` (default runtime)
 - Optional: Dioxus CLI for viewer bundling (`cargo install dioxus-cli`)
+- Optional engines (Podman, WSL, Apple Container, PhenoCompose/nvms): see
+  [`runtime-facade.md`](runtime-facade.md)
 
-## Start (`make dev`)
+## Start (`make dev` / runtime facade)
 
-From repo root:
+**Default** local stack is still **process-compose** (zero hard deps beyond that
+CLI). Prefer the runtime facade when you want engine selection via `SL_RUNTIME`:
+
+```bash
+./scripts/runtime-up.sh                 # Linux/macOS — process-compose by default
+pwsh ./scripts/runtime-up.ps1           # Windows
+# optional: SL_RUNTIME=podman|pheno|wsl|apple
+```
+
+From repo root with Make:
 
 ```bash
 make build          # cargo build -p sl-daemon -p sl-viewer
@@ -38,6 +49,9 @@ cargo run -p sl-daemon -- serve
 cargo run -p sl-viewer
 ```
 
+Engine matrix, PhenoCompose/nvms delegation, Podman/`Containerfile`, WSL, and
+Apple Container: [`runtime-facade.md`](runtime-facade.md). ADR 0001 keeps this
+CLI/HTTP-only (no tray companion).
 ## Health check
 
 Two probes — do not conflate them. Full policy:
@@ -171,7 +185,9 @@ against a scraped target and walk one row of the
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `process-compose: command not found` | CLI missing | Install process-compose; or run crates manually |
+| `process-compose: command not found` | CLI missing | Install process-compose; or `./scripts/runtime-up.sh` error text; or run crates manually |
+| `SL_RUNTIME=pheno` fails immediately | `pheno-compose` / `nvms` missing | Install per [`runtime-facade.md`](runtime-facade.md); or unset `SL_RUNTIME` for process-compose |
+| `SL_RUNTIME=podman` / `apple` fails | Engine or Containerfile missing | Install podman / Apple `container`; confirm root or `crates/sl-daemon` Containerfile |
 | Viewer never starts | Daemon not **ready** | Confirm `/readyz` returns `ready`; `/healthz` alone is insufficient; check port 8080 free; raise probe delay |
 | `/healthz` ok, `/readyz` 503 | Missing or non-dir `out_dir` | Ensure `SL_DATA_DIR` exists; mkdir if needed; restart serve |
 | `Address already in use` | Stale daemon | Kill process on 8080; `make dev-down` |
@@ -213,10 +229,12 @@ until each module reaches 85%.
 
 ## Related
 
+- [`runtime-facade.md`](runtime-facade.md) — `SL_RUNTIME` matrix, PhenoCompose/nvms, Podman/WSL/Apple Container
 - [`observability.md`](observability.md) — SLO stubs, RED map, `/healthz` vs `/readyz`, game-day cadence, OTel/#65
 - [`alerts.md`](alerts.md) — PromQL, routing evidence, rule promotion status
 - [`WBS.md`](WBS.md) — phased project and organization work packages
 - [`GAP_QA_MATRIX.md`](GAP_QA_MATRIX.md) — current audit and acceptance gaps
 - [`TRACEABILITY.json`](TRACEABILITY.json) — machine-readable status SSOT
 - [`../functional_requirements.md`](../functional_requirements.md) — FR-014
+- [`../adr/0001-desktop-companion-scope.md`](../adr/0001-desktop-companion-scope.md) — no tray companion
 - [`../../AGENTS.md`](../../AGENTS.md) — agent build/test norms

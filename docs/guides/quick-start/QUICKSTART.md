@@ -7,6 +7,8 @@ Get the full stack running in five steps.
 - Rust toolchain (`rustup` recommended, stable >= 1.85)
 - [`process-compose`](https://github.com/F1bonacc1/process-compose) installed and on `PATH`
   (`brew install f1bonacc1/tap/process-compose` on macOS)
+- Optional task runners (preferred): [`just`](https://github.com/casey/just) and/or
+  [`task`](https://taskfile.dev) (`brew install just go-task` / `scoop install just go-task`)
 
 ## Steps
 
@@ -20,10 +22,12 @@ cd SessionLedger
 ### 2. Build the binaries
 
 ```sh
-make build
+just build
+# or: task build
+# or: make build
 ```
 
-This compiles `sl-daemon` and `sl-viewer` (debug profile) using `cargo build -p sl-daemon -p sl-viewer`.
+This compiles `sl-daemon` and `sl-viewer` (debug profile).
 Both binaries land in `./target/debug/`.
 
 ### 3. (Optional) Set watch/output directories
@@ -38,11 +42,13 @@ Defaults are `./sessions` and `./okf-out` if these are not set.
 ### 4. Start the stack
 
 ```sh
-make dev
+just dev
+# or: task dev
+# or: make dev
 ```
 
-This is equivalent to `cargo build … && process-compose up`. You should see three services
-appear in the process-compose TUI:
+This builds then brings up the local stack (`scripts/runtime-up.*` if present, otherwise
+`process-compose up`). You should see three services appear in the process-compose TUI:
 
 | Service | Role |
 |---|---|
@@ -59,7 +65,9 @@ Drop a `.jsonl` session transcript into `$SL_WATCH_DIR`. Within a few seconds
 ## Stopping
 
 ```sh
-make dev-down
+just dev-down
+# or: task dev-down
+# or: make dev-down
 ```
 
 Or press `q` in the process-compose TUI.

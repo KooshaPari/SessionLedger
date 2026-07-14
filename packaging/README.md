@@ -12,17 +12,18 @@ Linux service unit lives at
 ## Prerequisites
 
 - Rust toolchain (rustup)
-- For macOS: Xcode command line tools
+- For macOS: Xcode command line tools (`productbuild` for PKG)
 - For Linux: standard build essentials; `appimagetool` for AppImage or
-  `dpkg-deb` for the Debian scaffold
-- For Windows: PowerShell 5.1+ and the MSVC Rust target/toolchain; WiX v4 only
-  when evaluating the MSI scaffold
+  `dpkg-deb` for the Debian package
+- For Windows: PowerShell 5.1+ and the MSVC Rust target/toolchain; WiX v4
+  (`dotnet tool install --global wix`) for MSI builds
 
 ## Usage
 
 ```sh
-# macOS .app bundle
-make -C packaging package-macos
+# macOS .app + .pkg (unsigned)
+./packaging/macos/package-app.sh
+./packaging/macos/package-pkg.sh
 
 # Linux binary
 make -C packaging package-linux
@@ -32,40 +33,42 @@ make -C packaging package-windows
 # Equivalent:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1
 
-# Linux installer candidates (developer scaffolds, not published)
+# Windows MSI (unsigned; requires WiX v4 + layout from package-windows)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-msi.ps1
+
+# Linux installer candidates (also attached best-effort by release CI)
 ./packaging/linux/package-appimage.sh
 ./packaging/linux/package-deb.sh
 
-# macOS + Linux (host-local scaffold)
+# macOS + Linux (host-local Make scaffolds)
 make -C packaging package-all
 ```
 
-## Output (local Make)
+## Output (local)
 
 | Platform | Output |
 |----------|--------|
-| macOS    | `packaging/dist/SessionLedger.app` |
-| Linux    | `packaging/dist/linux/SessionLedger` |
-| Windows  | `packaging/dist/sl-viewer-v<version>-x86_64-pc-windows-msvc.zip` (includes per-user install/uninstall scripts) |
+| macOS    | `packaging/dist/SessionLedger.app`, `SessionLedger-<ver>[-arch].pkg` |
+| Linux    | `packaging/dist/linux/SessionLedger`; optional `.deb` / AppImage |
+| Windows  | `packaging/dist/sl-viewer-v<version>-x86_64-pc-windows-msvc.zip` + `SessionLedger-<ver>-x64.msi` |
 
 ## Release matrix (GitHub Actions)
 
 Tag push (`v*`) builds via [`.github/workflows/release.yml`](../.github/workflows/release.yml):
 
-| Target | Archive | CI validation | Local Make? |
-|--------|---------|---------------|-------------|
-| Linux `x86_64-unknown-linux-gnu` | `.tar.gz` | Download, extract, binary `--version` smoke on `ubuntu-latest` | `package-linux` |
-| macOS Intel `x86_64-apple-darwin` | `.tar.gz` | Build/archive only | `package-macos` |
-| macOS ARM `aarch64-apple-darwin` | `.tar.gz` | Build/archive only | `package-macos` (on Apple Silicon host) |
-| Windows `x86_64-pc-windows-msvc` | `.zip` (`sl-viewer.exe`) | Download, extract, binary `--version` smoke on `windows-latest` | `package-windows` (on Windows) |
-| Windows MSI scaffold | `.zip` (`Product.wxs` + build notes; no MSI) | Archive presence enforced by release build | WiX v4 developer build |
+| Target | Artifacts | CI validation |
+|--------|-----------|---------------|
+| Linux `x86_64-unknown-linux-gnu` | viewer + daemon `.tar.gz`; best-effort `.deb` + AppImage | Download, extract, binary `--version`; optional installer presence check |
+| macOS Intel `x86_64-apple-darwin` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz` | Build/archive |
+| macOS ARM `aarch64-apple-darwin` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz` | PKG expand smoke |
+| Windows `x86_64-pc-windows-msvc` | viewer + daemon `.zip`; unsigned `SessionLedger-<ver>-x64.msi` | ZIP `--version` + MSI silent install → `--version` → uninstall |
 
 ## Clean-host checklist (unsigned)
 
-Repeatable install → launch → uninstall evidence **without** Authenticode or MSI.
+Repeatable install → launch → uninstall evidence **without** Authenticode.
 Full ops narrative: [`docs/ops/distribution.md`](../docs/ops/distribution.md#clean-host-installuninstall-evidence-unsigned).
 
-### Windows (automated in CI)
+### Windows portable ZIP (automated in PR CI)
 
 PR CI job `clean-host-smoke-windows` on `windows-latest` runs:
 
@@ -74,24 +77,18 @@ PR CI job `clean-host-smoke-windows` on `windows-latest` runs:
   -EvidencePath packaging/dist/clean-host-evidence.json
 ```
 
-The job uploads `clean-host-evidence.json` as a workflow artifact. Steps: preflight
-(no default install dir) → package unsigned stub ZIP → extract → `Install.ps1` →
-`--version` → `Uninstall.ps1` → verify shortcut/registry/install dir removed.
+### Windows MSI (automated in Release CI)
 
-Local rerun (same host policy: no prior `%LOCALAPPDATA%\Programs\SessionLedger`):
+Release job `smoke-windows` silently installs the unsigned MSI, runs
+`sl-viewer.exe --version`, then uninstalls. See
+[`scripts/package-msi.md`](../scripts/package-msi.md).
 
-```powershell
-make -C packaging package-windows
-# extract packaging/dist/*.zip, then follow distribution.md checklist
-# or run the smoke script with -WindowsInstallLifecycle
-```
-
-### Linux / macOS (manual)
+### Linux / macOS (manual + Release PKG expand)
 
 | Platform | Package | Verify | Cleanup |
 |----------|---------|--------|---------|
-| Linux | Release `.tar.gz` or `make -C packaging package-linux` | `./sl-viewer --version` | Delete extract tree + configured data dirs |
-| macOS | Release `.tar.gz` or `make -C packaging package-macos` | `./sl-viewer --version` or open `.app` once | Remove test `.app`; see Gatekeeper notes in distribution guide |
+| Linux | Release `.tar.gz` / best-effort `.deb` / AppImage | `./sl-viewer --version` | Delete extract tree + configured data dirs |
+| macOS | Release `.pkg` / `.app.tar.gz` | expand PKG or open `.app` once | Remove test `.app`; Gatekeeper notes in distribution guide |
 
 Signed MSI / Authenticode evidence is explicitly out of scope for this checklist.
 
@@ -99,28 +96,21 @@ Signed MSI / Authenticode evidence is explicitly out of scope for this checklist
 
 | Platform / format | Status | Scope |
 |-------------------|--------|-------|
-| Windows installable ZIP | **Partial, CI-smoked** | Release CI downloads, extracts, and executes `sl-viewer.exe --version`; PR CI `clean-host-smoke-windows` runs unsigned portable install/uninstall with evidence artifact via `scripts/installer-lifecycle-smoke.ps1 -WindowsInstallLifecycle`; `package-windows.ps1` adds per-user install/uninstall scripts and a Start Menu shortcut locally |
-| Windows MSI (WiX v4) | **Partial, scaffold published** | Release CI publishes `Product.wxs` and [`scripts/package-msi.md`](../scripts/package-msi.md) as a source/documentation archive, not an MSI |
-| Linux AppImage | **Partial** | `packaging/linux/package-appimage.sh` builds a local candidate with `appimagetool` |
-| Linux `.deb` | **Partial** | `packaging/linux/package-deb.sh` builds a local candidate with `dpkg-deb` |
-| macOS `.app` | **Partial** | Host-local unsigned app bundle; DMG/notarization deferred |
+| Windows installable ZIP | **Partial, CI-smoked** | Release + PR clean-host portable install/uninstall |
+| Windows MSI (WiX v4) | **Active (unsigned)** | Release CI builds `SessionLedger-<ver>-x64.msi`; silent install smoke; Authenticode deferred |
+| Linux AppImage | **Active (unsigned, best-effort)** | Release CI attaches when `package-appimage.sh` succeeds |
+| Linux `.deb` | **Active (unsigned, best-effort)** | Release CI attaches when `package-deb.sh` succeeds |
+| macOS `.app` / `.pkg` | **Active (unsigned)** | Release CI builds via `productbuild`; notarization deferred |
 
-Release CI publishes and smoke-tests the portable Windows ZIP and Linux
-`.tar.gz`. It also publishes the WiX source and build notes as an explicitly
-non-installable scaffold archive. `Install.ps1` can copy the local Windows
-package below LocalAppData, register an uninstall entry, and create a Start
-Menu shortcut. No MSI, AppImage, or `.deb` is a supported release target.
+Release CI publishes portable viewer and daemon archives, the unsigned Windows
+MSI, unsigned macOS PKGs, and best-effort Linux installers. Platform-native
+signing remains deferred under ADR 0003.
 `scripts/installer-lifecycle-smoke.ps1` dry-runs scaffold and clean-host-doc
 assertions on any host with PowerShell. On `windows-latest` CI the
-`clean-host-smoke-windows` job runs `-WindowsInstallLifecycle`, which packages an
-unsigned stub `sl-viewer.exe`, executes Install.ps1 → `--version` →
-Uninstall.ps1, verifies cleanup, and writes `clean-host-evidence.json`. That
-path proves unsigned portable installer wiring only and does **not** replace
-platform Authenticode signing, which remains a human/deferred step (see
-[`docs/ops/distribution.md`](../docs/ops/distribution.md)). Signed MSI
-clean-host evidence still requires Windows plus WiX tooling.
-Linux details and limitations are in
-[`packaging/linux/README.md`](linux/README.md).
+`clean-host-smoke-windows` job runs `-WindowsInstallLifecycle` for the
+unsigned portable ZIP path. Linux details are in
+[`packaging/linux/README.md`](linux/README.md); macOS scripts are in
+[`packaging/macos/`](macos/).
 
 ## Installer script draft (not published)
 
@@ -147,7 +137,6 @@ Pin a release with `SL_VERSION=v0.1.0`; override the destination with
   cosign signature (`SHA256SUMS.sigstore.json`); signing failures do not block
   the Release. This existing
   [cosign and attestation path](../docs/ops/distribution.md#release-integrity-signing-cosign)
-  also applies when installer candidates are attached for internal evaluation,
-  but does not replace platform signing
+  also applies to installer assets, but does not replace platform signing
 - Data root for local compose: `SL_DATA_DIR` (default `./.sl-data`); uninstall
   steps documented in the distribution guide

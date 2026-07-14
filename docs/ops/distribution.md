@@ -23,8 +23,8 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` or `cargo install --git … --path crates/sl-daemon` |
 | curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` Release archives |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
+| Native installers (unsigned) | **Active, CI-smoked** | Release CI publishes unsigned MSI + macOS PKG, best-effort Linux `.deb`/AppImage, and portable viewer/daemon archives; Release smoke covers Windows ZIP + MSI silent install and macOS PKG expand; PR CI still runs unsigned portable clean-host smoke on `windows-latest` |
 | Homebrew / winget | **Manifests in-repo, publish tap/PR next** | Formula template in `packaging/homebrew/`; Package/Installer/Locale YAML in `packaging/winget/` — fill digests from `SHA256SUMS`, then publish |
-| Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked on Release; PR CI runs unsigned clean-host portable install smoke on `windows-latest` (`clean-host-smoke-windows`) plus scaffold/doc checks on `ubuntu-latest`; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local. MSI/PKG lanes: see `packaging/` if concurrent |
 | Scoop / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, crate publication, DMG, or update automation exists yet |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 | Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
@@ -33,56 +33,60 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 
 From `.github/workflows/release.yml` (on `push` tags `v*`):
 
-| Target triple | Runner | Archive | Status |
-|---------------|--------|---------|--------|
-| `x86_64-unknown-linux-gnu` | `ubuntu-latest` | `.tar.gz` | **Shipped + smoke-tested** |
-| `x86_64-apple-darwin` | `macos-latest` | `.tar.gz` | Shipped |
-| `aarch64-apple-darwin` | `macos-latest` | `.tar.gz` | Shipped |
-| `x86_64-pc-windows-msvc` | `windows-latest` | `.zip` (`sl-viewer.exe`) | **Shipped + smoke-tested** |
-| Windows MSI scaffold | `windows-latest` | `.zip` (`Product.wxs` + build notes) | **Published scaffold; no MSI** |
+| Target triple | Runner | Artifacts | Status |
+|---------------|--------|-----------|--------|
+| `x86_64-unknown-linux-gnu` | `ubuntu-latest` | viewer + daemon `.tar.gz`; best-effort `.deb` + AppImage | **Shipped + smoke-tested** |
+| `x86_64-apple-darwin` | `macos-latest` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz` | Shipped |
+| `aarch64-apple-darwin` | `macos-latest` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz` | **Shipped + PKG expand smoke** |
+| `x86_64-pc-windows-msvc` | `windows-latest` | viewer + daemon `.zip`; unsigned `SessionLedger-<ver>-x64.msi` | **Shipped + ZIP/MSI smoke** |
 
-Asset names:
+Asset names (representative):
 
 ```text
 sl-viewer-<tag>-x86_64-unknown-linux-gnu.tar.gz
+sl-daemon-<tag>-x86_64-unknown-linux-gnu.tar.gz
 sl-viewer-<tag>-x86_64-apple-darwin.tar.gz
+sl-daemon-<tag>-x86_64-apple-darwin.tar.gz
 sl-viewer-<tag>-aarch64-apple-darwin.tar.gz
+sl-daemon-<tag>-aarch64-apple-darwin.tar.gz
 sl-viewer-<tag>-x86_64-pc-windows-msvc.zip
-sl-viewer-<tag>-windows-msi-scaffold.zip
+sl-daemon-<tag>-x86_64-pc-windows-msvc.zip
+SessionLedger-<ver>-x64.msi
+SessionLedger-<ver>-aarch64.pkg
+SessionLedger-<ver>-x86_64.pkg
+SessionLedger-<ver>-aarch64.app.tar.gz
+SessionLedger-<ver>-x86_64.app.tar.gz
+sessionledger_<ver>_amd64.deb
+SessionLedger-<ver>-x86_64.AppImage
 SHA256SUMS
 session-ledger.cdx.json
 SHA256SUMS.sigstore.json
 ```
 
 `session-ledger.cdx.json` is the CycloneDX SBOM and is required for the Release
-job to succeed. GitHub build provenance and `SHA256SUMS.sigstore.json` are
-best-effort. OIDC, attestation, cosign installation, signing, or upload failures
-do not fail or retract the otherwise valid unsigned Release.
+job to succeed. GitHub build provenance is blocking on the canonical repository.
+`SHA256SUMS.sigstore.json` remains best-effort. Authenticode and Apple
+notarization stay deferred under ADR 0003 — published MSI/PKG artifacts are
+**unsigned**.
 
-**Windows matrix status:** release CI produces an unsigned
-`x86_64-pc-windows-msvc` zip, then a dependent `windows-latest` job downloads
-and extracts that artifact and runs `sl-viewer.exe --version`. A matching Linux
-job validates the `.tar.gz` on `ubuntu-latest`; the Release is not created
-unless both smoke jobs pass. On a Windows host, the local
-`package-windows` target produces an equivalent versioned portable ZIP via
-`scripts/package-windows.ps1`. Day-to-day `ci.yml` remains Linux-only for the
-main build/test gate (Phenotype billing policy); unsigned clean-host portable
-smoke runs on `windows-latest` in dedicated CI jobs. Release CI also attaches a ZIP containing the WiX MSI source and build notes,
-but does not build or claim an MSI. The installable-script layer, WiX MSI, and
-Linux package scripts remain **partial** developer scaffolds. MSI publication
-and Authenticode signing remain explicitly deferred.
+**Windows matrix status:** release CI produces an unsigned portable ZIP and a
+real WiX v4 MSI (`SessionLedger-<ver>-x64.msi`), then `smoke-windows` runs ZIP
+`--version` plus MSI silent install → `--version` → uninstall. Linux smoke
+validates the viewer `.tar.gz`; macOS smoke expands the aarch64 PKG. The
+Release is not created unless those smoke jobs pass. Authenticode signing
+remains explicitly deferred.
 
 ### Installer matrix
 
 | Platform / format | Status | Current capability |
 |-------------------|--------|--------------------|
 | Windows installable ZIP | **Partial, CI-smoked** | Portable release binary is download/extract/execute-smoked; local package adds per-user install scripts |
-| Windows MSI / WiX v4 | **Partial, scaffold published** | Release source/docs archive plus local build notes and `Product.wxs`; no MSI output |
-| Linux AppImage | **Partial** | Local `appimagetool` build script |
-| Linux Debian package | **Partial** | Local `dpkg-deb` build script |
-| macOS `.app` | **Partial** | Unsigned host-local bundle; no DMG/notarization |
+| Windows MSI / WiX v4 | **Active (unsigned)** | Release CI builds and attaches `SessionLedger-<ver>-x64.msi`; silent install smoke; Authenticode deferred |
+| Linux AppImage | **Active (unsigned, best-effort)** | Release CI attaches when `packaging/linux/package-appimage.sh` succeeds |
+| Linux Debian package | **Active (unsigned, best-effort)** | Release CI attaches when `packaging/linux/package-deb.sh` succeeds |
+| macOS `.app` / `.pkg` | **Active (unsigned)** | Release CI builds via `packaging/macos/` + `productbuild`; notarization deferred |
 
-These candidates use the same existing
+These installers use the same existing
 [checksum, cosign, and GitHub attestation path](#release-integrity-signing-cosign)
 when distributed as release assets. Platform-native signing is separate and
 remains deferred.
@@ -174,17 +178,19 @@ Until then, treat `SL_DATA_DIR` (and `--out` / `--data-dir`) as the SSOT.
 ## Clean-host install/uninstall evidence (unsigned)
 
 **Scope:** repeatable install → launch → uninstall checks on a host with no prior
-SessionLedger install. This lane documents and automates **unsigned** portable
-artifacts only. It does **not** use Authenticode, notarization, or MSI publication.
+SessionLedger install. This lane covers **unsigned** portable ZIP and unsigned
+MSI paths. It does **not** use Authenticode or notarization.
 
 | Evidence type | Where | What it proves |
 |---------------|-------|----------------|
-| CI scaffold smoke | `ci.yml` job `installer-lifecycle-smoke` | Installer scaffolds, uninstall docs, and clean-host checklist text are present |
+| CI scaffold smoke | `ci.yml` job `installer-lifecycle-smoke` | Installer sources, uninstall docs, and clean-host checklist text are present |
 | CI Windows portable smoke | `ci.yml` job `clean-host-smoke-windows` | Unsigned ZIP → `Install.ps1` → `--version` → `Uninstall.ps1` on an ephemeral `windows-latest` runner with isolated paths |
+| Release Windows MSI smoke | `release.yml` job `smoke-windows` | Unsigned MSI silent install → `--version` → uninstall |
+| Release macOS PKG smoke | `release.yml` job `smoke-macos-pkg` | Unsigned aarch64 PKG expands with expected payload |
 | CI artifact | `clean-host-evidence.json` (uploaded per Windows smoke run) | Machine-readable step log with run metadata |
 | Manual checklist | Below | Human reruns on a VM or spare machine before release |
 
-Signed MSI / Authenticode clean-host evidence remains deferred under
+Authenticode / notarized clean-host evidence remains deferred under
 [ADR 0003](../adr/0003-platform-code-signing.md) and [#66](https://github.com/KooshaPari/SessionLedger/issues/66).
 
 ### Repeatable checklist — Windows unsigned portable ZIP
@@ -232,8 +238,8 @@ CI does not yet automate these; use an isolated VM or user account.
 ### What unsigned clean-host evidence does **not** cover
 
 - Authenticode / Apple Developer ID signatures or SmartScreen/Gatekeeper trust
-- WiX MSI build, per-machine install, or MSI uninstall
-- AppImage / `.deb` publication or `dpkg`/package-manager integration
+- Per-machine (ALLUSERS=1) MSI installs
+- Full `dpkg -i` / AppImage desktop integration smoke beyond artifact presence
 - Daemon install via systemd unit (documented separately above)
 - Automatic updates or signed update channels
 
@@ -245,8 +251,8 @@ CI does not yet automate these; use an isolated VM or user account.
 
 1. Download the archive for your platform from the latest `v*` Release.
 2. Extract; run `./sl-viewer` (Unix) or `sl-viewer.exe` (Windows).
-3. Start `sl-daemon` separately (from source or a future daemon artifact) with
-   an explicit `--watch` / `--out` (or compose + `SL_DATA_DIR`).
+3. Start `sl-daemon` from the matching Release daemon archive (or from source)
+   with an explicit `--watch` / `--out` (or compose + `SL_DATA_DIR`).
 
 ### From source (local packaging)
 
@@ -256,25 +262,30 @@ make -C packaging package-linux   # → packaging/dist/linux/SessionLedger
 # On Windows:
 make -C packaging package-windows # → packaging/dist/sl-viewer-v<version>-x86_64-pc-windows-msvc.zip
 
-# Optional Linux installer scaffolds:
+# Linux installers (also best-effort on Release CI):
 ./packaging/linux/package-appimage.sh
 ./packaging/linux/package-deb.sh
+
+# macOS .app + .pkg (unsigned):
+./packaging/macos/package-app.sh
+./packaging/macos/package-pkg.sh
+
+# Windows MSI (unsigned; requires WiX v4):
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-msi.ps1
 ```
 
 The Windows ZIP can run portably or invoke `Install.ps1` for a per-user install.
-WiX MSI evaluation is documented in
+Unsigned MSI builds are documented in
 [`scripts/package-msi.md`](../../scripts/package-msi.md). See
-[`packaging/README.md`](../../packaging/README.md) for scaffold status.
+[`packaging/README.md`](../../packaging/README.md) for the installer matrix.
 See [`packaging/channels.md`](../../packaging/channels.md) for the current
 cargo install path, GitHub Release archive channel, curl/irm install scripts,
 Homebrew/winget in-repo manifests, and future Scoop placeholders.
 Run [`scripts/installer-lifecycle-smoke.ps1`](../../scripts/installer-lifecycle-smoke.ps1)
-for machine-checkable scaffold and lifecycle-documentation assertions. On
-`windows-latest` CI, pass `-WindowsInstallLifecycle` to exercise the unsigned
-Windows ZIP install path end-to-end with a stub `sl-viewer.exe` (package →
-Install.ps1 → `--version` → Uninstall.ps1 + cleanup). That smoke validates
-installer wiring only; platform Authenticode signing and MSI publication remain
-human/deferred steps under #66. See
+for machine-checkable documentation assertions. On `windows-latest` CI, pass
+`-WindowsInstallLifecycle` to exercise the unsigned Windows ZIP install path.
+Release CI additionally smokes the unsigned MSI. Authenticode signing remains
+deferred under #66 / ADR 0003. See
 [Clean-host install/uninstall evidence (unsigned)](#clean-host-installuninstall-evidence-unsigned)
 for the manual checklist and CI artifact path.
 
@@ -343,8 +354,8 @@ installs it elsewhere. The service is configured with `Restart=on-failure`.
 
 The installable Windows ZIP registers `Uninstall.ps1` in Windows Installed Apps;
 it removes the application and shortcut but deliberately preserves user data.
-The WiX MSI remains a scaffold. For portable and source installations, use
-manual cleanup:
+The unsigned WiX MSI uninstalls via `msiexec /x` (or Installed Apps) and likewise
+preserves user data. For portable and source installations, use manual cleanup:
 
 1. **Stop processes** — `make dev-down` or kill `sl-daemon` / `sl-viewer`.
 2. **Remove binaries** — delete extracted Release folders, `packaging/dist/`,
@@ -442,11 +453,11 @@ interpret the absence as a successful provenance check.
 See [`docs/adr/0003-platform-code-signing.md`](../adr/0003-platform-code-signing.md)
 for the accepted deferral decision, portable trust model, and reconsider triggers.
 
-Release and packaging scaffolds still ship **unsigned binaries, installers, and
-`.app` bundles**. The following platform trust paths remain deferred under #66:
+Release CI ships **unsigned binaries, MSI/PKG installers, and `.app` bundles**.
+The following platform trust paths remain deferred under #66:
 
 - Apple Developer ID signing, `notarytool` notarization, and stapling
-- Windows Authenticode (`signtool`) for `sl-viewer.exe` and future MSI artifacts
+- Windows Authenticode (`signtool`) for `sl-viewer.exe` and MSI artifacts
 
 ### macOS Gatekeeper notes (unsigned builds)
 

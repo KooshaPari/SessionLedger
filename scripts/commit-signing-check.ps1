@@ -50,6 +50,38 @@ try {
         Write-Host "$Mark $Text"
     }
 
+    function Resolve-GitRef {
+        param(
+            [string]$RefName,
+            [int]$FetchDepth
+        )
+
+        $Candidates = @($RefName)
+        if ($RefName -eq "main") {
+            $Candidates += "origin/main"
+        }
+
+        foreach ($Candidate in $Candidates) {
+            & git rev-parse --verify "$Candidate^{commit}" *> $null
+            if ($LASTEXITCODE -eq 0) {
+                return $Candidate
+            }
+        }
+
+        if ($RefName -eq "main") {
+            Write-Host "Local main not found; fetching origin/main (depth $FetchDepth)..."
+            & git fetch --no-tags --depth $FetchDepth origin main 2>&1 | Out-Host
+            if ($LASTEXITCODE -eq 0) {
+                & git rev-parse --verify "origin/main^{commit}" *> $null
+                if ($LASTEXITCODE -eq 0) {
+                    return "origin/main"
+                }
+            }
+        }
+
+        throw "Ref not found: $RefName (tried: $($Candidates -join ', '))"
+    }
+
     function Invoke-BranchProtectionChecklist {
         $Items = @(
             "Require signed commits on branch main",
@@ -101,13 +133,13 @@ try {
         exit (Invoke-BranchProtectionChecklist)
     }
 
-    & git rev-parse --verify "$Ref^{commit}" *> $null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Ref not found: $Ref"
+    $ResolvedRef = Resolve-GitRef -RefName $Ref -FetchDepth ([Math]::Max($Count, 30))
+    if ($ResolvedRef -ne $Ref) {
+        Write-Host "Resolved ref '$Ref' -> '$ResolvedRef'"
     }
 
-    $Tip = (& git rev-parse "$Ref^{commit}").Trim()
-    $Shas = @(& git rev-list -n $Count $Ref)
+    $Tip = (& git rev-parse "$ResolvedRef^{commit}").Trim()
+    $Shas = @(& git rev-list -n $Count $ResolvedRef)
     if ($Shas.Count -eq 0) {
         throw "No commits found for ref $Ref"
     }
@@ -146,7 +178,7 @@ try {
     }
 
     $TipKind = Get-CommitSignatureKind $Tip
-    Write-Host "Commit signing report for $Ref (tip $Tip, last $($Shas.Count) commits)"
+    Write-Host "Commit signing report for $ResolvedRef (tip $Tip, last $($Shas.Count) commits)"
     Write-Host "  gpg:       $($Stats.gpg)"
     Write-Host "  ssh:       $($Stats.ssh)"
     Write-Host "  unsigned:  $($Stats.unsigned)"
@@ -154,7 +186,7 @@ try {
     Write-Host "  tip:       $TipKind"
 
     if ($TipKind -notin @("gpg", "ssh")) {
-        $Problems.Add("Tip commit $Tip on $Ref is not GPG/SSH signed ($TipKind)")
+        $Problems.Add("Tip commit $Tip on $ResolvedRef is not GPG/SSH signed ($TipKind)")
     }
 
     if ($Problems.Count -gt 0) {
@@ -167,7 +199,7 @@ try {
     }
 
     Write-Host ""
-    Write-Host "Commit signing check passed for $Ref."
+    Write-Host "Commit signing check passed for $ResolvedRef."
     exit 0
 }
 finally {

@@ -39,6 +39,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: ensure origin/main is available on PR checkouts
+        run: git fetch --no-tags origin main
+
       - name: verify main tip and recent signed commits
         shell: pwsh
         run: ./scripts/commit-signing-check.ps1 -Ref main -Count 30

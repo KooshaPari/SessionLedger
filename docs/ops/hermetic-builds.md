@@ -70,28 +70,30 @@ pwsh ./scripts/hermetic-isolation-check.ps1 -SelfCheck
 
 `-SelfCheck` asserts this section stays present, done rows stay marked **done**,
 unpaid L3 rows stay documented, `hermetic-builder.json` digests match
-`hermetic.yml`, and `release.yml` keeps soft-fail `oci-image` plus the
-verify-on-deploy pointer. It does **not** claim SLSA Build Level 3. Optional
-soft CI runs the same SelfCheck from `hermetic.yml` (`continue-on-error: true`).
+`hermetic.yml`, and `release.yml` keeps canonical-repo blocking `oci-image`
+plus the verify-on-deploy pointer. It does **not** claim SLSA Build Level 3.
+Optional soft CI runs the same SelfCheck from `hermetic.yml`
+(`continue-on-error: true`).
 
 | Gate | Status | Evidence / next step |
 |------|--------|----------------------|
 | Offline `sl-daemon` fetch+build | **done** | `scripts/hermetic-check.ps1` + `hermetic.yml` |
 | Digest-pinned builder image | **done** | `hermetic-builder.json` + container job |
 | `SOURCE_DATE_EPOCH` release wiring | **done** | `repro-check.ps1 -PolicyOnly` |
-| Best-effort GHCR build + keyless cosign + attest | **done** | `release.yml` `oci-image` (`continue-on-error: true`) |
+| GHCR build + keyless cosign + attest + release verify | **done** | `release.yml` `oci-image` (blocking on canonical repo; explicit skip on forks) |
 | Verify-on-deploy (cosign / attestation) | **done (deploy-time)** | `scripts/oci-cosign-verify.ps1` + [distribution.md](distribution.md#verify-an-oci-image-cosign) |
 | Protected GitHub Environment for releases | unpaid | Create `release` (or similar) Environment with required reviewers; bind `oci-image` / publish jobs with `environment:` |
-| Make `oci-image` release-blocking | unpaid / deferred | Only after Environment + reliable `packages:write` / OIDC; today soft-fail preserves unsigned portable Releases |
 | Immutable / ephemeral runners for release | unpaid | Pin self-hosted or hardened runners; avoid mutable `ubuntu-latest` as sole L3 claim |
 | Vendored deps + two-builder rebuild | unpaid | Vendor or remote-cache proof; rebuild on a second independent builder |
 | System package / linker snapshot | unpaid | Lock OS packages inside the builder image beyond the Rust toolchain pin |
 | Isolation checklist SelfCheck | **done** | `scripts/hermetic-isolation-check.ps1 -SelfCheck` (+ soft CI job) |
 
-**Policy:** Prefer deploy-time verify (`oci-cosign-verify.ps1`) over flipping
-`oci-image` to hard-fail while GHCR permissions or Sigstore/OIDC can soft-fail.
+**Policy:** On the canonical repository, `oci-image` is release-blocking when
+`packages:write` and OIDC are available. Forks skip OCI with an explicit reason
+so unsigned portable Releases remain valid. Deploy-time verify
+(`oci-cosign-verify.ps1`) remains the operator gate when pulling by digest.
 Portable archives + `SHA256SUMS` remain the supported path when OCI provenance
-is missing.
+is missing or skipped.
 
 ## Builder pin
 

@@ -31,7 +31,7 @@ Published release artifacts:
 | `SHA256SUMS` | Release checksum step |
 | `session-ledger.cdx.json` | CycloneDX SBOM step |
 | `SHA256SUMS.sigstore.json` | Best-effort keyless checksum signature |
-| `ghcr.io/kooshapari/sl-daemon:<tag>` | Best-effort OCI build + keyless cosign + attestation |
+| `ghcr.io/kooshapari/sl-daemon:<tag>` | OCI build + keyless cosign + attestation + release verify (canonical repo) |
 
 ## Acceptance Jobs
 
@@ -44,7 +44,7 @@ Published release artifacts:
 | `smoke-windows` | `windows-latest` | Downloads the Windows artifact, extracts it, and runs `sl-viewer.exe --version` |
 | `release` | `ubuntu-latest` | Publishes only after build plus Linux and Windows smoke jobs pass |
 | `sign-checksums` | `ubuntu-latest` | Attempts keyless checksum signing after publication |
-| `oci-image` | `ubuntu-latest` | Best-effort GHCR build/push + cosign sign + OCI attestation (soft-fail); deploy gate: `scripts/oci-cosign-verify.ps1` |
+| `oci-image` | `ubuntu-latest` | GHCR build/push + cosign sign + OCI attestation + in-workflow verify (blocking on canonical repo; explicit skip on forks); deploy gate: `scripts/oci-cosign-verify.ps1` |
 
 macOS acceptance is a release-build acceptance signal today. Linux and Windows
 also have release-artifact execution smokes before publication.

@@ -15,6 +15,8 @@ pub enum SkeletonLayout {
     Bundles,
     /// Single-column list rows (search / history panes).
     ListDetail,
+    /// Terminal-style log lines (live feed / replay stream panes).
+    StreamFeed,
 }
 
 /// Content-shaped loading placeholder that preserves final layout (no CLS).
@@ -66,6 +68,37 @@ pub fn ContentSkeleton(
                 div { class: "sl-skeleton-list", {list_blocks} }
             }
         },
+        SkeletonLayout::StreamFeed => {
+            let stream_lines = (0..rows).map(|index| {
+                let width_pct = match index % 4 {
+                    0 => 92,
+                    1 => 78,
+                    2 => 86,
+                    _ => 64,
+                };
+                rsx! {
+                    div {
+                        key: "{index}",
+                        class: "sl-skeleton-stream-line-wrap",
+                        div {
+                            class: "sl-skeleton-block sl-skeleton-stream-line",
+                            style: "width: {width_pct}%;",
+                        }
+                    }
+                }
+            });
+            rsx! {
+                div {
+                    class: "sl-content-skeleton sl-content-skeleton-stream",
+                    role: "status",
+                    "aria-live": "polite",
+                    "aria-busy": "true",
+                    "aria-label": "Loading stream",
+                    "data-testid": "content-skeleton",
+                    div { class: "sl-skeleton-stream-lines", {stream_lines} }
+                }
+            }
+        }
     }
 }
 

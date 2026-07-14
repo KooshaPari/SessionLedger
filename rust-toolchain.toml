@@ -1,5 +1,6 @@
 [toolchain]
-# Pin to stable; MSRV (1.85) enforced via workspace Cargo.toml `rust-version`.
-# `stable` avoids forcing an old compiler that could reject newer-edition code.
-channel = "stable"
+# Exact rustc pin (C06 L60). Do not use floating `stable` / `beta` / `nightly`
+# here — bump channel + docs/ops/rustc-toolchain-pin.json together.
+# MSRV remains workspace Cargo.toml `rust-version = "1.85"`.
+channel = "1.96.0"
 components = ["rustfmt", "clippy"]

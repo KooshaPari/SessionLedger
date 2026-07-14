@@ -50,7 +50,7 @@ Fast inner loop: `cargo test --manifest-path crates/sl-daemon/Cargo.toml` /
 
 ## Gotchas
 
-- MSRV is pinned in `rust-toolchain.toml`; workspace `rust-version = "1.85"`.
+- Exact rustc is pinned in `rust-toolchain.toml` (see `docs/ops/rustc-toolchain-pin.md`); workspace MSRV is `rust-version = "1.85"`.
 - clippy warnings — fix, don't `#[allow]` without a tracking-issue comment.
 - sl-viewer is Dioxus 0.6 — `dx` toolchain required for desktop bundling (see electrobun/dioxus codesign notes when packaging macOS).
 - CI uses `--locked` — keep `Cargo.lock` committed and current.

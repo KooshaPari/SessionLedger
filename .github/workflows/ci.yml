@@ -97,23 +97,37 @@ jobs:
         run: ./scripts/repro-check.ps1
 
   installer-lifecycle-smoke:
-    name: installer lifecycle scaffold smoke
+    name: clean-host smoke · scaffold
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - name: validate installer scaffolds
+      - name: validate installer scaffolds and clean-host docs
         shell: pwsh
-        run: ./scripts/installer-lifecycle-smoke.ps1
+        run: ./scripts/installer-lifecycle-smoke.ps1 -EvidencePath packaging/dist/clean-host-evidence-scaffold.json
+      - name: upload clean-host scaffold evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: clean-host-evidence-scaffold
+          path: packaging/dist/clean-host-evidence-scaffold.json
+          if-no-files-found: error
 
-  installer-lifecycle-smoke-windows:
-    name: installer lifecycle · Windows unsigned install smoke
+  clean-host-smoke-windows:
+    name: clean-host smoke · Windows unsigned portable install
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
-      - name: package, install, version check, uninstall
+      - name: unsigned portable install, version check, uninstall
         shell: pwsh
-        run: ./scripts/installer-lifecycle-smoke.ps1 -WindowsInstallLifecycle
+        run: ./scripts/installer-lifecycle-smoke.ps1 -WindowsInstallLifecycle -EvidencePath packaging/dist/clean-host-evidence.json
+      - name: upload clean-host evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: clean-host-evidence-windows
+          path: packaging/dist/clean-host-evidence.json
+          if-no-files-found: error
 
   build-test:
     name: build · test · lint

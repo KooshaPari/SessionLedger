@@ -23,7 +23,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` installs the daemon/CLI from a checkout |
 | Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
 | Installer script | **Draft, not published** | `scripts/install.sh` installs checksum-verified Linux/macOS GitHub Release artifacts |
-| Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked on Release; PR CI on `windows-latest` runs unsigned Install.ps1 → `--version` → Uninstall.ps1 lifecycle smoke via `scripts/installer-lifecycle-smoke.ps1 -WindowsInstallLifecycle`; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local |
+| Native installer scaffolds | **Partial, CI-smoked** | Windows and Linux portable archives are download/extract/execute-smoked on Release; PR CI runs unsigned clean-host portable install smoke on `windows-latest` (`clean-host-smoke-windows`) plus scaffold/doc checks on `ubuntu-latest`; WiX source/docs are published as a non-installable scaffold; AppImage/`.deb` remain local |
 | Scoop / brew / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, formula, crate publication, DMG, or update automation exists yet |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
 | Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
@@ -64,9 +64,9 @@ and extracts that artifact and runs `sl-viewer.exe --version`. A matching Linux
 job validates the `.tar.gz` on `ubuntu-latest`; the Release is not created
 unless both smoke jobs pass. On a Windows host, the local
 `package-windows` target produces an equivalent versioned portable ZIP via
-`scripts/package-windows.ps1`. Day-to-day `ci.yml` remains Linux-only
-(Phenotype billing policy); Windows coverage is release-tag scoped, not PR CI.
-Release CI also attaches a ZIP containing the WiX MSI source and build notes,
+`scripts/package-windows.ps1`. Day-to-day `ci.yml` remains Linux-only for the
+main build/test gate (Phenotype billing policy); unsigned clean-host portable
+smoke runs on `windows-latest` in dedicated CI jobs. Release CI also attaches a ZIP containing the WiX MSI source and build notes,
 but does not build or claim an MSI. The installable-script layer, WiX MSI, and
 Linux package scripts remain **partial** developer scaffolds. MSI publication
 and Authenticode signing remain explicitly deferred.
@@ -168,6 +168,74 @@ Until then, treat `SL_DATA_DIR` (and `--out` / `--data-dir`) as the SSOT.
 
 ---
 
+## Clean-host install/uninstall evidence (unsigned)
+
+**Scope:** repeatable install → launch → uninstall checks on a host with no prior
+SessionLedger install. This lane documents and automates **unsigned** portable
+artifacts only. It does **not** use Authenticode, notarization, or MSI publication.
+
+| Evidence type | Where | What it proves |
+|---------------|-------|----------------|
+| CI scaffold smoke | `ci.yml` job `installer-lifecycle-smoke` | Installer scaffolds, uninstall docs, and clean-host checklist text are present |
+| CI Windows portable smoke | `ci.yml` job `clean-host-smoke-windows` | Unsigned ZIP → `Install.ps1` → `--version` → `Uninstall.ps1` on an ephemeral `windows-latest` runner with isolated paths |
+| CI artifact | `clean-host-evidence.json` (uploaded per Windows smoke run) | Machine-readable step log with run metadata |
+| Manual checklist | Below | Human reruns on a VM or spare machine before release |
+
+Signed MSI / Authenticode clean-host evidence remains deferred under
+[ADR 0003](../adr/0003-platform-code-signing.md) and [#66](https://github.com/KooshaPari/SessionLedger/issues/66).
+
+### Repeatable checklist — Windows unsigned portable ZIP
+
+Run on a Windows host **without** an existing install at
+`%LOCALAPPDATA%\Programs\SessionLedger`, no Start Menu shortcut named
+`SessionLedger.lnk`, and no `HKCU\...\Uninstall\SessionLedger` key.
+
+| Step | Action | Pass criteria |
+|------|--------|---------------|
+| 1. Preflight | Confirm paths above are absent; close any `sl-viewer` process | No prior install artifacts |
+| 2. Obtain package | `make -C packaging package-windows` **or** download the Release `.zip` and extract | `sl-viewer.exe`, `Install.ps1`, `Uninstall.ps1` present |
+| 3. Install | `powershell -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` from the extracted folder | Exit code 0; binary under `%LOCALAPPDATA%\Programs\SessionLedger` |
+| 4. Register | Inspect Start Menu and Installed Apps | `SessionLedger.lnk` exists; uninstall entry present |
+| 5. Launch | `sl-viewer.exe --version` from the install dir | Prints expected `sl-viewer <version>` |
+| 6. Uninstall | `powershell -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` **or** Installed Apps → Uninstall | Exit code 0 |
+| 7. Cleanup verify | Wait a few seconds, then re-check install dir, shortcut, registry key | All removed; **user data dirs are intentionally preserved** (see [Uninstall / cleanliness](#uninstall--cleanliness)) |
+
+Automated equivalent (writes `clean-host-evidence.json` when `-EvidencePath` is set):
+
+```powershell
+./scripts/installer-lifecycle-smoke.ps1 -WindowsInstallLifecycle `
+  -EvidencePath packaging/dist/clean-host-evidence.json
+```
+
+PR CI runs the same path on `windows-latest` and uploads the evidence artifact.
+
+### Repeatable checklist — Linux / macOS portable (manual)
+
+CI does not yet automate these; use an isolated VM or user account.
+
+**Linux Release `.tar.gz`**
+
+1. Preflight: no `~/.local/bin/sl-viewer` from a prior `install.sh` run unless you intend to overwrite it.
+2. Download Release archive + `SHA256SUMS`; verify checksum (see [Release integrity signing](#release-integrity-signing-cosign)).
+3. Extract; run `./sl-viewer --version`.
+4. Cleanup: delete the extracted folder and any data roots you created (`SL_DATA_DIR`, `./okf-out`, etc.).
+
+**macOS Release `.tar.gz` or local `.app`**
+
+1. Preflight: remove any prior `SessionLedger.app` copy from `/Applications` used for testing.
+2. Extract or `make -C packaging package-macos`; run `./sl-viewer --version` or open the `.app` once.
+3. Cleanup: delete the test `.app` / extracted tree; clear quarantine attrs if needed (see [macOS Gatekeeper notes](#macos-gatekeeper-notes-unsigned-builds)).
+
+### What unsigned clean-host evidence does **not** cover
+
+- Authenticode / Apple Developer ID signatures or SmartScreen/Gatekeeper trust
+- WiX MSI build, per-machine install, or MSI uninstall
+- AppImage / `.deb` publication or `dpkg`/package-manager integration
+- Daemon install via systemd unit (documented separately above)
+- Automatic updates or signed update channels
+
+---
+
 ## Install
 
 ### From GitHub Release
@@ -203,7 +271,9 @@ for machine-checkable scaffold and lifecycle-documentation assertions. On
 Windows ZIP install path end-to-end with a stub `sl-viewer.exe` (package →
 Install.ps1 → `--version` → Uninstall.ps1 + cleanup). That smoke validates
 installer wiring only; platform Authenticode signing and MSI publication remain
-human/deferred steps under #66. It does not perform a clean-host MSI install.
+human/deferred steps under #66. See
+[Clean-host install/uninstall evidence (unsigned)](#clean-host-installuninstall-evidence-unsigned)
+for the manual checklist and CI artifact path.
 
 ### Installer script draft (Linux / macOS)
 

@@ -19,6 +19,7 @@ work that belongs here is limited to:
 | Round-trip / unit tests | Compile and parse assertions against fixtures | `tests/`, crate unit tests |
 | Pipeline performance | Criterion measurements for distill compile, OKF export, and injection rendering | `benches/pipeline.rs` |
 | Eval reproducibility | Lockfile SHA, fixture count, MSRV, and bench policy anchors | `docs/ops/eval-manifest.json`; `scripts/eval-repro-check.ps1` |
+| Cross-language fixture parity | Python / TypeScript / Go OKF shapes already in the corpus | [`docs/ops/cross-language-parity.md`](ops/cross-language-parity.md); `scripts/cross-language-parity-check.ps1` |
 | Quality gates | Coverage / lint / mutation as configured | `.qgate.toml`, CI |
 
 These surfaces verify that SessionLedger emits and consumes valid OKF. They
@@ -82,5 +83,6 @@ Until then, treat Harbor-scale agent-eval asks as **out of scope**.
 ## Related
 
 - Soft goal: issue #68 — eval corpus depth (C08)
+- Cross-language OKF fixture parity (C08 L75): [`docs/ops/cross-language-parity.md`](ops/cross-language-parity.md)
 - Conformance process: [`docs/reference/conformance/README.md`](reference/conformance/README.md)
 - Observability soft goals (separate): [`docs/ops/observability.md`](ops/observability.md)

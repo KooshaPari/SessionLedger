@@ -72,10 +72,7 @@ fn allocation_budget_config_exposes_positive_ceilings() {
         bytes >= 1024 * 1024,
         "bytes ceiling should stay >= 1 MiB for debug smoke (got {bytes})"
     );
-    assert!(
-        allocs >= 1_000,
-        "allocations ceiling should stay generous (got {allocs})"
-    );
+    assert!(allocs >= 1_000, "allocations ceiling should stay generous (got {allocs})");
 }
 
 #[test]
@@ -117,12 +114,7 @@ fn allocation_budget_script_self_check_parses_args_and_ceilings() {
     assert!(script.is_file(), "missing {}", script.display());
 
     let output = Command::new("pwsh")
-        .args([
-            "-NoProfile",
-            "-File",
-            script.to_str().expect("utf-8 script path"),
-            "-SelfCheck",
-        ])
+        .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()
         .unwrap_or_else(|error| panic!("failed to spawn pwsh for self-check: {error}"));
 
@@ -136,10 +128,7 @@ fn allocation_budget_script_self_check_parses_args_and_ceilings() {
         stdout.contains("Self-check passed"),
         "expected self-check success line, got:\n{stdout}"
     );
-    assert!(
-        stdout.contains("Bytes ceiling:"),
-        "expected bytes ceiling echo, got:\n{stdout}"
-    );
+    assert!(stdout.contains("Bytes ceiling:"), "expected bytes ceiling echo, got:\n{stdout}");
     assert!(
         stdout.contains("Allocations ceiling:"),
         "expected allocations ceiling echo, got:\n{stdout}"

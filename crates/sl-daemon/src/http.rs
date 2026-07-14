@@ -79,10 +79,16 @@ const SL_ENABLE_PPROF: &str = "SL_ENABLE_PPROF";
 const X_API_KEY: &str = "x-api-key";
 const IDEMPOTENCY_KEY: &str = "idempotency-key";
 
-/// Optional shared-secret authentication for mutating HTTP routes.
+/// Shared-secret authentication for HTTP API routes.
+///
+/// On loopback, a configured key gates mutating routes only (`POST /api/ingest`).
+/// On non-loopback binds, startup requires a key and [`Self::protect_all_api`]
+/// gates every `/api/*` route.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct ApiKeyAuth {
     expected: Option<Arc<str>>,
+    /// When true, all `/api/*` routes require a matching key (non-loopback bind).
+    protect_all_api: bool,
 }
 
 impl ApiKeyAuth {
@@ -90,12 +96,25 @@ impl ApiKeyAuth {
         Self::from_value(std::env::var(SL_API_KEY).ok())
     }
 
-    fn from_value(value: Option<String>) -> Self {
+    pub(crate) fn from_value(value: Option<String>) -> Self {
         let expected = value
             .map(|value| value.trim().to_owned())
             .filter(|value| !value.is_empty())
             .map(Arc::<str>::from);
-        Self { expected }
+        Self { expected, protect_all_api: false }
+    }
+
+    pub(crate) fn is_configured(&self) -> bool {
+        self.expected.is_some()
+    }
+
+    pub(crate) fn with_protect_all_api(mut self, protect: bool) -> Self {
+        self.protect_all_api = protect;
+        self
+    }
+
+    pub(crate) fn protects_all_api(&self) -> bool {
+        self.protect_all_api
     }
 
     fn allows(&self, headers: &HeaderMap) -> bool {
@@ -200,7 +219,7 @@ pub(crate) struct AppState {
     pub http_metrics: Arc<HttpMetrics>,
     /// Body-size and in-flight request limits for ingest.
     pub ingest_admission: IngestAdmission,
-    /// Optional shared-secret authentication for mutating routes.
+    /// Optional shared-secret authentication for HTTP API routes.
     pub api_key_auth: ApiKeyAuth,
     /// Durable local audit sink for structured actor/action events.
     pub audit_sink: Arc<AuditSink>,
@@ -219,7 +238,11 @@ pub(crate) fn router(state: AppState) -> Router {
 fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
     let http_metrics = state.http_metrics.clone();
+    let api_auth_state = state.clone();
 
+    // Ingest admission (body size + semaphore bulkhead) stays in the handler.
+    // Tower RateLimitLayer is intentionally avoided: axum clones layers per
+    // connection, so native tower rate counters do not share process-wide state.
     let router = Router::new()
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
@@ -242,8 +265,30 @@ fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
     router
         .fallback(not_found)
         .with_state(state)
+        .layer(middleware::from_fn_with_state(api_auth_state, enforce_api_key_policy))
         .layer(middleware::from_fn_with_state(http_metrics, observe_request))
         .layer(cors)
+}
+
+/// When non-loopback protection is enabled, require a valid API key on `/api/*`.
+async fn enforce_api_key_policy(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if state.api_key_auth.protects_all_api()
+        && request.uri().path().starts_with("/api/")
+        && !state.api_key_auth.allows(request.headers())
+    {
+        let request_id = request_id_from_headers(request.headers());
+        return api_error(
+            axum::http::StatusCode::UNAUTHORIZED,
+            "unauthorized",
+            "missing or invalid API key",
+            &request_id,
+        );
+    }
+    next.run(request).await
 }
 
 fn pprof_enabled_from_env() -> bool {
@@ -1014,6 +1059,12 @@ mod tests {
         state
     }
 
+    fn test_state_with_protect_all_api(out_dir: &Path, api_key: &str) -> AppState {
+        let mut state = test_state_with_api_key(out_dir, api_key);
+        state.api_key_auth = state.api_key_auth.with_protect_all_api(true);
+        state
+    }
+
     fn valid_ingest_body() -> &'static str {
         r#"{
             "bundle_id": "bundle-auth-test",
@@ -1088,9 +1139,8 @@ mod tests {
         use std::collections::BTreeSet;
 
         let src = include_str!("http.rs");
-        let start = src
-            .find("let router = Router::new()")
-            .expect("stable router block marker missing");
+        let start =
+            src.find("let router = Router::new()").expect("stable router block marker missing");
         let end = start
             + src[start..]
                 .find("let router = if pprof_enabled")
@@ -1126,8 +1176,7 @@ mod tests {
         routes
     }
 
-    fn expected_openapi_route_surface(
-    ) -> std::collections::BTreeSet<(String, String)> {
+    fn expected_openapi_route_surface() -> std::collections::BTreeSet<(String, String)> {
         OPENAPI_ROUTE_SURFACE
             .iter()
             .map(|&(method, path)| (method.to_owned(), path.to_owned()))
@@ -1137,9 +1186,8 @@ mod tests {
     #[test]
     fn openapi_route_surface_matches_yaml_contract() {
         let openapi_path = openapi_path_from_manifest();
-        let yaml = std::fs::read_to_string(&openapi_path).unwrap_or_else(|err| {
-            panic!("failed to read {}: {err}", openapi_path.display())
-        });
+        let yaml = std::fs::read_to_string(&openapi_path)
+            .unwrap_or_else(|err| panic!("failed to read {}: {err}", openapi_path.display()));
         let spec_routes = parse_openapi_route_surface(&yaml);
         let expected = expected_openapi_route_surface();
 
@@ -1305,6 +1353,46 @@ mod tests {
     fn api_key_auth_ignores_unset_or_empty_env_values() {
         assert!(ApiKeyAuth::from_value(None).allows(&HeaderMap::new()));
         assert!(ApiKeyAuth::from_value(Some("  ".into())).allows(&HeaderMap::new()));
+        assert!(!ApiKeyAuth::from_value(None).is_configured());
+        assert!(ApiKeyAuth::from_value(Some("secret".into())).is_configured());
+    }
+
+    #[tokio::test]
+    async fn protect_all_api_requires_key_on_read_routes_but_healthz_stays_open() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) =
+            start_test_server(test_state_with_protect_all_api(out_dir.path(), "secret-token"))
+                .await;
+        let client = reqwest::Client::new();
+
+        let health = client.get(format!("http://{addr}/healthz")).send().await.unwrap();
+        assert_eq!(health.status(), axum::http::StatusCode::OK);
+
+        let denied = client.get(format!("http://{addr}/api/bundles")).send().await.unwrap();
+        assert_eq!(denied.status(), axum::http::StatusCode::UNAUTHORIZED);
+        let body: Value = denied.json().await.unwrap();
+        assert_eq!(body["error"]["code"], "unauthorized");
+
+        let allowed = client
+            .get(format!("http://{addr}/api/bundles"))
+            .header(AUTHORIZATION, "Bearer secret-token")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(allowed.status(), axum::http::StatusCode::OK);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn loopback_api_key_keeps_read_routes_open_without_credentials() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) =
+            start_test_server(test_state_with_api_key(out_dir.path(), "secret-token")).await;
+
+        let response =
+            reqwest::Client::new().get(format!("http://{addr}/api/bundles")).send().await.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        server.abort();
     }
 
     #[test]
@@ -1318,7 +1406,8 @@ mod tests {
         assert!(logs_contain("outcome=\"accepted\""));
 
         let contents = std::fs::read_to_string(sink.path()).unwrap();
-        let line: serde_json::Value = serde_json::from_str(contents.lines().next().unwrap()).unwrap();
+        let line: serde_json::Value =
+            serde_json::from_str(contents.lines().next().unwrap()).unwrap();
         assert_eq!(line["actor"], "local");
         assert_eq!(line["action"], "ingest");
         assert_eq!(line["outcome"], "accepted");

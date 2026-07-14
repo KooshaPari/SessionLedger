@@ -75,12 +75,28 @@ boundary.
 
 ## Shell completions
 
-Generate shell completions with the `completions` subcommand and install them
-using your shell's normal completion path:
+`sl-daemon` ships `clap_complete` support via the `completions` subcommand and
+commits generated scripts under [`completions/`](./completions/) for bash, zsh,
+fish, and PowerShell.
+
+Generate on demand:
 
 ```bash
-cargo run -p sl-daemon -- completions bash > sl-daemon.bash
-cargo run -p sl-daemon -- completions zsh > _sl-daemon
-cargo run -p sl-daemon -- completions fish > sl-daemon.fish
-cargo run -p sl-daemon -- completions powershell > sl-daemon.ps1
+cargo run -p sl-daemon -- completions bash > crates/sl-daemon/completions/sl-daemon.bash
+cargo run -p sl-daemon -- completions zsh > crates/sl-daemon/completions/_sl-daemon
+cargo run -p sl-daemon -- completions fish > crates/sl-daemon/completions/sl-daemon.fish
+cargo run -p sl-daemon -- completions powershell > crates/sl-daemon/completions/sl-daemon.ps1
 ```
+
+Install the committed artifacts (from the repo root):
+
+```bash
+sh scripts/install-sl-daemon-completions.sh          # bash+zsh+fish+powershell
+sh scripts/install-sl-daemon-completions.sh zsh      # one shell
+pwsh -NoProfile -File scripts/install-sl-daemon-completions.ps1 -Shell powershell
+```
+
+See also [`CONTRIBUTING.md`](../../CONTRIBUTING.md#shell-completions-sl-daemon).
+Richer `--help` examples are attached via clap `after_help` on the top-level
+CLI and on `serve`, `export`, `search`, `tag`, `archive`, `restore`, `replay`,
+`validate`, and `completions`.

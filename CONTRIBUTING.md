@@ -106,6 +106,30 @@ pwsh -NoProfile -File scripts/env-example-check.ps1
 Do not commit real API keys. Secret rotation and header handling are summarized
 in [`SECURITY.md`](SECURITY.md#api-keys-and-secret-rotation).
 
+## Shell completions (sl-daemon)
+
+`sl-daemon` uses `clap_complete`. Committed scripts live in
+[`crates/sl-daemon/completions/`](crates/sl-daemon/completions/) (bash, zsh,
+fish, PowerShell). After changing the CLI surface, regenerate them:
+
+```bash
+cargo run -p sl-daemon -- completions bash > crates/sl-daemon/completions/sl-daemon.bash
+cargo run -p sl-daemon -- completions zsh > crates/sl-daemon/completions/_sl-daemon
+cargo run -p sl-daemon -- completions fish > crates/sl-daemon/completions/sl-daemon.fish
+cargo run -p sl-daemon -- completions powershell > crates/sl-daemon/completions/sl-daemon.ps1
+```
+
+Install into your shell:
+
+```bash
+sh scripts/install-sl-daemon-completions.sh zsh
+pwsh -NoProfile -File scripts/install-sl-daemon-completions.ps1 -Shell powershell
+```
+
+Top-level and subcommand `--help` output includes richer examples (`serve`,
+`export`, `search`, `tag`, `archive`, `restore`, `replay`, `validate`,
+`completions`). See [`crates/sl-daemon/README.md`](crates/sl-daemon/README.md#shell-completions).
+
 ## Branch Discipline
 - Always create feature branches off main
 - Never commit directly to main

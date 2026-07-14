@@ -28,6 +28,11 @@ pub enum EnvelopeError {
 /// Encrypt `plaintext` with the soft SHA-256 keystream under `SL_ENVELOPE_KEY`.
 ///
 /// Output format (UTF-8 string): `v1:<nonce_hex>:<ciphertext_hex>`.
+///
+/// # Errors
+///
+/// Returns [`EnvelopeError::BadKey`] when `SL_ENVELOPE_KEY` is missing or not
+/// 32 decoded bytes, or [`EnvelopeError::Crypto`] on encoding failures.
 pub fn seal(plaintext: &[u8]) -> Result<String, EnvelopeError> {
     let key = load_key()?;
     let mut nonce = [0_u8; 16];
@@ -44,6 +49,11 @@ pub fn seal(plaintext: &[u8]) -> Result<String, EnvelopeError> {
 }
 
 /// Decrypt a `v1:…` blob produced by [`seal`].
+///
+/// # Errors
+///
+/// Returns [`EnvelopeError::BadKey`] when `SL_ENVELOPE_KEY` is missing or invalid,
+/// or [`EnvelopeError::Crypto`] when the blob is malformed or undecodable.
 pub fn open(blob: &str) -> Result<Vec<u8>, EnvelopeError> {
     let key = load_key()?;
     let parts: Vec<&str> = blob.split(':').collect();

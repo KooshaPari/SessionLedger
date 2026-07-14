@@ -55,6 +55,30 @@ This policy does not meet SLSA Build Level 3. Remaining gaps include:
 Treat this as stronger offline evidence for `sl-daemon` and as a prerequisite
 for future hermetic release work, not as a SLSA L3 attestation.
 
+## Environment isolation checklist (SLSA L3 gaps)
+
+Use this checklist when closing C06 environment-isolation / OCI gaps. Items
+marked **done** are already in-tree; the rest stay unpaid until operators wire
+GitHub Environments and harden runners.
+
+| Gate | Status | Evidence / next step |
+|------|--------|----------------------|
+| Offline `sl-daemon` fetch+build | **done** | `scripts/hermetic-check.ps1` + `hermetic.yml` |
+| Digest-pinned builder image | **done** | `hermetic-builder.json` + container job |
+| `SOURCE_DATE_EPOCH` release wiring | **done** | `repro-check.ps1 -PolicyOnly` |
+| Best-effort GHCR build + keyless cosign + attest | **done** | `release.yml` `oci-image` (`continue-on-error: true`) |
+| Verify-on-deploy (cosign / attestation) | **done (deploy-time)** | `scripts/oci-cosign-verify.ps1` + [distribution.md](distribution.md#verify-an-oci-image-cosign) |
+| Protected GitHub Environment for releases | unpaid | Create `release` (or similar) Environment with required reviewers; bind `oci-image` / publish jobs with `environment:` |
+| Make `oci-image` release-blocking | unpaid / deferred | Only after Environment + reliable `packages:write` / OIDC; today soft-fail preserves unsigned portable Releases |
+| Immutable / ephemeral runners for release | unpaid | Pin self-hosted or hardened runners; avoid mutable `ubuntu-latest` as sole L3 claim |
+| Vendored deps + two-builder rebuild | unpaid | Vendor or remote-cache proof; rebuild on a second independent builder |
+| System package / linker snapshot | unpaid | Lock OS packages inside the builder image beyond the Rust toolchain pin |
+
+**Policy:** Prefer deploy-time verify (`oci-cosign-verify.ps1`) over flipping
+`oci-image` to hard-fail while GHCR permissions or Sigstore/OIDC can soft-fail.
+Portable archives + `SHA256SUMS` remain the supported path when OCI provenance
+is missing.
+
 ## Builder pin
 
 [`hermetic-builder.json`](hermetic-builder.json) records the MSRV, immutable

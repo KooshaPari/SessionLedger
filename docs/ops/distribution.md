@@ -174,7 +174,8 @@ Local build (no registry):
 podman build -t sl-daemon:local -f crates/sl-daemon/Containerfile .
 ```
 
-See [Verify an OCI image](#verify-an-oci-image-cosign) for deploy-time checks.
+See [Verify an OCI image](#verify-an-oci-image-cosign) for deploy-time checks
+(`scripts/oci-cosign-verify.ps1`).
 
 ### Future XDG / AppData (not implemented)
 
@@ -435,8 +436,21 @@ the checksum comparison then binds the downloaded archive to that signed file.
 ### Verify an OCI image (cosign)
 
 When the best-effort `oci-image` job succeeds for a Release tag, pull by digest
-and verify the keyless signature before deploying. Replace `<tag>` and
-`<digest>` (for example `sha256:…` from `crane digest` or the Actions summary):
+and verify the keyless signature **before deploying**. Prefer the helper script
+(Windows / PowerShell 7+, also fine under `pwsh` on Linux/macOS):
+
+```powershell
+pwsh ./scripts/oci-cosign-verify.ps1 -Tag <tag> -Digest sha256:<digest>
+# Optional: require GitHub OCI attestation as well
+pwsh ./scripts/oci-cosign-verify.ps1 -Tag <tag> -Digest sha256:<digest> -RequireAttestation
+```
+
+The script fails closed when cosign cannot verify the digest. That is the
+verify-on-deploy gate. It does **not** change release CI: missing GHCR push or
+signature still leaves portable archives + `SHA256SUMS` valid (soft-fail
+`oci-image` job). Use `-AllowUnsigned` only for dry-runs.
+
+Manual equivalent (replace `<tag>` and `<digest>`):
 
 ```bash
 IMAGE=ghcr.io/kooshapari/sl-daemon
@@ -458,7 +472,9 @@ If cosign or `gh attestation verify` reports no signature/attestation, treat
 OCI provenance as unavailable for that tag and either rebuild locally from
 `crates/sl-daemon/Containerfile` or fall back to the portable `sl-daemon`
 archive path above. Do not treat a missing OCI signature as a successful
-verify-on-deploy check.
+verify-on-deploy check. Do not make `oci-image` release-blocking until a
+protected GitHub Environment and reliable `packages:write` / OIDC path exist;
+see the [environment isolation checklist](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps).
 
 ### Verify GitHub build provenance
 

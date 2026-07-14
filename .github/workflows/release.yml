@@ -12,9 +12,10 @@
 # Release checksums are signed with cosign keyless signing on a best-effort
 # basis. The sl-daemon OCI image (crates/sl-daemon/Containerfile → GHCR) is
 # built, keyless-cosign-signed, and attested on a best-effort basis and never
-# blocks portable Release publication. Release assets receive blocking GitHub
-# build provenance in the canonical KooshaPari/SessionLedger repository; forks
-# skip that OIDC step.
+# blocks portable Release publication. Deploy-time verify-on-deploy lives in
+# scripts/oci-cosign-verify.ps1 (fails closed when a signature is expected).
+# Release assets receive blocking GitHub build provenance in the canonical
+# KooshaPari/SessionLedger repository; forks skip that OIDC step.
 #
 # Ref: crates/sl-viewer/Cargo.toml  ·  crates/sl-daemon/Cargo.toml
 #      packaging/README.md  ·  docs/ops/distribution.md
@@ -551,8 +552,11 @@ jobs:
     name: OCI image · build + cosign (best effort)
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    # Soft-fail: portable Release archives must remain available even when GHCR
-    # push, keyless cosign, or OCI attestation fails.
+    # Soft-fail by design: portable Release archives must remain available even
+    # when GHCR push, keyless cosign, or OCI attestation fails (packages:write /
+    # OIDC / registry outages). Do not flip this job to blocking without GHCR
+    # package permissions and a protected release environment. Deploy-time trust
+    # is enforced by scripts/oci-cosign-verify.ps1, not by failing this job.
     continue-on-error: true
     permissions:
       contents: read
@@ -645,12 +649,16 @@ jobs:
           if [ "${{ steps.sign.outcome }}" = "success" ]; then
             echo "::notice::Published keyless cosign signature for ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}."
             echo "### OCI cosign: published" >> "$GITHUB_STEP_SUMMARY"
+            echo "Digest: \`${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "Verify-on-deploy: \`pwsh ./scripts/oci-cosign-verify.ps1 -Tag ${{ github.ref_name }} -Digest ${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
             if [ "${{ steps.attest.outcome }}" = "success" ]; then
               echo "### OCI attestation: published" >> "$GITHUB_STEP_SUMMARY"
             else
               echo "### OCI attestation: skipped or unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
+              echo "Cosign signature may still verify; attestation is best-effort. Portable Release archives remain valid." >> "$GITHUB_STEP_SUMMARY"
             fi
           else
-            echo "::notice::OCI build/sign was skipped or failed (non-blocking). meta=${{ steps.meta.outcome }}, buildx=${{ steps.buildx.outcome }}, login=${{ steps.login.outcome }}, build=${{ steps.build.outcome }}, cosign=${{ steps.cosign.outcome }}, sign=${{ steps.sign.outcome }}, attest=${{ steps.attest.outcome }}"
+            echo "::notice::OCI build/sign skipped or failed (non-blocking; portable Release remains valid). meta=${{ steps.meta.outcome }}, buildx=${{ steps.buildx.outcome }}, login=${{ steps.login.outcome }}, build=${{ steps.build.outcome }}, cosign=${{ steps.cosign.outcome }}, sign=${{ steps.sign.outcome }}, attest=${{ steps.attest.outcome }}. Use archives + SHA256SUMS, or re-run after GHCR packages:write / OIDC is healthy. Deploy gate: scripts/oci-cosign-verify.ps1 (fails closed when a signature is expected)."
             echo "### OCI cosign: skipped or unavailable (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
+            echo "Portable Release archives and \`SHA256SUMS\` remain the supported install path. Do not treat a missing OCI signature as verify-on-deploy success; run \`scripts/oci-cosign-verify.ps1\` only when this job published a digest." >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -26,12 +26,6 @@ impl ServeShutdown {
         self.0.cancel();
     }
 
-    /// Whether cancellation has already been requested.
-    #[must_use]
-    pub fn is_cancelled(&self) -> bool {
-        self.0.is_cancelled()
-    }
-
     /// Future that completes when [`Self::cancel`] is called.
     pub fn cancelled(
         &self,
@@ -58,14 +52,14 @@ mod tests {
     #[tokio::test]
     async fn cancel_notifies_waiters() {
         let shutdown = ServeShutdown::new();
-        assert!(!shutdown.is_cancelled());
+        assert!(!shutdown.token().is_cancelled());
         let waiter = shutdown.clone();
         let handle = tokio::spawn(async move {
             waiter.cancelled().await;
         });
 
         shutdown.cancel();
-        assert!(shutdown.is_cancelled());
+        assert!(shutdown.token().is_cancelled());
 
         tokio::time::timeout(Duration::from_secs(1), handle)
             .await

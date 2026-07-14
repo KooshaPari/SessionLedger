@@ -1,4 +1,4 @@
-//! Hermetic SelfCheck for docs/ops/crypto-inventory.md anchors (C02 L22).
+//! Hermetic `SelfCheck` for docs/ops/crypto-inventory.md anchors (C02 L22).
 //!
 //! Local: `pwsh ./scripts/crypto-inventory-check.ps1 -SelfCheck`
 

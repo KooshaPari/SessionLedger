@@ -23,7 +23,8 @@ cargo fmt --all --check                   # format check
 
 sl-viewer (Dioxus 0.6 desktop) needs the Dioxus CLI: `cargo install dioxus-cli`, then `dx serve` / `dx bundle` from `crates/sl-viewer`.
 
-Fast inner loop: `cargo test -p sl-daemon` / `cargo check -p sl-viewer`.
+Fast inner loop: `cargo test --manifest-path crates/sl-daemon/Cargo.toml` /
+`cargo check -p sl-viewer`. Measured budgets: [`docs/ops/feedback-budgets.md`](docs/ops/feedback-budgets.md).
 
 ## Key files
 
@@ -36,6 +37,7 @@ Fast inner loop: `cargo test -p sl-daemon` / `cargo check -p sl-viewer`.
 | `PLAN.md` / `WORK_DAG.md` | claimable tasks + dependency graph |
 | `llms.txt` | LLM-friendly repo map + build/test commands |
 | `docs/ops/runbook.md` | `make dev`, healthz :8080, common failures |
+| `docs/ops/feedback-budgets.md` | measured check/test/`make lint` loop budgets + nextest |
 | `README.md` | overview + Releases link | `.github/workflows/release.yml` | per-OS viewer build |
 
 ## Forbidden

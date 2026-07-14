@@ -12,19 +12,10 @@ fn repo_root() -> PathBuf {
 #[test]
 fn rustc_toolchain_pin_self_check_validates_exact_channel() {
     let script = repo_root().join("scripts/rustc-toolchain-check.ps1");
-    assert!(
-        script.is_file(),
-        "expected rustc toolchain check script at {}",
-        script.display()
-    );
+    assert!(script.is_file(), "expected rustc toolchain check script at {}", script.display());
 
     let output = Command::new("pwsh")
-        .args([
-            "-NoProfile",
-            "-File",
-            script.to_str().expect("utf-8 script path"),
-            "-SelfCheck",
-        ])
+        .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()
         .unwrap_or_else(|error| panic!("failed to spawn pwsh for SelfCheck: {error}"));
 

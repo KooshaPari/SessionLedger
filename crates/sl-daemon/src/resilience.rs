@@ -187,6 +187,7 @@ impl ApiCircuitBreaker {
         }
     }
 
+    #[cfg(test)]
     pub fn state(&self) -> BreakerState {
         let Some(inner) = &self.inner else {
             return BreakerState::Closed;

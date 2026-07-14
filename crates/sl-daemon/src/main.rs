@@ -23,6 +23,12 @@
 //! * `1` — daemon not running, validation failed, or no search matches
 //! * `2` — general / unexpected error
 
+// Soft optional jemalloc (C00 L8). Feature-gated + Unix-only so default and
+// Windows builds keep the system allocator. See docs/ops/jemalloc.md.
+#[cfg(all(feature = "jemalloc", unix))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 mod archive;
 mod audit;
 mod banner;

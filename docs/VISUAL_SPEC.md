@@ -9,6 +9,7 @@ Implementation of viewer CSS/components is owned by other lanes (`crates/sl-view
 |-------|------|
 | [`assets/tokens.css`](../assets/tokens.css) | Canonical Lab-Coat hex tokens + `.family-lab-coat` aliases |
 | [`assets/README-tokens.md`](../assets/README-tokens.md) | Adoption / re-sync notes |
+| [`docs/a11y/design-tokens.md`](a11y/design-tokens.md) | Viewer token SSOT wiring (Rust + CSS) |
 | [`assets/brand/README.md`](../assets/brand/README.md) | Mark rationale + family differentiation |
 | [`docs/assets/identity/README.md`](assets/identity/README.md) | Identity demo motion (SVG/MP4) |
 | [`tests/visual/README.md`](../tests/visual/README.md) | Manual golden checklist |

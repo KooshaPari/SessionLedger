@@ -12,7 +12,7 @@ and CI) and which unpaid hardening gates remain open. This document does **not**
 |----------|----------------|--------------|---------------------|
 | File-watch ingest | `*.jsonl` on disk | ETL → `*.okf.json` | Owner-only watch dir; parser fail-closed |
 | HTTP API | Local HTTP clients | Axum handlers → data dirs | Loopback bind default; `SL_API_KEY` for non-loopback |
-| OCI runtime | Host-mounted session dirs | `sl` user inside container | Non-root `USER`, explicit `VOLUME` mounts |
+| OCI runtime | Host-mounted session dirs | `sl` user inside container | Non-root `USER`, explicit `VOLUME` mounts, soft seccomp / no-new-privileges |
 | CI runners | PR/push code | Ephemeral `ubuntu-latest` jobs | `permissions: contents: read`; no `privileged: true` |
 
 Full STRIDE-lite context: [`docs/THREAT_MODEL.md`](../THREAT_MODEL.md) §1 and
@@ -27,18 +27,51 @@ Full STRIDE-lite context: [`docs/THREAT_MODEL.md`](../THREAT_MODEL.md) §1 and
 | Non-root runtime user | **done** | `useradd … sl` + `USER sl` (uid `10001`) |
 | Data-dir volume contract | **done** | `VOLUME ["/data/sessions", "/data/out"]`; host mounts sessions read-only, out read-write |
 | Loopback health probe | **done** | `HEALTHCHECK` curls `http://127.0.0.1:8080/healthz` (daemon default bind stays loopback) |
-| Seccomp / AppArmor profile | **unpaid** | No custom seccomp JSON in-repo; rely on runtime defaults |
+| Soft seccomp profile | **done** | [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) — allow-by-default + deny high-risk syscalls (operator opt-in) |
+| `no-new-privileges` / `cap-drop ALL` | **done** | Documented below + [`compose.sl-daemon.soft-hardening.yml`](../../packaging/oci/compose.sl-daemon.soft-hardening.yml) |
 | Rootless-only enforcement | **unpaid** | Operator must choose rootless `container` / podman; not CI-gated |
 
-Example run (host session dir in, OKF out):
+Example run (host session dir in, OKF out) with soft hardening:
 
 ```bash
 container build -t sl-daemon:latest -f crates/sl-daemon/Containerfile .
-container run --rm \
+# Docker / OrbStack fallback:
+docker run --rm \
+  --user 10001:10001 \
+  --security-opt no-new-privileges:true \
+  --security-opt seccomp=packaging/oci/sl-daemon-seccomp.json \
+  --cap-drop ALL \
   -v "$HOME/.forge/sessions:/data/sessions:ro" \
   -v "$PWD/okf-out:/data/out" \
   sl-daemon:latest serve --watch /data/sessions --out /data/out
 ```
+
+Compose sample (same soft policy):
+
+```bash
+docker compose -f packaging/oci/compose.sl-daemon.soft-hardening.yml up
+```
+
+### Soft seccomp / no-new-privileges / cap-drop
+
+| Knob | Soft policy | Notes |
+|------|-------------|-------|
+| Seccomp | Load [`sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) via `--security-opt seccomp=…` | Deny-list for `mount`/`reboot`/`bpf`/`unshare`/…; runtime default is also acceptable |
+| `no-new-privileges` | `--security-opt no-new-privileges:true` (compose `security_opt`) | Blocks privilege escalation via `setuid` binaries |
+| Capabilities | `--cap-drop ALL` (compose `cap_drop: [ALL]`) | Daemon needs no Linux capabilities for loopback ETL |
+| Network | Prefer loopback bind; optional `network_mode: none` for offline ETL smoke | `none` breaks HEALTHCHECK / HTTP clients — use only for file-watch-only runs |
+
+This is **soft** guidance: checked-in profile + docs + SelfCheck anchors. CI does not build the image or enforce seccomp on hosted runners.
+
+### Soft no-net policy (CI / offline)
+
+| Mode | When to use | Status |
+|------|-------------|--------|
+| Soft no-net SelfCheck | Docs/script/profile anchors only — no registry, no `cargo` | **done** (`sandbox-boundary-check.ps1 -SelfCheck`) |
+| Offline ETL container | `network_mode: none` + volume mounts for sessions/out | **documented** (compose sample, commented) |
+| Hard no-network security jobs | Block crates.io / advisory DB refresh on runners | **unpaid** — would break `cargo install` / Dependabot-style fetches |
+
+Operators who need a no-net smoke can run the compose sample with `network_mode: "none"` uncommented after dropping HEALTHCHECK reliance.
 
 ### Native / systemd (preferred deploy path)
 
@@ -57,8 +90,9 @@ The daemon rejects non-loopback `--http-bind` without a non-empty `SL_API_KEY`
 |---------|--------|----------|
 | Least-privilege workflow permissions | **done** | [`.github/workflows/security.yml`](../../.github/workflows/security.yml) `permissions: contents: read` |
 | No privileged containers on runners | **done** | No `privileged: true` in `.github/workflows/*` |
-| Dedicated no-network job sandbox | **unpaid** | Hosted runners still reach the network for `cargo install` / registry fetches |
-| Seccomp for CI steps | **unpaid** | Not configured; standard GitHub-hosted isolation only |
+| Soft sandbox SelfCheck (no network beyond checkout) | **done** | `sandbox-boundary` job runs hermetic SelfCheck with `continue-on-error: true` |
+| Hard no-network job sandbox | **unpaid** | Hosted runners still reach the network for `cargo install` / registry fetches |
+| Hard seccomp for CI steps | **unpaid** | Not configured; standard GitHub-hosted isolation only |
 
 ## Sandbox boundary checklist
 
@@ -69,15 +103,17 @@ The daemon rejects non-loopback `--http-bind` without a non-empty `SL_API_KEY`
 | Containerfile non-root `USER` | **done** | [`crates/sl-daemon/Containerfile`](../../crates/sl-daemon/Containerfile) |
 | Containerfile data `VOLUME` contract | **done** | same Containerfile |
 | Systemd loopback bind sample | **done** | [`packaging/systemd/sessionledger-daemon.service`](../../packaging/systemd/sessionledger-daemon.service) |
+| Soft seccomp profile JSON | **done** | [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) |
+| Soft `no-new-privileges` + `cap-drop ALL` guidance | **done** | this page + compose sample |
+| Soft no-net policy documented | **done** | Soft SelfCheck + optional `network_mode: none` for offline ETL |
 | Sandbox boundary SelfCheck | **done** | `scripts/sandbox-boundary-check.ps1 -SelfCheck` |
-| Custom seccomp profile for `sl-daemon` image | **unpaid** | Operator/runtime default only |
 | Rootless-only OCI policy in CI | **unpaid** | Requires runner capability matrix |
-| No-network CI sandbox for security jobs | **unpaid** | Would block `cargo install` / advisory DB refresh |
+| Hard no-network CI sandbox for security jobs | **unpaid** | Would block `cargo install` / advisory DB refresh |
 
 ## SelfCheck (machine proof)
 
-Docs + Containerfile + workflow anchors only — no container build, no network,
-no `cargo`:
+Docs + Containerfile + seccomp profile + workflow anchors only — no container
+build, no network, no `cargo`:
 
 ```powershell
 pwsh ./scripts/sandbox-boundary-check.ps1 -SelfCheck
@@ -86,6 +122,8 @@ pwsh ./scripts/sandbox-boundary-check.ps1 -SelfCheck
 The script asserts:
 
 - This checklist documents non-root `USER`, loopback bind, and data-dir `VOLUME`
+- Soft seccomp / `no-new-privileges` / `cap-drop` / soft no-net policy anchors
+- `packaging/oci/sl-daemon-seccomp.json` exists with deny-list `defaultAction`
 - `crates/sl-daemon/Containerfile` retains `USER sl`, `VOLUME`, and loopback
   `HEALTHCHECK`
 - Trust-boundary cross-links to `THREAT_MODEL.md` and `local-trust-boundary.md`
@@ -100,3 +138,5 @@ Soft CI may run the same SelfCheck with `continue-on-error: true` from
 - [`local-trust-boundary.md`](local-trust-boundary.md) — bind modes and API key
 - [`hermetic-builds.md`](hermetic-builds.md) — SLSA L3 environment isolation (C06)
 - [`crates/sl-daemon/README.md`](../../crates/sl-daemon/README.md) — run modes
+- [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) — soft seccomp profile
+- [`packaging/oci/compose.sl-daemon.soft-hardening.yml`](../../packaging/oci/compose.sl-daemon.soft-hardening.yml) — compose sample

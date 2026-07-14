@@ -4,11 +4,13 @@
 
 .DESCRIPTION
   Verifies docs/ops/sandbox-boundary.md documents process isolation evidence
-  (non-root container USER, loopback bind, data-dir VOLUME) and that
-  crates/sl-daemon/Containerfile + trust-boundary docs retain required anchors.
+  (non-root container USER, loopback bind, data-dir VOLUME, soft seccomp /
+  no-new-privileges / cap-drop / soft no-net policy) and that
+  crates/sl-daemon/Containerfile + packaging/oci seccomp profile +
+  trust-boundary docs retain required anchors.
   Hermetic: no container build, no network, no cargo.
 
-  Does not claim maintainer 2FA (L36) or seccomp/rootless enforcement.
+  Does not claim maintainer 2FA (L36) or hard rootless / no-net CI enforcement.
 
 .PARAMETER SelfCheck
   Explicit docs/path smoke (CI unit proof). Same checks as the default path.
@@ -30,6 +32,8 @@ $containerPath = Join-Path $repoRoot "crates/sl-daemon/Containerfile"
 $threatPath = Join-Path $repoRoot "docs/THREAT_MODEL.md"
 $trustPath = Join-Path $repoRoot "docs/ops/local-trust-boundary.md"
 $systemdPath = Join-Path $repoRoot "packaging/systemd/sessionledger-daemon.service"
+$seccompPath = Join-Path $repoRoot "packaging/oci/sl-daemon-seccomp.json"
+$composePath = Join-Path $repoRoot "packaging/oci/compose.sl-daemon.soft-hardening.yml"
 $securityWorkflow = Join-Path $repoRoot ".github/workflows/security.yml"
 $ciWorkflow = Join-Path $repoRoot ".github/workflows/ci.yml"
 $selfPath = Join-Path $repoRoot "scripts/sandbox-boundary-check.ps1"
@@ -67,7 +71,7 @@ function Test-DocContains {
 
 Write-Host "Sandbox boundary checklist check (C04 L40)"
 if ($SelfCheck) {
-    Write-Host "Mode: SelfCheck (docs + Containerfile + workflow anchors; no build / no network)"
+    Write-Host "Mode: SelfCheck (docs + Containerfile + seccomp + workflow anchors; no build / no network)"
 }
 
 Assert-File -Path $docPath -Label "sandbox boundary doc"
@@ -75,6 +79,8 @@ Assert-File -Path $containerPath -Label "sl-daemon Containerfile"
 Assert-File -Path $threatPath -Label "THREAT_MODEL.md"
 Assert-File -Path $trustPath -Label "local trust boundary doc"
 Assert-File -Path $systemdPath -Label "systemd unit sample"
+Assert-File -Path $seccompPath -Label "soft seccomp profile"
+Assert-File -Path $composePath -Label "soft hardening compose sample"
 Assert-File -Path $securityWorkflow -Label "security workflow"
 Assert-File -Path $ciWorkflow -Label "ci workflow"
 Assert-File -Path $selfPath -Label "sandbox boundary check script"
@@ -84,6 +90,8 @@ $container = Get-Content -LiteralPath $containerPath -Raw
 $threat = Get-Content -LiteralPath $threatPath -Raw
 $trust = Get-Content -LiteralPath $trustPath -Raw
 $systemd = Get-Content -LiteralPath $systemdPath -Raw
+$seccomp = Get-Content -LiteralPath $seccompPath -Raw
+$compose = Get-Content -LiteralPath $composePath -Raw
 $securityWf = Get-Content -LiteralPath $securityWorkflow -Raw
 $ciWf = Get-Content -LiteralPath $ciWorkflow -Raw
 
@@ -102,14 +110,67 @@ Test-DocContains -Doc $doc -Needle "Data-dir volume contract | **done**" `
     -Label "data VOLUME gate marked done"
 Test-DocContains -Doc $doc -Needle "Loopback HTTP bind | **done**" `
     -Label "loopback bind gate marked done"
-Test-DocContains -Doc $doc -Needle "Custom seccomp profile for ``sl-daemon`` image | **unpaid**" `
-    -Label "seccomp unpaid gate"
+Test-DocContains -Doc $doc -Needle "Soft seccomp profile JSON | **done**" `
+    -Label "soft seccomp profile gate marked done"
+Test-DocContains -Doc $doc -Needle "Soft ``no-new-privileges`` + ``cap-drop ALL`` guidance | **done**" `
+    -Label "no-new-privileges / cap-drop gate marked done"
+Test-DocContains -Doc $doc -Needle "Soft no-net policy documented | **done**" `
+    -Label "soft no-net policy gate marked done"
+Test-DocContains -Doc $doc -Needle "no-new-privileges:true" `
+    -Label "no-new-privileges security-opt documented"
+Test-DocContains -Doc $doc -Needle "--cap-drop ALL" `
+    -Label "cap-drop ALL documented"
+Test-DocContains -Doc $doc -Needle "packaging/oci/sl-daemon-seccomp.json" `
+    -Label "seccomp profile path documented"
+Test-DocContains -Doc $doc -Needle "Hard no-network CI sandbox for security jobs | **unpaid**" `
+    -Label "hard no-net CI remains unpaid"
 Test-DocContains -Doc $doc -Needle "does **not** claim maintainer 2FA enforcement" `
     -Label "no 2FA claim disclaimer"
 Test-DocContains -Doc $doc -Needle "docs/THREAT_MODEL.md" `
     -Label "THREAT_MODEL cross-link"
 Test-DocContains -Doc $doc -Needle "local-trust-boundary.md" `
     -Label "local-trust-boundary cross-link"
+
+Write-Host "Soft seccomp / compose anchors:"
+if ($seccomp -notmatch '"defaultAction"\s*:\s*"SCMP_ACT_ALLOW"') {
+    throw "seccomp profile missing defaultAction SCMP_ACT_ALLOW."
+}
+[void](Write-Check -Label "seccomp defaultAction SCMP_ACT_ALLOW" -Ok $true)
+
+if ($seccomp -notmatch '"action"\s*:\s*"SCMP_ACT_ERRNO"') {
+    throw "seccomp profile missing deny-list SCMP_ACT_ERRNO entries."
+}
+[void](Write-Check -Label "seccomp deny-list SCMP_ACT_ERRNO" -Ok $true)
+
+foreach ($syscall in @("mount", "reboot", "bpf", "unshare", "setns")) {
+    if ($seccomp -notmatch [regex]::Escape('"' + $syscall + '"')) {
+        throw "seccomp profile missing deny entry for syscall '$syscall'."
+    }
+}
+[void](Write-Check -Label "seccomp denies mount/reboot/bpf/unshare/setns" -Ok $true)
+
+if ($compose -notmatch 'no-new-privileges:true') {
+    throw "compose sample missing no-new-privileges:true."
+}
+[void](Write-Check -Label "compose no-new-privileges" -Ok $true)
+
+if ($compose -notmatch 'seccomp=./packaging/oci/sl-daemon-seccomp.json') {
+    throw "compose sample missing seccomp profile path."
+}
+[void](Write-Check -Label "compose seccomp profile path" -Ok $true)
+
+if ($compose -notmatch '(?m)^\s*cap_drop:\s*$' -and $compose -notmatch 'cap_drop:') {
+    throw "compose sample missing cap_drop."
+}
+if ($compose -notmatch '(?m)^\s*-\s*ALL\s*$') {
+    throw "compose sample missing cap_drop ALL."
+}
+[void](Write-Check -Label "compose cap_drop ALL" -Ok $true)
+
+if ($compose -notmatch 'network_mode:\s*"none"') {
+    throw "compose sample missing soft no-net network_mode none guidance."
+}
+[void](Write-Check -Label "compose soft no-net comment/anchor" -Ok $true)
 
 Write-Host "Containerfile isolation anchors:"
 if ($container -notmatch '(?m)^USER\s+sl\s*$') {
@@ -153,6 +214,16 @@ if ($securityWf -notmatch 'permissions:\s*\r?\n\s*contents:\s*read') {
 }
 [void](Write-Check -Label "security.yml contents: read" -Ok $true)
 
+if ($securityWf -notmatch 'sandbox-boundary') {
+    throw "security.yml missing sandbox-boundary soft job."
+}
+[void](Write-Check -Label "security.yml sandbox-boundary soft job" -Ok $true)
+
+if ($securityWf -notmatch 'continue-on-error:\s*true') {
+    throw "security.yml missing continue-on-error soft gate."
+}
+[void](Write-Check -Label "security.yml continue-on-error soft gate" -Ok $true)
+
 $workflowDir = Join-Path $repoRoot ".github/workflows"
 $privilegedHits = @()
 Get-ChildItem -LiteralPath $workflowDir -Filter "*.yml" | ForEach-Object {
@@ -166,12 +237,19 @@ if ($privilegedHits.Count -gt 0) {
 }
 [void](Write-Check -Label "no privileged: true in workflows" -Ok $true)
 
+# Keep $ciWf referenced so StrictMode does not flag an unused variable.
+if ([string]::IsNullOrWhiteSpace($ciWf)) {
+    throw "ci.yml unexpectedly empty."
+}
+[void](Write-Check -Label "ci.yml present and non-empty" -Ok $true)
+
 $summary = @"
 ## Sandbox boundary SelfCheck
 
 SelfCheck passed: ``docs/ops/sandbox-boundary.md`` checklist anchors,
-Containerfile ``USER``/``VOLUME``/loopback HEALTHCHECK, and trust-boundary
-cross-links. Seccomp/rootless/no-net CI rows remain documented as unpaid.
+Containerfile ``USER``/``VOLUME``/loopback HEALTHCHECK, soft seccomp profile
+(``packaging/oci/sl-daemon-seccomp.json``), ``no-new-privileges`` / ``cap-drop``,
+and soft no-net policy anchors. Hard rootless / hard no-net CI remain unpaid.
 Does not claim maintainer 2FA.
 "@
 
@@ -179,5 +257,5 @@ if ($env:GITHUB_STEP_SUMMARY) {
     $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 }
 
-Write-Host "Sandbox boundary SelfCheck passed (C04 L40 process isolation anchors; seccomp/rootless unpaid)."
+Write-Host "Sandbox boundary SelfCheck passed (C04 L40 process isolation + soft seccomp/no-net anchors; hard rootless/no-net unpaid)."
 exit 0

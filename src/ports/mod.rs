@@ -16,6 +16,9 @@ use crate::domain::session::Session;
 
 /// In-process memory, compression, and tracing adapters.
 pub mod adapters;
+#[cfg(feature = "sqlite")]
+/// Durable SQLite [`MemoryStore`] adapter (schema migrations at open time).
+pub mod sqlite_memory;
 
 /// Error surface for port operations. Adapters map their native errors into this.
 #[derive(Debug, thiserror::Error)]

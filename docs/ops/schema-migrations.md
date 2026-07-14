@@ -20,6 +20,7 @@ registering it in the manifest. Never rewrite or delete a shipped migration.
 
 ```powershell
 cargo test --features sqlite schema::
+cargo test --features sqlite sqlite_memory
 ```
 
 CI runs the manifest unit tests on every pull request through the default
@@ -28,6 +29,6 @@ CI runs the manifest unit tests on every pull request through the default
 
 ## Limits
 
-This scaffold does not ship a production `MemoryStore` adapter. It documents the
-versioned on-disk contract and proves forward-only migration application in
-tests. Cancellation semantics and FSM allow-lists remain separate C00 work.
+This scaffold ships a feature-gated [`SqliteMemoryStore`](../../src/ports/sqlite_memory.rs)
+that applies the manifest at open time. Cancellation semantics and FSM
+allow-lists remain separate C00 work.

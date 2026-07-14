@@ -131,6 +131,59 @@ pub fn LoadingState(
     }
 }
 
+/// First-run activation empty state (VISUAL_SPEC §2 — no corpus ingested yet).
+#[component]
+pub fn FirstRunEmpty() -> Element {
+    let c = ThemeColors::dark();
+    rsx! {
+        div {
+            class: "empty-state empty-state-first-run",
+            role: "status",
+            "data-testid": "first-run-empty",
+            style: "flex-direction:column;gap:var(--sl-space-lg);text-align:center;padding:var(--sl-space-2xl);",
+            p {
+                style: "margin:0;max-width:var(--sl-measure-max);line-height:1.5;",
+                "No sessions ingested yet. Open a corpus directory or start the daemon to begin."
+            }
+            button {
+                class: "sl-first-run-cta",
+                "data-testid": "first-run-cta",
+                style: "padding:8px 18px;font-size:13px;font-weight:600;border-radius:var(--sl-radius-md);cursor:pointer;border:1px solid {c.focus};background:{c.focus};color:#111827;",
+                "Open corpus…"
+            }
+        }
+    }
+}
+
+/// Error-color contract panel for visual goldens (VISUAL_SPEC §4 — warm red, not live orange).
+#[component]
+pub fn ErrorColorFixture() -> Element {
+    rsx! {
+        div {
+            class: "error-color-fixture",
+            "data-testid": "error-color-panel",
+            style: "display:flex;flex-direction:column;gap:var(--sl-space-lg);padding:var(--sl-space-2xl);",
+            div {
+                style: "display:flex;align-items:center;gap:var(--sl-space-md);",
+                span {
+                    class: "feed-status connecting",
+                    "data-testid": "error-color-live-badge",
+                    "● Live"
+                }
+                span {
+                    style: "font-size:12px;color:var(--sl-text-muted);",
+                    "Live indicator uses orange — errors use warm red below."
+                }
+            }
+            ErrorState {
+                message: "Warm error foreground on slate panel (visual fixture).".to_owned(),
+                retryable: true,
+                on_retry: move |_| {},
+            }
+        }
+    }
+}
+
 /// Recoverable error panel for failed async bundle / daemon loads.
 #[component]
 pub fn ErrorState(

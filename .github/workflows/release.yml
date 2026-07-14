@@ -77,11 +77,22 @@ jobs:
         with:
           key: release-${{ matrix.target }}
 
+      - name: derive SOURCE_DATE_EPOCH
+        id: source-date-epoch
+        shell: bash
+        run: |
+          set -euo pipefail
+          epoch="$(git log -1 --pretty=%ct)"
+          echo "epoch=${epoch}" >> "$GITHUB_OUTPUT"
+          echo "SOURCE_DATE_EPOCH=${epoch}"
+
       - name: build sl-viewer (desktop)
         run: cargo build -p sl-viewer --release --target ${{ matrix.target }} --locked
         env:
           # The desktop feature is the default — explicit is clearer for CI.
           CARGO_FEATURES: desktop
+          CARGO_INCREMENTAL: "0"
+          SOURCE_DATE_EPOCH: ${{ steps.source-date-epoch.outputs.epoch }}
 
       - name: package binary
         shell: bash

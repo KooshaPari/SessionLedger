@@ -22,7 +22,9 @@ access during the build phase.
 
 `.github/workflows/hermetic.yml` runs this check on Ubuntu for pushes and pull
 requests. It is a dependency-offline gate, not a claim that release builds are
-fully hermetic across every host and target.
+fully hermetic across every host and target. The same workflow also runs
+`scripts/repro-check.ps1 -PolicyOnly` so release packaging keeps exporting
+`SOURCE_DATE_EPOCH` without a second compile matrix.
 
 A second job rebuilds `sl-daemon` inside the digest-pinned builder image recorded
 in [`hermetic-builder.json`](hermetic-builder.json). The image digest must match

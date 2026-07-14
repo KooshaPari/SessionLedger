@@ -73,7 +73,7 @@ fn process_session_stays_under_dhat_heap_profile() {
     );
 
     assert!(
-        stats.max_bytes <= max_bytes_ceiling as usize,
+        stats.max_bytes <= usize::try_from(max_bytes_ceiling).expect("ceiling fits usize"),
         "max_bytes {} exceeds ceiling {}",
         stats.max_bytes,
         max_bytes_ceiling

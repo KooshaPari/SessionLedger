@@ -518,7 +518,9 @@ async fn run_serve(
     let (tx, mut rx) = mpsc::channel::<PathBuf>(CHANNEL_CAPACITY);
     let out_dir = out.clone();
     let data_dir = audit::data_dir_from_env_or(&out);
-    let audit_sink = Arc::new(audit::AuditSink::new(&data_dir));
+    let audit_sink = Arc::new(
+        audit::AuditSink::open(&data_dir).map_err(|error| format!("audit sink: {error}"))?,
+    );
 
     // Consumer: drain the channel, transforming each path.
     let bcast_for_consumer = bcast_tx.clone();
@@ -879,7 +881,10 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
 
     match archive::archive_bundles(data_dir, before, dry_run) {
         Ok(stats) => {
-            let audit_sink = audit::AuditSink::new(data_dir);
+            let audit_sink = audit::AuditSink::open(data_dir).unwrap_or_else(|error| {
+                eprintln!("error: audit sink: {error}");
+                std::process::exit(2);
+            });
             audit_event(
                 &audit_sink,
                 "archive",
@@ -895,7 +900,10 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
             );
         }
         Err(e) => {
-            let audit_sink = audit::AuditSink::new(data_dir);
+            let audit_sink = audit::AuditSink::open(data_dir).unwrap_or_else(|error| {
+                eprintln!("error: audit sink: {error}");
+                std::process::exit(2);
+            });
             audit_event(&audit_sink, "archive", "failed", &data_dir.display());
             eprintln!("error: {e}");
             std::process::exit(2);
@@ -908,7 +916,10 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
 // ---------------------------------------------------------------------------
 
 fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
-    let audit_sink = audit::AuditSink::new(data_dir);
+    let audit_sink = audit::AuditSink::open(data_dir).unwrap_or_else(|error| {
+        eprintln!("error: audit sink: {error}");
+        std::process::exit(2);
+    });
     let archive_root = data_dir.join("archive");
     let archive_path = match archive::find_archive_path(&archive_root, bundle_id) {
         Ok(p) => p,

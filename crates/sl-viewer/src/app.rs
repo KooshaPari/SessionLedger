@@ -278,6 +278,12 @@ pub fn App() -> Element {
                     closeBtn.click();
                     return;
                   }}
+                  const clearCancel = document.querySelector('[data-testid="search-clear-cancel-btn"]');
+                  if (clearCancel) {{
+                    e.preventDefault();
+                    clearCancel.click();
+                    return;
+                  }}
                 }}
 
                 const el = document.activeElement;

@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 
 use notify::{Event, EventKind, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
 /// Return every `*.jsonl` file directly under `dir`, sorted for determinism.
 ///
@@ -36,14 +37,30 @@ pub fn list_jsonl(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
 ///
 /// Returns the number of paths emitted. Errors from `read_dir` propagate; a
 /// closed receiver ends the sweep early (returns what was sent so far).
-pub async fn scan_once(dir: &Path, tx: &mpsc::Sender<PathBuf>) -> std::io::Result<usize> {
+/// When `cancel` is triggered, the sweep stops without enqueueing further paths.
+pub async fn scan_once(
+    dir: &Path,
+    tx: &mpsc::Sender<PathBuf>,
+    cancel: &CancellationToken,
+) -> std::io::Result<usize> {
+    if cancel.is_cancelled() {
+        return Ok(0);
+    }
     let paths = list_jsonl(dir)?;
     let mut sent = 0;
     for path in paths {
-        if tx.send(path).await.is_err() {
+        if cancel.is_cancelled() {
             break;
         }
-        sent += 1;
+        tokio::select! {
+            _ = cancel.cancelled() => break,
+            result = tx.send(path) => {
+                if result.is_err() {
+                    break;
+                }
+                sent += 1;
+            }
+        }
     }
     Ok(sent)
 }
@@ -74,4 +91,60 @@ pub fn spawn_fs_watcher(
     })?;
     watcher.watch(dir, RecursiveMode::NonRecursive)?;
     Ok(watcher)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use session_ledger::domain::session::Corpus;
+    use session_ledger::{Message, Role, Session};
+    use std::time::Duration;
+
+    fn write_jsonl(dir: &Path, ids: &[&str]) {
+        let mut buf = String::new();
+        for id in ids {
+            let mut session = Session::new(*id, Corpus::Forge);
+            session.messages.push(Message::new(Role::User, "hello"));
+            buf.push_str(&serde_json::to_string(&session).expect("serialize"));
+            buf.push('\n');
+        }
+        std::fs::write(dir.join("sessions.jsonl"), buf).expect("write jsonl");
+    }
+
+    #[tokio::test]
+    async fn scan_once_stops_when_cancelled_before_send() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        write_jsonl(tmp.path(), &["a", "b", "c"]);
+        let (tx, mut rx) = mpsc::channel(1);
+        let cancel = CancellationToken::new();
+        cancel.cancel();
+
+        let sent = scan_once(tmp.path(), &tx, &cancel).await.expect("scan");
+        assert_eq!(sent, 0);
+        drop(tx);
+        assert!(rx.recv().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn scan_once_stops_mid_sweep_when_cancelled() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        write_jsonl(tmp.path(), &["only"]);
+        let (tx, _rx) = mpsc::channel(1);
+        let cancel = CancellationToken::new();
+        let cancel_for_task = cancel.clone();
+        let dir = tmp.path().to_path_buf();
+        let sender = tx.clone();
+
+        let scan_task = tokio::spawn(async move {
+            scan_once(&dir, &sender, &cancel_for_task).await
+        });
+
+        cancel.cancel();
+        let sent = tokio::time::timeout(Duration::from_secs(1), scan_task)
+            .await
+            .expect("scan should finish promptly after cancel")
+            .expect("join")
+            .expect("io");
+        assert!(sent <= 1);
+    }
 }

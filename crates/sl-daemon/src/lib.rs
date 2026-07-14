@@ -40,10 +40,13 @@
 //! }
 //! ```
 
+pub mod shutdown;
 pub mod watcher;
 pub mod worker;
 
+pub use shutdown::ServeShutdown;
 pub use watcher::list_jsonl;
+pub use watcher::scan_once;
 pub use watcher::spawn_fs_watcher;
 pub use worker::run_worker_pool;
 

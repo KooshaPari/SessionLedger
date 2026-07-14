@@ -6,14 +6,17 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
-- `GET /readyz` readiness probe + process-compose probe switch; SLO stubs in observability docs.
+- Versioning policy SSOT + CHANGELOG tagged-section SelfCheck (C11 L119).
 
-- Security pack (audit-v38 C04/C06 P0): `SECURITY.md`, `CODE_OF_CONDUCT.md`, `deny.toml`, `.github/workflows/security.yml` (cargo-deny + gitleaks), `.github/dependabot.yml`, `.pre-commit-config.yaml`.
-- Agent-readiness docs: `docs/functional_requirements.md` (FR catalog), `PLAN.md`, `WORK_DAG.md`, `llms.txt`.
-- Ops stubs: `docs/ops/runbook.md` (`make dev` / healthz :8080) and `docs/ops/observability.md` (metrics + OTel soft goal).
-- `AGENTS.md` — agent entrypoint (build/test/lint/worktree/forbidden-ops); Key files links to FR/PLAN/llms/runbook.
-- `rust-toolchain.toml` — reproducible toolchain (MSRV 1.85 via Cargo).
-- `.github/PULL_REQUEST_TEMPLATE.md` and `user-friction` issue template + `docs/friction-log.md`.
-- proc-compose deploy stack with sl-viewer + Makefile + quickstart (#39).
+## [0.2.0] - 2026-07-04
 
-<!-- Prior history predates this changelog; reconstruct from git tags as versions are cut. -->
+Initial public release tag (`v0.2.0`).
+
+### Added
+
+- Desktop viewer release workflow + launch instructions.
+- Packaging scaffolds for macOS `.app` and Linux portable binaries.
+- Session list / search selection in the viewer.
+- Domain mutation-targeted state machine and boundary tests.
+
+<!-- Earlier history was Unreleased-aggregated; tag sections start at 0.2.0. -->

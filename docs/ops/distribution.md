@@ -535,7 +535,7 @@ SessionLedger release and data-surface versioning follow distinct rules:
 
 | Surface | Policy | Source of truth |
 |---------|--------|-----------------|
-| **Git tags / desktop binaries** | [SemVer](https://semver.org/) on `v*` tags (`v0.1.0` → version `0.1.0`) | Root `Cargo.toml` `version` must match the tag body before tagging; [`CHANGELOG.md`](../../CHANGELOG.md) follows Keep a Changelog |
+| **Git tags / desktop binaries** | [SemVer](https://semver.org/) on `v*` tags (`v0.1.0` → version `0.1.0`) | Root `Cargo.toml` `version` must match the tag body before tagging; [`CHANGELOG.md`](../../CHANGELOG.md) + [`versioning-policy.md`](versioning-policy.md) |
 | **Release asset names** | Tag-derived `VER` in CI (`sl-viewer-v<tag>-<target>`, `SessionLedger-<ver>-x64.msi`, `SessionLedger-<ver>-<arch>.pkg`) | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) `derive version` step |
 | **OKF export documents** | `[major].[minor]` tuple with major-bump rejection rules | [`docs/reference/OKF-SPEC.md`](../reference/OKF-SPEC.md#13-versioning--compatibility) |
 | **SQLite schema** | Forward-only migrations; consumers on older schema revisions upgrade via `sl-daemon` migrate | [`docs/ops/schema-migrations.md`](schema-migrations.md) |
@@ -601,3 +601,4 @@ the production path (deferred).
 - [`observability.md`](observability.md) — `/healthz`, `/readyz`, metrics
 - [`SECURITY.md`](../../SECURITY.md) — supply chain / SBOM
 - Issue [#66](https://github.com/KooshaPari/SessionLedger/issues/66) — signing + installers
+

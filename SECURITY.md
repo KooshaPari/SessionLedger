@@ -38,6 +38,20 @@ We follow coordinated disclosure. If a fix cannot ship within 90 days, we will d
 
 Critical supply-chain or remote-code issues may be accelerated at maintainer discretion.
 
+## Commit signing
+
+- Every commit on `main` must carry a **GPG or SSH** signature in addition to DCO
+  sign-off (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
+- Policy and operator steps: [`docs/ops/commit-signing.md`](docs/ops/commit-signing.md);
+  decision record: [`docs/adr/0004-commit-signing-policy.md`](docs/adr/0004-commit-signing-policy.md).
+- CI runs [`scripts/commit-signing-check.ps1`](scripts/commit-signing-check.ps1) via
+  [`.github/workflows/commit-signing.yml`](.github/workflows/commit-signing.yml) to
+  verify the `main` tip is signed and to emit a branch-protection checklist.
+  GitHub **Require signed commits** on `main` is the enforcement control; the
+  checklist step is intentionally soft when admin API scope is unavailable in OSS.
+- Maintainer **2FA** is recommended org hygiene but is not attestable from this
+  repository (out of scope for commit-signing evidence).
+
 ## Supply Chain & SBOM
 
 - Dependency policy is enforced by [`deny.toml`](deny.toml) via `cargo deny check` (see [`.github/workflows/security.yml`](.github/workflows/security.yml)).

@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "358/402",
-    "pct": 89,
-    "grade": "B",
-    "commit": "114428a",
-    "wave": "Wave-27"
+    "score": "362/402",
+    "pct": 90,
+    "grade": "A",
+    "commit": "495b3a8",
+    "wave": "Wave-28"
   },
   "fr": [
     {
@@ -730,7 +730,7 @@
   "clusters": [
     {
       "id": "C00",
-      "score": "27/30",
+      "score": "28/30",
       "status": "partial",
       "evidence": [
         "docs/api/openapi.yaml",
@@ -772,7 +772,7 @@
     },
     {
       "id": "C02",
-      "score": "25/30",
+      "score": "26/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/audit.rs",
@@ -868,7 +868,7 @@
     },
     {
       "id": "C08",
-      "score": "24/30",
+      "score": "25/30",
       "status": "partial",
       "evidence": [
         "docs/ops/eval-manifest.json",
@@ -883,7 +883,7 @@
     },
     {
       "id": "C09",
-      "score": "39/45",
+      "score": "40/45",
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/help_overlay.rs",

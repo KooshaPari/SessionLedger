@@ -114,3 +114,14 @@ jobs:
       - name: self-check GHSA+OSV+NVD subscription docs + deny/audit/Dependabot anchors
         shell: pwsh
         run: ./scripts/cve-feed-check.ps1 -SelfCheck
+
+  # Soft C02 L24 in-tree PII redaction helper — hermetic SelfCheck only.
+  pii-redaction:
+    name: PII redaction helper smoke (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: self-check pii_redact helper + ops doc anchors
+        shell: pwsh
+        run: ./scripts/pii-redact-check.ps1 -SelfCheck

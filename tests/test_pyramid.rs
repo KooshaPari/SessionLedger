@@ -12,11 +12,7 @@ fn repo_root() -> PathBuf {
 #[test]
 fn test_pyramid_doc_self_check_validates_anchors() {
     let script = repo_root().join("scripts/test-pyramid-check.ps1");
-    assert!(
-        script.is_file(),
-        "expected test pyramid check script at {}",
-        script.display()
-    );
+    assert!(script.is_file(), "expected test pyramid check script at {}", script.display());
 
     let output = Command::new("pwsh")
         .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])

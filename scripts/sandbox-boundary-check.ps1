@@ -10,7 +10,7 @@
   trust-boundary docs retain required anchors.
   Hermetic: no container build, no network, no cargo.
 
-  Does not claim maintainer 2FA (L36) or hard rootless / no-net CI enforcement.
+  Does not claim maintainer 2FA (L36) or hard rootless / no-net runner enforcement (SelfCheck CI is blocking).
 
 .PARAMETER SelfCheck
   Explicit docs/path smoke (CI unit proof). Same checks as the default path.
@@ -214,15 +214,21 @@ if ($securityWf -notmatch 'permissions:\s*\r?\n\s*contents:\s*read') {
 }
 [void](Write-Check -Label "security.yml contents: read" -Ok $true)
 
-if ($securityWf -notmatch 'sandbox-boundary') {
-    throw "security.yml missing sandbox-boundary soft job."
+if ($securityWf -notmatch 'sandbox-boundary:') {
+    throw "security.yml missing sandbox-boundary job."
 }
-[void](Write-Check -Label "security.yml sandbox-boundary soft job" -Ok $true)
+[void](Write-Check -Label "security.yml sandbox-boundary job" -Ok $true)
 
-if ($securityWf -notmatch 'continue-on-error:\s*true') {
-    throw "security.yml missing continue-on-error soft gate."
+# Extract the sandbox-boundary job block and require it to be blocking.
+$sbMatch = [regex]::Match($securityWf, '(?ms)^  sandbox-boundary:.*?(?=^  [a-z0-9-]+:|\z)')
+if (-not $sbMatch.Success) {
+    throw "security.yml could not extract sandbox-boundary job block."
 }
-[void](Write-Check -Label "security.yml continue-on-error soft gate" -Ok $true)
+$sbBlock = $sbMatch.Value
+if ($sbBlock -match 'continue-on-error:\s*true') {
+    throw "sandbox-boundary job must be blocking (remove continue-on-error: true)."
+}
+[void](Write-Check -Label "sandbox-boundary job is blocking" -Ok $true)
 
 $workflowDir = Join-Path $repoRoot ".github/workflows"
 $privilegedHits = @()
@@ -249,7 +255,7 @@ $summary = @"
 SelfCheck passed: ``docs/ops/sandbox-boundary.md`` checklist anchors,
 Containerfile ``USER``/``VOLUME``/loopback HEALTHCHECK, soft seccomp profile
 (``packaging/oci/sl-daemon-seccomp.json``), ``no-new-privileges`` / ``cap-drop``,
-and soft no-net policy anchors. Hard rootless / hard no-net CI remain unpaid.
+soft no-net policy anchors, and blocking sandbox-boundary CI. Hard rootless / hard no-net runner sandbox remain unpaid.
 Does not claim maintainer 2FA.
 "@
 
@@ -257,5 +263,6 @@ if ($env:GITHUB_STEP_SUMMARY) {
     $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 }
 
-Write-Host "Sandbox boundary SelfCheck passed (C04 L40 process isolation + soft seccomp/no-net anchors; hard rootless/no-net unpaid)."
+Write-Host "Sandbox boundary SelfCheck passed (C04 L40 process isolation + soft seccomp/no-net + blocking SelfCheck CI; hard rootless/no-net unpaid)."
 exit 0
+

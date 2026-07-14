@@ -114,8 +114,12 @@ test("command palette Focus search switches to Search and focuses the filter", a
   page,
 }) => {
   await page.goto("/");
+  const palette = page.locator('[data-testid="command-palette-dialog"]');
   await page.keyboard.press("Control+k");
-  await page.getByRole("option", { name: /Focus search/ }).click();
+  await expect(palette).toHaveCount(1);
+  const focusSearch = page.getByRole("option", { name: /Focus search/ });
+  await expect(focusSearch).toBeVisible();
+  await focusSearch.click();
   await expect(page.getByRole("tab", { name: "Search" })).toHaveAttribute(
     "aria-selected",
     "true",

@@ -80,9 +80,10 @@ sl-viewer-<tag>-x86_64-pc-windows-msvc.zip
 
 Each Release also publishes `SHA256SUMS`, `session-ledger.cdx.json`, and a
 best-effort `SHA256SUMS.sigstore.json`. On the same tag, CI best-effort pushes
-`ghcr.io/kooshapari/sl-daemon` and keyless-cosign signs it. Verify archives and
-OCI digests with the checksum / cosign flow in
-[`docs/ops/distribution.md`](../docs/ops/distribution.md).
+`ghcr.io/kooshapari/sl-daemon` and keyless-cosign signs it. Verify archives with
+the checksum / cosign flow in
+[`docs/ops/distribution.md`](../docs/ops/distribution.md); for OCI deploy checks
+run [`scripts/oci-cosign-verify.ps1`](../scripts/oci-cosign-verify.ps1).
 
 GitHub Releases are the current user-facing archive channel for `sl-viewer`.
 The daemon is also available as a best-effort GHCR image, from source

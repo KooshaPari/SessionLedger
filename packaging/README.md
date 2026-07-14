@@ -142,6 +142,7 @@ Pin a release with `SL_VERSION=v0.1.0`; override the destination with
   (build/push + keyless cosign + attestation). See the
   [cosign and attestation path](../docs/ops/distribution.md#release-integrity-signing-cosign)
   — installer assets are covered too, but that path does not replace platform
-  signing
+  signing. Deploy-time OCI gate:
+  [`scripts/oci-cosign-verify.ps1`](../scripts/oci-cosign-verify.ps1)
 - Data root for local compose: `SL_DATA_DIR` (default `./.sl-data`); uninstall
   steps documented in the distribution guide

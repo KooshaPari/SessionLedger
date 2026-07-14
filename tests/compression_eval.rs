@@ -17,6 +17,35 @@ const COMPRESS_TOKEN_FIXTURES: &[&str] = &[
     "docs/reference/conformance/fixtures/archive-gzip-resume-036.okf.json",
 ];
 
+/// Per-fixture token ledger rows: intent token_estimate sum must match gate total.
+const TOKEN_LEDGER_FIXTURES: &[(&str, u32, &[u32])] = &[
+    (
+        "docs/reference/conformance/fixtures/task-family-token-budget-032.okf.json",
+        370,
+        &[210, 160],
+    ),
+    (
+        "docs/reference/conformance/fixtures/task-family-compress-resume-033.okf.json",
+        360,
+        &[240, 120],
+    ),
+    (
+        "docs/reference/conformance/fixtures/compress-token-proxy-034.okf.json",
+        270,
+        &[180, 90],
+    ),
+    (
+        "docs/reference/conformance/fixtures/token-slice-budget-035.okf.json",
+        280,
+        &[160, 120],
+    ),
+    (
+        "docs/reference/conformance/fixtures/archive-gzip-resume-036.okf.json",
+        310,
+        &[200, 110],
+    ),
+];
+
 #[test]
 fn compress_token_fixtures_zstd_roundtrip_stays_below_ratio_gate() {
     let compressor = ZstdCompressor::new(ZSTD_LEVEL);
@@ -59,6 +88,74 @@ fn compress_token_fixtures_zstd_roundtrip_stays_below_ratio_gate() {
             bytes_saved > 0 && rough_tokens_saved > 0,
             "expected positive token-burn proxy on {}: bytes_saved={bytes_saved} \
              rough_tokens_saved={rough_tokens_saved}",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn compress_token_fixtures_per_eval_token_ledger_matches_gate() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+
+    for (rel, expected_total, expected_intents) in TOKEN_LEDGER_FIXTURES {
+        let path = root.join(rel);
+        let source = std::fs::read_to_string(&path)
+            .unwrap_or_else(|err| panic!("read {}: {err}", path.display()));
+        let okf: serde_json::Value = serde_json::from_str(&source)
+            .unwrap_or_else(|err| panic!("parse {}: {err}", path.display()));
+
+        let entities = okf["entities"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{} missing entities array", path.display()));
+
+        let intent_sum: u32 = entities
+            .iter()
+            .filter(|entity| entity["type"] == "intent")
+            .filter_map(|entity| entity["properties"]["token_estimate"].as_u64())
+            .map(|value| value as u32)
+            .sum();
+
+        let gate_total = entities
+            .iter()
+            .filter(|entity| entity["type"] == "gate")
+            .find_map(|entity| entity["properties"]["total_token_estimate"].as_u64())
+            .map(|value| value as u32)
+            .unwrap_or_else(|| {
+                panic!(
+                    "{} missing gate.properties.total_token_estimate",
+                    path.display()
+                )
+            });
+
+        let config_sum: u32 = expected_intents.iter().sum();
+        assert_eq!(
+            config_sum, *expected_total,
+            "pinned ledger config mismatch for {}",
+            path.display()
+        );
+        assert_eq!(
+            intent_sum, *expected_total,
+            "intent token_estimate sum mismatch on {}",
+            path.display()
+        );
+        assert_eq!(
+            gate_total, *expected_total,
+            "gate total_token_estimate mismatch on {}",
+            path.display()
+        );
+
+        let mut observed: Vec<u32> = entities
+            .iter()
+            .filter(|entity| entity["type"] == "intent")
+            .filter_map(|entity| entity["properties"]["token_estimate"].as_u64())
+            .map(|value| value as u32)
+            .collect();
+        observed.sort_unstable();
+        let mut expected = expected_intents.to_vec();
+        expected.sort_unstable();
+        assert_eq!(
+            observed, expected,
+            "intent token_estimate list mismatch on {}",
             path.display()
         );
     }

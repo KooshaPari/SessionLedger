@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "326/402",
+    "score": "327/402",
     "pct": 81,
     "grade": "B",
-    "commit": "1a1eaf9",
-    "wave": "Wave-18"
+    "commit": "6344eff",
+    "wave": "Wave-19"
   },
   "fr": [
     {
@@ -535,6 +535,25 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.24",
+      "status": "done",
+      "evidence": [
+        "src/ports/sqlite_memory.rs",
+        "crates/sl-daemon/src/metrics.rs",
+        "scripts/flake-tracker-check.ps1",
+        "scripts/flake-rerun-stats.ps1",
+        "crates/sl-viewer/src/live_feed.rs",
+        "crates/sl-viewer/src/replay_view.rs"
+      ]
+    },
+    {
+      "id": "WBS-8.25",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
@@ -545,6 +564,7 @@
       "evidence": [
         "docs/api/openapi.yaml",
         "src/schema/mod.rs",
+        "src/ports/sqlite_memory.rs",
         "docs/ops/schema-migrations.md",
         "scripts/openapi-drift-check.ps1"
       ]
@@ -582,7 +602,11 @@
     {
       "id": "C05",
       "score": "26/30",
-      "status": "partial"
+      "status": "partial",
+      "evidence": [
+        "crates/sl-daemon/src/metrics.rs",
+        "docs/ops/observability.md"
+      ]
     },
     {
       "id": "C06",
@@ -598,9 +622,12 @@
     },
     {
       "id": "C07",
-      "score": "25/30",
+      "score": "26/30",
       "status": "partial",
       "evidence": [
+        "scripts/flake-tracker-check.ps1",
+        "scripts/flake-rerun-stats.ps1",
+        "docs/ops/flake-tracker.md",
         "tests/race_smoke.rs",
         ".github/workflows/race-smoke.yml",
         "docs/ops/cross-platform-ci.md",
@@ -629,6 +656,8 @@
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/async_states.rs",
+        "crates/sl-viewer/src/live_feed.rs",
+        "crates/sl-viewer/src/replay_view.rs",
         "assets/tokens.css",
         "tests/visual/golden/l1-content-skeleton.png",
         "tests/visual/harness/visual.spec.js"

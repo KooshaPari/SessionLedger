@@ -19,7 +19,7 @@ chrono = { version = "0.4", features = ["clock"], default-features = false, opti
 rusqlite = { version = "0.40", optional = true }
 zstd = { version = "0.13", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
-web-sys = { version = "0.3", optional = true, features = ["Document", "Element", "HtmlElement", "Location", "UrlSearchParams", "Window"] }
+web-sys = { version = "0.3", optional = true, features = ["Document", "Element", "HtmlElement", "KeyboardEvent", "Location", "UrlSearchParams", "Window"] }
 
 [dev-dependencies]
 rusqlite = "0.40"

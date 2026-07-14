@@ -17,13 +17,13 @@
     ]
   },
   "latency": {
-    "enforced": false,
+    "enforced": true,
     "threshold_percent": 25.0,
     "units": "nanoseconds",
     "metric": "criterion_sample_p95",
     "notes": [
-      "C00 L6 soft latency budgets: checked-in p95 baselines with the same 25% regression threshold as mean budgets.",
-      "Soft CI only (policy.latency.enforced=false): overruns warn and annotate the gate artifact; they do not fail the blocking mean gate.",
+      "C00 L6 enforced latency budgets: checked-in p95 baselines with the same 25% regression threshold as mean budgets.",
+      "Blocking CI (latency.enforced=true): p95 overruns fail the pipeline perf gate alongside mean budget misses.",
       "p95_ns values are provisional (≈ mean_ns × 1.15) until refreshed via ./scripts/bench-gate.ps1 -UpdateBaseline.",
       "HTTP load-smoke p95 SLO (ms) is recorded under http_load_smoke for ops alignment with scripts/load-smoke.ps1."
     ],

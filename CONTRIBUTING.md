@@ -30,8 +30,10 @@ The CI repeat is a short detection signal; it does not replace a root-cause fix.
 Use the [flake tracker](docs/ops/flake-tracker.md) to record confirmed flakes
 and any temporary quarantine.
 
-The `fuzz-smoke` CI job runs the committed OKF corpus for 10 seconds. Longer
-local campaigns use `cargo fuzz run okf_roundtrip`.
+The `fuzz-smoke` CI job runs the committed corpus for 10 seconds per target.
+Soft sustained cadence (nightly / dispatch, 120 s / target) and crash corpus
+triage live in [`docs/ops/fuzz-cadence.md`](docs/ops/fuzz-cadence.md). Longer
+local campaigns use `cargo fuzz run okf_roundtrip` (or `jsonl_ingest`).
 
 ## Native WebView accessibility smoke
 

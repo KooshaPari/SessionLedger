@@ -30,12 +30,15 @@ docs/reference/conformance/
     ├── forge-go-module-026.okf.json        ← forge Go module gRPC health probe
     ├── task-family-multiturn-031.okf.json  ← multi-turn discover/compress/verify family
     ├── task-family-token-budget-032.okf.json ← token-budget / metrics family
-    └── task-family-compress-resume-033.okf.json ← zstd compress → resume family
+    ├── task-family-compress-resume-033.okf.json ← zstd compress → resume family
+    ├── compress-token-proxy-034.okf.json   ← bytes_saved / rough_tokens_saved proxy
+    ├── token-slice-budget-035.okf.json     ← per-slice CharCountTokenEstimator budget
+    └── archive-gzip-resume-036.okf.json    ← gzip archive → resume / rehydrate family
 ```
 
-Seventeen fixtures total — five from worked examples in `OKF-EXAMPLES.md` plus
-twelve hand-vetted edge, corpus-expansion, cross-language, and task-family
-shapes (multi-turn / token-budget / compress-resume). Example fixtures are the
+Twenty fixtures total — five from worked examples in `OKF-EXAMPLES.md` plus
+fifteen hand-vetted edge, corpus-expansion, cross-language, task-family, and
+compression/token-oriented shapes. Example fixtures are the
 **exact JSON shown in the examples doc** (verbatim, byte-for-byte except for
 trailing whitespace). Anchored filenames are pinned in
 [`docs/ops/eval-manifest.json`](../../ops/eval-manifest.json).

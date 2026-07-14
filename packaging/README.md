@@ -129,6 +129,21 @@ curl -fsSL https://raw.githubusercontent.com/KooshaPari/SessionLedger/main/scrip
 Pin a release with `SL_VERSION=v0.1.0`; override the destination with
 `SL_INSTALL_DIR=/desired/bin`. Review the script before piping it to a shell.
 
+## Homebrew / winget templates (not live channels)
+
+In-repo formula + winget YAML live under [`homebrew/`](homebrew/) and
+[`winget/`](winget/). They are templates only — there is no published tap and
+no `winget-pkgs` listing until you follow
+[`docs/ops/brew-winget-publish.md`](../docs/ops/brew-winget-publish.md).
+
+After a `v*` Release, fill digests from that Release's `SHA256SUMS`:
+
+```powershell
+pwsh ./scripts/fill-packaging-checksums.ps1 -Sha256Sums ./SHA256SUMS -Version v0.1.0
+```
+
+Channel status: [`channels.md`](channels.md).
+
 ## Notes
 
 - Binaries are built with `cargo build --release`

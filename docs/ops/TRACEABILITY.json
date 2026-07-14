@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "337/402",
-    "pct": 84,
+    "score": "343/402",
+    "pct": 85,
     "grade": "B",
-    "commit": "b08c3fe",
-    "wave": "Wave-22"
+    "commit": "1a45f2c",
+    "wave": "Wave-23"
   },
   "fr": [
     {
@@ -615,12 +615,31 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.32",
+      "status": "done",
+      "evidence": [
+        "tests/memory_budget.rs",
+        "docs/functional_requirements.md",
+        "docs/ops/feedback-budgets.md",
+        "scripts/repro-check.ps1",
+        "docs/a11y/screen-reader-smoke.md",
+        "tests/visual/golden/s1-launch-splash.png"
+      ]
+    },
+    {
+      "id": "WBS-8.33",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md"
+      ]
     }
   ],
   "clusters": [
     {
       "id": "C00",
-      "score": "25/30",
+      "score": "26/30",
       "status": "partial",
       "evidence": [
         "docs/api/openapi.yaml",
@@ -631,7 +650,10 @@
         "crates/sl-daemon/src/watcher.rs",
         "crates/sl-daemon/src/http.rs",
         "docs/ops/schema-migrations.md",
-        "scripts/openapi-drift-check.ps1"
+        "scripts/openapi-drift-check.ps1",
+        "tests/memory_budget.rs",
+        "scripts/rss-budget-check.ps1",
+        "docs/ops/memory-budget.json"
       ]
     },
     {
@@ -653,8 +675,17 @@
     },
     {
       "id": "C03",
-      "score": "34/36",
-      "status": "partial"
+      "score": "36/36",
+      "status": "done",
+      "evidence": [
+        "docs/functional_requirements.md",
+        "docs/ops/feedback-budgets.md",
+        "scripts/feedback-budget-check.ps1",
+        ".github/workflows/feedback-budgets.yml",
+        ".config/nextest.toml",
+        "docs/ops/GAP_QA_MATRIX.md",
+        "docs/ops/TRACEABILITY.json"
+      ]
     },
     {
       "id": "C04",
@@ -685,14 +716,15 @@
     },
     {
       "id": "C06",
-      "score": "23/30",
+      "score": "24/30",
       "status": "partial",
       "evidence": [
         "scripts/provenance-contract-check.ps1",
         ".github/workflows/provenance-contract.yml",
         "docs/ops/fixtures/slsa-materials-contract.sample.json",
         ".github/workflows/release.yml",
-        "docs/ops/reproducible-builds.md"
+        "docs/ops/reproducible-builds.md",
+        "scripts/repro-check.ps1"
       ],
       "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and container provenance"
     },
@@ -726,12 +758,15 @@
     },
     {
       "id": "C09",
-      "score": "37/45",
+      "score": "38/45",
       "status": "partial",
       "evidence": [
         "crates/sl-viewer/src/help_overlay.rs",
         "docs/HELP.md",
         "docs/a11y/status-regions-and-native-smoke.md",
+        "docs/a11y/screen-reader-smoke.md",
+        "scripts/record-native-webview-smoke.ps1",
+        "docs/ops/fixtures/native-webview-smoke.sample.json",
         "scripts/inclusive-language-check.ps1",
         "tests/visual/harness/a11y.spec.js",
         "tests/fixtures/a11y/help_shortcuts.golden.tsv"
@@ -739,8 +774,8 @@
     },
     {
       "id": "C10",
-      "score": "35/36",
-      "status": "partial",
+      "score": "36/36",
+      "status": "done",
       "evidence": [
         "crates/sl-viewer/src/async_states.rs",
         "crates/sl-viewer/src/live_feed.rs",
@@ -754,6 +789,8 @@
         "tests/visual/golden/r2-replay-error.png",
         "tests/visual/golden/r3-error-color.png",
         "tests/visual/golden/l1-content-skeleton.png",
+        "tests/visual/golden/s1-launch-splash.png",
+        "tests/visual/golden/s1-launch-splash-light.png",
         "tests/visual/harness/visual.spec.js"
       ]
     },

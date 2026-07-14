@@ -555,6 +555,17 @@ Pin a specific desktop build with `SL_VERSION=v0.1.0` in
 [`scripts/install.sh`](../../scripts/install.sh) or download the matching GitHub
 Release assets for that tag.
 
+## Serverless / edge deploy — NOT APPLICABLE
+
+SessionLedger does **not** target Cloudflare Workers, Vercel, Netlify Edge, or
+similar serverless/edge runtimes. Local daemon + desktop viewer scope wins over
+an edge isolate data plane.
+
+Decision record: [`docs/adr/0005-no-serverless-edge.md`](../adr/0005-no-serverless-edge.md).
+Hermetic proof: `pwsh ./scripts/edge-deploy-scope-check.ps1 -SelfCheck`.
+
+Absence of `wrangler.toml` / `vercel.json` is intentional.
+
 ## Platform code-signing & notarization — DEFERRED
 
 See [`docs/adr/0003-platform-code-signing.md`](../adr/0003-platform-code-signing.md)

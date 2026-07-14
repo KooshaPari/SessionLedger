@@ -8,6 +8,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Soft envelope helper (`SL_ENVELOPE_KEY` + SHA-256 keystream) in `src/envelope.rs` (C02 L22; not a KMS).
 
+- ADR 0005: explicit no Workers/Vercel/edge deploy target (C11 L114) + `edge-deploy-scope` SelfCheck.
+
 - Blocking `sandbox-boundary` SelfCheck job in `security.yml` (C04 L40; hard no-net/rootless still unpaid).
 
 - `GET /readyz` readiness probe + process-compose probe switch; SLO stubs in observability docs.
@@ -15,8 +17,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 - Security pack (audit-v38 C04/C06 P0): `SECURITY.md`, `CODE_OF_CONDUCT.md`, `deny.toml`, `.github/workflows/security.yml` (cargo-deny + gitleaks), `.github/dependabot.yml`, `.pre-commit-config.yaml`.
 - Agent-readiness docs: `docs/functional_requirements.md` (FR catalog), `PLAN.md`, `WORK_DAG.md`, `llms.txt`.
 - Ops stubs: `docs/ops/runbook.md` (`make dev` / healthz :8080) and `docs/ops/observability.md` (metrics + OTel soft goal).
-- `AGENTS.md` ΓÇö agent entrypoint (build/test/lint/worktree/forbidden-ops); Key files links to FR/PLAN/llms/runbook.
-- `rust-toolchain.toml` ΓÇö reproducible toolchain (MSRV 1.85 via Cargo).
+- `AGENTS.md` ╬ô├ç├╢ agent entrypoint (build/test/lint/worktree/forbidden-ops); Key files links to FR/PLAN/llms/runbook.
+- `rust-toolchain.toml` ╬ô├ç├╢ reproducible toolchain (MSRV 1.85 via Cargo).
 - `.github/PULL_REQUEST_TEMPLATE.md` and `user-friction` issue template + `docs/friction-log.md`.
 - proc-compose deploy stack with sl-viewer + Makefile + quickstart (#39).
 

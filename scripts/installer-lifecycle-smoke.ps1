@@ -285,16 +285,19 @@ $distributionDoc = Join-RepoPath @("docs", "ops", "distribution.md")
 $packagingReadme = Join-RepoPath @("packaging", "README.md")
 $daemonContainerfile = Join-RepoPath @("crates", "sl-daemon", "Containerfile")
 
-Write-Output "Clean-host smoke: scaffold assertions (unsigned; no Authenticode)."
+Write-Output "Clean-host smoke: documentation assertions (unsigned; no Authenticode)."
 Write-Output "Optional -WindowsInstallLifecycle exercises unsigned portable install/uninstall on a clean Windows host."
-Write-Output "Signed MSI clean-host evidence remains deferred under ADR 0003 and issue #66."
+Write-Output "Unsigned MSI Release smoke lives in release.yml; Authenticode remains deferred under ADR 0003 and issue #66."
 
 $scaffoldOutcome = "pass"
 try {
-    Assert-Path $productWxs "WiX Product.wxs scaffold"
-    Assert-Path $installPs1 "Windows Install.ps1 scaffold"
-    Assert-Path $uninstallPs1 "Windows Uninstall.ps1 scaffold"
-    Assert-Path $appImageScript "Linux AppImage scaffold"
+    Assert-Path $productWxs "WiX Product.wxs"
+    Assert-Path $installPs1 "Windows Install.ps1"
+    Assert-Path $uninstallPs1 "Windows Uninstall.ps1"
+    Assert-Path $appImageScript "Linux AppImage script"
+    Assert-Path (Join-RepoPath @("scripts", "package-msi.ps1")) "package-msi.ps1"
+    Assert-Path (Join-RepoPath @("packaging", "macos", "package-app.sh")) "macOS package-app.sh"
+    Assert-Path (Join-RepoPath @("packaging", "macos", "package-pkg.sh")) "macOS package-pkg.sh"
 
     Assert-Contains $productWxs 'Scope="perUser"' "WiX per-user install scope"
     Assert-Contains $productWxs 'sl-viewer\.exe' "WiX viewer executable payload"
@@ -314,17 +317,17 @@ try {
     Assert-Contains $appImageScript 'sessionledger\.desktop' "AppImage desktop entry"
 
     Assert-Contains $distributionDoc 'Clean-host install/uninstall evidence \(unsigned\)' "distribution guide documents unsigned clean-host checklist"
-    Assert-Contains $distributionDoc 'WiX MSI remains a scaffold' "distribution guide states MSI scaffold status"
+    Assert-Contains $distributionDoc 'Active \(unsigned\)' "distribution guide marks MSI/PKG Active unsigned"
     Assert-Contains $distributionDoc 'Uninstall / cleanliness' "distribution guide documents uninstall lifecycle"
     Assert-Contains $distributionDoc 'User data' "distribution guide documents user-data retention"
     Assert-Contains $packagingReadme 'Clean-host checklist \(unsigned\)' "packaging README documents unsigned clean-host checklist"
-    Assert-Contains $packagingReadme 'No MSI, AppImage, or `\.deb` is a supported release target' "packaging README limits installer claims"
+    Assert-Contains $packagingReadme 'Active \(unsigned\)' "packaging README marks MSI Active unsigned"
 
     Assert-Contains $daemonContainerfile 'HEALTHCHECK' "daemon Containerfile defines OCI HEALTHCHECK"
     Assert-Contains $daemonContainerfile '/healthz' "daemon Containerfile probes /healthz"
 
-    Add-EvidenceStep -Id "scaffold" -Description "Installer scaffold and clean-host documentation assertions" -Status "pass" -Detail "repository static checks"
-    Write-Output "ok: clean-host scaffold smoke passed"
+    Add-EvidenceStep -Id "scaffold" -Description "Installer documentation assertions" -Status "pass" -Detail "repository static checks"
+    Write-Output "ok: clean-host documentation smoke passed"
 }
 catch {
     $scaffoldOutcome = "fail"

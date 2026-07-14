@@ -19,7 +19,7 @@ work that belongs here is limited to:
 | Round-trip / unit tests | Compile and parse assertions against fixtures | `tests/`, crate unit tests |
 | Pipeline performance | Criterion measurements for distill compile, OKF export, and injection rendering | `benches/pipeline.rs` |
 | Eval reproducibility | Lockfile SHA, fixture count, MSRV, and bench policy anchors | `docs/ops/eval-manifest.json`; `scripts/eval-repro-check.ps1` |
-| Cross-language fixture parity | Python / TypeScript / Go OKF shapes already in the corpus | [`docs/ops/cross-language-parity.md`](ops/cross-language-parity.md); `scripts/cross-language-parity-check.ps1` |
+| Cross-language fixture parity | Python / TypeScript / Go OKF shapes + structural invariant harness over those fixtures | [`docs/ops/cross-language-parity.md`](ops/cross-language-parity.md); `scripts/cross-language-parity-check.ps1` |
 | Quality gates | Coverage / lint / mutation as configured | `.qgate.toml`, CI |
 
 These surfaces verify that SessionLedger emits and consumes valid OKF. They

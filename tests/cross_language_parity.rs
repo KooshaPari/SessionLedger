@@ -1,4 +1,5 @@
-//! Hermetic `SelfCheck` for docs/ops/cross-language-parity.md anchors (C08 L75).
+//! Hermetic `SelfCheck` for docs/ops/cross-language-parity.md anchors +
+//! structural invariant harness across Python/TS/Go OKF fixtures (C08 L75).
 //!
 //! Local: `pwsh ./scripts/cross-language-parity-check.ps1 -SelfCheck`
 
@@ -30,7 +31,8 @@ fn cross_language_parity_doc_self_check_validates_anchors() {
         "cross-language-parity-check.ps1 -SelfCheck failed\nstdout:\n{stdout}\nstderr:\n{stderr}"
     );
     assert!(
-        stdout.contains("Cross-language parity SelfCheck passed"),
-        "expected SelfCheck success line, got:\n{stdout}"
+        stdout.contains("Cross-language parity SelfCheck passed")
+            && stdout.contains("structural invariant harness"),
+        "expected SelfCheck success with structural harness, got:\n{stdout}"
     );
 }

@@ -23,7 +23,7 @@ Scheduled evidence:
 | Workflow | Cadence | What it proves |
 |----------|---------|----------------|
 | [`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml) | Weekdays 06:23 UTC + `workflow_dispatch` | Short ops/chaos smoke via [`scripts/ops-chaos-smoke.ps1`](../../scripts/ops-chaos-smoke.ps1): `/healthz` vs `/readyz` separation, metrics shape checks, light load burst, process-kill recovery. Smoke phases target **&lt;2 min** once the daemon binary is built. |
-| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch` | Heavier concurrent load against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics` via [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1). |
+| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch` | Heavier concurrent load against `/healthz`, `/readyz`, `/api/metrics`, and `/metrics` via [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1). Soft `rss-budget` job also runs [`scripts/rss-budget-check.ps1`](../../scripts/rss-budget-check.ps1) against `POST /api/ingest` (see [`memory-budget.md`](memory-budget.md)). |
 | [`.github/workflows/ops-gameday.yml`](../../.github/workflows/ops-gameday.yml) | Quarterly (manual) + `workflow_dispatch` | Game-day evidence pass: same short chaos smoke with `-EvidencePath` → `gameday-evidence.json` artifact. See [Game-day cadence](#game-day-cadence). |
 
 Prometheus SLO alert rules live in

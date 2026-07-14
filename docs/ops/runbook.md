@@ -109,6 +109,21 @@ recovery, mini load), run `scripts/ops-chaos-smoke.ps1` after building
 [`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml);
 see [`observability.md`](observability.md) for the scheduled-evidence table.
 
+## RSS / memory budget smoke (ingest)
+
+For L8 Memory & Allocation evidence, run the RSS ceiling smoke against
+`POST /api/ingest` (contract: [`memory-budget.md`](memory-budget.md)):
+
+```powershell
+pwsh ./scripts/rss-budget-check.ps1 -SelfCheck
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w23-c00-rss"
+pwsh ./scripts/rss-budget-check.ps1
+```
+
+Default ceiling is **512 MiB** working-set / RSS after a small ingest burst.
+The soft scheduled job lives in
+[`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml).
+
 ## Audit retention and review
 
 The durable audit sink is append-only JSONL (default) or SQLite under

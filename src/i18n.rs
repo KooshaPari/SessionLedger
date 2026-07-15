@@ -1,7 +1,7 @@
 //! Minimal i18n scaffold (C01 L16).
 //!
 //! Phase-0 ships JSON catalogs under `locales/` (`en` + soft `es`) plus a
-//! lookup helper with `SL_LOCALE` selection. No Fluent/ICU MessageFormat
+//! lookup helper with `SL_LOCALE` selection. No Fluent/ICU `MessageFormat`
 //! runtime yet — that remains a documented future hook in `docs/ops/i18n.md`.
 
 use serde::Deserialize;

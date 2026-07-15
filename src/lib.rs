@@ -20,6 +20,7 @@
 
 pub mod distill;
 pub mod domain;
+pub mod envelope;
 pub mod export;
 pub mod i18n;
 pub mod ingestion;

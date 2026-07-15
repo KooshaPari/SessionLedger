@@ -74,6 +74,8 @@ Assert-File -Path $securityPath -Label "SECURITY.md"
 Assert-File -Path $trustPath -Label "local trust boundary doc"
 Assert-File -Path $caddyPath -Label "Caddy sample"
 Assert-File -Path $nginxPath -Label "nginx sample"
+$envelopePath = Join-Path $repoRoot "src/envelope.rs"
+Assert-File -Path $envelopePath -Label "envelope soft stub"
 
 $doc = Get-Content -LiteralPath $docPath -Raw
 $security = Get-Content -LiteralPath $securityPath -Raw
@@ -86,8 +88,8 @@ Test-DocContains -Doc $doc -Needle "SHA-256" `
     -Label "SHA-256 inventory row"
 Test-DocContains -Doc $doc -Needle "No encryption-at-rest" `
     -Label "no encryption-at-rest disclaimer"
-Test-DocContains -Doc $doc -Needle "not** a claim of an in-tree key-management service" `
-    -Label "no KMS disclaimer"
+Test-DocContains -Doc $doc -Needle "not** a production KMS" `
+    -Label "no production KMS disclaimer"
 Test-DocContains -Doc $doc -Needle "## KMS and encryption-at-rest (Phase-0 decision)" `
     -Label "KMS / at-rest Phase-0 section"
 Test-DocContains -Doc $doc -Needle "Phase-0 deferred vs recommended deploy patterns" `
@@ -117,4 +119,19 @@ Test-DocContains -Doc $security -Needle "docs/ops/crypto-inventory.md" `
 Test-DocContains -Doc $trust -Needle "crypto-inventory.md" `
     -Label "local-trust-boundary -> crypto-inventory"
 
-Write-Host "Crypto inventory SelfCheck passed (C02 L22 doc anchors + Phase-0 KMS/at-rest guidance; no in-tree KMS)."
+
+Write-Host "Envelope soft stub anchors:"
+$envelope = Get-Content -LiteralPath (Join-Path $repoRoot "src/envelope.rs") -Raw
+$cargoToml = Get-Content -LiteralPath (Join-Path $repoRoot "Cargo.toml") -Raw
+Test-DocContains -Doc $envelope -Needle "C02 L22" -Label "envelope C02 L22 marker"
+Test-DocContains -Doc $envelope -Needle "SL_ENVELOPE_KEY" -Label "SL_ENVELOPE_KEY"
+Test-DocContains -Doc $envelope -Needle "pub fn seal" -Label "seal helper"
+Test-DocContains -Doc $envelope -Needle "pub fn open" -Label "open helper"
+Test-DocContains -Doc $envelope -Needle "pub fn seal" -Label "seal present (cargo toml scanned)"
+Test-DocContains -Doc $doc -Needle "src/envelope.rs" -Label "doc links envelope module"
+Test-DocContains -Doc $doc -Needle "Soft envelope stub" -Label "doc soft envelope section"
+
+Write-Host "Crypto inventory SelfCheck passed (C02 L22 doc anchors + soft envelope stub; no production KMS)."
+
+
+

@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Soft envelope helper (`SL_ENVELOPE_KEY` + SHA-256 keystream) in `src/envelope.rs` (C02 L22; not a KMS).
+
 - Viewer `ErrorState` non-color cues: warning glyph + `aria-invalid` (C09 L81.15).
 
 - Versioning policy SSOT + CHANGELOG tagged-section SelfCheck (C11 L119).

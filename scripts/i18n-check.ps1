@@ -3,9 +3,10 @@
   Machine-check the C01 L16 i18n scaffold anchors.
 
 .DESCRIPTION
-  Verifies locales/en.json (English catalog), src/i18n.rs lookup helper,
-  docs/ops/i18n.md Phase-0 decision + future hooks, and the hermetic
-  SelfCheck wiring. No fluent/gettext/ICU runtime; no network; no cargo.
+  Verifies locales/en.json + locales/es.json (multi-locale soft catalogs),
+  src/i18n.rs lookup helper with SL_LOCALE, docs/ops/i18n.md Phase-0 decision
+  + Fluent/ICU future hooks, and hermetic SelfCheck wiring. No Fluent runtime;
+  no network; no cargo.
 
 .PARAMETER SelfCheck
   Explicit docs/path smoke (CI unit proof). Same checks as the default path.
@@ -22,7 +23,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$catalogPath = Join-Path $repoRoot "locales/en.json"
+$enPath = Join-Path $repoRoot "locales/en.json"
+$esPath = Join-Path $repoRoot "locales/es.json"
 $helperPath = Join-Path $repoRoot "src/i18n.rs"
 $docPath = Join-Path $repoRoot "docs/ops/i18n.md"
 $checkScript = Join-Path $repoRoot "scripts/i18n-check.ps1"
@@ -61,56 +63,77 @@ function Assert-Contains {
 
 Write-Host "i18n scaffold check (C01 L16)"
 if ($SelfCheck) {
-    Write-Host "Mode: SelfCheck (catalog + helper + docs; no cargo / no network / no fluent)"
+    Write-Host "Mode: SelfCheck (en+es catalogs + helper + docs; no cargo / no network / no Fluent runtime)"
 }
 
-Assert-File -Path $catalogPath -Label "English locale catalog"
+Assert-File -Path $enPath -Label "English locale catalog"
+Assert-File -Path $esPath -Label "Spanish soft locale catalog"
 Assert-File -Path $helperPath -Label "i18n Rust helper"
 Assert-File -Path $docPath -Label "i18n ops doc"
 Assert-File -Path $checkScript -Label "i18n check script"
 Assert-File -Path $rustWrapper -Label "i18n rust SelfCheck wrapper"
 
-$catalog = Get-Content -LiteralPath $catalogPath -Raw
+$enCatalog = Get-Content -LiteralPath $enPath -Raw
+$esCatalog = Get-Content -LiteralPath $esPath -Raw
 $helper = Get-Content -LiteralPath $helperPath -Raw
 $doc = Get-Content -LiteralPath $docPath -Raw
 
 Write-Host "Catalog anchors:"
-Assert-Contains -Doc $catalog -Needle '"locale": "en"' `
+Assert-Contains -Doc $enCatalog -Needle '"locale": "en"' `
     -Label "catalog locale en" -Context "locales/en.json"
-Assert-Contains -Doc $catalog -Needle '"messages"' `
-    -Label "messages object" -Context "locales/en.json"
-Assert-Contains -Doc $catalog -Needle '"cli.app_about"' `
-    -Label "cli.app_about key" -Context "locales/en.json"
-Assert-Contains -Doc $catalog -Needle '"viewer.app_title"' `
-    -Label "viewer.app_title key" -Context "locales/en.json"
-Assert-Contains -Doc $catalog -Needle '"viewer.empty_state"' `
-    -Label "viewer.empty_state key" -Context "locales/en.json"
-Assert-Contains -Doc $catalog -Needle "SessionLedger" `
-    -Label "SessionLedger brand string" -Context "locales/en.json"
+Assert-Contains -Doc $esCatalog -Needle '"locale": "es"' `
+    -Label "catalog locale es" -Context "locales/es.json"
+Assert-Contains -Doc $enCatalog -Needle '"messages"' `
+    -Label "en messages object" -Context "locales/en.json"
+Assert-Contains -Doc $esCatalog -Needle '"messages"' `
+    -Label "es messages object" -Context "locales/es.json"
 
-# Parse JSON to ensure the catalog is valid.
+$requiredKeys = @(
+    "cli.app_about",
+    "viewer.app_title",
+    "viewer.empty_state",
+    "viewer.tab_sessions",
+    "viewer.search_placeholder"
+)
+foreach ($key in $requiredKeys) {
+    Assert-Contains -Doc $enCatalog -Needle ('"' + $key + '"') `
+        -Label "en key $key" -Context "locales/en.json"
+    Assert-Contains -Doc $esCatalog -Needle ('"' + $key + '"') `
+        -Label "es key $key" -Context "locales/es.json"
+}
+
 try {
-    $parsed = $catalog | ConvertFrom-Json
-    $msgCount = @($parsed.messages.PSObject.Properties).Count
-    $ok = $msgCount -ge 5
-    [void](Write-Check -Label "catalog parses with >=5 messages ($msgCount)" -Ok $ok)
+    $enParsed = $enCatalog | ConvertFrom-Json
+    $esParsed = $esCatalog | ConvertFrom-Json
+    $enCount = @($enParsed.messages.PSObject.Properties).Count
+    $esCount = @($esParsed.messages.PSObject.Properties).Count
+    $ok = ($enCount -ge 5) -and ($enCount -eq $esCount)
+    [void](Write-Check -Label "en/es parse with matching key counts ($enCount)" -Ok $ok)
     if (-not $ok) {
-        throw "locales/en.json must contain at least 5 message keys (found $msgCount)."
+        throw "locales/en.json and locales/es.json must parse with matching >=5 keys (en=$enCount es=$esCount)."
     }
 } catch {
-    throw "locales/en.json failed JSON parse: $_"
+    throw "locale catalogs failed JSON parse / parity check: $_"
 }
 
 Write-Host "Helper anchors:"
 Assert-Contains -Doc $helper -Label "DEFAULT_LOCALE" -Needle "DEFAULT_LOCALE" `
     -Context "src/i18n.rs"
+Assert-Contains -Doc $helper -Label "SOFT_LOCALE_ES" -Needle "SOFT_LOCALE_ES" `
+    -Context "src/i18n.rs"
 Assert-Contains -Doc $helper -Label "include_str locales/en.json" `
     -Needle 'include_str!("../locales/en.json")' -Context "src/i18n.rs"
-Assert-Contains -Doc $helper -Label "pub fn t" -Needle "pub fn t<" `
+Assert-Contains -Doc $helper -Label "include_str locales/es.json" `
+    -Needle 'include_str!("../locales/es.json")' -Context "src/i18n.rs"
+Assert-Contains -Doc $helper -Label "pub fn t" -Needle "pub fn t(" `
+    -Context "src/i18n.rs"
+Assert-Contains -Doc $helper -Label "pub fn t_locale" -Needle "pub fn t_locale(" `
     -Context "src/i18n.rs"
 Assert-Contains -Doc $helper -Label "pub fn try_catalog" -Needle "pub fn try_catalog(" `
     -Context "src/i18n.rs"
-Assert-Contains -Doc $helper -Label "en_catalog" -Needle "pub fn en_catalog(" `
+Assert-Contains -Doc $helper -Label "active_locale" -Needle "pub fn active_locale(" `
+    -Context "src/i18n.rs"
+Assert-Contains -Doc $helper -Label "SL_LOCALE" -Needle "SL_LOCALE" `
     -Context "src/i18n.rs"
 Assert-Contains -Doc $helper -Label "C01 L16 marker" -Needle "C01 L16" `
     -Context "src/i18n.rs"
@@ -118,18 +141,18 @@ Assert-Contains -Doc $helper -Label "C01 L16 marker" -Needle "C01 L16" `
 Write-Host "Doc anchors:"
 Assert-Contains -Doc $doc -Needle "## Phase-0 decision" `
     -Label "Phase-0 decision heading" -Context "docs/ops/i18n.md"
-Assert-Contains -Doc $doc -Needle "English-only" `
-    -Label "English-only posture" -Context "docs/ops/i18n.md"
-Assert-Contains -Doc $doc -Needle "locales/en.json" `
-    -Label "catalog path reference" -Context "docs/ops/i18n.md"
+Assert-Contains -Doc $doc -Needle "locales/es.json" `
+    -Label "Spanish catalog path" -Context "docs/ops/i18n.md"
+Assert-Contains -Doc $doc -Needle "SL_LOCALE" `
+    -Label "SL_LOCALE selection" -Context "docs/ops/i18n.md"
 Assert-Contains -Doc $doc -Needle "src/i18n.rs" `
     -Label "helper path reference" -Context "docs/ops/i18n.md"
-Assert-Contains -Doc $doc -Needle "## Future hooks" `
-    -Label "future hooks heading" -Context "docs/ops/i18n.md"
+Assert-Contains -Doc $doc -Needle "## Future hooks (Fluent / ICU)" `
+    -Label "Fluent/ICU future hooks heading" -Context "docs/ops/i18n.md"
 Assert-Contains -Doc $doc -Needle "Fluent" `
     -Label "Fluent future mention" -Context "docs/ops/i18n.md"
 Assert-Contains -Doc $doc -Needle "try_catalog" `
-    -Label "try_catalog future hook" -Context "docs/ops/i18n.md"
+    -Label "try_catalog hook" -Context "docs/ops/i18n.md"
 Assert-Contains -Doc $doc -Needle "scripts/i18n-check.ps1" `
     -Label "SelfCheck script reference" -Context "docs/ops/i18n.md"
 Assert-Contains -Doc $doc -Needle "-SelfCheck" `
@@ -137,4 +160,4 @@ Assert-Contains -Doc $doc -Needle "-SelfCheck" `
 Assert-Contains -Doc $doc -Needle "i18n SelfCheck | **done**" `
     -Label "SelfCheck gate marked done" -Context "docs/ops/i18n.md"
 
-Write-Host "i18n SelfCheck passed (C01 L16 English catalog + lookup helper; no fluent runtime)."
+Write-Host "i18n SelfCheck passed (C01 L16 en+es soft catalogs + SL_LOCALE helper; no Fluent runtime)."

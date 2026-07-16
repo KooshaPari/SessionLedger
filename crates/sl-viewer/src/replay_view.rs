@@ -4,6 +4,9 @@
 
 use dioxus::prelude::*;
 
+use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
+use crate::fixture::query_fixture_active;
+
 /// Default daemon base URL (configurable via `SL_DAEMON_URL` env at runtime).
 const DEFAULT_DAEMON: &str = "http://127.0.0.1:8080";
 
@@ -23,6 +26,7 @@ struct ReplayEntry {
 }
 
 impl ReplayEntry {
+    #[allow(dead_code)] // reserved for desktop SSE JSON decode path
     fn from_json(v: &serde_json::Value) -> Option<Self> {
         let idx = v.get("event_index")?.as_u64()? as usize;
         let total = v.get("total_events")?.as_u64()? as usize;
@@ -80,52 +84,103 @@ pub fn ReplayView() -> Element {
 
     let daemon_url = option_env!("SL_DAEMON_URL").unwrap_or(DEFAULT_DAEMON);
 
+    if query_fixture_active("replay-error") {
+        return rsx! {
+            style {
+                r#"
+                .replay-view {{ display: flex; flex-direction: column; height: 100%; padding: 16px 20px; box-sizing: border-box; }}
+                .replay-controls {{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }}
+                .replay-input {{ flex: 1; min-width: 180px; padding: 8px 12px; background: #1c1f2b; border: 1px solid #2a2d35; border-radius: 6px; color: #e1e4ea; font-size: 13px; font-family: monospace; }}
+                .btn {{ padding: 8px 16px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }}
+                .btn-play {{ background: #2563eb; color: #fff; }}
+                .status-error {{ color: #f87171; font-size: 13px; padding: 8px 0; }}
+                "#
+            }
+            div {
+                class: "replay-view",
+                "data-testid": "replay-error-fixture",
+                div { class: "replay-controls",
+                    input {
+                        class: "replay-input",
+                        r#type: "text",
+                        "aria-label": "Bundle ID",
+                        value: "sess-visual-fixture",
+                        readonly: true,
+                    }
+                    button { class: "btn btn-play", disabled: true, "Play" }
+                }
+                p {
+                    class: "status-error",
+                    "data-testid": "replay-status-error",
+                    "Replay stream disconnected before completion."
+                }
+                ErrorState {
+                    message: "daemon closed the SSE replay stream (visual fixture)".to_owned(),
+                    retryable: true,
+                    on_retry: move |_| {},
+                }
+            }
+        };
+    }
+
     rsx! {
         style {
             r#"
             .replay-view {{ display: flex; flex-direction: column; height: 100%; padding: 16px 20px; box-sizing: border-box; }}
             .replay-controls {{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }}
             .replay-input {{ flex: 1; min-width: 180px; padding: 8px 12px; background: #1c1f2b; border: 1px solid #2a2d35; border-radius: 6px; color: #e1e4ea; font-size: 13px; font-family: monospace; }}
-            .replay-input::placeholder {{ color: #5c5f6e; }}
+            .replay-input::placeholder {{ color: #8b8fa3; }}
             .speed-label {{ font-size: 12px; color: #8b8fa3; }}
             .speed-input {{ width: 60px; padding: 8px; background: #1c1f2b; border: 1px solid #2a2d35; border-radius: 6px; color: #e1e4ea; font-size: 13px; text-align: center; }}
             .btn {{ padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }}
-            .btn-play {{ background: #6c8cff; color: #fff; }}
-            .btn-play:hover {{ background: #5a78e8; }}
+            .btn-play {{ background: #2563eb; color: #fff; }}
+            .btn-play:hover {{ background: #1d4ed8; }}
             .btn-stop {{ background: #3a2a2a; color: #f87171; }}
             .btn-stop:hover {{ background: #4a2a2a; }}
-            .btn-clear {{ background: #2a2d35; color: #8b8fa3; }}
+            .btn-clear {{ background: #2a2d35; color: #c8cdd6; }}
             .btn-clear:hover {{ background: #343744; }}
             .progress-bar-wrap {{ height: 4px; background: #2a2d35; border-radius: 2px; margin-bottom: 12px; }}
             .progress-bar-fill {{ height: 4px; background: #6c8cff; border-radius: 2px; transition: width 0.3s; }}
             .terminal {{ flex: 1; overflow-y: auto; background: #0a0c12; border: 1px solid #2a2d35; border-radius: 8px; padding: 12px 16px; font-family: "SF Mono", "Menlo", "Consolas", monospace; font-size: 12px; line-height: 1.7; }}
             .terminal-line {{ color: #c8cdd6; }}
-            .terminal-line .ts {{ color: #5c5f6e; }}
+            .terminal-line .ts {{ color: #8b8fa3; }}
             .terminal-line .type-intent {{ color: #6c8cff; }}
             .terminal-line .type-gate {{ color: #4ade80; }}
             .terminal-line .type-acceptance {{ color: #4ade80; }}
             .terminal-line .type-constraint {{ color: #f59e0b; }}
             .terminal-line .type-other {{ color: #a1a6b5; }}
-            .status-idle {{ color: #5c5f6e; font-size: 13px; padding: 8px 0; }}
+            .status-idle {{ color: #8b8fa3; font-size: 13px; padding: 8px 0; }}
             .status-error {{ color: #f87171; font-size: 13px; padding: 8px 0; }}
             .status-done {{ color: #4ade80; font-size: 13px; padding: 8px 0; }}
             "#
         }
 
-        div { class: "replay-view",
+        div {
+            class: "replay-view",
+            onkeydown: move |evt: Event<KeyboardData>| {
+                if evt.key() == Key::Escape {
+                    evt.prevent_default();
+                    entries.set(vec![]);
+                    progress.set((0, 0));
+                    state.set(ReplayState::Idle);
+                }
+            },
             // Controls bar
             div { class: "replay-controls",
                 input {
                     class: "replay-input",
                     r#type: "text",
+                    "aria-label": "Bundle ID",
                     placeholder: "Bundle ID (e.g. sess-abc)",
                     value: "{bundle_id}",
                     oninput: move |evt| bundle_id.set(evt.value()),
                 }
                 span { class: "speed-label", "Speed:" }
                 input {
+                    id: "replay-speed",
                     class: "speed-input",
                     r#type: "number",
+                    "aria-label": "Replay speed multiplier",
                     min: "0.1",
                     max: "10.0",
                     step: "0.5",
@@ -204,7 +259,7 @@ pub fn ReplayView() -> Element {
             // Progress bar
             {
                 let (done, total) = *progress.read();
-                let pct = if total > 0 { (done * 100 / total).min(100) } else { 0 };
+                let pct = (done * 100).checked_div(total).unwrap_or(0).min(100);
                 rsx! {
                     div { class: "progress-bar-wrap",
                         div { class: "progress-bar-fill", style: "width: {pct}%;" }
@@ -218,7 +273,7 @@ pub fn ReplayView() -> Element {
                     p { class: "status-idle", "Enter a bundle ID and press Play to start replay." }
                 },
                 ReplayState::Playing => rsx! {
-                    p { class: "status-idle", "Streaming events…" }
+                    ContentSkeleton { layout: SkeletonLayout::StreamFeed, list_rows: 6 }
                 },
                 ReplayState::Paused => rsx! {
                     p { class: "status-idle", "Paused." }
@@ -229,7 +284,7 @@ pub fn ReplayView() -> Element {
                 ReplayState::Error(msg) => {
                     let m = msg.clone();
                     rsx! {
-                        p { class: "status-error", "Error: {m}" }
+                        ErrorState { message: m }
                     }
                 },
             }

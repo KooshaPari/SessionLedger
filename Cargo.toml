@@ -16,22 +16,53 @@ repository = "https://github.com/KooshaPari/SessionLedger"
 readme = "README.md"
 
 [features]
-# Enable the rusqlite-backed Forge ingestion adapter and the zstd decompressor.
-sqlite = ["dep:rusqlite", "dep:zstd"]
+# Soft envelope stub is always compiled (sha2 keystream in src/envelope.rs; C02 L22).
+# Enable reusable zstd compression adapters.
+compress = ["dep:zstd"]
+# Enable the rusqlite-backed Forge ingestion adapter and zstd decompression.
+sqlite = ["dep:rusqlite", "compress"]
+# Optional dhat heap-profiling smoke (tests/alloc_profile_dhat.rs only).
+alloc-profile = []
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-sha2 = "0.10"
-time = { version = "0.3", features = ["serde", "formatting"] }
-rusqlite = { version = "0.32", optional = true }
+sha2 = "0.11"
+time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
+rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 zstd = { version = "0.13", optional = true }
+tracing = "0.1"
 
-[dev-dependencies]
-rusqlite = { version = "0.32" }
+# FFI / native build scripts (rusqlite bundled, zstd) cannot run under Miri.
+# Keep them off the miri graph so `cargo miri test --test race_model` stays a
+# pure-std smoke (see .github/workflows/miri-smoke.yml).
+[target.'cfg(not(miri))'.dev-dependencies]
+rusqlite = { version = "0.40", features = ["bundled"] }
 zstd = { version = "0.13" }
 tempfile = "3"
+criterion = { version = "0.7.0", default-features = false, features = ["cargo_bench_support"] }
+proptest = "1.11.0"
+# Counting allocator for the L8 allocation-budget smoke (tests/allocation_budget.rs).
+# Keeps unsafe inside the dependency; production builds stay on the System allocator.
+stats_alloc = "0.1.10"
+# Optional dhat heap profiler for the L8 alloc-profile smoke (tests/alloc_profile_dhat.rs).
+dhat = "0.3.3"
+
+# Loom permutation checker — only resolved when RUSTFLAGS='--cfg loom'
+# (soft nightly / PR job in .github/workflows/loom-smoke.yml). Keeps default
+# `cargo test` free of the loom graph on Windows and the PR matrix.
+[target.'cfg(loom)'.dev-dependencies]
+loom = "0.7"
+
+[[test]]
+name = "alloc_profile_dhat"
+path = "tests/alloc_profile_dhat.rs"
+required-features = ["alloc-profile"]
+
+[[bench]]
+name = "pipeline"
+harness = false
 
 # ---------------------------------------------------------------------------
 # webkit2gtk-sys 2.0.1 was yanked from crates.io after 2.0.2 was published,
@@ -45,7 +76,10 @@ webkit2gtk = { path = "vendor/webkit2gtk" }
 
 [lints.rust]
 unsafe_code = "forbid"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 [lints.clippy]
 all = { level = "deny", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
+
+

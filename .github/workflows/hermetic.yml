@@ -1,0 +1,79 @@
+name: Hermetic Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  source-date-epoch-policy:
+    name: release · SOURCE_DATE_EPOCH policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: verify SOURCE_DATE_EPOCH docs + release wiring
+        shell: pwsh
+        run: ./scripts/repro-check.ps1 -PolicyOnly
+
+  # Soft C06 L3 isolation checklist — docs/pin consistency only (non-blocking).
+  environment-isolation-checklist:
+    name: hermetic · environment isolation checklist (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: SelfCheck isolation checklist + builder pin
+        shell: pwsh
+        run: ./scripts/hermetic-isolation-check.ps1 -SelfCheck
+
+  # Soft C06 L60 exact rustc pin — toml/json/docs + CI wiring (non-blocking).
+  rustc-toolchain-pin:
+    name: hermetic · exact rustc toolchain pin (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: SelfCheck rust-toolchain.toml exact channel + CI uses pin
+        shell: pwsh
+        run: ./scripts/rustc-toolchain-check.ps1 -SelfCheck
+
+  sl-daemon-offline:
+    name: sl-daemon · locked offline build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: cargo fetch then offline build
+        shell: pwsh
+        run: ./scripts/hermetic-check.ps1
+
+  sl-daemon-offline-container:
+    name: sl-daemon · pinned builder image offline build
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.87-slim@sha256:437507c3e719e4f968033b88d851ffa9f5aceeb2dcc2482cc6cb7647811a55eb
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: verify builder pin file matches container digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='sha256:437507c3e719e4f968033b88d851ffa9f5aceeb2dcc2482cc6cb7647811a55eb'
+          actual="$(sed -n 's/.*"builder_image_digest": "\([^"]*\)".*/\1/p' docs/ops/hermetic-builder.json)"
+          test -n "$actual"
+          test "$actual" = "$expected"
+      - name: cargo fetch then offline build in pinned image
+        shell: bash
+        working-directory: crates/sl-daemon
+        run: |
+          set -euo pipefail
+          cargo fetch --locked
+          cargo build --locked --offline

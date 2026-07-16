@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Use this for friction — something worked but was confusing, slow, or harder than it should be.
-        For crashes/bugs use the bug template.
+        For crashes/bugs use the **Bug report** template.
   - type: textarea
     id: what
     attributes:

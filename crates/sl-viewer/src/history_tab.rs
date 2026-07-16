@@ -121,7 +121,7 @@ pub fn HistoryTimeline() -> Element {
             .history-entry:hover {{ background: #1c1f2b; }}
             .history-entry.selected {{ background: #252836; border-left: 3px solid #f59e0b; }}
             .history-entry .session-id {{
-                font-size: 12px; color: #5c5f6e; margin-bottom: 4px;
+                font-size: 12px; color: #8b8fa3; margin-bottom: 4px;
                 font-family: monospace;
             }}
             .history-entry .session-title {{
@@ -132,7 +132,7 @@ pub fn HistoryTimeline() -> Element {
                 display: flex; gap: 8px; align-items: center;
             }}
             .history-entry .preview {{
-                font-size: 12px; color: #6b6f7e; margin-top: 8px;
+                font-size: 12px; color: #8b8fa3; margin-top: 8px;
                 line-height: 1.5;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -173,7 +173,7 @@ pub fn HistoryTimeline() -> Element {
                 background: #2a1e1e; border-left: 3px solid #fb923c;
             }}
             .timeline-detail .message-system {{
-                background: #1e1e2a; border-left: 3px solid #5c5f6e;
+                background: #1e1e2a; border-left: 3px solid #8b8fa3;
             }}
             .timeline-detail .message-role {{
                 font-size: 10px; font-weight: 600; text-transform: uppercase;

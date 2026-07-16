@@ -154,6 +154,8 @@ pub fn validate_okf_bundle(bundle: &PostBundle) -> ValidationResult {
 
 #[cfg(test)]
 mod tests {
+    // Traceability: these validation cases are acceptance evidence for FR-002,
+    // including the rules enforced by POST /api/ingest.
     use super::*;
 
     /// Build a minimal valid bundle for property-style testing.
@@ -167,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn valid_bundle_passes() {
+    fn fr002_valid_bundle_passes() {
         let result = validate_okf_bundle(&valid_bundle());
         assert!(result.valid, "unexpected errors: {:?}", result.errors);
         assert!(result.errors.is_empty());

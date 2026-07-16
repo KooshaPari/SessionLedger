@@ -1,5 +1,6 @@
-//! Port traits — the boundary the domain depends on. Adapters (implemented in a
-//! later phase) wire these to existing Phenotype systems; see `docs/DESIGN.md`:
+//! Port traits — the boundary the domain depends on. In-process MVP adapters
+//! live in [`adapters`]; production adapters wire these to existing Phenotype
+//! systems as described in `docs/DESIGN.md`:
 //!
 //! - [`CorpusSource`]  ← forgecode `ConversationRepository`, codex/claude JSONL.
 //! - [`MemoryStore`]   ← `OmniRoute` `src/lib/memory` (FTS5 + Qdrant, hybrid recall).
@@ -12,6 +13,12 @@ use crate::domain::context::Context;
 use crate::domain::contract::Contract;
 use crate::domain::intent::Intent;
 use crate::domain::session::Session;
+
+/// In-process memory, compression, and tracing adapters.
+pub mod adapters;
+#[cfg(feature = "sqlite")]
+/// Durable SQLite [`MemoryStore`] adapter (schema migrations at open time).
+pub mod sqlite_memory;
 
 /// Error surface for port operations. Adapters map their native errors into this.
 #[derive(Debug, thiserror::Error)]

@@ -4,7 +4,9 @@
 //! Sessions that share a scope (project cwd + normalized intent topic) collapse
 //! under a single [`DedupKey`], so their continuation bundles can be merged.
 
+use crate::domain::session::Corpus;
 use crate::domain::session::Session;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// A stable key identifying a logical "scope" a session belongs to.
@@ -12,8 +14,24 @@ use sha2::{Digest, Sha256};
 /// Two sessions with the same `DedupKey` are candidates for merge. The key is a
 /// SHA-256 over the normalized scope (cwd) plus a topic slug, so it is stable
 /// across crashes and re-ingestion.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct DedupKey(String);
+
+/// One source session represented in a deduplicated continuation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DedupMember {
+    pub session_id: String,
+    pub corpus: Corpus,
+}
+
+/// Reproducible record of the sessions collapsed under one scope key.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DedupManifest {
+    pub dedup_key: DedupKey,
+    pub topic_slug: String,
+    pub sessions: Vec<DedupMember>,
+}
 
 impl DedupKey {
     /// Derive a dedup key from a session's scope and a topic slug.
@@ -25,7 +43,12 @@ impl DedupKey {
         hasher.update(scope.as_bytes());
         hasher.update([0u8]);
         hasher.update(topic.as_bytes());
-        Self(format!("{:x}", hasher.finalize()))
+        let digest = hasher.finalize();
+        Self(digest.iter().fold(String::with_capacity(64), |mut s, b| {
+            use std::fmt::Write;
+            let _ = write!(s, "{b:02x}");
+            s
+        }))
     }
 
     #[must_use]
@@ -41,7 +64,7 @@ mod tests {
 
     fn make_session(id: &str, cwd: Option<&str>) -> Session {
         let mut s = Session::new(id, Corpus::Forge);
-        s.cwd = cwd.map(|c| c.to_string());
+        s.cwd = cwd.map(std::string::ToString::to_string);
         s
     }
 

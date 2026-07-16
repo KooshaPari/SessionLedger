@@ -1,4 +1,7 @@
 //! Skeleton integration tests proving the domain compiles and behaves.
+//!
+//! Traceability: JSONL ingest / distill paths cover FR-001; injectable
+//! [`ContinuationBundle`] compile covers FR-012.
 
 use session_ledger::distill;
 use session_ledger::domain::dedup::DedupKey;
@@ -20,7 +23,7 @@ fn sample_session() -> Session {
 }
 
 #[test]
-fn compiled_bundle_is_injectable_and_complete() {
+fn fr012_compiled_bundle_is_injectable_and_complete() {
     let s = sample_session();
     let bundle = distill::compile(&s);
     assert!(bundle.is_injectable(), "must carry an Acceptance gate");
@@ -109,7 +112,7 @@ fn sample_jsonl() -> String {
 }
 
 #[test]
-fn pipeline_round_trips_jsonl_through_ingest_distill_export() {
+fn fr001_pipeline_round_trips_jsonl_through_ingest_distill_export() {
     let jsonl = sample_jsonl();
 
     // Stage 1: Ingestion — parse JSONL into sessions.
@@ -121,21 +124,24 @@ fn pipeline_round_trips_jsonl_through_ingest_distill_export() {
     assert_eq!(docs.len(), 2, "should produce two documents");
 
     // First document: forge session "fix pagination"
-    let doc1 = &docs[0];
-    assert_eq!(doc1.source_id, "pipeline-int-1");
-    assert_eq!(doc1.provenance.corpus, "forge");
-    assert!(doc1.entities.iter().any(|e| e.r#type == "gate"), "should have gate entity");
-    assert!(doc1.entities.iter().any(|e| e.r#type == "intent"), "should have intent entity");
+    let first = &docs[0];
+    assert_eq!(first.source_id, "pipeline-int-1");
+    assert_eq!(first.provenance.corpus, "forge");
+    assert!(first.entities.iter().any(|e| e.r#type == "gate"), "should have gate entity");
+    assert!(first.entities.iter().any(|e| e.r#type == "intent"), "should have intent entity");
     assert!(
-        doc1.entities.iter().any(|e| e.r#type == "constraint"),
+        first.entities.iter().any(|e| e.r#type == "constraint"),
         "should have constraint entity"
     );
-    assert!(doc1.relations.iter().any(|r| r.r#type == "bounded_by"), "should have bounded_by edge");
+    assert!(
+        first.relations.iter().any(|r| r.r#type == "bounded_by"),
+        "should have bounded_by edge"
+    );
 
     // Second document: codex session "add auth"
-    let doc2 = &docs[1];
-    assert_eq!(doc2.source_id, "pipeline-int-2");
-    assert_eq!(doc2.provenance.corpus, "codex");
+    let second = &docs[1];
+    assert_eq!(second.source_id, "pipeline-int-2");
+    assert_eq!(second.provenance.corpus, "codex");
 
     // Round-trip through JSON serialization.
     for doc in &docs {

@@ -14,16 +14,34 @@
 docs/reference/conformance/
 ├── README.md             ← this file
 └── fixtures/
-    ├── auth-fix-session-001.okf.json       ← example §2 (auth-fix)
-    ├── billing-session-003.okf.json        ← example §3 (billing)
-    ├── arm-ci-runner-007.okf.json          ← example §4 (ARM CI)
-    ├── minimal-session-042.okf.json        ← example §5 (minimal)
-    └── multi-intent-088.okf.json           ← example §6 (multi-intent)
+    ├── auth-fix-session-001.okf.json       ← example §2 (auth-fix, forge)
+    ├── billing-session-003.okf.json        ← example §3 (billing, codex)
+    ├── arm-ci-runner-007.okf.json          ← example §4 (ARM CI, claude-code)
+    ├── minimal-session-042.okf.json        ← example §5 (minimal, forge)
+    ├── multi-intent-088.okf.json           ← example §6 (multi-intent, forge)
+    ├── empty-intent-002.okf.json           ← edge: blank intent label
+    ├── cursor-refactor-011.okf.json        ← cursor corpus shape
+    ├── blank-entities-099.okf.json         ← edge: empty entities[]
+    ├── context-grounds-004.okf.json        ← explicit grounds relations
+    ├── factory-delegate-015.okf.json     ← factory-droid delegated refactor
+    ├── tool-evidence-021.okf.json          ← claude-code tool-output acceptance
+    ├── codex-typescript-023.okf.json       ← codex TypeScript/npm toolchain acceptance
+    ├── cursor-python-029.okf.json          ← cursor Python pytest tool evidence
+    ├── forge-go-module-026.okf.json        ← forge Go module gRPC health probe
+    ├── task-family-multiturn-031.okf.json  ← multi-turn discover/compress/verify family
+    ├── task-family-token-budget-032.okf.json ← token-budget / metrics family
+    ├── task-family-compress-resume-033.okf.json ← zstd compress → resume family
+    ├── compress-token-proxy-034.okf.json   ← bytes_saved / rough_tokens_saved proxy
+    ├── token-slice-budget-035.okf.json     ← per-slice CharCountTokenEstimator budget
+    └── archive-gzip-resume-036.okf.json    ← gzip archive → resume / rehydrate family
 ```
 
-Five fixtures total — one per worked example in `OKF-EXAMPLES.md`. Each
-fixture is the **exact JSON shown in the examples doc** (verbatim, byte-for-byte
-except for trailing whitespace).
+Twenty fixtures total — five from worked examples in `OKF-EXAMPLES.md` plus
+fifteen hand-vetted edge, corpus-expansion, cross-language, task-family, and
+compression/token-oriented shapes. Example fixtures are the
+**exact JSON shown in the examples doc** (verbatim, byte-for-byte except for
+trailing whitespace). Anchored filenames are pinned in
+[`docs/ops/eval-manifest.json`](../../ops/eval-manifest.json).
 
 ---
 

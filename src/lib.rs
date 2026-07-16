@@ -20,20 +20,49 @@
 
 pub mod distill;
 pub mod domain;
+pub mod envelope;
 pub mod export;
+pub mod i18n;
 pub mod ingestion;
+pub mod inject;
+pub mod pii_redact;
 pub mod ports;
+pub mod schema;
 pub mod viewer;
 
+pub use distill::contract_compiler::ContractCompiler;
+pub use distill::dedup_compiler::{DedupCompileError, DedupCompiler};
+pub use distill::memory_writer::{DistillMemoryWriter, DistilledMemory};
+pub use distill::token_estimator::{CharCountTokenEstimator, TokenEstimator};
+pub use distill::{compile_and_store, DistillOutput};
 pub use domain::acceptance::Acceptance;
 pub use domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 pub use domain::context::{Context, Decision};
 pub use domain::contract::Contract;
+pub use domain::dedup::{DedupKey, DedupManifest, DedupMember};
 pub use domain::intent::{Intent, IntentState};
-pub use domain::session::{Message, Role, Session};
+pub use domain::merge::{
+    LostWorkError, LostWorkLocalizer, MergeError, MergeExecutor, MergeMessageOrder, MergeResult,
+};
+pub use domain::session::{Corpus, Message, Role, Session};
+pub use domain::worklog::{
+    detect_unfinished, project_unfinished_work, UnfinishedReason, UnfinishedWorkItem,
+    WorklogProjection,
+};
 pub use export::okf::export_to_okf;
-pub use ingestion::{parse_jsonl_sessions, read_jsonl_sessions, IngestionError};
+pub use ingestion::{
+    claude_code::ClaudeDir, codex::CodexDir, cursor::CursorDir, parse_jsonl_sessions,
+    read_jsonl_sessions, IngestionError, JsonIngestionReport,
+};
+pub use inject::{render_prompt, render_slice_prompt, InjectRenderError, PromptRenderer};
+#[cfg(feature = "compress")]
+pub use ports::adapters::ZstdCompressor;
+pub use ports::adapters::{
+    InMemoryMemoryStore, NoopTraceSink, PassthroughCompressor, TracingTraceSink,
+};
 pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};
+#[cfg(feature = "sqlite")]
+pub use ports::sqlite_memory::SqliteMemoryStore;
 
 /// Process a single session through the entire ingest→distill→export pipeline.
 ///

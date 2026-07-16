@@ -1,28 +1,100 @@
 use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
 
+use crate::async_states::{
+    ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState, SkeletonLayout,
+};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
+use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
+#[cfg(feature = "web")]
+use crate::fixture::visual_fixture_active;
+use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
+use crate::help_overlay::HelpOverlay;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
 use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
+use crate::theme::ThemeColors;
 use crate::timeline::TimelineView;
+use crate::tokens::{TOKENS_CSS, VIEWER_COLOR_SCHEME};
+use crate::unfinished_tab::UnfinishedWork;
 
 /// Tab identifiers for the viewer.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tab {
     Bundles,
     History,
+    Unfinished,
     Memory,
     LiveFeed,
     Search,
     Timeline,
     Replay,
+}
+
+impl Tab {
+    const ALL: [Tab; 8] = [
+        Tab::Bundles,
+        Tab::History,
+        Tab::Unfinished,
+        Tab::Memory,
+        Tab::LiveFeed,
+        Tab::Search,
+        Tab::Timeline,
+        Tab::Replay,
+    ];
+
+    fn label(self) -> &'static str {
+        match self {
+            Tab::Bundles => "Bundles",
+            Tab::History => "History",
+            Tab::Unfinished => "Unfinished",
+            Tab::Memory => "Memory",
+            Tab::LiveFeed => "Live Feed",
+            Tab::Search => "Search",
+            Tab::Timeline => "Timeline",
+            Tab::Replay => "Replay",
+        }
+    }
+
+    fn id(self) -> &'static str {
+        match self {
+            Tab::Bundles => "tab-bundles",
+            Tab::History => "tab-history",
+            Tab::Unfinished => "tab-unfinished",
+            Tab::Memory => "tab-memory",
+            Tab::LiveFeed => "tab-live-feed",
+            Tab::Search => "tab-search",
+            Tab::Timeline => "tab-timeline",
+            Tab::Replay => "tab-replay",
+        }
+    }
+
+    fn panel_id(self) -> &'static str {
+        match self {
+            Tab::Bundles => "panel-bundles",
+            Tab::History => "panel-history",
+            Tab::Unfinished => "panel-unfinished",
+            Tab::Memory => "panel-memory",
+            Tab::LiveFeed => "panel-live-feed",
+            Tab::Search => "panel-search",
+            Tab::Timeline => "panel-timeline",
+            Tab::Replay => "panel-replay",
+        }
+    }
+
+    fn index(self) -> usize {
+        Self::ALL.iter().position(|&t| t == self).unwrap_or(0)
+    }
+
+    fn from_index(i: usize) -> Tab {
+        Self::ALL[i % Self::ALL.len()]
+    }
 }
 
 /// Shared session data provided at the root of the component tree.
@@ -45,6 +117,20 @@ fn resolve_data_source() -> DataSource {
     DataSource::Mock
 }
 
+fn initial_tab_for_viewer() -> Tab {
+    if query_fixture_active("history-empty") {
+        Tab::History
+    } else if query_fixture_active("search-empty") || query_fixture_active("search-error") {
+        Tab::Search
+    } else if query_fixture_active("replay-error") {
+        Tab::Replay
+    } else if query_fixture_active("stream-skeleton") {
+        Tab::LiveFeed
+    } else {
+        Tab::Bundles
+    }
+}
+
 /// Root application component.
 ///
 /// Three-tab layout:
@@ -57,30 +143,174 @@ fn resolve_data_source() -> DataSource {
 /// so every child component can access it without prop-drilling.
 #[component]
 pub fn App() -> Element {
+    #[cfg(feature = "web")]
+    use_effect(|| {
+        let force_light = query_fixture_active("launch-splash-light");
+        let script = if force_light {
+            r#"
+            document.documentElement.lang = 'en';
+            document.documentElement.dataset.theme = 'light';
+            window.localStorage.setItem('sl-viewer-theme', 'light');
+            "#
+        } else {
+            r#"
+            document.documentElement.lang = 'en';
+            const stored = window.localStorage.getItem('sl-viewer-theme');
+            const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
+            const theme = stored === 'light' || stored === 'dark'
+                ? stored
+                : (prefersLight ? 'light' : 'dark');
+            document.documentElement.dataset.theme = theme;
+            "#
+        };
+        let _ = document::eval(script);
+    });
+
+    #[cfg(feature = "web")]
+    use_effect(|| {
+        // Other visual fixtures strip the splash so empty/error goldens stay clean.
+        // Splash hold fixtures keep it pinned for S1 capture.
+        if visual_fixture_active() && !splash_hold_fixture_active() {
+            let _ = document::eval("document.querySelector('.launch-splash')?.remove();");
+        }
+    });
+
     // Load sessions once at the root; propagate via context.
     let source = resolve_data_source();
-    let sessions = match load_sessions(&source) {
-        Ok(s) => s,
+    let (sessions, corpus_error) = match load_sessions(&source) {
+        Ok(s) => (s, None),
         Err(e) => {
             eprintln!("[sl-viewer] failed to load corpus ({e}); falling back to mock data");
-            crate::mock_data::sample_sessions()
+            (crate::mock_data::sample_sessions(), Some(e))
         }
     };
     use_context_provider(|| SessionContext(sessions));
 
-    let mut active_tab: Signal<Tab> = use_signal(|| Tab::Bundles);
+    let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
+    let mut help_open: Signal<bool> = use_signal(|| false);
+    let mut palette_open: Signal<bool> = use_signal(|| false);
+    let colors = ThemeColors::dark();
 
-    let bundles_class = if active_tab() == Tab::Bundles { "tab active" } else { "tab" };
-    let history_class = if active_tab() == Tab::History { "tab active" } else { "tab" };
-    let memory_class = if active_tab() == Tab::Memory { "tab active" } else { "tab" };
-    let feed_class = if active_tab() == Tab::LiveFeed { "tab active" } else { "tab" };
-    let search_class = if active_tab() == Tab::Search { "tab active" } else { "tab" };
-    let timeline_class = if active_tab() == Tab::Timeline { "tab active" } else { "tab" };
-    let replay_class = if active_tab() == Tab::Replay { "tab active" } else { "tab" };
+    let mut close_help = move || {
+        help_open.set(false);
+        let _ = document::eval("document.getElementById('viewer-help-button')?.focus();");
+    };
+
+    let mut open_help = move || {
+        palette_open.set(false);
+        help_open.set(true);
+        let _ = document::eval(
+            "window.requestAnimationFrame(() => document.querySelector('.help-overlay-close')?.focus());",
+        );
+    };
+
+    let mut toggle_help = move || {
+        if help_open() {
+            close_help();
+        } else {
+            open_help();
+        }
+    };
+
+    let mut close_palette = move || {
+        palette_open.set(false);
+        let _ = document::eval("document.getElementById('viewer-palette-button')?.focus();");
+    };
+
+    let mut open_palette = move || {
+        help_open.set(false);
+        palette_open.set(true);
+        let _ = document::eval(
+            "window.requestAnimationFrame(() => document.querySelector('.command-palette-option.is-active')?.focus());",
+        );
+    };
+
+    let mut toggle_palette = move || {
+        if palette_open() {
+            close_palette();
+        } else {
+            open_palette();
+        }
+    };
+
+    // Global `?` / Cmd+K / Escape: click existing controls so Dioxus onclick
+    // handlers own state (avoids wasm Closure / eval bridge re-render gaps).
+    #[cfg(feature = "web")]
+    use_effect(|| {
+        let hold_splash = splash_hold_fixture_active();
+        let dismiss_script = if hold_splash {
+            // Hold fixture: do not auto-remove splash for golden capture.
+            String::new()
+        } else {
+            r#"
+            window.setTimeout(() => {
+              const splash = document.querySelector('.launch-splash');
+              if (splash) splash.remove();
+            }, 1800);
+            "#
+            .to_owned()
+        };
+        let script = format!(
+            r#"
+            {dismiss_script}
+
+            if (!window.__slHelpKeyClickBridge) {{
+              window.__slHelpKeyClickBridge = true;
+              document.addEventListener('keydown', (e) => {{
+                // Cmd+K / Ctrl+K — open palette even while typing in fields.
+                if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {{
+                  e.preventDefault();
+                  document.getElementById('viewer-palette-button')?.click();
+                  return;
+                }}
+
+                // Modal overlays close on Escape before the typing guard so focus
+                // in a text field cannot trap the user behind help or the palette.
+                if (e.key === 'Escape') {{
+                  const paletteClose = document.querySelector('.command-palette-close');
+                  if (paletteClose) {{
+                    e.preventDefault();
+                    paletteClose.click();
+                    return;
+                  }}
+                  const closeBtn = document.querySelector('.help-overlay-close');
+                  if (closeBtn) {{
+                    e.preventDefault();
+                    closeBtn.click();
+                    return;
+                  }}
+                  const clearCancel = document.querySelector('[data-testid="search-clear-cancel-btn"]');
+                  if (clearCancel) {{
+                    e.preventDefault();
+                    clearCancel.click();
+                    return;
+                  }}
+                }}
+
+                const el = document.activeElement;
+                const tag = (el && el.tagName) || '';
+                const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable);
+
+                if (typing) {{
+                  return;
+                }}
+                const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
+                if (isHelp) {{
+                  e.preventDefault();
+                  document.getElementById('viewer-help-button')?.click();
+                  return;
+                }}
+              }}, true);
+            }}
+            "#
+        );
+        let _ = document::eval(&script);
+    });
 
     let tab_body = match active_tab() {
         Tab::Bundles => rsx! { BundlesTab {} },
         Tab::History => rsx! { HistoryTimeline {} },
+        Tab::Unfinished => rsx! { UnfinishedWork {} },
         Tab::Memory => rsx! { MemoryWiki {} },
         Tab::LiveFeed => rsx! { LiveFeed {} },
         Tab::Search => rsx! { SearchView {} },
@@ -88,136 +318,516 @@ pub fn App() -> Element {
         Tab::Replay => rsx! { ReplayView {} },
     };
 
+    let mut activate = move |tab: Tab| {
+        active_tab.set(tab);
+        let _ = document::eval(&format!("document.getElementById('{}')?.focus();", tab.id()));
+    };
+
+    let mut run_palette_action = move |action: PaletteAction| {
+        palette_open.set(false);
+        match action {
+            PaletteAction::FocusSearch => {
+                active_tab.set(Tab::Search);
+                let _ = document::eval(
+                    r#"
+                    window.requestAnimationFrame(() => {
+                      const el = document.getElementById('search-since')
+                        || document.getElementById('search-since-fixture');
+                      el?.focus();
+                    });
+                    "#,
+                );
+            }
+            PaletteAction::OpenHelp => {
+                open_help();
+            }
+            PaletteAction::NextTab => {
+                let idx = active_tab().index();
+                activate(Tab::from_index(idx + 1));
+            }
+            PaletteAction::PrevTab => {
+                let idx = active_tab().index();
+                let len = Tab::ALL.len();
+                activate(Tab::from_index(idx + len - 1));
+            }
+            PaletteAction::ClearSearch => {
+                active_tab.set(Tab::Search);
+                let _ = document::eval(
+                    r#"
+                    window.requestAnimationFrame(() => {
+                      const panel = document.getElementById('panel-search');
+                      const view = panel?.querySelector('.search-view');
+                      if (view) {
+                        view.dispatchEvent(
+                          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+                        );
+                      }
+                      const el = document.getElementById('search-since')
+                        || document.getElementById('search-since-fixture');
+                      el?.focus();
+                    });
+                    "#,
+                );
+            }
+            PaletteAction::ToggleTheme => {
+                let _ = document::eval("document.getElementById('viewer-theme-toggle')?.click();");
+            }
+        }
+    };
+
     rsx! {
         style {
-            r#"
-                body {{ margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e1e4ea; }}
-                .app {{ display: flex; height: 100vh; }}
-                .sidebar {{ width: 340px; min-width: 340px; border-right: 1px solid #2a2d35; overflow-y: auto; background: #161822; }}
-                .sidebar h2 {{ padding: 16px 20px; margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8b8fa3; border-bottom: 1px solid #2a2d35; }}
-                .bundle-entry {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #1e2029; transition: background 0.15s; }}
-                .bundle-entry:hover {{ background: #1c1f2b; }}
-                .bundle-entry.selected {{ background: #252836; border-left: 3px solid #6c8cff; }}
-                .bundle-entry .source {{ font-size: 13px; font-weight: 600; color: #c8cdd6; }}
-                .bundle-entry .goal {{ font-size: 12px; color: #8b8fa3; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-                .bundle-entry .meta {{ font-size: 11px; color: #5c5f6e; margin-top: 6px; display: flex; gap: 8px; }}
+            // Design tokens: assets/tokens.css via crate::tokens (C09 L81.8 SSOT).
+            "{TOKENS_CSS}{VIEWER_COLOR_SCHEME}
+                html, body {{ margin: 0; max-width: 100%; overflow-x: clip; }}
+                body {{ font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
+                .app {{ display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow-x: clip; }}
+                .app > .sidebar {{
+                    width: 100%;
+                    min-width: 0;
+                    max-width: 100%;
+                    border-right: none;
+                    overflow-y: auto;
+                    overflow-x: clip;
+                    background: var(--sl-surface);
+                    display: flex;
+                    flex-direction: column;
+                    flex: 1;
+                    min-height: 0;
+                }}
+                .viewer-main .sidebar {{
+                    width: 100%;
+                    min-width: 0;
+                    max-width: 100%;
+                    border-right: none;
+                }}
+                .sidebar h2 {{ padding: 16px 20px; margin: 0; font-family: var(--font-ui); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-text-muted); border-bottom: 1px solid var(--sl-border); }}
+                .bundle-entry {{ padding: var(--sl-space-md) var(--sl-space-xl); cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background var(--sl-motion-fast) var(--sl-ease-out); }}
+                .bundle-entry:hover {{ background: var(--sl-surface-muted); }}
+                .bundle-entry.selected {{ background: var(--sl-surface-muted); border-left: 3px solid var(--sl-accent); }}
+                .bundle-entry .source {{ font-size: 13px; font-weight: 600; color: var(--sl-text); }}
+                .bundle-entry .goal {{ font-size: 12px; color: var(--sl-text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+                .bundle-entry .meta {{ font-size: 11px; color: var(--sl-text-muted); margin-top: 6px; display: flex; gap: 8px; }}
                 .bundle-entry .badge {{ display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }}
-                .badge-acceptance {{ background: #1a3a2a; color: #4ade80; }}
-                .badge-contract {{ background: #2a1a3a; color: #c084fc; }}
+                .badge-acceptance {{ background: color-mix(in srgb, var(--sl-accent-secondary) 18%, transparent); color: var(--sl-accent-secondary); }}
+                .badge-contract {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); }}
                 .detail {{ flex: 1; overflow-y: auto; padding: 32px 40px; }}
-                .detail h1 {{ font-size: 18px; font-weight: 600; margin: 0 0 24px 0; color: #e1e4ea; }}
+                .detail h1 {{ font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0 0 24px 0; color: var(--sl-text); }}
                 .detail-section {{ margin-bottom: 24px; }}
-                .detail-section h3 {{ font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6c8cff; margin: 0 0 8px 0; }}
-                .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: #c8cdd6; }}
-                .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; }}
-                .detail-section li {{ font-size: 13px; line-height: 1.7; color: #a1a6b5; }}
-                .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: #5c5f6e; font-size: 14px; }}
-                .tab-bar {{ display: flex; border-bottom: 1px solid #2a2d35; background: #13151c; }}
-                .tab {{ flex: 1; padding: 10px 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border-bottom: 2px solid transparent; transition: all 0.15s; }}
-                .tab:hover {{ color: #8b8fa3; background: #1a1c26; }}
-                .tab.active {{ color: #6c8cff; border-bottom-color: #6c8cff; background: #161822; }}
+                .detail-section h3 {{ font-family: var(--font-ui); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-accent); margin: 0 0 8px 0; }}
+                .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: var(--sl-text); max-width: var(--sl-measure-max); }}
+                .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; max-width: var(--sl-measure-max); }}
+                .detail-section li {{ font-size: 13px; line-height: 1.7; color: var(--sl-text-muted); }}
+                .caption {{ font-family: var(--sl-font-caption); font-size: var(--sl-font-size-caption); line-height: var(--sl-line-height-caption); color: var(--sl-text-muted); }}
+                .launch-splash {{
+                    position: fixed;
+                    inset: 0;
+                    z-index: 1000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: var(--sl-bg);
+                    animation: splash-dismiss var(--sl-motion-medium) var(--sl-ease-out) forwards;
+                    animation-delay: 1.2s;
+                }}
+                .launch-splash.launch-splash-hold {{
+                    animation: none;
+                    opacity: 1;
+                    visibility: visible;
+                    pointer-events: auto;
+                }}
+                .launch-splash-inner {{ text-align: center; }}
+                .launch-splash-mark {{
+                    display: block;
+                    font-family: var(--font-display);
+                    font-size: 1.75rem;
+                    font-weight: 600;
+                    color: var(--sl-accent);
+                    letter-spacing: -0.02em;
+                }}
+                .launch-splash-caption {{
+                    display: block;
+                    margin-top: var(--sl-space-sm);
+                    font-family: var(--sl-font-caption);
+                    font-size: var(--sl-font-size-caption);
+                    line-height: var(--sl-line-height-caption);
+                    color: var(--sl-text-muted);
+                    text-transform: uppercase;
+                    letter-spacing: 0.12em;
+                }}
+                @keyframes splash-dismiss {{
+                    to {{ opacity: 0; visibility: hidden; pointer-events: none; }}
+                }}
+                .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sl-text-muted); font-size: 14px; }}
+                .sl-content-skeleton {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
+                .sl-content-skeleton-bundles {{ flex-direction: row; }}
+                .sl-content-skeleton-list {{ flex-direction: column; }}
+                .sl-content-skeleton-stream {{ flex-direction: column; flex: 1; padding: var(--sl-space-md) var(--sl-space-lg); box-sizing: border-box; }}
+                .sl-skeleton-stream-lines {{ display: flex; flex-direction: column; gap: var(--sl-space-sm); width: 100%; font-family: var(--font-mono); }}
+                .sl-skeleton-stream-line-wrap {{ min-height: 16px; }}
+                .sl-skeleton-stream-line {{ height: 12px; }}
+                .sl-skeleton-list {{ width: 340px; min-width: 340px; max-width: 340px; border-right: 1px solid var(--sl-border); padding: var(--sl-space-sm) 0; box-sizing: border-box; }}
+                .sl-skeleton-row {{ padding: var(--sl-space-md) var(--sl-space-xl); border-bottom: 1px solid var(--sl-border); min-height: 72px; box-sizing: border-box; }}
+                .sl-skeleton-block {{ border-radius: var(--sl-radius-sm); background: linear-gradient(90deg, var(--sl-skeleton-base) 0%, var(--sl-skeleton-highlight) 50%, var(--sl-skeleton-base) 100%); background-size: 200% 100%; animation: sl-skeleton-shimmer var(--sl-motion-slow) var(--sl-ease-in-out) infinite; }}
+                .sl-skeleton-block-title {{ height: 13px; width: 62%; margin-bottom: var(--sl-space-sm); }}
+                .sl-skeleton-block-subtitle {{ height: 12px; width: 84%; margin-bottom: var(--sl-space-sm); }}
+                .sl-skeleton-block-meta {{ height: 10px; width: 38%; }}
+                .sl-skeleton-detail {{ flex: 1; padding: var(--sl-space-2xl) 40px; box-sizing: border-box; }}
+                .sl-skeleton-block-heading {{ height: 18px; width: 48%; margin-bottom: var(--sl-space-xl); }}
+                .sl-skeleton-block-line {{ height: 14px; width: 100%; max-width: var(--sl-measure-max); margin-bottom: var(--sl-space-md); }}
+                .sl-skeleton-block-line-short {{ width: 72%; }}
+                @keyframes sl-skeleton-shimmer {{
+                    0% {{ background-position: 100% 0; }}
+                    100% {{ background-position: -100% 0; }}
+                }}
+                @media (max-width: 600px) {{
+                    .sl-skeleton-list {{ width: 100%; min-width: 0; max-width: 100%; border-right: none; }}
+                    .sl-content-skeleton-bundles {{ flex-direction: column; }}
+                    .sl-skeleton-detail {{ padding: var(--sl-space-lg); }}
+                }}
+                .tab-bar {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--sl-border); background: var(--sl-surface-muted); }}
+                .tab {{ flex: 1; padding: var(--sl-space-md) var(--sl-space-md); text-align: center; cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); border: none; border-bottom: 2px solid transparent; background: transparent; transition: all var(--sl-motion-fast) var(--sl-ease-out); }}
+                .tab:hover {{ color: var(--sl-text); background: color-mix(in srgb, var(--sl-accent) 8%, transparent); }}
+                .tab.active {{ color: var(--sl-accent); border-bottom-color: var(--sl-accent); background: var(--sl-surface); }}
+                .tab:focus {{ outline: none; }}
+                .tab:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; color: {colors.focus}; }}
+                .theme-toggle {{ width: calc(100% - 32px); margin: 10px 16px; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
+                .theme-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
+                .theme-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .help-toggle {{ width: calc(100% - 32px); margin: 10px 16px 0; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
+                .help-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
+                .help-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .help-overlay-backdrop {{ position: fixed; inset: 0; z-index: 1100; background: color-mix(in srgb, var(--sl-bg) 35%, transparent); }}
+                .help-overlay {{ position: fixed; z-index: 1101; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 32px)); max-height: min(80vh, 720px); overflow: auto; margin: 0; padding: var(--sl-space-lg) var(--sl-space-xl); box-sizing: border-box; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-lg); background: var(--sl-surface); color: var(--sl-text); box-shadow: 0 16px 48px color-mix(in srgb, var(--sl-bg) 55%, transparent); }}
+                .help-overlay-header {{ display: flex; align-items: center; justify-content: space-between; gap: var(--sl-space-md); margin-bottom: var(--sl-space-md); }}
+                .help-overlay-header h2 {{ margin: 0; font-family: var(--font-ui); font-size: 1rem; font-weight: 600; }}
+                .help-overlay-close {{ padding: 6px 12px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
+                .help-overlay-close:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
+                .help-overlay-close:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .help-overlay-lede {{ margin: 0 0 var(--sl-space-md); font-size: 13px; line-height: 1.5; color: var(--sl-text-muted); max-width: var(--sl-measure-max); }}
+                .help-overlay-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+                .help-overlay-table th, .help-overlay-table td {{ padding: 8px 10px; border-bottom: 1px solid var(--sl-border); text-align: left; vertical-align: top; }}
+                .help-overlay-table th {{ font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); }}
+                .help-overlay-keys kbd {{ display: inline-block; padding: 2px 6px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); font-family: var(--font-mono); font-size: 12px; }}
+                .help-overlay-footer {{ margin: var(--sl-space-md) 0 0; }}
+                .command-palette-backdrop {{ position: fixed; inset: 0; z-index: 1200; background: color-mix(in srgb, var(--sl-bg) 35%, transparent); }}
+                .command-palette {{ position: fixed; z-index: 1201; top: 18%; left: 50%; transform: translateX(-50%); width: min(480px, calc(100vw - 32px)); max-height: min(70vh, 420px); overflow: auto; margin: 0; padding: var(--sl-space-lg) var(--sl-space-xl); box-sizing: border-box; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-lg); background: var(--sl-surface); color: var(--sl-text); box-shadow: 0 16px 48px color-mix(in srgb, var(--sl-bg) 55%, transparent); }}
+                .command-palette-header {{ display: flex; align-items: center; justify-content: space-between; gap: var(--sl-space-md); margin-bottom: var(--sl-space-sm); }}
+                .command-palette-header h2 {{ margin: 0; font-family: var(--font-ui); font-size: 1rem; font-weight: 600; }}
+                .command-palette-close {{ padding: 6px 12px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
+                .command-palette-close:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
+                .command-palette-close:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .command-palette-lede {{ margin: 0 0 var(--sl-space-md); font-size: 13px; line-height: 1.5; color: var(--sl-text-muted); }}
+                .command-palette-lede kbd {{ display: inline-block; padding: 2px 6px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); font-family: var(--font-mono); font-size: 12px; }}
+                .command-palette-list {{ list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }}
+                .command-palette-option {{ display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid transparent; border-radius: var(--sl-radius-sm); cursor: pointer; }}
+                .command-palette-option.is-active, .command-palette-option:hover {{ border-color: var(--sl-accent); background: color-mix(in srgb, var(--sl-accent) 10%, transparent); }}
+                .command-palette-option:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .command-palette-option-label {{ font-size: 14px; font-weight: 600; }}
+                .command-palette-option-hint {{ font-size: 12px; color: var(--sl-text-muted); }}
+                .palette-trigger {{ position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }}
+                .search-input:focus-visible, .search-btn:focus-visible, .search-advanced-toggle:focus-visible, .retry-btn:focus-visible, .btn:focus-visible, .replay-input:focus-visible, .speed-input:focus-visible, .compare-btn:focus-visible, .sl-error-retry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .session-item:focus-visible, .feed-entry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; }}
                 .session-list {{ display: flex; flex-direction: column; height: 100%; }}
-                .search-input {{ width: 100%; padding: 10px 16px; background: #1c1f2b; border: 1px solid #2a2d35; border-radius: 6px; color: #e1e4ea; font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
-                .session-count {{ padding: 6px 20px; font-size: 11px; color: #5c5f6e; }}
-                .session-item {{ padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #1e2029; transition: background 0.15s; }}
-                .session-item:hover {{ background: #1c1f2b; }}
-                .session-item.selected {{ background: #252836; border-left: 3px solid #6c8cff; }}
-                .session-source {{ font-size: 13px; font-weight: 600; color: #c8cdd6; }}
-                .session-goal {{ font-size: 12px; color: #8b8fa3; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-                .session-meta {{ font-size: 11px; color: #5c5f6e; margin-top: 6px; display: flex; gap: 8px; align-items: center; }}
-                .meta-bundles {{ color: #6c8cff; }}
+                .search-input {{ width: 100%; padding: 10px 16px; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: 6px; color: var(--sl-text); font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
+                .session-count {{ padding: 6px 20px; font-size: 11px; color: var(--sl-text-muted); }}
+                .session-item {{ padding: var(--sl-space-md) var(--sl-space-xl); cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background var(--sl-motion-fast) var(--sl-ease-out); }}
+                .session-item:hover {{ background: var(--sl-surface-muted); }}
+                .session-item.selected {{ background: var(--sl-surface-muted); border-left: 3px solid var(--sl-accent); }}
+                .session-source {{ font-size: 13px; font-weight: 600; color: var(--sl-text); }}
+                .session-goal {{ font-size: 12px; color: var(--sl-text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+                .session-meta {{ font-size: 11px; color: var(--sl-text-muted); margin-top: 6px; display: flex; gap: 8px; align-items: center; }}
+                .meta-bundles {{ color: var(--sl-accent); }}
                 .badge {{ display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }}
-                .badge-ok {{ background: #1a3a2a; color: #4ade80; }}
-                .badge-contract {{ background: #2a1a3a; color: #c084fc; }}
+                .badge-ok {{ background: color-mix(in srgb, var(--sl-accent-secondary) 18%, transparent); color: var(--sl-accent-secondary); }}
+                .badge-contract {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); }}
                 .search-view {{ display: flex; flex-direction: column; height: 100%; overflow-y: auto; }}
-                .search-form {{ padding: 0 0 8px 0; border-bottom: 1px solid #2a2d35; }}
+                .search-form {{ padding: 0 0 8px 0; border-bottom: 1px solid var(--sl-border); }}
+                .search-form-title {{ padding: var(--sl-space-lg) var(--sl-space-xl); margin: 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sl-text-muted); border-bottom: 1px solid var(--sl-border); }}
+                .search-form-hint {{ margin: 0; padding: var(--sl-space-sm) var(--sl-space-xl) 0; font-size: 12px; line-height: 1.45; color: var(--sl-text-muted); }}
                 .search-fields {{ display: flex; flex-direction: column; gap: 4px; padding: 10px 16px; }}
-                .search-label {{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; }}
-                .search-actions {{ display: flex; gap: 8px; padding: 8px 16px 10px; }}
-                .search-btn {{ padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; border: 1px solid #2a2d35; background: #252836; color: #8b8fa3; }}
-                .search-btn:hover {{ background: #2f3244; color: #c8cdd6; }}
-                .search-btn-primary {{ background: #1e2a4a; color: #6c8cff; border-color: #2a3a6a; }}
-                .search-btn-primary:hover {{ background: #263460; color: #a0b4ff; }}
+                .search-label {{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); }}
+                .search-advanced-toggle {{ display: inline-flex; align-items: center; gap: var(--sl-space-sm); margin: var(--sl-space-sm) 0 0; padding: var(--sl-space-sm) var(--sl-space-md); min-height: 44px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-muted); color: var(--sl-accent); font-size: 12px; font-weight: 600; cursor: pointer; transition: background var(--sl-motion-fast) var(--sl-ease-out), border-color var(--sl-motion-fast) var(--sl-ease-out); }}
+                .search-advanced-toggle:hover {{ background: color-mix(in srgb, var(--sl-accent) 10%, transparent); border-color: var(--sl-accent); }}
+                .search-advanced-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .search-advanced-chevron {{ display: inline-block; width: 0.85em; color: var(--sl-text-muted); }}
+                .search-advanced-badge {{ margin-left: var(--sl-space-xs); padding: 1px 6px; border-radius: var(--sl-radius-sm); background: color-mix(in srgb, var(--sl-accent-secondary) 18%, transparent); color: var(--sl-accent-secondary); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }}
+                .search-advanced-panel {{ display: flex; flex-direction: column; gap: 4px; margin-top: var(--sl-space-sm); padding-top: var(--sl-space-sm); border-top: 1px solid var(--sl-border); }}
+                .search-advanced-panel.is-collapsed {{ display: none; }}
+                .search-actions {{ display: flex; gap: 8px; padding: 8px 16px 10px; flex-wrap: wrap; align-items: center; }}
+                .search-btn {{ padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer; border: 1px solid var(--sl-border); background: var(--sl-surface-muted); color: var(--sl-text-muted); }}
+                .search-btn:hover {{ background: color-mix(in srgb, var(--sl-accent) 8%, transparent); color: var(--sl-text); }}
+                .search-btn-primary {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); border-color: var(--sl-accent); }}
+                .search-btn-primary:hover {{ background: color-mix(in srgb, var(--sl-accent) 24%, transparent); color: var(--sl-accent); }}
+                .search-clear-title {{ margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--sl-text); }}
+                .search-clear-desc {{ margin: 0 0 8px; font-size: 12px; color: var(--sl-text-muted); max-width: 22rem; }}
+                .session-meta-muted {{ color: var(--sl-text-muted); }}
                 .search-results {{ flex: 1; overflow-y: auto; }}
-                .search-error {{ padding: 10px 16px; font-size: 13px; color: #f87171; background: #2a1a1a; border-bottom: 1px solid #3a2020; }}
+                .search-error {{ padding: 10px 16px; font-size: 13px; color: var(--sl-danger); background: var(--sl-danger-surface); border-bottom: 1px solid var(--sl-border); }}
+                .search-empty {{ padding: var(--sl-space-lg) var(--sl-space-xl); font-size: 13px; color: var(--sl-text-muted); }}
                 .live-feed {{ display: flex; flex-direction: column; height: 100%; }}
-                .live-feed-header {{ display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #2a2d35; background: #13151c; }}
-                .live-feed-title {{ font-size: 13px; font-weight: 600; color: #c8cdd6; flex: 1; }}
+                .live-feed-header {{ display: flex; align-items: center; gap: var(--sl-space-md); padding: var(--sl-space-md) var(--sl-space-lg); border-bottom: 1px solid var(--sl-border); background: var(--sl-bg); }}
+                .live-feed-title {{ font-size: 13px; font-weight: 600; color: var(--sl-text); flex: 1; }}
                 .feed-status {{ font-size: 11px; font-weight: 600; }}
-                .feed-status.live {{ color: #4ade80; }}
-                .feed-status.disconnected {{ color: #f87171; }}
-                .feed-status.connecting {{ color: #facc15; }}
-                .retry-btn {{ padding: 3px 10px; font-size: 11px; font-weight: 600; background: #252836; border: 1px solid #2a2d35; border-radius: 4px; color: #8b8fa3; cursor: pointer; }}
-                .retry-btn:hover {{ background: #2f3244; color: #c8cdd6; }}
-                .live-feed-list {{ flex: 1; overflow-y: auto; padding: 8px 0; }}
-                .feed-empty {{ padding: 16px 20px; font-size: 13px; color: #5c5f6e; }}
-                .feed-entry {{ display: flex; gap: 10px; align-items: baseline; padding: 6px 16px; border-bottom: 1px solid #1e2029; font-family: monospace; }}
-                .feed-entry:hover {{ background: #1c1f2b; }}
-                .feed-ts {{ font-size: 11px; color: #5c5f6e; white-space: nowrap; }}
-                .feed-path {{ font-size: 12px; color: #a1b4ff; word-break: break-all; }}
-                .compare-btn {{ padding: 2px 8px; font-size: 10px; font-weight: 600; background: #1e2435; border: 1px solid #2a2d35; border-radius: 4px; color: #8b8fa3; cursor: pointer; margin-left: 6px; }}
-                .compare-btn:hover {{ background: #2a2d45; color: #c8cdd6; }}
-                .compare-btn.active {{ background: #2a1a3a; color: #c084fc; border-color: #4a2a6a; }}
-                .diff-panel {{ border-top: 2px solid #6c8cff; background: #0d0f18; padding: 0; flex-shrink: 0; max-height: 340px; overflow-y: auto; }}
-                .diff-header {{ display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid #2a2d35; background: #13151c; }}
-                .diff-title {{ flex: 1; font-size: 13px; font-weight: 600; color: #c8cdd6; }}
-                .diff-badge {{ display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; background: #2a1a1a; color: #f87171; }}
-                .diff-badge-same {{ background: #1a3a2a; color: #4ade80; }}
-                .diff-close {{ cursor: pointer; font-size: 14px; color: #5c5f6e; padding: 2px 6px; border-radius: 4px; }}
-                .diff-close:hover {{ background: #252836; color: #c8cdd6; }}
-                .diff-col-headers {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #5c5f6e; border-bottom: 1px solid #2a2d35; background: #13151c; }}
+                .feed-status.live {{ color: var(--sl-accent-secondary); }}
+                .feed-status.disconnected {{ color: var(--sl-danger); }}
+                .feed-status.connecting {{ color: var(--sl-accent-warning); }}
+                .retry-btn {{ padding: var(--sl-space-xs) var(--sl-space-md); font-size: 11px; font-weight: 600; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); color: var(--sl-text-muted); cursor: pointer; transition: background var(--sl-motion-fast) var(--sl-ease-out), color var(--sl-motion-fast) var(--sl-ease-out); }}
+                .retry-btn:hover {{ background: color-mix(in srgb, var(--sl-accent) 8%, var(--sl-surface-muted)); color: var(--sl-text); }}
+                .live-feed-list {{ flex: 1; overflow-y: auto; padding: var(--sl-space-sm) 0; }}
+                .feed-empty {{ padding: var(--sl-space-lg) var(--sl-space-xl); font-size: 13px; color: var(--sl-text-muted); }}
+                .feed-entry {{ display: flex; gap: var(--sl-space-md); align-items: baseline; padding: var(--sl-space-sm) var(--sl-space-lg); border-bottom: 1px solid var(--sl-border); font-family: var(--font-mono); transition: background var(--sl-motion-fast) var(--sl-ease-out); }}
+                .feed-entry:hover {{ background: var(--sl-surface-muted); }}
+                .feed-ts {{ font-size: 11px; color: var(--sl-text-muted); white-space: nowrap; }}
+                .feed-path {{ font-size: 12px; color: var(--sl-accent); word-break: break-all; }}
+                .compare-btn {{ padding: 2px var(--sl-space-sm); font-size: 10px; font-weight: 600; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); color: var(--sl-text-muted); cursor: pointer; margin-left: var(--sl-space-sm); transition: background var(--sl-motion-fast) var(--sl-ease-out), color var(--sl-motion-fast) var(--sl-ease-out); }}
+                .compare-btn:hover {{ background: color-mix(in srgb, var(--sl-accent) 8%, var(--sl-surface-muted)); color: var(--sl-text); }}
+                .compare-btn.active {{ background: color-mix(in srgb, var(--sl-accent) 16%, transparent); color: var(--sl-accent); border-color: var(--sl-accent); }}
+                .diff-panel {{ border-top: 2px solid var(--sl-accent); background: var(--sl-bg); padding: 0; flex-shrink: 0; max-height: 340px; overflow-y: auto; }}
+                .diff-header {{ display: flex; align-items: center; padding: var(--sl-space-md) var(--sl-space-lg); border-bottom: 1px solid var(--sl-border); background: var(--sl-bg); }}
+                .diff-title {{ flex: 1; font-size: 13px; font-weight: 600; color: var(--sl-text); }}
+                .diff-badge {{ display: inline-block; margin-left: var(--sl-space-sm); padding: 1px var(--sl-space-sm); border-radius: var(--sl-radius-pill); font-size: 11px; font-weight: 600; background: var(--sl-danger-surface); color: var(--sl-danger); }}
+                .diff-badge-same {{ background: color-mix(in srgb, var(--sl-accent-secondary) 18%, transparent); color: var(--sl-accent-secondary); }}
+                .diff-close {{ cursor: pointer; font-size: 14px; color: var(--sl-text-muted); padding: 2px var(--sl-space-sm); border-radius: var(--sl-radius-sm); transition: background var(--sl-motion-fast) var(--sl-ease-out), color var(--sl-motion-fast) var(--sl-ease-out); }}
+                .diff-close:hover {{ background: var(--sl-surface-muted); color: var(--sl-text); }}
+                .diff-col-headers {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: var(--sl-space-sm) var(--sl-space-lg); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sl-text-muted); border-bottom: 1px solid var(--sl-border); background: var(--sl-bg); }}
                 .diff-rows {{ display: flex; flex-direction: column; }}
-                .diff-row {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: 6px 16px; font-size: 12px; border-bottom: 1px solid #1e2029; font-family: monospace; align-items: start; }}
-                .diff-row-changed {{ background: #1a1520; }}
-                .diff-row-changed .diff-col-a {{ color: #f87171; }}
-                .diff-row-changed .diff-col-b {{ color: #4ade80; }}
-                .diff-field-label {{ color: #8b8fa3; font-weight: 600; font-family: system-ui, sans-serif; font-size: 11px; padding-top: 1px; }}
-                .diff-col-a {{ color: #c8cdd6; overflow-wrap: break-word; }}
-                .diff-col-b {{ color: #c8cdd6; overflow-wrap: break-word; }}
+                .diff-row {{ display: grid; grid-template-columns: 160px 1fr 1fr; padding: var(--sl-space-sm) var(--sl-space-lg); font-size: 12px; border-bottom: 1px solid var(--sl-border); font-family: var(--font-mono); align-items: start; }}
+                .diff-row-changed {{ background: color-mix(in srgb, var(--sl-danger) 6%, var(--sl-surface)); }}
+                .diff-row-changed .diff-col-a {{ color: var(--sl-danger); }}
+                .diff-row-changed .diff-col-b {{ color: var(--sl-accent-secondary); }}
+                .diff-field-label {{ color: var(--sl-text-muted); font-weight: 600; font-family: var(--font-ui); font-size: 11px; padding-top: 1px; }}
+                .diff-col-a {{ color: var(--sl-text); overflow-wrap: break-word; }}
+                .diff-col-b {{ color: var(--sl-text); overflow-wrap: break-word; }}
                 .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
                 .main-upper {{ flex: 1; overflow-y: auto; }}
-            "#,
+                .bundles-view {{ display: contents; }}
+                .viewer-main {{ flex: 1; min-width: 0; width: 100%; overflow: hidden; }}
+                .corpus-error-banner {{ padding: 0 8px; }}
+                .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
+                @media (max-width: 600px) {{
+                    .tab {{
+                        min-height: 44px;
+                        min-width: 44px;
+                        padding: 12px 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-sizing: border-box;
+                    }}
+                    .theme-toggle, .help-toggle {{
+                        min-height: 44px;
+                        padding: 12px 16px;
+                        box-sizing: border-box;
+                    }}
+                    .search-btn, .retry-btn, .search-advanced-toggle {{
+                        min-height: 44px;
+                        min-width: 44px;
+                        padding: 10px 16px;
+                        box-sizing: border-box;
+                    }}
+                    .detail, .timeline-detail, .wiki-page {{
+                        padding: 16px;
+                        max-width: 100%;
+                        box-sizing: border-box;
+                    }}
+                    .diff-col-headers, .diff-row {{
+                        grid-template-columns: minmax(72px, 96px) minmax(0, 1fr) minmax(0, 1fr);
+                    }}
+                    .replay-controls .btn {{
+                        min-height: 44px;
+                        min-width: 44px;
+                        padding: 10px 16px;
+                        box-sizing: border-box;
+                    }}
+                }}
+                @media (min-width: 601px) {{
+                    .app > .sidebar {{
+                        width: 340px;
+                        min-width: 340px;
+                        max-width: 340px;
+                        border-right: 1px solid var(--sl-border);
+                    }}
+                }}
+                .sl-loading-spinner {{
+                    animation: sl-spin 0.8s linear infinite;
+                }}
+                @keyframes sl-spin {{
+                    to {{ transform: rotate(360deg); }}
+                }}
+                @media (prefers-reduced-motion: reduce) {{
+                    *, *::before, *::after {{
+                        animation-duration: 0.01ms !important;
+                        animation-iteration-count: 1 !important;
+                        transition-duration: 0.01ms !important;
+                        scroll-behavior: auto !important;
+                    }}
+                    .launch-splash:not(.launch-splash-hold) {{
+                        animation: none;
+                        opacity: 0;
+                        visibility: hidden;
+                        pointer-events: none;
+                    }}
+                    .launch-splash.launch-splash-hold {{
+                        animation: none !important;
+                        opacity: 1 !important;
+                        visibility: visible !important;
+                        pointer-events: auto !important;
+                    }}
+                    .sl-loading-spinner {{
+                        animation: none !important;
+                    }}
+                }}
+            ",
         }
-        div { class: "app",
-            div { class: "sidebar",
-                div { class: "tab-bar",
+        div {
+            class: "app",
+            {
+                let splash_hold = splash_hold_fixture_active();
+                let splash_class = if splash_hold {
+                    "launch-splash launch-splash-hold"
+                } else {
+                    "launch-splash"
+                };
+                rsx! {
                     div {
-                        class: "{bundles_class}",
-                        onclick: move |_| active_tab.set(Tab::Bundles),
-                        "Bundles"
-                    }
-                    div {
-                        class: "{history_class}",
-                        onclick: move |_| active_tab.set(Tab::History),
-                        "History"
-                    }
-                    div {
-                        class: "{memory_class}",
-                        onclick: move |_| active_tab.set(Tab::Memory),
-                        "Memory"
-                    }
-                    div {
-                        class: "{feed_class}",
-                        onclick: move |_| active_tab.set(Tab::LiveFeed),
-                        "Live Feed"
-                    }
-                    div {
-                        class: "{search_class}",
-                        onclick: move |_| active_tab.set(Tab::Search),
-                        "Search"
-                    }
-                    div {
-                        class: "{timeline_class}",
-                        onclick: move |_| active_tab.set(Tab::Timeline),
-                        "Timeline"
-                    }
-                    div {
-                        class: "{replay_class}",
-                        onclick: move |_| active_tab.set(Tab::Replay),
-                        "Replay"
+                        class: "{splash_class}",
+                        role: "presentation",
+                        "data-testid": "launch-splash",
+                        div { class: "launch-splash-inner",
+                            span { class: "launch-splash-mark", "SessionLedger" }
+                            span { class: "launch-splash-caption", "Viewer" }
+                        }
                     }
                 }
-                {tab_body}
+            }
+            div { class: "sidebar",
+                nav {
+                    "aria-label": "Primary viewer navigation",
+                    div {
+                        class: "tab-bar",
+                        role: "tablist",
+                        "aria-label": "SessionLedger views",
+                        for tab in Tab::ALL {
+                            {
+                                let is_active = active_tab() == tab;
+                                let cls = if is_active { "tab active" } else { "tab" };
+                                let selected = if is_active { "true" } else { "false" };
+                                let tab_index = if is_active { "0" } else { "-1" };
+                                rsx! {
+                                    button {
+                                        key: "{tab.id()}",
+                                        id: "{tab.id()}",
+                                        class: "{cls}",
+                                        role: "tab",
+                                        r#type: "button",
+                                        tabindex: "{tab_index}",
+                                        "aria-selected": "{selected}",
+                                        "aria-controls": "{tab.panel_id()}",
+                                        onclick: move |_| activate(tab),
+                                        onkeydown: move |evt: Event<KeyboardData>| {
+                                            let len = Tab::ALL.len();
+                                            let idx = tab.index();
+                                            match evt.key() {
+                                                Key::Enter => {
+                                                    evt.prevent_default();
+                                                    activate(tab);
+                                                }
+                                                Key::Character(ref ch) if ch == " " => {
+                                                    evt.prevent_default();
+                                                    activate(tab);
+                                                }
+                                                Key::ArrowRight => {
+                                                    evt.prevent_default();
+                                                    activate(Tab::from_index(idx + 1));
+                                                }
+                                                Key::ArrowLeft => {
+                                                    evt.prevent_default();
+                                                    activate(Tab::from_index(idx + len - 1));
+                                                }
+                                                Key::Home => {
+                                                    evt.prevent_default();
+                                                    activate(Tab::Bundles);
+                                                }
+                                                Key::End => {
+                                                    evt.prevent_default();
+                                                    activate(Tab::Replay);
+                                                }
+                                                _ => {}
+                                            }
+                                        },
+                                        "{tab.label()}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if let Some(ref err) = corpus_error {
+                    div { class: "corpus-error-banner",
+                        ErrorState {
+                            message: format!("Corpus load failed ({err}); showing mock sessions."),
+                        }
+                    }
+                }
+                main {
+                    class: "viewer-main",
+                    div {
+                        id: "{active_tab().panel_id()}",
+                        role: "tabpanel",
+                        "aria-labelledby": "{active_tab().id()}",
+                        {tab_body}
+                    }
+                }
+                // After tabpanel so Tab from the active tab reaches panel controls first.
+                button {
+                    id: "viewer-help-button",
+                    class: "help-toggle",
+                    r#type: "button",
+                    "aria-haspopup": "dialog",
+                    "aria-expanded": if help_open() { "true" } else { "false" },
+                    "aria-controls": "keyboard-help-dialog",
+                    onclick: move |_| toggle_help(),
+                    "Help (?)"
+                }
+                button {
+                    id: "viewer-palette-button",
+                    class: "palette-trigger",
+                    r#type: "button",
+                    "aria-haspopup": "dialog",
+                    "aria-expanded": if palette_open() { "true" } else { "false" },
+                    "aria-controls": "command-palette-dialog",
+                    "aria-label": "Open command palette",
+                    onclick: move |_| toggle_palette(),
+                    "Command palette (Ctrl+K)"
+                }
+                button {
+                    id: "viewer-theme-toggle",
+                    class: "theme-toggle",
+                    r#type: "button",
+                    "aria-label": "Toggle light and dark theme",
+                    onclick: move |_| {
+                        let _ = document::eval(
+                            r#"
+                            const root = document.documentElement;
+                            const current = root.dataset.theme === 'light' ? 'light' : 'dark';
+                            const next = current === 'light' ? 'dark' : 'light';
+                            root.dataset.theme = next;
+                            window.localStorage.setItem('sl-viewer-theme', next);
+                            "#,
+                        );
+                    },
+                    "Toggle Theme"
+                }
+            }
+            HelpOverlay {
+                open: help_open(),
+                on_close: move |_| close_help(),
+            }
+            CommandPalette {
+                open: palette_open(),
+                on_close: move |_| close_palette(),
+                on_run: move |action| run_palette_action(action),
             }
         }
     }
@@ -230,9 +840,68 @@ pub fn App() -> Element {
 /// The compiled-bundles tab — the original sidebar + detail panel.
 #[component]
 fn BundlesTab() -> Element {
-    let bundles = use_signal(sample_bundles);
+    let mut bundles = use_signal(Vec::new);
+    let mut loading = use_signal(|| true);
+    let mut load_error: Signal<Option<String>> = use_signal(|| None);
+    let mut load_gen: Signal<u32> = use_signal(|| 0u32);
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
+
+    // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
+    // Today this is synchronous sample data; the same signals work for a future
+    // daemon/HTTP loader without changing the chrome.
+    use_effect(move || {
+        let _ = load_gen();
+        loading.set(true);
+        load_error.set(None);
+        let loaded = sample_bundles();
+        if loaded.is_empty() {
+            load_error.set(Some("No bundles available to display.".into()));
+        } else {
+            bundles.set(loaded);
+        }
+        loading.set(false);
+    });
+
+    if query_fixture_active("first-run") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            FirstRunEmpty {}
+        };
+    }
+
+    if query_fixture_active("error-color") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ErrorColorFixture {}
+        };
+    }
+
+    if query_fixture_active("loading-long") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            LoadingState {
+                message: "Loading bundles…".to_string(),
+                patience_hint: true,
+            }
+        };
+    }
+    if loading() || query_fixture_active("skeleton") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ContentSkeleton { layout: SkeletonLayout::Bundles }
+        };
+    }
+    if let Some(err) = load_error() {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ErrorState {
+                message: err,
+                retryable: true,
+                on_retry: move |_| load_gen.with_mut(|g| *g += 1),
+            }
+        };
+    }
 
     let summaries: Vec<BundleSummary> = bundles.iter().map(|b| summarize(&b)).collect();
     let detail = selected_idx().and_then(|idx| bundles.get(idx)).map(|b| extract_detail(&b));
@@ -246,35 +915,44 @@ fn BundlesTab() -> Element {
         });
 
     rsx! {
-        h2 { "Compiled Bundles" }
-        SessionListWithCompare {
-            items: summaries,
-            selected_idx: selected_idx(),
-            compare_idx: compare_idx(),
-            on_select: move |idx| selected_idx.set(Some(idx)),
-            on_compare: move |idx| {
-                // Toggle: clicking same row again clears compare slot.
-                if compare_idx() == Some(idx) {
+        div {
+            class: "bundles-view",
+            onkeydown: move |evt: Event<KeyboardData>| {
+                if evt.key() == Key::Escape && compare_idx().is_some() {
+                    evt.prevent_default();
                     compare_idx.set(None);
-                } else {
-                    compare_idx.set(Some(idx));
                 }
             },
-        }
-        div { class: "main-content",
-            div { class: "main-upper",
-                match detail {
-                    Some(d) => rsx! { DetailView { detail: d.clone() } },
-                    None => rsx! {
-                        div { class: "empty-state", "Select a bundle from the list to view details" }
-                    },
-                }
+            h2 { "Compiled Bundles" }
+            SessionListWithCompare {
+                items: summaries,
+                selected_idx: selected_idx(),
+                compare_idx: compare_idx(),
+                on_select: move |idx| selected_idx.set(Some(idx)),
+                on_compare: move |idx| {
+                    // Toggle: clicking same row again clears compare slot.
+                    if compare_idx() == Some(idx) {
+                        compare_idx.set(None);
+                    } else {
+                        compare_idx.set(Some(idx));
+                    }
+                },
             }
-            if let Some((a, b)) = diff_pair {
-                BundleDiff {
-                    bundle_a: a,
-                    bundle_b: b,
-                    on_close: move |_| compare_idx.set(None),
+            div { class: "main-content",
+                div { class: "main-upper",
+                    match detail {
+                        Some(d) => rsx! { DetailView { detail: d.clone() } },
+                        None => rsx! {
+                            div { class: "empty-state", "Select a bundle from the list to view details" }
+                        },
+                    }
+                }
+                if let Some((a, b)) = diff_pair {
+                    BundleDiff {
+                        bundle_a: a,
+                        bundle_b: b,
+                        on_close: move |_| compare_idx.set(None),
+                    }
                 }
             }
         }
@@ -316,6 +994,7 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
         div { class: "session-list",
             input {
                 class: "search-input",
+                "aria-label": "Filter sessions",
                 placeholder: "Filter sessions...",
                 value: "{query}",
                 oninput: move |e| query.set(e.value()),
@@ -323,7 +1002,7 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
             div { class: "session-count",
                 "{count} session{plural}"
                 if props.compare_idx.is_some() {
-                    span { style: "color:#c084fc; margin-left:8px;", "compare slot active" }
+                    span { style: "color:var(--sl-accent); margin-left:var(--sl-space-sm);", "compare slot active" }
                 }
             }
             for (orig_idx, summary) in filtered.into_iter() {

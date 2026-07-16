@@ -23,7 +23,8 @@ cargo fmt --all --check                   # format check
 
 sl-viewer (Dioxus 0.6 desktop) needs the Dioxus CLI: `cargo install dioxus-cli`, then `dx serve` / `dx bundle` from `crates/sl-viewer`.
 
-Fast inner loop: `cargo test -p sl-daemon` / `cargo check -p sl-viewer`.
+Fast inner loop: `cargo test --manifest-path crates/sl-daemon/Cargo.toml` /
+`cargo check -p sl-viewer`. Measured budgets: [`docs/ops/feedback-budgets.md`](docs/ops/feedback-budgets.md).
 
 ## Key files
 
@@ -31,6 +32,12 @@ Fast inner loop: `cargo test -p sl-daemon` / `cargo check -p sl-viewer`.
 |------|------|
 | `crates/sl-daemon` | watch → compile session bundles (the compiler daemon) |
 | `crates/sl-viewer` | Dioxus 0.6 desktop viewer (bundle/history/memory tabs) |
+| `docs/functional_requirements.md` | FR-NNN catalog + acceptance refs |
+| `docs/USER_JOURNEYS.md` | Named user journeys mapped to FRs and existing tests |
+| `PLAN.md` / `WORK_DAG.md` | claimable tasks + dependency graph |
+| `llms.txt` | LLM-friendly repo map + build/test commands |
+| `docs/ops/runbook.md` | `make dev`, healthz :8080, common failures |
+| `docs/ops/feedback-budgets.md` | measured check/test/`make lint` loop budgets + nextest |
 | `README.md` | overview + Releases link | `.github/workflows/release.yml` | per-OS viewer build |
 
 ## Forbidden
@@ -43,7 +50,7 @@ Fast inner loop: `cargo test -p sl-daemon` / `cargo check -p sl-viewer`.
 
 ## Gotchas
 
-- MSRV is pinned in `rust-toolchain.toml`; workspace `rust-version = "1.85"`.
+- Exact rustc is pinned in `rust-toolchain.toml` (see `docs/ops/rustc-toolchain-pin.md`); workspace MSRV is `rust-version = "1.85"`.
 - clippy warnings — fix, don't `#[allow]` without a tracking-issue comment.
 - sl-viewer is Dioxus 0.6 — `dx` toolchain required for desktop bundling (see electrobun/dioxus codesign notes when packaging macOS).
 - CI uses `--locked` — keep `Cargo.lock` committed and current.

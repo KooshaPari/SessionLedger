@@ -1,8 +1,11 @@
 //! OKF roundtrip smoke test (lives in the session-ledger root crate).
 //!
+//! Traceability: these smoke tests are the primary acceptance evidence for
+//! FR-013 (JSONL → daemon contract → OKF → viewer contract).
+//!
 //! This placement is intentional: it lets the test depend on the canonical
 //! `OkfDocument` type without pulling in the sl-viewer lib, which currently
-//! has pre-existing compile errors on origin/main (search_view.rs, theme.rs
+//! has pre-existing compile errors on origin/main (`search_view.rs`, `theme.rs`
 //! — out of scope for the roundtrip work).  When sl-viewer is fixed, this
 //! test moves to `crates/sl-viewer/tests/okf_roundtrip.rs` and the sl-viewer
 //! lib exercises the same contract through its own API surface.
@@ -37,9 +40,18 @@ fn write_fixture_jsonl(dir: &Path) -> std::io::Result<()> {
     s.title = Some("Login timeout fix".into());
     s.cwd = Some("/home/dev/auth-service".into());
     s.messages = vec![
-        Message::new(Role::User, "The login session keeps expiring after 5 minutes, we need to fix this."),
-        Message::new(Role::Assistant, "Let me trace the auth middleware to find where the TTL is set."),
-        Message::new(Role::Assistant, "Found it — the session TTL is hardcoded to 300s in src/auth/session.rs."),
+        Message::new(
+            Role::User,
+            "The login session keeps expiring after 5 minutes, we need to fix this.",
+        ),
+        Message::new(
+            Role::Assistant,
+            "Let me trace the auth middleware to find where the TTL is set.",
+        ),
+        Message::new(
+            Role::Assistant,
+            "Found it — the session TTL is hardcoded to 300s in src/auth/session.rs.",
+        ),
         Message::new(Role::User, "Increase it to 1800s and make sure MFA is preserved."),
         Message::new(Role::Assistant, "Done. TTL bumped, all existing auth tests pass."),
         Message::new(Role::User, "Looks good, tests pass. Ship it."),
@@ -83,13 +95,12 @@ fn validate_okf_v1(doc: &OkfDocument) -> Result<(), String> {
 }
 
 #[test]
-fn jsonl_to_okf_to_viewer_roundtrip_is_well_formed() {
+fn fr013_jsonl_to_okf_to_viewer_roundtrip_is_well_formed() {
     let tmp = tempdir().expect("tempdir");
     write_fixture_jsonl(tmp.path()).expect("write fixture");
 
     let jsonl_path = tmp.path().join("auth-fix.jsonl");
-    let sessions = session_ledger::read_jsonl_sessions(&jsonl_path)
-        .expect("read_jsonl_sessions");
+    let sessions = session_ledger::read_jsonl_sessions(&jsonl_path).expect("read_jsonl_sessions");
     assert_eq!(sessions.len(), 1);
     let session = &sessions[0];
     assert_eq!(session.id, "roundtrip-001");
@@ -101,22 +112,19 @@ fn jsonl_to_okf_to_viewer_roundtrip_is_well_formed() {
     validate_okf_v1(&doc).expect("OKF should pass structural validation");
 
     let out_path = tmp.path().join("roundtrip-001.okf.json");
-    std::fs::write(&out_path, serde_json::to_string_pretty(&doc).unwrap())
-        .expect("write OKF");
+    std::fs::write(&out_path, serde_json::to_string_pretty(&doc).unwrap()).expect("write OKF");
     assert!(out_path.exists());
 
     let raw = std::fs::read_to_string(&out_path).expect("read OKF");
-    let parsed: OkfDocument = serde_json::from_str(&raw)
-        .expect("OKF should deserialize via serde_json");
+    let parsed: OkfDocument =
+        serde_json::from_str(&raw).expect("OKF should deserialize via serde_json");
     assert_eq!(parsed, doc, "OKF must round-trip byte-equivalent");
 
-    let entity_types: Vec<&str> =
-        doc.entities.iter().map(|e| e.r#type.as_str()).collect();
+    let entity_types: Vec<&str> = doc.entities.iter().map(|e| e.r#type.as_str()).collect();
     assert!(entity_types.contains(&"intent"));
     assert!(entity_types.contains(&"gate"));
 
-    let relation_types: Vec<&str> =
-        doc.relations.iter().map(|r| r.r#type.as_str()).collect();
+    let relation_types: Vec<&str> = doc.relations.iter().map(|r| r.r#type.as_str()).collect();
     assert!(relation_types.contains(&"verified_by"));
     assert!(relation_types.contains(&"bounded_by"));
 }
@@ -128,14 +136,12 @@ fn roundtripped_okf_supports_live_feed_metadata_contract() {
     // list rendering.
     let tmp = tempdir().expect("tempdir");
     write_fixture_jsonl(tmp.path()).expect("write fixture");
-    let sessions = session_ledger::read_jsonl_sessions(
-        tmp.path().join("auth-fix.jsonl"),
-    ).expect("read JSONL");
+    let sessions =
+        session_ledger::read_jsonl_sessions(tmp.path().join("auth-fix.jsonl")).expect("read JSONL");
 
     let doc = session_ledger::process_session(&sessions[0]);
     let out_path = tmp.path().join(format!("{}.okf.json", doc.source_id));
-    std::fs::write(&out_path, serde_json::to_string_pretty(&doc).unwrap())
-        .expect("write OKF");
+    std::fs::write(&out_path, serde_json::to_string_pretty(&doc).unwrap()).expect("write OKF");
 
     // Bundle list fields consumed by sl-viewer:
     let _: &Vec<OkfEntity> = &doc.entities;
@@ -143,8 +149,10 @@ fn roundtripped_okf_supports_live_feed_metadata_contract() {
     assert!(out_path.exists());
     let stem = out_path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
     let stem_no_okf = stem.strip_suffix(".okf").unwrap_or(stem);
-    assert_eq!(stem_no_okf, doc.source_id,
-        "OKF filename stem must equal source_id (sl-daemon convention)");
+    assert_eq!(
+        stem_no_okf, doc.source_id,
+        "OKF filename stem must equal source_id (sl-daemon convention)"
+    );
 }
 
 #[test]
@@ -172,6 +180,41 @@ fn process_session_is_idempotent() {
 }
 
 #[test]
+fn conformance_corpus_fixtures_validate_via_our_parser() {
+    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let fixture_root = manifest_dir.join("docs/reference/conformance/fixtures");
+    let mut paths: Vec<_> = std::fs::read_dir(&fixture_root)
+        .expect("read conformance fixtures dir")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension().is_some_and(|ext| ext == "json")
+                && path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.ends_with(".okf.json"))
+        })
+        .collect();
+    paths.sort();
+
+    assert!(
+        paths.len() >= 20,
+        "expected at least 20 conformance fixtures under {}",
+        fixture_root.display()
+    );
+
+    for path in paths {
+        let raw = std::fs::read_to_string(&path).expect("read fixture");
+        let doc: OkfDocument = serde_json::from_str(&raw).expect("parse fixture");
+        validate_okf_v1(&doc).expect("fixture must validate");
+
+        let round = serde_json::to_string_pretty(&doc).expect("serialize fixture");
+        let reparsed: OkfDocument = serde_json::from_str(&round).expect("round-trip fixture");
+        assert_eq!(doc, reparsed, "fixture {} must round-trip", path.display());
+    }
+}
+
+#[test]
 fn conformance_fixture_auth_fix_validates_via_our_parser() {
     // Loads the canonical fixture from docs/reference/conformance/fixtures/
     // and asserts our parser + serde shape accept it byte-for-byte.
@@ -183,15 +226,9 @@ fn conformance_fixture_auth_fix_validates_via_our_parser() {
         manifest_dir.join("docs/reference/conformance/fixtures/auth-fix-session-001.okf.json"),
         manifest_dir.join("tests/fixtures/okf/auth-fix-session-001.okf.json"),
     ];
-    let fixture_path = candidates
-        .iter()
-        .find(|p| p.exists())
-        .unwrap_or_else(|| {
-            panic!(
-                "auth-fix-session-001.okf.json not found in any of: {:#?}",
-                candidates
-            )
-        });
+    let fixture_path = candidates.iter().find(|p| p.exists()).unwrap_or_else(|| {
+        panic!("auth-fix-session-001.okf.json not found in any of: {candidates:#?}")
+    });
     let raw = std::fs::read_to_string(fixture_path).expect("read fixture");
     let doc: OkfDocument = serde_json::from_str(&raw).expect("parse fixture");
     validate_okf_v1(&doc).expect("fixture must validate");
@@ -202,8 +239,11 @@ fn conformance_fixture_auth_fix_validates_via_our_parser() {
     // state, criteria, gate) and 7 relations per OKF-EXAMPLES.md §2.
     assert_eq!(doc.entities.len(), 10,
         "auth-fix fixture has 10 entities (intent + 3 acceptance + 2 constraint + resource + state + criteria + gate)");
-    assert_eq!(doc.relations.len(), 7,
-        "auth-fix fixture has 7 relations (3 verified_by + 2 bounded_by + requires + asserts)");
+    assert_eq!(
+        doc.relations.len(),
+        7,
+        "auth-fix fixture has 7 relations (3 verified_by + 2 bounded_by + requires + asserts)"
+    );
 }
 
 #[test]
@@ -212,9 +252,8 @@ fn viewer_bundle_list_metadata_matches_okf() {
     // renders from a ContinuationBundle are also derivable from the OKF.
     let tmp = tempdir().expect("tempdir");
     write_fixture_jsonl(tmp.path()).expect("write fixture");
-    let sessions = session_ledger::read_jsonl_sessions(
-        tmp.path().join("auth-fix.jsonl"),
-    ).expect("read JSONL");
+    let sessions =
+        session_ledger::read_jsonl_sessions(tmp.path().join("auth-fix.jsonl")).expect("read JSONL");
     let doc = session_ledger::process_session(&sessions[0]);
 
     // Detail pane shows source_id as bundle header.

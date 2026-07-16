@@ -1,15 +1,15 @@
-//! `sl` — SessionLedger daemon and CLI companion.
+//! `sl-daemon` — SessionLedger daemon and CLI companion.
 //!
 //! ## Subcommands
 //!
 //! | Command     | Description                                               |
 //! |-------------|-----------------------------------------------------------|
-//! | `sl serve`  | Start the file-watcher daemon (long-running or `--once`)  |
-//! | `sl status` | Check daemon liveness (`GET /healthz`)                    |
-//! | `sl list`   | List compiled OKF bundle paths (`GET /api/bundles`)       |
-//! | `sl tail`   | Stream new bundle paths as they arrive (`GET /api/stream`)|
-//! | `sl export` | Export bundle metadata as CSV / Markdown / JSON            |
-//! | `sl summary`| Print aggregate statistics across all bundles              |
+//! | `sl-daemon serve`  | Start the file-watcher daemon (long-running or `--once`)  |
+//! | `sl-daemon status` | Check daemon liveness (`GET /healthz`)                    |
+//! | `sl-daemon list`   | List compiled OKF bundle paths (`GET /api/bundles`)       |
+//! | `sl-daemon tail`   | Stream new bundle paths as they arrive (`GET /api/stream`)|
+//! | `sl-daemon export` | Export bundle metadata as CSV / Markdown / JSON            |
+//! | `sl-daemon summary`| Print aggregate statistics across all bundles              |
 //!
 //! ## HTTP API (exposed by `sl serve`)
 //!
@@ -20,16 +20,30 @@
 //! ## Exit codes
 //!
 //! * `0` — success (or daemon running, for `status`)
-//! * `1` — daemon not running (for `status` / `tail` when daemon absent)
+//! * `1` — daemon not running, validation failed, or no search matches
 //! * `2` — general / unexpected error
 
+// Soft optional jemalloc (C00 L8). Feature-gated + Unix-only so default and
+// Windows builds keep the system allocator. See docs/ops/jemalloc.md.
+#[cfg(all(feature = "jemalloc", unix))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 mod archive;
+mod audit;
+mod banner;
 mod cli;
 mod etl;
 mod export;
 mod filter;
 mod http;
 mod metrics;
+#[cfg(feature = "otel")]
+mod otel;
+#[cfg(feature = "otel-metrics")]
+mod otel_metrics;
+mod resilience;
+mod shutdown;
 mod tag;
 mod validation;
 mod watcher;
@@ -38,9 +52,11 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell};
 use std::path::Path;
 use tokio::sync::{broadcast, mpsc};
+use tracing::{error, info, info_span, warn, Instrument};
 
 /// Channel depth. Bounded so a slow consumer applies backpressure to the
 /// watcher instead of letting an unbounded queue grow without limit.
@@ -49,9 +65,81 @@ const CHANNEL_CAPACITY: usize = 256;
 /// Broadcast channel capacity for SSE notifications.
 const BROADCAST_CAPACITY: usize = 256;
 
+const CLI_AFTER_HELP: &str = r#"Examples:
+  sl-daemon serve --watch ~/.cursor/agent-transcripts --out ./okf-out
+  sl-daemon serve --watch ./sessions --out ./okf-out --once --http-bind 127.0.0.1:8080
+  curl -X POST http://127.0.0.1:8080/api/ingest \
+    -H 'content-type: application/json' --data-binary @bundle.json
+  sl-daemon status
+  sl-daemon search --tag production --format json
+  sl-daemon completions zsh > _sl-daemon
+  sh scripts/install-sl-daemon-completions.sh
+"#;
+
+const SERVE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon serve --watch ~/.cursor/agent-transcripts --out ./okf-out
+  sl-daemon serve --watch ./sessions --out ./okf-out --once
+  sl-daemon serve --watch ./sessions --out ./okf-out --http-bind off
+  SL_API_KEY=secret sl-daemon serve --watch ./sessions --out ./okf-out --http-bind 0.0.0.0:8080
+
+Loopback binds (127.0.0.0/8, ::1) keep the local trust model: SL_API_KEY is optional
+and only gates mutating routes when set. Non-loopback binds require a non-empty
+SL_API_KEY and gate all /api/* routes. Use --http-bind off for batch jobs that do
+not need HTTP.
+"#;
+
+const EXPORT_AFTER_HELP: &str = r#"Examples:
+  sl-daemon export --format csv
+  sl-daemon export --format md --out report.md ./out/sess-abc.okf.json
+  sl-daemon export --format json --url http://127.0.0.1:9001
+"#;
+
+const SEARCH_AFTER_HELP: &str = r#"Examples:
+  sl-daemon search --since 2026-01-01 --model gpt
+  sl-daemon search --tag production --format json
+  sl-daemon search --min-tokens 1000 --limit 10
+"#;
+
+const TAG_AFTER_HELP: &str = r#"Examples:
+  sl-daemon tag add ./out/sess-abc.okf.json reviewed production
+  sl-daemon tag list ./out/sess-abc.okf.json
+  sl-daemon tag search reviewed --dir ./out
+"#;
+
+const ARCHIVE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon archive --before 2025-01-01 --data-dir ./okf-out
+  sl-daemon archive --before 2025-01-01 --data-dir ./okf-out --dry-run
+"#;
+
+const RESTORE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon restore sess-abc --data-dir ./okf-out
+  sl-daemon restore sess-abc --data-dir ./okf-out --out ./restored
+"#;
+
+const REPLAY_AFTER_HELP: &str = r#"Examples:
+  sl-daemon replay sess-abc
+  sl-daemon replay ./okf-out/sess-abc.okf.json --speed 2.0
+  sl-daemon replay sess-abc --no-stream
+"#;
+
+const VALIDATE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon validate sess-abc --data-dir ./okf-out
+"#;
+
+const COMPLETIONS_AFTER_HELP: &str = r#"Examples:
+  sl-daemon completions bash > sl-daemon.bash
+  sl-daemon completions zsh > _sl-daemon
+  sl-daemon completions fish > sl-daemon.fish
+  sl-daemon completions powershell > sl-daemon.ps1
+
+Committed scripts live under crates/sl-daemon/completions/. Install with:
+  sh scripts/install-sl-daemon-completions.sh
+  pwsh -File scripts/install-sl-daemon-completions.ps1
+"#;
+
 /// SessionLedger — daemon and CLI companion.
 #[derive(Parser, Debug)]
-#[command(name = "sl", version, about)]
+#[command(name = "sl-daemon", version, about, after_help = CLI_AFTER_HELP)]
 struct Args {
     /// Base URL of the daemon HTTP server (used by status / list / tail).
     #[arg(long, global = true, default_value = cli::DEFAULT_BASE_URL)]
@@ -64,6 +152,7 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Start the file-watcher daemon.
+    #[command(after_help = SERVE_AFTER_HELP)]
     Serve {
         /// Directory to watch for `*.jsonl` session transcripts.
         #[arg(long)]
@@ -78,9 +167,15 @@ enum Command {
         once: bool,
 
         /// Address to bind the HTTP server on (e.g. `127.0.0.1:8080`).
+        /// Loopback keeps optional API-key trust; non-loopback requires `SL_API_KEY`.
         /// Pass `off` to disable the HTTP server entirely.
         #[arg(long, default_value = "127.0.0.1:8080")]
         http_bind: String,
+
+        /// SQLite database for durable episodic memory (`SL_MEMORY_DB`).
+        /// Requires `sl-daemon` built with `--features sqlite`.
+        #[arg(long)]
+        memory_db: Option<PathBuf>,
     },
 
     /// Check daemon status (exit 0 = running, exit 1 = not running).
@@ -97,6 +192,7 @@ enum Command {
     /// When no bundle paths are given, all bundles are fetched from the daemon
     /// via GET /api/bundles.  Each bundle path must point to an OKF JSON file
     /// on the local filesystem.
+    #[command(after_help = EXPORT_AFTER_HELP)]
     Export {
         /// Output format: csv | md | json  (default: csv).
         #[arg(long, default_value = "csv")]
@@ -119,12 +215,14 @@ enum Command {
     },
 
     /// Manage tags on OKF bundle files.
+    #[command(after_help = TAG_AFTER_HELP)]
     Tag {
         #[command(subcommand)]
         action: TagAction,
     },
 
     /// Archive bundles older than a given date by gzipping them.
+    #[command(after_help = ARCHIVE_AFTER_HELP)]
     Archive {
         /// Archive bundles with created_at strictly before this date (YYYY-MM-DD).
         #[arg(long)]
@@ -141,6 +239,7 @@ enum Command {
     },
 
     /// Restore a previously archived bundle by decompressing it.
+    #[command(after_help = RESTORE_AFTER_HELP)]
     Restore {
         /// Bundle ID (without extension) to restore from the archive.
         bundle_id: String,
@@ -158,6 +257,7 @@ enum Command {
     /// Replay a compiled OKF bundle, streaming its entities in chronological
     /// order.  Connects to the running daemon's SSE endpoint unless
     /// `--bundle` points to a local file.
+    #[command(after_help = REPLAY_AFTER_HELP)]
     Replay {
         /// Bundle ID (e.g. `sess-abc`) or path to a `.okf.json` file.
         bundle_id: String,
@@ -172,11 +272,12 @@ enum Command {
         no_stream: bool,
     },
 
-    /// Validate an OKF bundle by sending it to the daemon's ingest endpoint.
+    /// Validate an OKF bundle on disk against ingest rules.
     ///
-    /// Reads the bundle file at `<data_dir>/<bundle_id>.okf.json`, re-packages
-    /// the metadata as a `PostBundle`, and calls `POST /api/ingest`.  Exits 0
-    /// when valid, 1 when invalid (errors printed to stdout as JSON), 2 on error.
+    /// Reads `<data_dir>/<bundle_id>.okf.json`, re-packages the metadata as a
+    /// `PostBundle`, and runs local validation.  Exits 0 when valid, 1 when
+    /// invalid (diagnostics printed to stdout as JSON), 2 on I/O or parse error.
+    #[command(after_help = VALIDATE_AFTER_HELP)]
     Validate {
         /// Bundle ID (filename stem, without `.okf.json`).
         bundle_id: String,
@@ -190,6 +291,7 @@ enum Command {
     ///
     /// When no `--bundles` paths are given, all bundles are fetched from the
     /// daemon via GET /api/bundles.
+    #[command(after_help = SEARCH_AFTER_HELP)]
     Search {
         /// Include only bundles created on or after this date (YYYY-MM-DD).
         #[arg(long)]
@@ -223,6 +325,16 @@ enum Command {
         /// OKF bundle file paths to search. If omitted, fetches all from the
         /// daemon.
         bundles: Vec<PathBuf>,
+    },
+
+    /// Generate shell completion scripts to stdout.
+    ///
+    /// Supported shells: bash, zsh, fish, powershell.
+    #[command(after_help = COMPLETIONS_AFTER_HELP)]
+    Completions {
+        /// Shell to generate completions for.
+        #[arg(value_enum)]
+        shell: Shell,
     },
 }
 
@@ -266,11 +378,25 @@ enum TagAction {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "otel")]
+    let otel_provider = init_tracing();
+    #[cfg(not(feature = "otel"))]
+    init_tracing();
+    #[cfg(feature = "otel-metrics")]
+    otel_metrics::maybe_log_stub_status();
     let args = Args::parse();
 
     match args.command {
-        Command::Serve { watch, out, once, http_bind } => {
-            run_serve(watch, out, once, http_bind).await?;
+        Command::Serve { watch, out, once, http_bind, memory_db } => {
+            let memory_db = memory_db.or_else(|| {
+                std::env::var("SL_MEMORY_DB")
+                    .ok()
+                    .filter(|value| !value.trim().is_empty())
+                    .map(PathBuf::from)
+            });
+            if let Err(error) = run_serve(watch, out, once, http_bind, memory_db).await {
+                cli::exit_error(error);
+            }
         }
         Command::Status => run_status(&args.url).await,
         Command::List => run_list(&args.url).await,
@@ -300,9 +426,140 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             run_search(&args.url, since, until, model, min_tokens, tags, limit, &format, &bundles)
                 .await;
         }
+        Command::Completions { shell } => {
+            run_completions(shell);
+        }
+    }
+
+    #[cfg(feature = "otel")]
+    if let Some(provider) = otel_provider {
+        let _ = provider.shutdown();
     }
 
     Ok(())
+}
+
+fn run_completions(shell: Shell) {
+    let mut command = Args::command();
+    generate(shell, &mut command, "sl-daemon", &mut std::io::stdout());
+}
+
+/// Install a `tracing` subscriber filtered by `RUST_LOG`.
+///
+/// Default when unset: `sl_daemon=info` (matches docs/ops/observability.md).
+#[cfg(not(feature = "otel"))]
+fn init_tracing() {
+    use tracing_subscriber::EnvFilter;
+
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+
+    #[cfg(feature = "json-logs")]
+    if json_logs_requested() {
+        tracing_subscriber::fmt().json().with_env_filter(filter.clone()).with_target(true).init();
+        return;
+    }
+
+    tracing_subscriber::fmt().with_env_filter(filter).with_target(true).init();
+}
+
+#[cfg(feature = "json-logs")]
+fn json_logs_requested() -> bool {
+    std::env::var("SL_LOG_FORMAT").is_ok_and(|value| value.eq_ignore_ascii_case("json"))
+}
+
+/// Install the formatting subscriber and, when configured, OTLP trace export.
+#[cfg(feature = "otel")]
+fn init_tracing() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
+    use tracing_subscriber::EnvFilter;
+
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+    let endpoint = std::env::var("SL_OTLP_ENDPOINT")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| {
+            std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+        });
+
+    if let Some(endpoint) = endpoint {
+        #[cfg(feature = "json-logs")]
+        let json_logs = json_logs_requested();
+        #[cfg(not(feature = "json-logs"))]
+        let json_logs = false;
+        match otel::init(filter, &endpoint, json_logs) {
+            Ok(provider) => return Some(provider),
+            Err(error) => {
+                eprintln!(
+                    "warning: failed to initialize OTLP export for {endpoint:?}: {error}; \
+                     continuing with local logs"
+                );
+            }
+        }
+    }
+
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+    #[cfg(feature = "json-logs")]
+    if json_logs_requested() {
+        tracing_subscriber::fmt().json().with_env_filter(filter.clone()).with_target(true).init();
+        return None;
+    }
+
+    tracing_subscriber::fmt().with_env_filter(filter).with_target(true).init();
+    None
+}
+
+fn parse_http_bind(value: &str) -> Result<SocketAddr, String> {
+    value.parse().map_err(|error| format!("invalid --http-bind address {value:?}: {error}"))
+}
+
+/// Non-loopback binds require a configured API key; loopback keeps optional-key behavior.
+fn ensure_http_bind_auth(addr: SocketAddr, auth: &http::ApiKeyAuth) -> Result<(), String> {
+    if addr.ip().is_loopback() {
+        return Ok(());
+    }
+    if auth.is_configured() {
+        return Ok(());
+    }
+    Err(format!(
+        "non-loopback --http-bind {addr} requires SL_API_KEY \
+         (set a non-empty shared secret, or bind to 127.0.0.0/8 or ::1 for the local trust model)"
+    ))
+}
+
+fn audit_event(
+    sink: &audit::AuditSink,
+    action: &'static str,
+    outcome: &'static str,
+    resource: &dyn std::fmt::Display,
+) {
+    let request_id = audit::local_request_id();
+    let resource = resource.to_string();
+    info!(
+        target: "sl_daemon::audit",
+        event_kind = "audit",
+        actor = audit::LOCAL_ACTOR,
+        action,
+        outcome,
+        request_id,
+        resource = %resource,
+        "local operation"
+    );
+    let event = audit::AuditEvent {
+        timestamp: audit::timestamp_unix_ms(),
+        actor: audit::LOCAL_ACTOR,
+        action,
+        outcome,
+        request_id: &request_id,
+        reason: None,
+        resource: Some(resource),
+    };
+    if let Err(error) = sink.append(&event) {
+        warn!(error = %error, path = %sink.path().display(), "failed to append audit event");
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -314,87 +571,200 @@ async fn run_serve(
     out: PathBuf,
     once: bool,
     http_bind: String,
+    memory_db: Option<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let version = env!("CARGO_PKG_VERSION");
+    banner::emit_interactive_banner(version);
+    info!(banner = %banner::plain_banner(version), "startup");
+
+    #[cfg(not(feature = "sqlite"))]
+    if memory_db.is_some() {
+        return Err(
+            "--memory-db / SL_MEMORY_DB requires sl-daemon built with --features sqlite".into()
+        );
+    }
+
+    #[cfg(feature = "sqlite")]
+    let memory_store: Option<Arc<session_ledger::SqliteMemoryStore>> = if let Some(path) = memory_db
+    {
+        let store = session_ledger::SqliteMemoryStore::open(&path).map_err(|error| {
+            format!("failed to open memory database {}: {error}", path.display())
+        })?;
+        info!(memory_db = %path.display(), "durable memory store enabled");
+        Some(Arc::new(store))
+    } else {
+        None
+    };
+
     // Broadcast channel: ETL consumer publishes every written path; HTTP SSE
     // handler subscribes one receiver per connected client.
     let (bcast_tx, _bcast_rx) = broadcast::channel::<PathBuf>(BROADCAST_CAPACITY);
 
+    let shutdown = shutdown::ServeShutdown::new();
+    let _ctrl_c = shutdown.spawn_ctrl_c_handler();
+
     let (tx, mut rx) = mpsc::channel::<PathBuf>(CHANNEL_CAPACITY);
     let out_dir = out.clone();
+    let data_dir = audit::data_dir_from_env_or(&out);
+    let audit_sink = Arc::new(
+        audit::AuditSink::open(&data_dir).map_err(|error| format!("audit sink: {error}"))?,
+    );
 
     // Consumer: drain the channel, transforming each path.
     let bcast_for_consumer = bcast_tx.clone();
-    let consumer = tokio::spawn(async move {
-        let mut total = 0usize;
-        while let Some(path) = rx.recv().await {
-            match etl::transform_file(&path, &out_dir) {
-                Ok(written) => {
-                    total += written.len();
-                    for w in &written {
-                        let _ = bcast_for_consumer.send(w.clone());
+    let audit_sink_for_consumer = audit_sink.clone();
+    #[cfg(feature = "sqlite")]
+    let memory_for_consumer = memory_store.clone();
+    let shutdown_for_consumer = shutdown.clone();
+    let consumer = tokio::spawn(
+        async move {
+            let mut total = 0usize;
+            loop {
+                tokio::select! {
+                    _ = shutdown_for_consumer.cancelled() => {
+                        info!("ETL consumer cancelled");
+                        break;
                     }
-                    eprintln!("[sl-daemon] {} → {} OKF doc(s)", path.display(), written.len());
+                    path = rx.recv() => {
+                        let Some(path) = path else {
+                            break;
+                        };
+                        let span = info_span!("etl.transform", path = %path.display());
+                        async {
+                            #[cfg(feature = "sqlite")]
+                            let memory_ref = memory_for_consumer
+                                .as_ref()
+                                .map(|store| store.as_ref() as &dyn session_ledger::ports::MemoryStore);
+                            #[cfg(not(feature = "sqlite"))]
+                            let memory_ref: Option<&dyn session_ledger::ports::MemoryStore> = None;
+                            match etl::transform_file(&path, &out_dir, memory_ref) {
+                                Ok(written) => {
+                                    total += written.len();
+                                    for w in &written {
+                                        let _ = bcast_for_consumer.send(w.clone());
+                                        audit_event(
+                                            &audit_sink_for_consumer,
+                                            "export",
+                                            "succeeded",
+                                            &w.display(),
+                                        );
+                                    }
+                                    info!(
+                                        path = %path.display(),
+                                        okf_docs = written.len(),
+                                        "ETL transform ok"
+                                    );
+                                }
+                                Err(err) => {
+                                    audit_event(
+                                        &audit_sink_for_consumer,
+                                        "export",
+                                        "failed",
+                                        &path.display(),
+                                    );
+                                    error!(path = %path.display(), error = %err, "ETL transform failed");
+                                }
+                            }
+                        }
+                        .instrument(span)
+                        .await;
+                    }
                 }
-                Err(err) => eprintln!("[sl-daemon] ERROR {err}"),
             }
+            total
         }
-        total
-    });
+        .instrument(info_span!("etl.consumer")),
+    );
 
     // HTTP server (optional).
     let http_handle = if http_bind.eq_ignore_ascii_case("off") {
         None
     } else {
-        let addr: SocketAddr = http_bind
-            .parse()
-            .map_err(|e| format!("invalid --http-bind address {http_bind:?}: {e}"))?;
-        let state =
-            http::AppState { out_dir: Arc::new(out.clone()), broadcast_tx: bcast_tx.clone() };
-        let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+        let addr = parse_http_bind(&http_bind)?;
+        let ingest_admission = http::IngestAdmission::from_env()?;
+        let mut api_key_auth = http::ApiKeyAuth::from_env();
+        ensure_http_bind_auth(addr, &api_key_auth)?;
+        if !addr.ip().is_loopback() {
+            api_key_auth = api_key_auth.with_protect_all_api(true);
+            info!(%addr, "non-loopback HTTP bind; SL_API_KEY required for all /api/* routes");
+        }
+        // Shared-key or non-loopback path gets a default tower-style API throttle;
+        // pure loopback DX leaves it off unless SL_API_RATE_LIMIT is set.
+        let enforce_api_rate_default = api_key_auth.is_configured() || !addr.ip().is_loopback();
+        let api_rate_limit = http::ApiRateLimit::from_env(enforce_api_rate_default)?;
+        if api_rate_limit.is_enabled() {
+            info!(
+                limit = api_rate_limit.limit,
+                window_ms = api_rate_limit.window.as_millis() as u64,
+                "HTTP /api/* rate limit enabled"
+            );
+        }
+        let api_circuit_breaker =
+            resilience::ApiCircuitBreaker::from_env(enforce_api_rate_default)?;
+        if api_circuit_breaker.is_enabled() {
+            info!(
+                failure_threshold = api_circuit_breaker.failure_threshold,
+                open_ms = api_circuit_breaker.open_for.as_millis() as u64,
+                "HTTP /api/* circuit breaker enabled"
+            );
+        }
+        let state = http::AppState {
+            out_dir: Arc::new(out.clone()),
+            broadcast_tx: bcast_tx.clone(),
+            http_metrics: Arc::new(metrics::HttpMetrics::default()),
+            ingest_admission,
+            api_rate_limit,
+            api_circuit_breaker,
+            api_key_auth,
+            audit_sink: audit_sink.clone(),
+            idempotency_cache: http::IngestIdempotencyCache::default(),
+            #[cfg(feature = "sqlite")]
+            memory_store: memory_store.clone(),
+        };
+        let shutdown_for_http = shutdown.clone();
         let handle = tokio::spawn(async move {
             if let Err(e) = http::serve(addr, state, async move {
-                let _ = shutdown_rx.await;
+                shutdown_for_http.cancelled().await;
             })
             .await
             {
-                eprintln!("[sl-daemon] HTTP server error: {e}");
+                error!(error = %e, "HTTP server error");
             }
         });
-        eprintln!("[sl-daemon] HTTP server listening on http://{addr}");
-        Some((handle, shutdown_tx))
+        info!(%addr, "HTTP server listening");
+        Some(handle)
     };
 
     if once {
-        let sent = watcher::scan_once(&watch, &tx).await?;
-        eprintln!("[sl-daemon] --once: enqueued {sent} file(s)");
+        let sent = watcher::scan_once(&watch, &tx, shutdown.token()).await?;
+        info!(enqueued = sent, "once: scan complete");
         drop(tx);
         let total = consumer.await?;
-        eprintln!("[sl-daemon] --once: wrote {total} OKF doc(s)");
-        if let Some((handle, shutdown_tx)) = http_handle {
-            let _ = shutdown_tx.send(());
+        info!(okf_docs = total, "once: ETL complete");
+        shutdown.cancel();
+        if let Some(handle) = http_handle {
             let _ = handle.await;
         }
         return Ok(());
     }
 
     // Long-running mode.
-    watcher::scan_once(&watch, &tx).await?;
+    watcher::scan_once(&watch, &tx, shutdown.token()).await?;
     let _watcher = watcher::spawn_fs_watcher(&watch, tx.clone())?;
-    eprintln!("[sl-daemon] watching {} → {}", watch.display(), out.display());
+    info!(watch = %watch.display(), out = %out.display(), "watching for sessions");
 
     drop(tx);
 
-    tokio::signal::ctrl_c().await?;
-    eprintln!("[sl-daemon] shutting down");
+    shutdown.cancelled().await;
+    info!("shutting down");
     drop(_watcher);
 
-    if let Some((handle, shutdown_tx)) = http_handle {
-        let _ = shutdown_tx.send(());
+    if let Some(handle) = http_handle {
         let _ = handle.await;
     }
 
     let total = consumer.await?;
-    eprintln!("[sl-daemon] wrote {total} OKF doc(s) total");
+    info!(okf_docs = total, "ETL consumer finished");
     Ok(())
 }
 
@@ -407,16 +777,14 @@ async fn run_status(base_url: &str) {
     match cli::fetch_health(&client, base_url).await {
         Ok(cli::HealthStatus::Running { body }) => {
             println!("daemon running — {body}");
-            std::process::exit(0);
+            std::process::exit(cli::EXIT_OK);
         }
         Ok(cli::HealthStatus::NotRunning) => {
             println!("daemon not running");
-            std::process::exit(1);
+            eprintln!("hint: {}", cli::daemon_down_message(base_url));
+            std::process::exit(cli::EXIT_NOT_OK);
         }
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "health check failed", e),
     }
 }
 
@@ -432,10 +800,7 @@ async fn run_list(base_url: &str) {
                 println!("{p}");
             }
         }
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "fetching bundle list", e),
     }
 }
 
@@ -453,14 +818,7 @@ async fn run_tail(base_url: &str) {
 
     let resp = match client.get(&url).header("Accept", "text/event-stream").send().await {
         Ok(r) => r,
-        Err(e) if e.is_connect() => {
-            eprintln!("daemon not running at {base_url}");
-            std::process::exit(1);
-        }
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "connecting to SSE stream", e),
     };
 
     let byte_stream = resp.bytes_stream().map_err(std::io::Error::other);
@@ -515,10 +873,7 @@ async fn resolve_bundle_paths(base_url: &str, given: &[PathBuf]) -> Vec<PathBuf>
     let client = reqwest::Client::new();
     match cli::fetch_bundle_paths(&client, base_url).await {
         Ok(paths) => paths.into_iter().map(PathBuf::from).collect(),
-        Err(e) => {
-            eprintln!("error fetching bundle list: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "fetching bundle list", e),
     }
 }
 
@@ -532,10 +887,7 @@ async fn run_export(
 
     let fmt = match export::ExportFormat::from_str(format_str) {
         Ok(f) => f,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_error(e),
     };
 
     let paths = resolve_bundle_paths(base_url, given_bundles).await;
@@ -550,8 +902,7 @@ async fn run_export(
     match out_path {
         Some(p) => {
             if let Err(e) = std::fs::write(p, &rendered) {
-                eprintln!("error writing to {}: {e}", p.display());
-                std::process::exit(2);
+                cli::exit_error(format!("writing to {}: {e}", p.display()));
             }
         }
         None => print!("{rendered}"),
@@ -568,19 +919,13 @@ fn run_tag(action: TagAction) {
             Ok(updated) => {
                 eprintln!("tags updated: {:?}", updated);
             }
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(2);
-            }
+            Err(e) => cli::exit_error(e),
         },
         TagAction::Remove { bundle, tags } => match tag::remove(&bundle, &tags) {
             Ok(updated) => {
                 eprintln!("tags updated: {:?}", updated);
             }
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(2);
-            }
+            Err(e) => cli::exit_error(e),
         },
         TagAction::List { bundle } => match tag::list(&bundle) {
             Ok(tags) => {
@@ -588,10 +933,7 @@ fn run_tag(action: TagAction) {
                     println!("{t}");
                 }
             }
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(2);
-            }
+            Err(e) => cli::exit_error(e),
         },
         TagAction::Search { tag: search_tag, dir } => match tag::search_dir(&dir, &search_tag) {
             Ok(paths) => {
@@ -599,10 +941,7 @@ fn run_tag(action: TagAction) {
                     println!("{}", p.display());
                 }
             }
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(2);
-            }
+            Err(e) => cli::exit_error(e),
         },
     }
 }
@@ -626,8 +965,9 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
     let before = match chrono::NaiveDate::parse_from_str(before_str, "%Y-%m-%d") {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("error: invalid --before date {before_str:?}: {e}");
-            std::process::exit(2);
+            cli::exit_error(format!(
+                "invalid --before date {before_str:?}: {e} (expected YYYY-MM-DD)"
+            ));
         }
     };
 
@@ -637,6 +977,16 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
 
     match archive::archive_bundles(data_dir, before, dry_run) {
         Ok(stats) => {
+            let audit_sink = audit::AuditSink::open(data_dir).unwrap_or_else(|error| {
+                eprintln!("error: audit sink: {error}");
+                std::process::exit(2);
+            });
+            audit_event(
+                &audit_sink,
+                "archive",
+                if dry_run { "dry_run" } else { "succeeded" },
+                &stats.archive_dir.display(),
+            );
             let mb_saved = stats.bytes_saved as f64 / 1_048_576.0;
             println!(
                 "Archived {} bundle(s), saved {:.2} MB  (archive: {})",
@@ -646,8 +996,12 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
             );
         }
         Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
+            let audit_sink = audit::AuditSink::open(data_dir).unwrap_or_else(|error| {
+                eprintln!("error: audit sink: {error}");
+                std::process::exit(2);
+            });
+            audit_event(&audit_sink, "archive", "failed", &data_dir.display());
+            cli::exit_error(e);
         }
     }
 }
@@ -657,23 +1011,25 @@ fn run_archive(before_str: &str, data_dir: &Path, dry_run: bool) {
 // ---------------------------------------------------------------------------
 
 fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
+    let audit_sink = audit::AuditSink::open(data_dir).unwrap_or_else(|error| {
+        eprintln!("error: audit sink: {error}");
+        std::process::exit(2);
+    });
     let archive_root = data_dir.join("archive");
     let archive_path = match archive::find_archive_path(&archive_root, bundle_id) {
         Ok(p) => p,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_error(e),
     };
 
     let output_dir = out.unwrap_or(data_dir);
     match archive::restore_bundle(&archive_path, output_dir) {
         Ok(restored) => {
+            audit_event(&audit_sink, "restore", "succeeded", &restored.display());
             println!("Restored: {}", restored.display());
         }
         Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
+            audit_event(&audit_sink, "restore", "failed", &archive_path.display());
+            cli::exit_error(e);
         }
     }
 }
@@ -688,18 +1044,12 @@ fn run_validate(bundle_id: &str, data_dir: &Path) {
     let path = data_dir.join(format!("{bundle_id}.okf.json"));
     let text = match std::fs::read_to_string(&path) {
         Ok(t) => t,
-        Err(e) => {
-            eprintln!("error: cannot read {}: {e}", path.display());
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_error(format!("cannot read {}: {e}", path.display())),
     };
 
     let value: serde_json::Value = match serde_json::from_str(&text) {
         Ok(v) => v,
-        Err(e) => {
-            eprintln!("error: cannot parse {}: {e}", path.display());
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_error(format!("cannot parse {}: {e}", path.display())),
     };
 
     // Re-package the on-disk OKF fields into a PostBundle for validation.
@@ -764,7 +1114,7 @@ fn run_validate(bundle_id: &str, data_dir: &Path) {
     let json = serde_json::to_string_pretty(&result).unwrap_or_default();
     println!("{json}");
     if !result.valid {
-        std::process::exit(1);
+        std::process::exit(cli::EXIT_NOT_OK);
     }
 }
 
@@ -794,29 +1144,33 @@ async fn run_search(
 
     if matched.is_empty() {
         eprintln!("no bundles matched the given filters");
-        return;
+        std::process::exit(cli::EXIT_NOT_OK);
     }
 
     let owned: Vec<export::BundleMeta> = matched.into_iter().cloned().collect();
 
-    let rendered = match export::ExportFormat::from_str(format_str) {
-        Ok(export::ExportFormat::Csv) => export::render_csv(&owned),
-        Ok(export::ExportFormat::Markdown) => export::render_markdown(&owned),
-        Ok(export::ExportFormat::Json) => export::render_json(&owned),
-        // Default / "text": one session_id  created_at  model  token_count  tags line each
-        _ => {
-            let mut out = String::new();
-            for m in &owned {
-                out.push_str(&format!(
-                    "{}\t{}\t{}\t{}\t[{}]\n",
-                    m.session_id,
-                    m.created_at,
-                    m.model,
-                    m.token_count,
-                    m.tags.join(", ")
-                ));
-            }
-            out
+    let rendered = if format_str.eq_ignore_ascii_case("text") {
+        let mut out = String::new();
+        for m in &owned {
+            out.push_str(&format!(
+                "{}\t{}\t{}\t{}\t[{}]\n",
+                m.session_id,
+                m.created_at,
+                m.model,
+                m.token_count,
+                m.tags.join(", ")
+            ));
+        }
+        out
+    } else {
+        let fmt = match export::ExportFormat::from_str(format_str) {
+            Ok(f) => f,
+            Err(e) => cli::exit_error(e),
+        };
+        match fmt {
+            export::ExportFormat::Csv => export::render_csv(&owned),
+            export::ExportFormat::Markdown => export::render_markdown(&owned),
+            export::ExportFormat::Json => export::render_json(&owned),
         }
     };
 
@@ -871,21 +1225,13 @@ async fn run_replay(base_url: &str, bundle_id: &str, speed: f64, no_stream: bool
     let client = reqwest::Client::new();
     let resp = match client.get(&url).header("Accept", "text/event-stream").send().await {
         Ok(r) => r,
-        Err(e) if e.is_connect() => {
-            eprintln!("daemon not running at {base_url}");
-            std::process::exit(1);
-        }
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(2);
-        }
+        Err(e) => cli::exit_on_reqwest(base_url, "connecting to replay stream", e),
     };
 
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        eprintln!("server error {status}: {body}");
-        std::process::exit(2);
+        cli::exit_error(format!("server error {status}: {body}"));
     }
 
     let byte_stream = resp.bytes_stream().map_err(std::io::Error::other);
@@ -987,5 +1333,28 @@ mod tests {
         let line = format_entity_line(&entity, 5);
         assert!(line.starts_with("[00:00:05]"));
         assert!(line.contains("unknown/?"));
+    }
+
+    #[test]
+    fn http_bind_parses_loopback_and_non_loopback_addresses() {
+        assert!(parse_http_bind("127.0.0.1:8080").is_ok());
+        assert!(parse_http_bind("[::1]:8080").is_ok());
+        assert!(parse_http_bind("0.0.0.0:8080").is_ok());
+        assert!(parse_http_bind("[::]:8080").is_ok());
+        assert!(parse_http_bind("not-an-addr").is_err());
+    }
+
+    #[test]
+    fn non_loopback_bind_requires_configured_api_key() {
+        let loopback = parse_http_bind("127.0.0.1:8080").unwrap();
+        let remote = parse_http_bind("0.0.0.0:8080").unwrap();
+        let unset = http::ApiKeyAuth::from_value(None);
+        let configured = http::ApiKeyAuth::from_value(Some("secret".into()));
+
+        assert!(ensure_http_bind_auth(loopback, &unset).is_ok());
+        assert!(ensure_http_bind_auth(loopback, &configured).is_ok());
+        assert!(ensure_http_bind_auth(remote, &configured).is_ok());
+        let err = ensure_http_bind_auth(remote, &unset).unwrap_err();
+        assert!(err.contains("requires SL_API_KEY"));
     }
 }

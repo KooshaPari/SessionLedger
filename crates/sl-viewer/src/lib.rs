@@ -3,6 +3,7 @@
 //! Three tabs:
 //! - **Bundles** — browse compiled continuation bundles
 //! - **History** — session history timeline
+//! - **Unfinished** — work that may need to be resumed
 //! - **Memory** — wiki/docs view of distilled memories
 //!
 //! Compiled for both desktop (`dioxus-desktop`) and web (`dioxus-web`) via
@@ -10,10 +11,14 @@
 //! [`App`] regardless of renderer.
 
 pub mod app;
+pub mod async_states;
 pub mod bundle_diff;
 pub mod bundle_list;
+pub mod command_palette;
 pub mod corpus_loader;
 pub mod detail_pane;
+pub mod fixture;
+pub mod help_overlay;
 pub mod history_tab;
 pub mod live_feed;
 pub mod memory_tab;
@@ -23,7 +28,10 @@ pub mod search_view;
 pub mod session_list;
 pub mod theme;
 pub mod timeline;
+pub mod tokens;
+pub mod unfinished_tab;
 
 pub use app::App;
+pub use async_states::{ContentSkeleton, ErrorState, LoadingState, SkeletonLayout};
 pub use corpus_loader::{load_sessions, DataSource};
 pub use session_list::SessionList;

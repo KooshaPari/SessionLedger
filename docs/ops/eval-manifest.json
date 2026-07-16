@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "eval_surfaces": [
+    "okf_conformance",
+    "pipeline_bench"
+  ],
+  "fixture_seed": "sessionledger-okf-v1",
+  "fixture_glob": "docs/reference/conformance/fixtures/*.okf.json",
+  "fixture_count": 20,
+  "fixture_anchors": [
+    "archive-gzip-resume-036.okf.json",
+    "arm-ci-runner-007.okf.json",
+    "auth-fix-session-001.okf.json",
+    "billing-session-003.okf.json",
+    "blank-entities-099.okf.json",
+    "codex-typescript-023.okf.json",
+    "compress-token-proxy-034.okf.json",
+    "context-grounds-004.okf.json",
+    "cursor-python-029.okf.json",
+    "cursor-refactor-011.okf.json",
+    "empty-intent-002.okf.json",
+    "factory-delegate-015.okf.json",
+    "forge-go-module-026.okf.json",
+    "minimal-session-042.okf.json",
+    "multi-intent-088.okf.json",
+    "task-family-compress-resume-033.okf.json",
+    "task-family-multiturn-031.okf.json",
+    "task-family-token-budget-032.okf.json",
+    "token-slice-budget-035.okf.json",
+    "tool-evidence-021.okf.json"
+  ],
+  "rust_msrv": "1.85",
+  "toolchain_channel": "stable",
+  "cargo_lock_sha256": "6b59a35aedc1c8abc7627cf8292aa6747723ebda666e4cf2704156a79fb69a6e",
+  "bench_policy_path": "docs/ops/perf-baseline.json",
+  "bench_gate_script": "scripts/bench-gate.ps1",
+  "verify_command": "./scripts/eval-repro-check.ps1"
+}

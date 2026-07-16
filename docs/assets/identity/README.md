@@ -1,6 +1,6 @@
 # SessionLedger — Identity Demo Media (L105)
 
-Animated SVG + MP4 showcasing the [Lab-Coat palette](../../assets/tokens.css) in motion.
+Animated SVG + MP4 showcasing the [Lab-Coat palette](../../../assets/tokens.css) in motion.
 
 ## Files
 
@@ -32,6 +32,8 @@ python /tmp/svg2mp4.py demo.svg demo.mp4 480 270 24 5
 
 ## Source of truth
 
-- Tokens: [`../../assets/tokens.css`](../../assets/tokens.css)
-- Source icon: [`../../assets/brand/sessionledger-icon.svg`](../../assets/brand/sessionledger-icon.svg)
+- Visual acceptance: [`../../VISUAL_SPEC.md`](../../VISUAL_SPEC.md) (palette, empty/loading/error, motion)
+- Golden checklist: [`../../../tests/visual/README.md`](../../../tests/visual/README.md)
+- Tokens: [`../../../assets/tokens.css`](../../../assets/tokens.css)
+- Source icon: [`../../../assets/brand/sessionledger-icon.svg`](../../../assets/brand/sessionledger-icon.svg)
 - Scorecard: `.claude/audit/.vision/L96-L107.md`

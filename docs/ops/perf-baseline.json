@@ -1,0 +1,65 @@
+{
+  "schema_version": 2,
+  "suite": "benches/pipeline.rs",
+  "criterion_baseline": "current",
+  "units": "nanoseconds",
+  "policy": {
+    "enforced": true,
+    "threshold_percent": 25.0,
+    "sample_size": 10,
+    "warm_up_seconds": 1.0,
+    "measurement_seconds": 2.0,
+    "update_command": "./scripts/bench-gate.ps1 -UpdateBaseline",
+    "self_check_command": "./scripts/bench-gate.ps1 -SelfCheck",
+    "notes": [
+      "CI job 'pipeline perf regression gate' is blocking (no continue-on-error).",
+      "A run fails when any current mean exceeds budget_mean_ns (baseline mean + threshold_percent)."
+    ]
+  },
+  "latency": {
+    "enforced": true,
+    "threshold_percent": 25.0,
+    "units": "nanoseconds",
+    "metric": "criterion_sample_p95",
+    "notes": [
+      "C00 L6 enforced latency budgets: checked-in p95 baselines with the same 25% regression threshold as mean budgets.",
+      "Blocking CI (latency.enforced=true): p95 overruns fail the pipeline perf gate alongside mean budget misses.",
+      "p95_ns values are provisional (≈ mean_ns × 1.15) until refreshed via ./scripts/bench-gate.ps1 -UpdateBaseline.",
+      "HTTP load-smoke p95 SLO (ms) is recorded under http_load_smoke for ops alignment with scripts/load-smoke.ps1."
+    ],
+    "http_load_smoke": {
+      "max_p95_ms": 500,
+      "min_success_rate_percent": 99,
+      "script": "scripts/load-smoke.ps1",
+      "workflow": ".github/workflows/ops-load.yml"
+    },
+    "benchmarks": {
+      "pipeline/distill_compile_200_messages": {
+        "p95_ns": 1243655.851,
+        "budget_p95_ns": 1554569.814
+      },
+      "pipeline/okf_export_200_messages": {
+        "p95_ns": 7598.83,
+        "budget_p95_ns": 9498.538
+      },
+      "pipeline/inject_render_200_messages": {
+        "p95_ns": 15366.989,
+        "budget_p95_ns": 19208.737
+      }
+    }
+  },
+  "benchmarks": {
+    "pipeline/distill_compile_200_messages": {
+      "mean_ns": 1081439.87,
+      "budget_mean_ns": 1351799.838
+    },
+    "pipeline/okf_export_200_messages": {
+      "mean_ns": 6607.678,
+      "budget_mean_ns": 8259.598
+    },
+    "pipeline/inject_render_200_messages": {
+      "mean_ns": 13362.599,
+      "budget_mean_ns": 16703.249
+    }
+  }
+}

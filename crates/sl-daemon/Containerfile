@@ -34,6 +34,11 @@ LABEL org.opencontainers.image.title="sl-daemon" \
       org.opencontainers.image.description="SessionLedger ETL daemon: watch -> compile -> OKF export" \
       org.opencontainers.image.source="https://github.com/KooshaPari/SessionLedger"
 
+# curl is used only for the OCI HEALTHCHECK probe against /healthz.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Non-root runtime user; OKF output dir owned by it.
 RUN useradd --system --create-home --uid 10001 sl \
     && mkdir -p /data/sessions /data/out \
@@ -42,6 +47,9 @@ USER sl
 
 COPY --from=build /src/target/release/sl-daemon /usr/local/bin/sl-daemon
 
+EXPOSE 8080
 VOLUME ["/data/sessions", "/data/out"]
 ENTRYPOINT ["sl-daemon"]
-CMD ["--watch", "/data/sessions", "--out", "/data/out"]
+CMD ["serve", "--watch", "/data/sessions", "--out", "/data/out"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:8080/healthz | grep -q '^ok$' || exit 1

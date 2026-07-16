@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 session-ledger = { path = "../.." }
+# SQLite memory persistence is optional; enable with `--features sqlite`.
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "signal", "fs", "time"] }
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 clap = { version = "4", features = ["derive"] }
@@ -16,18 +17,34 @@ thiserror = "2"
 flate2 = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
 # HTTP server (axum-based SSE bridge)
-axum = { version = "0.7", features = ["macros"] }
-tower-http = { version = "0.5", features = ["cors"] }
+axum = { version = "0.8", features = ["macros"] }
+tower-http = { version = "0.6", features = ["cors"] }
 futures-core = "0.3"
 tokio-stream = { version = "0.1", features = ["sync"] }
 # CLI client (reqwest + SSE stream helpers)
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
-tokio-util = { version = "0.7", features = ["io"] }
+tokio-util = { version = "0.7", features = ["io", "rt"] }
 futures-util = "0.3"
 async-stream = "0.3"
+# Structured logging / spans (RUST_LOG env filter)
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+opentelemetry = { version = "0.32.0", default-features = false, features = ["trace"], optional = true }
+opentelemetry_sdk = { version = "0.32.1", default-features = false, features = ["trace"], optional = true }
+tracing-opentelemetry = { version = "0.33.0", default-features = false, optional = true }
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["trace", "grpc-tonic"], optional = true }
+clap_complete = "4.6.7"
+rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
+
+# CPU sampling uses SIGPROF / setitimer; pprof-rs does not build on Windows.
+# jemalloc (tikv-jemallocator) is Unix-only — keep it off the default/Windows graph.
+[target.'cfg(unix)'.dependencies]
+pprof = { version = "0.15.0", default-features = false, features = ["prost-codec"] }
+tikv-jemallocator = { version = "0.6", optional = true }
 
 [dev-dependencies]
 tempfile = "3"
+tracing-test = "0.2.6"
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -39,3 +56,21 @@ unsafe_code = "forbid"
 # into sl-viewer's platform-specific graph. The `session-ledger` path dep above
 # still resolves via its relative path.
 [workspace]
+
+[features]
+default = []
+sqlite = ["session-ledger/sqlite", "dep:rusqlite"]
+json-logs = ["tracing-subscriber/json"]
+otel = [
+    "dep:opentelemetry",
+    "dep:opentelemetry_sdk",
+    "dep:opentelemetry-otlp",
+    "dep:tracing-opentelemetry",
+]
+# Soft stub: compile-time acknowledgment of unpaid OTLP metrics push.
+# Does not pull OpenTelemetry metrics deps; Prometheus GET /metrics stays default.
+otel-metrics = []
+# Soft optional jemalloc global allocator (Unix). Default builds stay on the
+# system allocator — Windows-safe / unchanged. Enable: --features jemalloc
+jemalloc = ["dep:tikv-jemallocator"]
+

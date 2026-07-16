@@ -26,20 +26,28 @@
 //! );
 //! let bundle = compiler.compile(&session).expect("compilation should succeed");
 //! assert!(bundle.is_injectable());
-//! let text = compiler.render_injectable(&bundle);
+//! let text = compiler.render_injectable(&bundle).expect("bundle should render");
 //! assert!(!text.is_empty());
 //! ```
 
+use crate::distill::contract_compiler::ContractCompiler;
+use crate::distill::token_estimator::{CharCountTokenEstimator, TokenEstimator};
 use crate::domain::acceptance::Acceptance;
 use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
 use crate::domain::context::Context;
 use crate::domain::contract::Contract;
 use crate::domain::intent::Intent;
 use crate::domain::session::Session;
+use crate::inject::{InjectRenderError, PromptRenderer};
 use crate::ports::{
     AcceptanceExtractor, ContextExtractor, ContractExtractor, IntentExtractor, PortError,
 };
 use serde_json::json;
+
+fn sized_bundle(kind: BundleKind, body: serde_json::Value) -> Bundle {
+    let token_estimate = CharCountTokenEstimator.estimate_json(&body);
+    Bundle { kind, token_estimate, body }
+}
 
 /// Compilation error.
 #[derive(Debug, thiserror::Error)]
@@ -99,7 +107,7 @@ where
         // Check if session appears ready for injection.
         let ready = acceptance.satisfaction_score > 0 || !session.messages.is_empty();
 
-        bundle.push(Bundle::new(
+        bundle.push(sized_bundle(
             BundleKind::Acceptance,
             json!({
                 "ready": ready,
@@ -111,7 +119,7 @@ where
                 "satisfaction_score": acceptance.satisfaction_score,
             }),
         ));
-        bundle.push(Bundle::new(
+        bundle.push(sized_bundle(
             BundleKind::Intent,
             json!({
                 "goal": intent.goal,
@@ -120,7 +128,7 @@ where
                 "user_turn_count": intent.user_turn_count,
             }),
         ));
-        bundle.push(Bundle::new(
+        bundle.push(sized_bundle(
             BundleKind::Context,
             json!({
                 "cwd": context.cwd,
@@ -131,16 +139,8 @@ where
                 "environment_notes": context.environment_notes,
             }),
         ));
-        bundle.push(Bundle::new(
-            BundleKind::Contract,
-            json!({
-                "success_criteria": contract.success_criteria,
-                "tests_or_verifications": contract.tests_or_verifications,
-                "constraints": contract.constraints,
-                "do_not_touch": contract.do_not_touch,
-            }),
-        ));
-        bundle.push(Bundle::new(
+        bundle.push(ContractCompiler::new(CharCountTokenEstimator).compile(&contract));
+        bundle.push(sized_bundle(
             BundleKind::Provenance,
             json!({ "corpus": session.corpus, "source_id": session.id }),
         ));
@@ -150,77 +150,17 @@ where
 
     /// Render a compiled bundle as injectable text payload for a new session.
     ///
-    /// The output is a formatted text block suitable for injection as a system
-    /// prompt or context prefix in a new agent session. All bundle slices are
-    /// rendered in a structured, human-readable format.
-    #[must_use]
-    pub fn render_injectable(&self, bundle: &ContinuationBundle) -> String {
-        let mut parts: Vec<String> = Vec::new();
-
-        parts.push(format!(
-            "[CONTINUATION BUNDLE] source: {} | injectable: {}",
-            bundle.source_id,
-            if bundle.is_injectable() { "YES" } else { "NO" }
-        ));
-
-        let total_tokens = bundle.total_token_estimate();
-        parts.push(format!(
-            "token budget estimate: ~{total_tokens} (sum across {} slices)",
-            bundle.bundles.len()
-        ));
-        parts.push(String::new());
-
-        for slice in &bundle.bundles {
-            let label = match slice.kind {
-                BundleKind::Acceptance => "--- ACCEPTANCE (resume gate) ---",
-                BundleKind::Intent => "--- INTENT (goal / acceptance signals) ---",
-                BundleKind::Context => "--- CONTEXT (working state) ---",
-                BundleKind::Contract => "--- CONTRACT (criteria / constraints) ---",
-                BundleKind::Provenance => "--- PROVENANCE (origin) ---",
-                BundleKind::Worklog => "--- WORKLOG (diff / outstanding) ---",
-                BundleKind::Dedup => "--- DEDUP (merge key) ---",
-            };
-            parts.push(label.to_string());
-
-            match &slice.kind {
-                BundleKind::Acceptance
-                | BundleKind::Intent
-                | BundleKind::Context
-                | BundleKind::Contract
-                | BundleKind::Provenance
-                | BundleKind::Worklog
-                | BundleKind::Dedup => {
-                    // Render the JSON body in a compact but readable form.
-                    if let Some(obj) = slice.body.as_object() {
-                        for (key, val) in obj {
-                            let rendered = match val {
-                                serde_json::Value::String(s) => s.clone(),
-                                serde_json::Value::Array(arr) => {
-                                    let items: Vec<String> = arr
-                                        .iter()
-                                        .filter_map(|v| v.as_str().map(String::from))
-                                        .collect();
-                                    if items.is_empty() {
-                                        "(empty)".to_string()
-                                    } else {
-                                        items.join(", ")
-                                    }
-                                }
-                                other => other.to_string(),
-                            };
-                            parts.push(format!("  {key}: {rendered}"));
-                        }
-                    } else {
-                        parts.push(format!("  {}", slice.body));
-                    }
-                }
-            }
-
-            parts.push(String::new());
-        }
-
-        parts.push("--- END CONTINUATION BUNDLE ---".to_string());
-        parts.join("\n")
+    /// The output is a formatted prompt suitable for a new agent session.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InjectRenderError::MissingAcceptance`] when the supplied
+    /// bundle does not carry the required resume gate.
+    pub fn render_injectable(
+        &self,
+        bundle: &ContinuationBundle,
+    ) -> Result<String, InjectRenderError> {
+        PromptRenderer::new().render_bundle(bundle)
     }
 }
 
@@ -278,23 +218,24 @@ mod tests {
         // Should NOT include Worklog or Dedup (not in the 4-extractor compiler).
         assert!(!bundle.has(BundleKind::Worklog));
         assert!(!bundle.has(BundleKind::Dedup));
+        assert!(bundle.bundles.iter().all(|slice| slice.token_estimate > 0));
     }
 
     #[test]
     fn render_injectable_produces_non_empty_text() {
         let compiler = make_compiler();
         let bundle = compiler.compile(&sample_session()).expect("compilation should succeed");
-        let text = compiler.render_injectable(&bundle);
+        let text = compiler.render_injectable(&bundle).expect("bundle should render");
 
         assert!(!text.is_empty(), "injectable text must not be empty");
-        assert!(text.contains("CONTINUATION BUNDLE"), "must have bundle header");
-        assert!(text.contains("source: sess-compile-test"), "must contain source id");
+        assert!(text.contains("CONTINUATION PROMPT"), "must have bundle header");
+        assert!(text.contains("source_id: \"sess-compile-test\""), "must contain source id");
         assert!(text.contains("ACCEPTANCE"), "must contain acceptance section");
         assert!(text.contains("INTENT"), "must contain intent section");
         assert!(text.contains("CONTEXT"), "must contain context section");
         assert!(text.contains("CONTRACT"), "must contain contract section");
         assert!(text.contains("PROVENANCE"), "must contain provenance section");
-        assert!(text.contains("END CONTINUATION BUNDLE"), "must have footer");
+        assert!(text.contains("END SESSIONLEDGER CONTINUATION PROMPT"), "must have footer");
     }
 
     /// Acceptance extractor returning a fixed satisfaction score, so the

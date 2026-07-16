@@ -1,0 +1,77 @@
+--- src/distill/compiler.rs
++++ replace BundleCompiler<IE, CE, CtrE, AE>::compile -> Result<ContinuationBundle, CompileError> with Ok(Default::default())
+@@ -84,73 +84,17 @@
+         }
+     }
+ 
+     /// Run all extractors and assemble the bundle.
+     ///
+     /// # Errors
+     /// Returns [`CompileError::Extraction`] if any extractor fails.
+     pub fn compile(&self, session: &Session) -> Result<ContinuationBundle, CompileError> {
+-        let intent: Intent = self.intent.extract(session)?;
+-        let context: Context = self.context.extract(session)?;
+-        let contract: Contract = self.contract.extract(session)?;
+-        let acceptance: Acceptance = self.acceptance.extract(session)?;
+-
+-        let mut bundle = ContinuationBundle::new(session.id.clone());
+-
+-        // Check if session appears ready for injection.
+-        let ready = acceptance.satisfaction_score > 0 || !session.messages.is_empty();
+-
+-        bundle.push(Bundle::new(
+-            BundleKind::Acceptance,
+-            json!({
+-                "ready": ready,
+-                "scope_sized": ready,
+-                "user_turns": session.user_turns(),
+-                "evidence": acceptance.evidence,
+-                "user_confirmed": acceptance.user_confirmed,
+-                "testing_evidence": acceptance.testing_evidence,
+-                "satisfaction_score": acceptance.satisfaction_score,
+-            }),
+-        ));
+-        bundle.push(Bundle::new(
+-            BundleKind::Intent,
+-            json!({
+-                "goal": intent.goal,
+-                "acceptance_signals": intent.acceptance_signals,
+-                "constraints": intent.constraints,
+-                "user_turn_count": intent.user_turn_count,
+-            }),
+-        ));
+-        bundle.push(Bundle::new(
+-            BundleKind::Context,
+-            json!({
+-                "cwd": context.cwd,
+-                "title": context.title,
+-                "files_mentioned": context.files_mentioned,
+-                "key_decisions": context.key_decisions,
+-                "key_symbols": context.key_symbols,
+-                "environment_notes": context.environment_notes,
+-            }),
+-        ));
+-        bundle.push(Bundle::new(
+-            BundleKind::Contract,
+-            json!({
+-                "success_criteria": contract.success_criteria,
+-                "tests_or_verifications": contract.tests_or_verifications,
+-                "constraints": contract.constraints,
+-                "do_not_touch": contract.do_not_touch,
+-            }),
+-        ));
+-        bundle.push(Bundle::new(
+-            BundleKind::Provenance,
+-            json!({ "corpus": session.corpus, "source_id": session.id }),
+-        ));
+-
+-        Ok(bundle)
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Render a compiled bundle as injectable text payload for a new session.
+     ///
+     /// The output is a formatted text block suitable for injection as a system
+     /// prompt or context prefix in a new agent session. All bundle slices are
+     /// rendered in a structured, human-readable format.
+     #[must_use]

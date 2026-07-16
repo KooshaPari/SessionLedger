@@ -1,0 +1,21 @@
+--- src/distill/contract_extractor.rs
++++ delete ! in HeuristicContractExtractor::extract_contract
+@@ -154,17 +154,17 @@
+                     }
+                 }
+             }
+ 
+             // --- Do-not-touch ---
+             for pat in DO_NOT_TOUCH_PATTERNS {
+                 if lower.contains(pat) {
+                     let dnt = format!("Do-not-touch: '{pat}'");
+-                    if !do_not_touch.contains(&dnt) {
++                    if  /* ~ changed by cargo-mutants ~ */do_not_touch.contains(&dnt) {
+                         do_not_touch.push(dnt);
+                     }
+                 }
+             }
+         }
+ 
+         Contract { success_criteria, tests_or_verifications, constraints, do_not_touch }
+     }

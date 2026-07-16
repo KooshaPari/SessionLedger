@@ -1,0 +1,21 @@
+--- src/distill/extractor.rs
++++ delete ! in HeuristicIntentExtractor::extract_intent
+@@ -100,17 +100,17 @@
+         // Constraints: collect matched patterns found in user messages.
+         let mut constraints: Vec<String> = Vec::new();
+ 
+         for msg in &user_messages {
+             let lower = msg.to_lowercase();
+             for pat in ACCEPTANCE_PATTERNS {
+                 if lower.contains(pat) {
+                     let signal = pat.to_string();
+-                    if !acceptance_signals.contains(&signal) {
++                    if  /* ~ changed by cargo-mutants ~ */acceptance_signals.contains(&signal) {
+                         acceptance_signals.push(signal);
+                     }
+                 }
+             }
+             for pat in CONSTRAINT_PATTERNS {
+                 if lower.contains(pat) {
+                     let constraint = pat.to_string();
+                     if !constraints.contains(&constraint) {

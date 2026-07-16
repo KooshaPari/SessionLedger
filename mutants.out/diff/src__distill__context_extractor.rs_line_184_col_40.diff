@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ replace < with == in is_file_path
+@@ -176,17 +176,17 @@
+     fn extract(&self, session: &Session) -> Result<Context, PortError> {
+         Ok(Self::extract_context(session))
+     }
+ }
+ 
+ /// Whether a whitespace-delimited token looks like a file path.
+ #[must_use]
+ fn is_file_path(token: &str) -> bool {
+-    if token.is_empty() || token.len() < 3 {
++    if token.is_empty() || token.len() == /* ~ changed by cargo-mutants ~ */ 3 {
+         return false;
+     }
+     // Must contain a `/` or start like a relative path (e.g. `src/`).
+     if token.contains('/') {
+         return true;
+     }
+     // Match common file extensions.
+     let lower = token.to_lowercase();

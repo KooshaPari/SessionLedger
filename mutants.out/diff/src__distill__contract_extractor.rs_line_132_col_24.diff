@@ -1,0 +1,21 @@
+--- src/distill/contract_extractor.rs
++++ delete ! in HeuristicContractExtractor::extract_contract
+@@ -124,17 +124,17 @@
+         // Scan user and assistant messages for contract signals.
+         for msg in &session.messages {
+             let lower = msg.content.to_lowercase();
+ 
+             // --- Success criteria ---
+             for pat in CRITERIA_PATTERNS {
+                 if lower.contains(pat) {
+                     let crit = format!("Goal/requirement: '{pat}'");
+-                    if !success_criteria.contains(&crit) {
++                    if  /* ~ changed by cargo-mutants ~ */success_criteria.contains(&crit) {
+                         success_criteria.push(crit);
+                     }
+                 }
+             }
+ 
+             // --- Tests / verifications ---
+             for pat in TEST_PATTERNS {
+                 if lower.contains(pat) {

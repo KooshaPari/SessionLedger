@@ -1,0 +1,22 @@
+
+*** src/domain/acceptance.rs:47:34: replace && with || in Acceptance::is_empty
+
+*** mutation diff:
+--- src/domain/acceptance.rs
++++ replace && with || in Acceptance::is_empty
+@@ -39,11 +39,11 @@
+             testing_evidence: Vec::new(),
+             satisfaction_score: 0,
+         }
+     }
+ 
+     /// Whether the extractor found any meaningful acceptance data.
+     #[must_use]
+     pub fn is_empty(&self) -> bool {
+-        self.evidence.is_empty() && !self.user_confirmed && self.testing_evidence.is_empty()
++        self.evidence.is_empty() || /* ~ changed by cargo-mutants ~ */ !self.user_confirmed && self.testing_evidence.is_empty()
+     }
+ }
+
+
+*** /opt/homebrew/bin/cargo test --no-run --verbose --package=session-ledger@0.1.0

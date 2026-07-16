@@ -1,0 +1,21 @@
+--- src/distill/acceptance_extractor.rs
++++ replace += with *= in HeuristicAcceptanceExtractor::extract_acceptance
+@@ -125,17 +125,17 @@
+ 
+             // --- General evidence ---
+             for pat in EVIDENCE_PATTERNS {
+                 if lower.contains(pat) {
+                     let ev = format!("Evidence: '{pat}'");
+                     if !evidence.contains(&ev) {
+                         evidence.push(ev);
+                         // Count toward satisfaction
+-                        confirmation_count += 1;
++                        confirmation_count *= /* ~ changed by cargo-mutants ~ */ 1;
+                     }
+                 }
+             }
+ 
+             // --- User confirmation (only user messages) ---
+             if msg.role == Role::User {
+                 for pat in USER_CONFIRMATION_PATTERNS {
+                     if lower.contains(pat) {

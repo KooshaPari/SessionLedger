@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ replace == with != in HeuristicContextExtractor::extract_context
+@@ -116,17 +116,17 @@
+             for token in &tokens {
+                 let clean = token.trim_matches(|c: char| {
+                     c == '('
+                         || c == ')'
+                         || c == ','
+                         || c == ';'
+                         || c == '{'
+                         || c == '}'
+-                        || c == '['
++                        || c != /* ~ changed by cargo-mutants ~ */ '['
+                         || c == ']'
+                 });
+                 let is_func_call = token.contains("()");
+                 if clean.contains("::") || is_func_call {
+                     let sym = clean.to_string();
+                     if !key_symbols.contains(&sym) {
+                         key_symbols.push(sym);
+                     }

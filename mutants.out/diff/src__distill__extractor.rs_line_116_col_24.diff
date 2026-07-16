@@ -1,0 +1,21 @@
+--- src/distill/extractor.rs
++++ delete ! in HeuristicIntentExtractor::extract_intent
+@@ -108,17 +108,17 @@
+                     if !acceptance_signals.contains(&signal) {
+                         acceptance_signals.push(signal);
+                     }
+                 }
+             }
+             for pat in CONSTRAINT_PATTERNS {
+                 if lower.contains(pat) {
+                     let constraint = pat.to_string();
+-                    if !constraints.contains(&constraint) {
++                    if  /* ~ changed by cargo-mutants ~ */constraints.contains(&constraint) {
+                         constraints.push(constraint);
+                     }
+                 }
+             }
+         }
+ 
+         Intent { goal, acceptance_signals, constraints, user_turn_count }
+     }

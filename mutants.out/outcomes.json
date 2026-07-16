@@ -1,0 +1,4868 @@
+{
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Success",
+      "log_path": "log/baseline.log",
+      "diff_path": null,
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 85.298294375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 4.689360667,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/mod.rs:31:5: replace compile -> ContinuationBundle with Default::default()",
+          "package": "session-ledger",
+          "file": "src/distill/mod.rs",
+          "function": {
+            "function_name": "compile",
+            "return_type": "-> ContinuationBundle",
+            "span": {
+              "start": {
+                "line": 25,
+                "column": 1
+              },
+              "end": {
+                "line": 87,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 31,
+              "column": 5
+            },
+            "end": {
+              "line": 86,
+              "column": 11
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__mod.rs_line_31_col_5.log",
+      "diff_path": "diff/src__distill__mod.rs_line_31_col_5.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.697907958,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:130:24: delete ! in HeuristicAcceptanceExtractor::extract_acceptance",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "HeuristicAcceptanceExtractor::extract_acceptance",
+            "return_type": "-> Acceptance",
+            "span": {
+              "start": {
+                "line": 111,
+                "column": 5
+              },
+              "end": {
+                "line": 174,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 130,
+              "column": 24
+            },
+            "end": {
+              "line": 130,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_130_col_24.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_130_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 8.421519125,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.934624833,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:133:44: replace += with -= in HeuristicAcceptanceExtractor::extract_acceptance",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "HeuristicAcceptanceExtractor::extract_acceptance",
+            "return_type": "-> Acceptance",
+            "span": {
+              "start": {
+                "line": 111,
+                "column": 5
+              },
+              "end": {
+                "line": 174,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 133,
+              "column": 44
+            },
+            "end": {
+              "line": 133,
+              "column": 46
+            }
+          },
+          "replacement": "-=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_133_col_44.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_133_col_44.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 6.8214197500000004,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.81697025,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:133:44: replace += with *= in HeuristicAcceptanceExtractor::extract_acceptance",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "HeuristicAcceptanceExtractor::extract_acceptance",
+            "return_type": "-> Acceptance",
+            "span": {
+              "start": {
+                "line": 111,
+                "column": 5
+              },
+              "end": {
+                "line": 174,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 133,
+              "column": 44
+            },
+            "end": {
+              "line": 133,
+              "column": 46
+            }
+          },
+          "replacement": "*=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_133_col_44_001.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_133_col_44_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 6.396160375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 6.055073583,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:139:25: replace == with != in HeuristicAcceptanceExtractor::extract_acceptance",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "HeuristicAcceptanceExtractor::extract_acceptance",
+            "return_type": "-> Acceptance",
+            "span": {
+              "start": {
+                "line": 111,
+                "column": 5
+              },
+              "end": {
+                "line": 174,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 139,
+              "column": 25
+            },
+            "end": {
+              "line": 139,
+              "column": 27
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_139_col_25.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_139_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 7.276195083,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.3048745840000002,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:143:44: replace += with -= in HeuristicAcceptanceExtractor::extract_acceptance",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "HeuristicAcceptanceExtractor::extract_acceptance",
+            "return_type": "-> Acceptance",
+            "span": {
+              "start": {
+                "line": 111,
+                "column": 5
+              },
+              "end": {
+                "line": 174,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 143,
+              "column": 44
+            },
+            "end": {
+              "line": 143,
+              "column": 46
+            }
+          },
+          "replacement": "-=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_143_col_44.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_143_col_44.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 7.824582916,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 5.29642225,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:118:9: replace HeuristicAcceptanceExtractor::extract_acceptance -> Acceptance with Default::default()",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "HeuristicAcceptanceExtractor::extract_acceptance",
+            "return_type": "-> Acceptance",
+            "span": {
+              "start": {
+                "line": 111,
+                "column": 5
+              },
+              "end": {
+                "line": 174,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 118,
+              "column": 9
+            },
+            "end": {
+              "line": 173,
+              "column": 86
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_118_col_9.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_118_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 63.122385375,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:143:44: replace += with *= in HeuristicAcceptanceExtractor::extract_acceptance",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "HeuristicAcceptanceExtractor::extract_acceptance",
+            "return_type": "-> Acceptance",
+            "span": {
+              "start": {
+                "line": 111,
+                "column": 5
+              },
+              "end": {
+                "line": 174,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 143,
+              "column": 44
+            },
+            "end": {
+              "line": 143,
+              "column": 46
+            }
+          },
+          "replacement": "*=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_143_col_44_001.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_143_col_44_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 5.607575791,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 5.056176333,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:179:9: replace <impl AcceptanceExtractor for HeuristicAcceptanceExtractor>::extract -> Result<Acceptance, PortError> with Ok(Default::default())",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "<impl AcceptanceExtractor for HeuristicAcceptanceExtractor>::extract",
+            "return_type": "-> Result<Acceptance, PortError>",
+            "span": {
+              "start": {
+                "line": 178,
+                "column": 5
+              },
+              "end": {
+                "line": 180,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 179,
+              "column": 9
+            },
+            "end": {
+              "line": 179,
+              "column": 46
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_179_col_9.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_179_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.052447542,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/compiler.rs:92:9: replace BundleCompiler<IE, CE, CtrE, AE>::compile -> Result<ContinuationBundle, CompileError> with Ok(Default::default())",
+          "package": "session-ledger",
+          "file": "src/distill/compiler.rs",
+          "function": {
+            "function_name": "BundleCompiler<IE, CE, CtrE, AE>::compile",
+            "return_type": "-> Result<ContinuationBundle, CompileError>",
+            "span": {
+              "start": {
+                "line": 87,
+                "column": 5
+              },
+              "end": {
+                "line": 149,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 92,
+              "column": 9
+            },
+            "end": {
+              "line": 148,
+              "column": 19
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__compiler.rs_line_92_col_9.log",
+      "diff_path": "diff/src__distill__compiler.rs_line_92_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.602515417,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/acceptance_extractor.rs:153:24: delete ! in HeuristicAcceptanceExtractor::extract_acceptance",
+          "package": "session-ledger",
+          "file": "src/distill/acceptance_extractor.rs",
+          "function": {
+            "function_name": "HeuristicAcceptanceExtractor::extract_acceptance",
+            "return_type": "-> Acceptance",
+            "span": {
+              "start": {
+                "line": 111,
+                "column": 5
+              },
+              "end": {
+                "line": 174,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 153,
+              "column": 24
+            },
+            "end": {
+              "line": 153,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__acceptance_extractor.rs_line_153_col_24.log",
+      "diff_path": "diff/src__distill__acceptance_extractor.rs_line_153_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 15.441917667,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.448141709,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/compiler.rs:100:55: replace || with && in BundleCompiler<IE, CE, CtrE, AE>::compile",
+          "package": "session-ledger",
+          "file": "src/distill/compiler.rs",
+          "function": {
+            "function_name": "BundleCompiler<IE, CE, CtrE, AE>::compile",
+            "return_type": "-> Result<ContinuationBundle, CompileError>",
+            "span": {
+              "start": {
+                "line": 87,
+                "column": 5
+              },
+              "end": {
+                "line": 149,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 100,
+              "column": 55
+            },
+            "end": {
+              "line": 100,
+              "column": 57
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__compiler.rs_line_100_col_55.log",
+      "diff_path": "diff/src__distill__compiler.rs_line_100_col_55.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 6.262690625,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 5.153052167,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/compiler.rs:100:51: replace > with == in BundleCompiler<IE, CE, CtrE, AE>::compile",
+          "package": "session-ledger",
+          "file": "src/distill/compiler.rs",
+          "function": {
+            "function_name": "BundleCompiler<IE, CE, CtrE, AE>::compile",
+            "return_type": "-> Result<ContinuationBundle, CompileError>",
+            "span": {
+              "start": {
+                "line": 87,
+                "column": 5
+              },
+              "end": {
+                "line": 149,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 100,
+              "column": 51
+            },
+            "end": {
+              "line": 100,
+              "column": 52
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__compiler.rs_line_100_col_51.log",
+      "diff_path": "diff/src__distill__compiler.rs_line_100_col_51.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 6.377040292,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 4.481188875,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/compiler.rs:100:51: replace > with < in BundleCompiler<IE, CE, CtrE, AE>::compile",
+          "package": "session-ledger",
+          "file": "src/distill/compiler.rs",
+          "function": {
+            "function_name": "BundleCompiler<IE, CE, CtrE, AE>::compile",
+            "return_type": "-> Result<ContinuationBundle, CompileError>",
+            "span": {
+              "start": {
+                "line": 87,
+                "column": 5
+              },
+              "end": {
+                "line": 149,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 100,
+              "column": 51
+            },
+            "end": {
+              "line": 100,
+              "column": 52
+            }
+          },
+          "replacement": "<",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__compiler.rs_line_100_col_51_001.log",
+      "diff_path": "diff/src__distill__compiler.rs_line_100_col_51_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 6.138076375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.8637010419999998,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/compiler.rs:100:51: replace > with >= in BundleCompiler<IE, CE, CtrE, AE>::compile",
+          "package": "session-ledger",
+          "file": "src/distill/compiler.rs",
+          "function": {
+            "function_name": "BundleCompiler<IE, CE, CtrE, AE>::compile",
+            "return_type": "-> Result<ContinuationBundle, CompileError>",
+            "span": {
+              "start": {
+                "line": 87,
+                "column": 5
+              },
+              "end": {
+                "line": 149,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 100,
+              "column": 51
+            },
+            "end": {
+              "line": 100,
+              "column": 52
+            }
+          },
+          "replacement": ">=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__compiler.rs_line_100_col_51_002.log",
+      "diff_path": "diff/src__distill__compiler.rs_line_100_col_51_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 6.104604125,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 4.439556625,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/compiler.rs:158:9: replace BundleCompiler<IE, CE, CtrE, AE>::render_injectable -> String with String::new()",
+          "package": "session-ledger",
+          "file": "src/distill/compiler.rs",
+          "function": {
+            "function_name": "BundleCompiler<IE, CE, CtrE, AE>::render_injectable",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 151,
+                "column": 5
+              },
+              "end": {
+                "line": 224,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 158,
+              "column": 9
+            },
+            "end": {
+              "line": 223,
+              "column": 25
+            }
+          },
+          "replacement": "String::new()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__compiler.rs_line_158_col_9.log",
+      "diff_path": "diff/src__distill__compiler.rs_line_158_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 7.157700166,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.724889541,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/compiler.rs:100:58: delete ! in BundleCompiler<IE, CE, CtrE, AE>::compile",
+          "package": "session-ledger",
+          "file": "src/distill/compiler.rs",
+          "function": {
+            "function_name": "BundleCompiler<IE, CE, CtrE, AE>::compile",
+            "return_type": "-> Result<ContinuationBundle, CompileError>",
+            "span": {
+              "start": {
+                "line": 87,
+                "column": 5
+              },
+              "end": {
+                "line": 149,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 100,
+              "column": 58
+            },
+            "end": {
+              "line": 100,
+              "column": 59
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__compiler.rs_line_100_col_58.log",
+      "diff_path": "diff/src__distill__compiler.rs_line_100_col_58.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 6.755539209,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 7.675643209,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:91:9: replace HeuristicContextExtractor::extract_context -> Context with Default::default()",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 91,
+              "column": 9
+            },
+            "end": {
+              "line": 171,
+              "column": 10
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__context_extractor.rs_line_91_col_9.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_91_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 5.543662042,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/compiler.rs:158:9: replace BundleCompiler<IE, CE, CtrE, AE>::render_injectable -> String with \"xyzzy\".into()",
+          "package": "session-ledger",
+          "file": "src/distill/compiler.rs",
+          "function": {
+            "function_name": "BundleCompiler<IE, CE, CtrE, AE>::render_injectable",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 151,
+                "column": 5
+              },
+              "end": {
+                "line": 224,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 158,
+              "column": 9
+            },
+            "end": {
+              "line": 223,
+              "column": 25
+            }
+          },
+          "replacement": "\"xyzzy\".into()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__compiler.rs_line_158_col_9_001.log",
+      "diff_path": "diff/src__distill__compiler.rs_line_158_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 9.06686625,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.553409166,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:78: replace && with || in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 78
+            },
+            "end": {
+              "line": 104,
+              "column": 80
+            }
+          },
+          "replacement": "||",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_78.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_78.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 10.140536125,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.9784198750000002,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:66: replace && with || in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 66
+            },
+            "end": {
+              "line": 104,
+              "column": 68
+            }
+          },
+          "replacement": "||",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_66.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_66.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 9.694892,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.472830208,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:54: replace && with || in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 54
+            },
+            "end": {
+              "line": 104,
+              "column": 56
+            }
+          },
+          "replacement": "||",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_54.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_54.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 7.67053575,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.574438125,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:42: replace && with || in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 42
+            },
+            "end": {
+              "line": 104,
+              "column": 44
+            }
+          },
+          "replacement": "||",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_42.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_42.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 7.999988083,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.6909646249999999,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:21: delete ! in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 21
+            },
+            "end": {
+              "line": 104,
+              "column": 22
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_21.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_21.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 8.6152585,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.131639208,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:47: replace != with == in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 47
+            },
+            "end": {
+              "line": 104,
+              "column": 49
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_47.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_47.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 9.546615875,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 7.737505583,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:59: replace != with == in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 59
+            },
+            "end": {
+              "line": 104,
+              "column": 61
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_59.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_59.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 10.721776666,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 8.348953917,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:71: replace != with == in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 71
+            },
+            "end": {
+              "line": 104,
+              "column": 73
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_71.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_71.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 12.802918125,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 9.907872458,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:104:83: replace != with == in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 104,
+              "column": 83
+            },
+            "end": {
+              "line": 104,
+              "column": 85
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_104_col_83.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_104_col_83.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 12.496501708,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 9.245501416,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:108:24: delete ! in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 108,
+              "column": 24
+            },
+            "end": {
+              "line": 108,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_108_col_24.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_108_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 11.601355625,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.407874125,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:125:25: replace || with && in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 125,
+              "column": 25
+            },
+            "end": {
+              "line": 125,
+              "column": 27
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_125_col_25.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_125_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 11.504505167,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 7.052965375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:124:25: replace || with && in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 124,
+              "column": 25
+            },
+            "end": {
+              "line": 124,
+              "column": 27
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_124_col_25.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_124_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 10.522293667,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 7.010562833,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:123:25: replace || with && in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 123,
+              "column": 25
+            },
+            "end": {
+              "line": 123,
+              "column": 27
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_123_col_25.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_123_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 9.168685375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 7.930547375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:122:25: replace || with && in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 122,
+              "column": 25
+            },
+            "end": {
+              "line": 122,
+              "column": 27
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_122_col_25.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_122_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 10.023300375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 7.476540333,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:121:25: replace || with && in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 121,
+              "column": 25
+            },
+            "end": {
+              "line": 121,
+              "column": 27
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_121_col_25.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_121_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 10.059335167,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 7.088754709,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:120:25: replace || with && in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 120,
+              "column": 25
+            },
+            "end": {
+              "line": 120,
+              "column": 27
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_120_col_25.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_120_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 7.783396625,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 7.999252167,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:118:23: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 118,
+              "column": 23
+            },
+            "end": {
+              "line": 118,
+              "column": 25
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_118_col_23.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_118_col_23.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 11.397067208,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.924482625,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:119:25: replace || with && in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 119,
+              "column": 25
+            },
+            "end": {
+              "line": 119,
+              "column": 27
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_119_col_25.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_119_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 10.731576375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 8.04101175,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:119:30: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 119,
+              "column": 30
+            },
+            "end": {
+              "line": 119,
+              "column": 32
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_119_col_30.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_119_col_30.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 9.8926035,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.92864225,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:120:30: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 120,
+              "column": 30
+            },
+            "end": {
+              "line": 120,
+              "column": 32
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_120_col_30.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_120_col_30.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 11.357695209,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.9163412499999999,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:121:30: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 121,
+              "column": 30
+            },
+            "end": {
+              "line": 121,
+              "column": 32
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_121_col_30.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_121_col_30.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 8.284671958,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.201406917,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:122:30: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 122,
+              "column": 30
+            },
+            "end": {
+              "line": 122,
+              "column": 32
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_122_col_30.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_122_col_30.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 9.952876834,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.7613924170000002,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:123:30: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 123,
+              "column": 30
+            },
+            "end": {
+              "line": 123,
+              "column": 32
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_123_col_30.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_123_col_30.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 7.196153125,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.593781333,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:124:30: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 124,
+              "column": 30
+            },
+            "end": {
+              "line": 124,
+              "column": 32
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_124_col_30.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_124_col_30.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 6.449238333,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.5894424169999999,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:125:30: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 125,
+              "column": 30
+            },
+            "end": {
+              "line": 125,
+              "column": 32
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_125_col_30.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_125_col_30.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 5.345143459,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.286473959,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:128:41: replace || with && in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 128,
+              "column": 41
+            },
+            "end": {
+              "line": 128,
+              "column": 43
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_128_col_41.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_128_col_41.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.843978541,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.613065167,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:130:24: delete ! in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 130,
+              "column": 24
+            },
+            "end": {
+              "line": 130,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_130_col_24.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_130_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.282122458,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.01709275,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:141:24: delete ! in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 141,
+              "column": 24
+            },
+            "end": {
+              "line": 141,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_141_col_24.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_141_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.359123458,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.3051615,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:141:64: replace == with != in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 141,
+              "column": 64
+            },
+            "end": {
+              "line": 141,
+              "column": 66
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_141_col_64.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_141_col_64.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.677054083,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.589489584,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:151:24: delete ! in HeuristicContextExtractor::extract_context",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContextExtractor::extract_context",
+            "return_type": "-> Context",
+            "span": {
+              "start": {
+                "line": 84,
+                "column": 5
+              },
+              "end": {
+                "line": 172,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 151,
+              "column": 24
+            },
+            "end": {
+              "line": 151,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_151_col_24.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_151_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.3860434999999995,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.286895375,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:177:9: replace <impl ContextExtractor for HeuristicContextExtractor>::extract -> Result<Context, PortError> with Ok(Default::default())",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "<impl ContextExtractor for HeuristicContextExtractor>::extract",
+            "return_type": "-> Result<Context, PortError>",
+            "span": {
+              "start": {
+                "line": 176,
+                "column": 5
+              },
+              "end": {
+                "line": 178,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 177,
+              "column": 9
+            },
+            "end": {
+              "line": 177,
+              "column": 43
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__context_extractor.rs_line_177_col_9.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_177_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.577081875,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:184:5: replace is_file_path -> bool with false",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 184,
+              "column": 5
+            },
+            "end": {
+              "line": 193,
+              "column": 86
+            }
+          },
+          "replacement": "false",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_184_col_5_001.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_184_col_5_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.024727167,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.936090916,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:184:5: replace is_file_path -> bool with true",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 184,
+              "column": 5
+            },
+            "end": {
+              "line": 193,
+              "column": 86
+            }
+          },
+          "replacement": "true",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_184_col_5.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_184_col_5.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.460064042,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.126007333,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:184:25: replace || with && in is_file_path",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 184,
+              "column": 25
+            },
+            "end": {
+              "line": 184,
+              "column": 27
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_184_col_25.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_184_col_25.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.032081625,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.330218958,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:184:40: replace < with == in is_file_path",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 184,
+              "column": 40
+            },
+            "end": {
+              "line": 184,
+              "column": 41
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_184_col_40.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_184_col_40.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.94169625,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.463097291,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:184:40: replace < with > in is_file_path",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 184,
+              "column": 40
+            },
+            "end": {
+              "line": 184,
+              "column": 41
+            }
+          },
+          "replacement": ">",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_184_col_40_001.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_184_col_40_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.912281834,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.088315708,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:184:40: replace < with <= in is_file_path",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 184,
+              "column": 40
+            },
+            "end": {
+              "line": 184,
+              "column": 41
+            }
+          },
+          "replacement": "<=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_184_col_40_002.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_184_col_40_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.03766725,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.688376375,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:193:59: replace && with || in is_file_path",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 193,
+              "column": 59
+            },
+            "end": {
+              "line": 193,
+              "column": 61
+            }
+          },
+          "replacement": "||",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_193_col_59.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_193_col_59.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.532722583,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.777875,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:193:74: replace > with == in is_file_path",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 193,
+              "column": 74
+            },
+            "end": {
+              "line": 193,
+              "column": 75
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_193_col_74.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_193_col_74.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.492958042,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.2659163749999998,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:193:74: replace > with < in is_file_path",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 193,
+              "column": 74
+            },
+            "end": {
+              "line": 193,
+              "column": 75
+            }
+          },
+          "replacement": "<",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_193_col_74_001.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_193_col_74_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.541759958,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.669609542,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/contract_extractor.rs:119:9: replace HeuristicContractExtractor::extract_contract -> Contract with Default::default()",
+          "package": "session-ledger",
+          "file": "src/distill/contract_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContractExtractor::extract_contract",
+            "return_type": "-> Contract",
+            "span": {
+              "start": {
+                "line": 112,
+                "column": 5
+              },
+              "end": {
+                "line": 170,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 119,
+              "column": 9
+            },
+            "end": {
+              "line": 169,
+              "column": 89
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__contract_extractor.rs_line_119_col_9.log",
+      "diff_path": "diff/src__distill__contract_extractor.rs_line_119_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.533192583,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/context_extractor.rs:193:74: replace > with >= in is_file_path",
+          "package": "session-ledger",
+          "file": "src/distill/context_extractor.rs",
+          "function": {
+            "function_name": "is_file_path",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 181,
+                "column": 1
+              },
+              "end": {
+                "line": 194,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 193,
+              "column": 74
+            },
+            "end": {
+              "line": 193,
+              "column": 75
+            }
+          },
+          "replacement": ">=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__context_extractor.rs_line_193_col_74_002.log",
+      "diff_path": "diff/src__distill__context_extractor.rs_line_193_col_74_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.873798167,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.073233417,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/contract_extractor.rs:142:24: delete ! in HeuristicContractExtractor::extract_contract",
+          "package": "session-ledger",
+          "file": "src/distill/contract_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContractExtractor::extract_contract",
+            "return_type": "-> Contract",
+            "span": {
+              "start": {
+                "line": 112,
+                "column": 5
+              },
+              "end": {
+                "line": 170,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 142,
+              "column": 24
+            },
+            "end": {
+              "line": 142,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__contract_extractor.rs_line_142_col_24.log",
+      "diff_path": "diff/src__distill__contract_extractor.rs_line_142_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.141266042,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.07419375,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/contract_extractor.rs:132:24: delete ! in HeuristicContractExtractor::extract_contract",
+          "package": "session-ledger",
+          "file": "src/distill/contract_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContractExtractor::extract_contract",
+            "return_type": "-> Contract",
+            "span": {
+              "start": {
+                "line": 112,
+                "column": 5
+              },
+              "end": {
+                "line": 170,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 132,
+              "column": 24
+            },
+            "end": {
+              "line": 132,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__contract_extractor.rs_line_132_col_24.log",
+      "diff_path": "diff/src__distill__contract_extractor.rs_line_132_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.208390791,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.49209625,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/contract_extractor.rs:152:24: delete ! in HeuristicContractExtractor::extract_contract",
+          "package": "session-ledger",
+          "file": "src/distill/contract_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContractExtractor::extract_contract",
+            "return_type": "-> Contract",
+            "span": {
+              "start": {
+                "line": 112,
+                "column": 5
+              },
+              "end": {
+                "line": 170,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 152,
+              "column": 24
+            },
+            "end": {
+              "line": 152,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__contract_extractor.rs_line_152_col_24.log",
+      "diff_path": "diff/src__distill__contract_extractor.rs_line_152_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 4.8189259589999995,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.541934209,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/contract_extractor.rs:162:24: delete ! in HeuristicContractExtractor::extract_contract",
+          "package": "session-ledger",
+          "file": "src/distill/contract_extractor.rs",
+          "function": {
+            "function_name": "HeuristicContractExtractor::extract_contract",
+            "return_type": "-> Contract",
+            "span": {
+              "start": {
+                "line": 112,
+                "column": 5
+              },
+              "end": {
+                "line": 170,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 162,
+              "column": 24
+            },
+            "end": {
+              "line": 162,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__contract_extractor.rs_line_162_col_24.log",
+      "diff_path": "diff/src__distill__contract_extractor.rs_line_162_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 5.119885666,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.190156166,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/extractor.rs:82:9: replace HeuristicIntentExtractor::extract_intent -> Intent with Default::default()",
+          "package": "session-ledger",
+          "file": "src/distill/extractor.rs",
+          "function": {
+            "function_name": "HeuristicIntentExtractor::extract_intent",
+            "return_type": "-> Intent",
+            "span": {
+              "start": {
+                "line": 75,
+                "column": 5
+              },
+              "end": {
+                "line": 124,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 82,
+              "column": 9
+            },
+            "end": {
+              "line": 123,
+              "column": 74
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__extractor.rs_line_82_col_9.log",
+      "diff_path": "diff/src__distill__extractor.rs_line_82_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.62336225,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/contract_extractor.rs:175:9: replace <impl ContractExtractor for HeuristicContractExtractor>::extract -> Result<Contract, PortError> with Ok(Default::default())",
+          "package": "session-ledger",
+          "file": "src/distill/contract_extractor.rs",
+          "function": {
+            "function_name": "<impl ContractExtractor for HeuristicContractExtractor>::extract",
+            "return_type": "-> Result<Contract, PortError>",
+            "span": {
+              "start": {
+                "line": 174,
+                "column": 5
+              },
+              "end": {
+                "line": 176,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 175,
+              "column": 9
+            },
+            "end": {
+              "line": 175,
+              "column": 44
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__contract_extractor.rs_line_175_col_9.log",
+      "diff_path": "diff/src__distill__contract_extractor.rs_line_175_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.011678166,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/extractor.rs:85:32: replace == with != in HeuristicIntentExtractor::extract_intent",
+          "package": "session-ledger",
+          "file": "src/distill/extractor.rs",
+          "function": {
+            "function_name": "HeuristicIntentExtractor::extract_intent",
+            "return_type": "-> Intent",
+            "span": {
+              "start": {
+                "line": 75,
+                "column": 5
+              },
+              "end": {
+                "line": 124,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 85,
+              "column": 32
+            },
+            "end": {
+              "line": 85,
+              "column": 34
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__extractor.rs_line_85_col_32.log",
+      "diff_path": "diff/src__distill__extractor.rs_line_85_col_32.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.305182208,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.427639041,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/extractor.rs:94:35: replace > with == in HeuristicIntentExtractor::extract_intent",
+          "package": "session-ledger",
+          "file": "src/distill/extractor.rs",
+          "function": {
+            "function_name": "HeuristicIntentExtractor::extract_intent",
+            "return_type": "-> Intent",
+            "span": {
+              "start": {
+                "line": 75,
+                "column": 5
+              },
+              "end": {
+                "line": 124,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 94,
+              "column": 35
+            },
+            "end": {
+              "line": 94,
+              "column": 36
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__extractor.rs_line_94_col_35.log",
+      "diff_path": "diff/src__distill__extractor.rs_line_94_col_35.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.556194,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.388327167,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/extractor.rs:94:35: replace > with < in HeuristicIntentExtractor::extract_intent",
+          "package": "session-ledger",
+          "file": "src/distill/extractor.rs",
+          "function": {
+            "function_name": "HeuristicIntentExtractor::extract_intent",
+            "return_type": "-> Intent",
+            "span": {
+              "start": {
+                "line": 75,
+                "column": 5
+              },
+              "end": {
+                "line": 124,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 94,
+              "column": 35
+            },
+            "end": {
+              "line": 94,
+              "column": 36
+            }
+          },
+          "replacement": "<",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__extractor.rs_line_94_col_35_001.log",
+      "diff_path": "diff/src__distill__extractor.rs_line_94_col_35_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.091482625,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.5665215,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/extractor.rs:94:35: replace > with >= in HeuristicIntentExtractor::extract_intent",
+          "package": "session-ledger",
+          "file": "src/distill/extractor.rs",
+          "function": {
+            "function_name": "HeuristicIntentExtractor::extract_intent",
+            "return_type": "-> Intent",
+            "span": {
+              "start": {
+                "line": 75,
+                "column": 5
+              },
+              "end": {
+                "line": 124,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 94,
+              "column": 35
+            },
+            "end": {
+              "line": 94,
+              "column": 36
+            }
+          },
+          "replacement": ">=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__distill__extractor.rs_line_94_col_35_002.log",
+      "diff_path": "diff/src__distill__extractor.rs_line_94_col_35_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.998071917,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 5.599363542,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/extractor.rs:108:24: delete ! in HeuristicIntentExtractor::extract_intent",
+          "package": "session-ledger",
+          "file": "src/distill/extractor.rs",
+          "function": {
+            "function_name": "HeuristicIntentExtractor::extract_intent",
+            "return_type": "-> Intent",
+            "span": {
+              "start": {
+                "line": 75,
+                "column": 5
+              },
+              "end": {
+                "line": 124,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 108,
+              "column": 24
+            },
+            "end": {
+              "line": 108,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__extractor.rs_line_108_col_24.log",
+      "diff_path": "diff/src__distill__extractor.rs_line_108_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.890404042,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.149239458,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/extractor.rs:129:9: replace <impl IntentExtractor for HeuristicIntentExtractor>::extract -> Result<Intent, PortError> with Ok(Default::default())",
+          "package": "session-ledger",
+          "file": "src/distill/extractor.rs",
+          "function": {
+            "function_name": "<impl IntentExtractor for HeuristicIntentExtractor>::extract",
+            "return_type": "-> Result<Intent, PortError>",
+            "span": {
+              "start": {
+                "line": 128,
+                "column": 5
+              },
+              "end": {
+                "line": 130,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 129,
+              "column": 9
+            },
+            "end": {
+              "line": 129,
+              "column": 42
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__distill__extractor.rs_line_129_col_9.log",
+      "diff_path": "diff/src__distill__extractor.rs_line_129_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.027195125,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/distill/extractor.rs:116:24: delete ! in HeuristicIntentExtractor::extract_intent",
+          "package": "session-ledger",
+          "file": "src/distill/extractor.rs",
+          "function": {
+            "function_name": "HeuristicIntentExtractor::extract_intent",
+            "return_type": "-> Intent",
+            "span": {
+              "start": {
+                "line": 75,
+                "column": 5
+              },
+              "end": {
+                "line": 124,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 116,
+              "column": 24
+            },
+            "end": {
+              "line": 116,
+              "column": 25
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__distill__extractor.rs_line_116_col_24.log",
+      "diff_path": "diff/src__distill__extractor.rs_line_116_col_24.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.175000125,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.838395083,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/domain/acceptance.rs:36:9: replace Acceptance::empty -> Self with Default::default()",
+          "package": "session-ledger",
+          "file": "src/domain/acceptance.rs",
+          "function": {
+            "function_name": "Acceptance::empty",
+            "return_type": "-> Self",
+            "span": {
+              "start": {
+                "line": 33,
+                "column": 5
+              },
+              "end": {
+                "line": 42,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 36,
+              "column": 9
+            },
+            "end": {
+              "line": 41,
+              "column": 10
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/src__domain__acceptance.rs_line_36_col_9.log",
+      "diff_path": "diff/src__domain__acceptance.rs_line_36_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.45721625,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/domain/acceptance.rs:47:9: replace Acceptance::is_empty -> bool with false",
+          "package": "session-ledger",
+          "file": "src/domain/acceptance.rs",
+          "function": {
+            "function_name": "Acceptance::is_empty",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 44,
+                "column": 5
+              },
+              "end": {
+                "line": 48,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 47,
+              "column": 9
+            },
+            "end": {
+              "line": 47,
+              "column": 93
+            }
+          },
+          "replacement": "false",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/src__domain__acceptance.rs_line_47_col_9_001.log",
+      "diff_path": "diff/src__domain__acceptance.rs_line_47_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.8695869590000003,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.864648291,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "src/domain/acceptance.rs:47:9: replace Acceptance::is_empty -> bool with true",
+          "package": "session-ledger",
+          "file": "src/domain/acceptance.rs",
+          "function": {
+            "function_name": "Acceptance::is_empty",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 44,
+                "column": 5
+              },
+              "end": {
+                "line": 48,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 47,
+              "column": 9
+            },
+            "end": {
+              "line": 47,
+              "column": 93
+            }
+          },
+          "replacement": "true",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/src__domain__acceptance.rs_line_47_col_9.log",
+      "diff_path": "diff/src__domain__acceptance.rs_line_47_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.83471475,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.988575958,
+          "process_status": "Success",
+          "argv": [
+            "/opt/homebrew/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=session-ledger@0.1.0"
+          ]
+        }
+      ]
+    }
+  ],
+  "total_mutants": 77,
+  "missed": 30,
+  "caught": 36,
+  "timeout": 0,
+  "unviable": 11,
+  "success": 0,
+  "start_time": "2026-07-02T07:27:11.554015Z",
+  "end_time": null,
+  "cargo_mutants_version": "27.1.0"
+}

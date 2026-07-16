@@ -1,0 +1,76 @@
+--- src/distill/acceptance_extractor.rs
++++ replace HeuristicAcceptanceExtractor::extract_acceptance -> Acceptance with Default::default()
+@@ -110,72 +110,17 @@
+ 
+     /// Heuristically extract acceptance evidence from a session's messages.
+     ///
+     /// This is factored as a public associated function so it can be used
+     /// directly by the compiler without going through the trait when no
+     /// adapter injection is needed (P3 default).
+     #[must_use]
+     pub fn extract_acceptance(session: &Session) -> Acceptance {
+-        let mut evidence: Vec<String> = Vec::new();
+-        let mut user_confirmed = false;
+-        let mut testing_evidence: Vec<String> = Vec::new();
+-        let mut confirmation_count: usize = 0;
+-
+-        for msg in &session.messages {
+-            let lower = msg.content.to_lowercase();
+-
+-            // --- General evidence ---
+-            for pat in EVIDENCE_PATTERNS {
+-                if lower.contains(pat) {
+-                    let ev = format!("Evidence: '{pat}'");
+-                    if !evidence.contains(&ev) {
+-                        evidence.push(ev);
+-                        // Count toward satisfaction
+-                        confirmation_count += 1;
+-                    }
+-                }
+-            }
+-
+-            // --- User confirmation (only user messages) ---
+-            if msg.role == Role::User {
+-                for pat in USER_CONFIRMATION_PATTERNS {
+-                    if lower.contains(pat) {
+-                        user_confirmed = true;
+-                        confirmation_count += 1;
+-                        break; // one confirmation is enough
+-                    }
+-                }
+-            }
+-
+-            // --- Testing evidence ---
+-            for pat in TESTING_EVIDENCE_PATTERNS {
+-                if lower.contains(pat) {
+-                    let te = format!("Testing: '{pat}'");
+-                    if !testing_evidence.contains(&te) {
+-                        testing_evidence.push(te);
+-                    }
+-                }
+-            }
+-        }
+-
+-        // Heuristic satisfaction score: clamp to 0–100.
+-        // Base: 10 per confirmation up to max 100.
+-        let satisfaction_score: u8 =
+-            u8::try_from(confirmation_count.saturating_mul(10)).unwrap_or(100).min(100);
+-
+-        // Dedup testing evidence.
+-        testing_evidence.sort();
+-        testing_evidence.dedup();
+-
+-        // Dedup evidence.
+-        evidence.sort();
+-        evidence.dedup();
+-
+-        Acceptance { evidence, user_confirmed, testing_evidence, satisfaction_score }
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ impl AcceptanceExtractor for HeuristicAcceptanceExtractor {
+     fn extract(&self, session: &Session) -> Result<Acceptance, PortError> {
+         Ok(Self::extract_acceptance(session))
+     }
+ }

@@ -1,0 +1,164 @@
+
+*** src/distill/contract_extractor.rs:132:24: delete ! in HeuristicContractExtractor::extract_contract
+
+*** mutation diff:
+--- src/distill/contract_extractor.rs
++++ delete ! in HeuristicContractExtractor::extract_contract
+@@ -124,17 +124,17 @@
+         // Scan user and assistant messages for contract signals.
+         for msg in &session.messages {
+             let lower = msg.content.to_lowercase();
+ 
+             // --- Success criteria ---
+             for pat in CRITERIA_PATTERNS {
+                 if lower.contains(pat) {
+                     let crit = format!("Goal/requirement: '{pat}'");
+-                    if !success_criteria.contains(&crit) {
++                    if  /* ~ changed by cargo-mutants ~ */success_criteria.contains(&crit) {
+                         success_criteria.push(crit);
+                     }
+                 }
+             }
+ 
+             // --- Tests / verifications ---
+             for pat in TEST_PATTERNS {
+                 if lower.contains(pat) {
+
+
+*** /opt/homebrew/bin/cargo test --no-run --verbose --package=session-ledger@0.1.0
+    Blocking waiting for file lock on package cache
+       Fresh unicode-ident v1.0.24
+       Fresh version_check v0.9.5
+       Fresh typenum v1.20.1
+       Fresh proc-macro2 v1.0.106
+       Fresh powerfmt v0.2.0
+       Fresh memchr v2.8.2
+       Fresh quote v1.0.46
+       Fresh serde_core v1.0.228
+       Fresh libc v0.2.186
+       Fresh zmij v1.0.21
+       Fresh num-conv v0.2.2
+       Fresh itoa v1.0.18
+       Fresh cfg-if v1.0.4
+       Fresh time-core v0.1.9
+       Fresh syn v2.0.118
+       Fresh generic-array v0.14.7
+       Fresh cpufeatures v0.2.17
+       Fresh deranged v0.5.8
+       Fresh serde_json v1.0.150
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.7
+       Fresh serde_derive v1.0.228
+       Fresh thiserror-impl v2.0.18
+       Fresh time v0.3.51
+       Fresh digest v0.10.7
+       Fresh serde v1.0.228
+       Fresh thiserror v2.0.18
+       Fresh sha2 v0.10.9
+       Dirty session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp): couldn't read metadata for file `target/debug/deps/libsession_ledger-d13352b219282d17.rlib`
+   Compiling session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp)
+     Running `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=eef283a138a36869 -C extra-filename=-d13352b219282d17 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rmeta --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rmeta --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rmeta --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rmeta --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rmeta`
+     Running `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ac9771b5e95f2e1d -C extra-filename=-88642e5ed190f524 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rlib --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rlib --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rlib --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rlib --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rlib`
+     Running `rustc --crate-name skeleton --edition=2021 tests/skeleton.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=46808918e2ab5b4b -C extra-filename=-f5cd9ce5cdb6eb09 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rlib --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rlib --extern session_ledger=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsession_ledger-d13352b219282d17.rlib --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rlib --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rlib --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rlib`
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.07s
+  Executable `/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/session_ledger-88642e5ed190f524`
+  Executable `/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/skeleton-f5cd9ce5cdb6eb09`
+
+*** result: Success
+
+*** /opt/homebrew/bin/cargo test --verbose --package=session-ledger@0.1.0
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+       Fresh version_check v0.9.5
+       Fresh unicode-ident v1.0.24
+       Fresh typenum v1.20.1
+       Fresh time-core v0.1.9
+       Fresh proc-macro2 v1.0.106
+       Fresh memchr v2.8.2
+       Fresh powerfmt v0.2.0
+       Fresh itoa v1.0.18
+       Fresh quote v1.0.46
+       Fresh serde_core v1.0.228
+       Fresh generic-array v0.14.7
+       Fresh libc v0.2.186
+       Fresh zmij v1.0.21
+       Fresh cfg-if v1.0.4
+       Fresh num-conv v0.2.2
+       Fresh syn v2.0.118
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.7
+       Fresh cpufeatures v0.2.17
+       Fresh deranged v0.5.8
+       Fresh serde_json v1.0.150
+       Fresh serde_derive v1.0.228
+       Fresh digest v0.10.7
+       Fresh thiserror-impl v2.0.18
+       Fresh time v0.3.51
+       Fresh serde v1.0.228
+       Fresh sha2 v0.10.9
+       Fresh thiserror v2.0.18
+       Fresh session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.68s
+     Running `/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/session_ledger-88642e5ed190f524`
+
+running 36 tests
+test distill::acceptance_extractor::tests::satisfaction_score_is_nonzero_for_valid_session ... ok
+test distill::acceptance_extractor::tests::returns_empty_for_no_signals ... ok
+test distill::acceptance_extractor::tests::empty_session_returns_empty ... ok
+test distill::compiler::tests::compiler_rejects_on_extractor_failure ... ok
+test distill::acceptance_extractor::tests::detects_user_confirmation ... ok
+test distill::acceptance_extractor::tests::extracts_testing_evidence ... ok
+test distill::acceptance_extractor::tests::detects_confirmation_from_user_messages_only ... ok
+test distill::acceptance_extractor::tests::acceptance_extractor_trait_works ... ok
+test distill::compiler::tests::full_bundle_compilation_produces_all_expected_kinds ... ok
+test distill::acceptance_extractor::tests::extracts_evidence_from_test_and_build_signals ... ok
+test distill::context_extractor::tests::context_extractor_trait_works ... ok
+test distill::context_extractor::tests::extracts_symbols_from_code_mentions ... ok
+test distill::context_extractor::tests::extracts_cwd_and_title_from_session ... ok
+test distill::compiler::tests::render_injectable_produces_non_empty_text ... ok
+test distill::context_extractor::tests::returns_empty_context_for_empty_session ... ok
+test distill::contract_extractor::tests::contract_extractor_trait_works ... FAILED
+test distill::contract_extractor::tests::extracts_constraints_from_modal_language ... ok
+test distill::contract_extractor::tests::extracts_do_not_touch_rules ... ok
+test distill::contract_extractor::tests::extracts_success_criteria_from_goal_language ... FAILED
+test distill::contract_extractor::tests::extracts_test_verification_commands ... ok
+test distill::context_extractor::tests::extracts_decisions_from_discourse ... ok
+test distill::extractor::tests::extracts_acceptance_signals_and_constraints ... ok
+test distill::context_extractor::tests::extracts_environment_notes ... ok
+test distill::context_extractor::tests::extracts_files_mentioned_from_messages ... ok
+test distill::extractor::tests::extracts_goal_from_first_substantial_user_message ... ok
+test distill::extractor::tests::ignores_assistant_messages_when_extracting_intent ... ok
+test distill::extractor::tests::intent_extractor_trait_works ... ok
+test distill::extractor::tests::returns_empty_intent_for_no_user_messages ... ok
+test distill::contract_extractor::tests::returns_empty_contract_for_empty_session ... ok
+test export::okf::tests::empty_bundle_produces_minimal_okf ... ok
+test export::okf::tests::okf_contains_expected_entity_kinds ... ok
+test export::okf::tests::okf_document_has_correct_metadata ... ok
+test export::okf::tests::okf_relations_have_correct_types_and_provenance ... ok
+test distill::extractor::tests::deduplicates_repeated_acceptance_signal ... ok
+test export::okf::tests::okf_document_round_trips_through_json ... ok
+test export::okf::tests::json_okf_exporter_produces_valid_value ... ok
+
+failures:
+
+---- distill::contract_extractor::tests::contract_extractor_trait_works stdout ----
+
+thread 'distill::contract_extractor::tests::contract_extractor_trait_works' (1456199) panicked at src/distill/contract_extractor.rs:234:9:
+assertion failed: !contract.success_criteria.is_empty()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- distill::contract_extractor::tests::extracts_success_criteria_from_goal_language stdout ----
+
+thread 'distill::contract_extractor::tests::extracts_success_criteria_from_goal_language' (1456202) panicked at src/distill/contract_extractor.rs:201:9:
+assertion failed: contract.success_criteria.iter().any(|c| c.contains("goal"))
+
+
+failures:
+    distill::contract_extractor::tests::contract_extractor_trait_works
+    distill::contract_extractor::tests::extracts_success_criteria_from_goal_language
+
+test result: FAILED. 34 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p session-ledger --lib`
+
+*** result: Failure(101)

@@ -1,0 +1,21 @@
+--- src/distill/compiler.rs
++++ delete ! in BundleCompiler<IE, CE, CtrE, AE>::compile
+@@ -92,17 +92,17 @@
+         let intent: Intent = self.intent.extract(session)?;
+         let context: Context = self.context.extract(session)?;
+         let contract: Contract = self.contract.extract(session)?;
+         let acceptance: Acceptance = self.acceptance.extract(session)?;
+ 
+         let mut bundle = ContinuationBundle::new(session.id.clone());
+ 
+         // Check if session appears ready for injection.
+-        let ready = acceptance.satisfaction_score > 0 || !session.messages.is_empty();
++        let ready = acceptance.satisfaction_score > 0 ||  /* ~ changed by cargo-mutants ~ */session.messages.is_empty();
+ 
+         bundle.push(Bundle::new(
+             BundleKind::Acceptance,
+             json!({
+                 "ready": ready,
+                 "scope_sized": ready,
+                 "user_turns": session.user_turns(),
+                 "evidence": acceptance.evidence,

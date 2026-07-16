@@ -1,0 +1,21 @@
+--- src/distill/contract_extractor.rs
++++ delete ! in HeuristicContractExtractor::extract_contract
+@@ -144,17 +144,17 @@
+                     }
+                 }
+             }
+ 
+             // --- Constraints ---
+             for pat in CONSTRAINT_PATTERNS {
+                 if lower.contains(pat) {
+                     let constraint = format!("Constraint: '{pat}'");
+-                    if !constraints.contains(&constraint) {
++                    if  /* ~ changed by cargo-mutants ~ */constraints.contains(&constraint) {
+                         constraints.push(constraint);
+                     }
+                 }
+             }
+ 
+             // --- Do-not-touch ---
+             for pat in DO_NOT_TOUCH_PATTERNS {
+                 if lower.contains(pat) {

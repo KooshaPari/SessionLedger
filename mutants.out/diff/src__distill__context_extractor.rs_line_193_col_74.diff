@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ replace > with == in is_file_path
+@@ -185,17 +185,17 @@
+         return false;
+     }
+     // Must contain a `/` or start like a relative path (e.g. `src/`).
+     if token.contains('/') {
+         return true;
+     }
+     // Match common file extensions.
+     let lower = token.to_lowercase();
+-    FILE_EXTENSIONS.iter().any(|ext| lower.ends_with(ext) && lower.len() > ext.len())
++    FILE_EXTENSIONS.iter().any(|ext| lower.ends_with(ext) && lower.len() == /* ~ changed by cargo-mutants ~ */ ext.len())
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+     use crate::domain::session::{Corpus, Message, Role};
+ 
+     fn fixture_session() -> Session {

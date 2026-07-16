@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ replace && with || in HeuristicContextExtractor::extract_context
+@@ -96,17 +96,17 @@
+         for msg in &session.messages {
+             let content = msg.content.as_str();
+             let lower = content.to_lowercase();
+             let tokens: Vec<&str> = content.split_whitespace().collect();
+ 
+             // --- Files ---
+             for token in &tokens {
+                 let clean = token.trim_matches(|c: char| {
+-                    !c.is_alphanumeric() && c != '/' && c != '.' && c != '-' && c != '_'
++                    !c.is_alphanumeric() || /* ~ changed by cargo-mutants ~ */ c != '/' && c != '.' && c != '-' && c != '_'
+                 });
+                 if is_file_path(clean) {
+                     let fp = clean.to_string();
+                     if !files_mentioned.contains(&fp) {
+                         files_mentioned.push(fp);
+                     }
+                 }
+             }

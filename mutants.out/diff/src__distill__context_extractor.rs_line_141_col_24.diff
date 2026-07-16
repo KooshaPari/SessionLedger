@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ delete ! in HeuristicContextExtractor::extract_context
+@@ -133,17 +133,17 @@
+                 }
+             }
+ 
+             // --- Decisions ---
+             for pat in DECISION_PATTERNS {
+                 if lower.contains(pat) {
+                     let summary = format!("Session contains '{pat}' language");
+                     let decision = Decision { summary, rationale: Some(content.to_string()) };
+-                    if !key_decisions.iter().any(|d| d.summary == decision.summary) {
++                    if  /* ~ changed by cargo-mutants ~ */key_decisions.iter().any(|d| d.summary == decision.summary) {
+                         key_decisions.push(decision);
+                     }
+                 }
+             }
+ 
+             // --- Environment notes ---
+             for pat in ENVIRONMENT_PATTERNS {
+                 if lower.contains(pat) {

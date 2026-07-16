@@ -1,0 +1,194 @@
+
+*** src/distill/compiler.rs:92:9: replace BundleCompiler<IE, CE, CtrE, AE>::compile -> Result<ContinuationBundle, CompileError> with Ok(Default::default())
+
+*** mutation diff:
+--- src/distill/compiler.rs
++++ replace BundleCompiler<IE, CE, CtrE, AE>::compile -> Result<ContinuationBundle, CompileError> with Ok(Default::default())
+@@ -84,73 +84,17 @@
+         }
+     }
+ 
+     /// Run all extractors and assemble the bundle.
+     ///
+     /// # Errors
+     /// Returns [`CompileError::Extraction`] if any extractor fails.
+     pub fn compile(&self, session: &Session) -> Result<ContinuationBundle, CompileError> {
+-        let intent: Intent = self.intent.extract(session)?;
+-        let context: Context = self.context.extract(session)?;
+-        let contract: Contract = self.contract.extract(session)?;
+-        let acceptance: Acceptance = self.acceptance.extract(session)?;
+-
+-        let mut bundle = ContinuationBundle::new(session.id.clone());
+-
+-        // Check if session appears ready for injection.
+-        let ready = acceptance.satisfaction_score > 0 || !session.messages.is_empty();
+-
+-        bundle.push(Bundle::new(
+-            BundleKind::Acceptance,
+-            json!({
+-                "ready": ready,
+-                "scope_sized": ready,
+-                "user_turns": session.user_turns(),
+-                "evidence": acceptance.evidence,
+-                "user_confirmed": acceptance.user_confirmed,
+-                "testing_evidence": acceptance.testing_evidence,
+-                "satisfaction_score": acceptance.satisfaction_score,
+-            }),
+-        ));
+-        bundle.push(Bundle::new(
+-            BundleKind::Intent,
+-            json!({
+-                "goal": intent.goal,
+-                "acceptance_signals": intent.acceptance_signals,
+-                "constraints": intent.constraints,
+-                "user_turn_count": intent.user_turn_count,
+-            }),
+-        ));
+-        bundle.push(Bundle::new(
+-            BundleKind::Context,
+-            json!({
+-                "cwd": context.cwd,
+-                "title": context.title,
+-                "files_mentioned": context.files_mentioned,
+-                "key_decisions": context.key_decisions,
+-                "key_symbols": context.key_symbols,
+-                "environment_notes": context.environment_notes,
+-            }),
+-        ));
+-        bundle.push(Bundle::new(
+-            BundleKind::Contract,
+-            json!({
+-                "success_criteria": contract.success_criteria,
+-                "tests_or_verifications": contract.tests_or_verifications,
+-                "constraints": contract.constraints,
+-                "do_not_touch": contract.do_not_touch,
+-            }),
+-        ));
+-        bundle.push(Bundle::new(
+-            BundleKind::Provenance,
+-            json!({ "corpus": session.corpus, "source_id": session.id }),
+-        ));
+-
+-        Ok(bundle)
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Render a compiled bundle as injectable text payload for a new session.
+     ///
+     /// The output is a formatted text block suitable for injection as a system
+     /// prompt or context prefix in a new agent session. All bundle slices are
+     /// rendered in a structured, human-readable format.
+     #[must_use]
+
+
+*** /opt/homebrew/bin/cargo test --no-run --verbose --package=session-ledger@0.1.0
+       Fresh unicode-ident v1.0.24
+       Fresh version_check v0.9.5
+       Fresh proc-macro2 v1.0.106
+       Fresh typenum v1.20.1
+       Fresh quote v1.0.46
+       Fresh memchr v2.8.2
+       Fresh time-core v0.1.9
+       Fresh serde_core v1.0.228
+       Fresh syn v2.0.118
+       Fresh libc v0.2.186
+       Fresh zmij v1.0.21
+       Fresh itoa v1.0.18
+       Fresh num-conv v0.2.2
+       Fresh cfg-if v1.0.4
+       Fresh powerfmt v0.2.0
+       Fresh generic-array v0.14.7
+       Fresh cpufeatures v0.2.17
+       Fresh deranged v0.5.8
+       Fresh thiserror-impl v2.0.18
+       Fresh serde_derive v1.0.228
+       Fresh serde_json v1.0.150
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.7
+       Fresh serde v1.0.228
+       Fresh thiserror v2.0.18
+       Fresh time v0.3.51
+       Fresh digest v0.10.7
+       Fresh sha2 v0.10.9
+       Dirty session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp): couldn't read metadata for file `target/debug/deps/libsession_ledger-d13352b219282d17.rlib`
+   Compiling session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp)
+     Running `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=eef283a138a36869 -C extra-filename=-d13352b219282d17 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rmeta --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libserde_json-831252b49069eef3.rmeta --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rmeta --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libthiserror-01b248626c37c884.rmeta --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rmeta`
+     Running `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ac9771b5e95f2e1d -C extra-filename=-88642e5ed190f524 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rlib --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libserde_json-831252b49069eef3.rlib --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rlib --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libthiserror-01b248626c37c884.rlib --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rlib`
+warning: unused import: `crate::domain::acceptance::Acceptance`
+  --> src/distill/compiler.rs:33:5
+   |
+33 | use crate::domain::acceptance::Acceptance;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Bundle`
+  --> src/distill/compiler.rs:34:29
+   |
+34 | use crate::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
+   |                             ^^^^^^
+
+warning: unused import: `crate::domain::context::Context`
+  --> src/distill/compiler.rs:35:5
+   |
+35 | use crate::domain::context::Context;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::domain::contract::Contract`
+  --> src/distill/compiler.rs:36:5
+   |
+36 | use crate::domain::contract::Contract;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::domain::intent::Intent`
+  --> src/distill/compiler.rs:37:5
+   |
+37 | use crate::domain::intent::Intent;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `serde_json::json`
+  --> src/distill/compiler.rs:42:5
+   |
+42 | use serde_json::json;
+   |     ^^^^^^^^^^^^^^^^
+
+error[E0277]: the trait bound `ContinuationBundle: Default` is not satisfied
+  --> src/distill/compiler.rs:92:12
+   |
+92 |         Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+   |            ^^^^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `ContinuationBundle`
+   |
+help: consider annotating `ContinuationBundle` with `#[derive(Default)]`
+  --> src/domain/bundle.rs:56:1
+   |
+56 + #[derive(Default)]
+57 | pub struct ContinuationBundle {
+   |
+
+For more information about this error, try `rustc --explain E0277`.
+warning: `session-ledger` (lib) generated 6 warnings
+error: could not compile `session-ledger` (lib) due to 1 previous error; 6 warnings emitted
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=eef283a138a36869 -C extra-filename=-d13352b219282d17 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rmeta --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libserde_json-831252b49069eef3.rmeta --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rmeta --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libthiserror-01b248626c37c884.rmeta --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rmeta` (exit status: 1)
+warning: build failed, waiting for other jobs to finish...
+error[E0277]: the trait bound `bundle::ContinuationBundle: Default` is not satisfied
+  --> src/distill/compiler.rs:92:12
+   |
+92 |         Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+   |            ^^^^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `bundle::ContinuationBundle`
+   |
+help: consider annotating `bundle::ContinuationBundle` with `#[derive(Default)]`
+  --> src/domain/bundle.rs:56:1
+   |
+56 + #[derive(Default)]
+57 | pub struct ContinuationBundle {
+   |
+
+warning: `session-ledger` (lib test) generated 5 warnings (5 duplicates)
+error: could not compile `session-ledger` (lib test) due to 1 previous error; 5 warnings emitted
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ac9771b5e95f2e1d -C extra-filename=-88642e5ed190f524 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rlib --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libserde_json-831252b49069eef3.rlib --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rlib --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libthiserror-01b248626c37c884.rlib --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-FyiIPS.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rlib` (exit status: 1)
+
+*** result: Failure(101)

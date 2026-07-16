@@ -1,0 +1,21 @@
+--- src/distill/extractor.rs
++++ replace > with == in HeuristicIntentExtractor::extract_intent
+@@ -86,17 +86,17 @@
+             .map(|m| m.content.as_str())
+             .collect();
+ 
+         let user_turn_count = user_messages.len();
+ 
+         // Goal: first substantial user message (>20 chars) or the very first one.
+         let goal = user_messages
+             .iter()
+-            .find(|msg| msg.len() > 20)
++            .find(|msg| msg.len() == /* ~ changed by cargo-mutants ~ */ 20)
+             .or_else(|| user_messages.first())
+             .map(|msg| (*msg).to_string());
+ 
+         // Acceptance signals: collect matched patterns found in user messages.
+         let mut acceptance_signals: Vec<String> = Vec::new();
+         // Constraints: collect matched patterns found in user messages.
+         let mut constraints: Vec<String> = Vec::new();
+ 

@@ -1,0 +1,21 @@
+--- src/distill/acceptance_extractor.rs
++++ replace == with != in HeuristicAcceptanceExtractor::extract_acceptance
+@@ -131,17 +131,17 @@
+                         evidence.push(ev);
+                         // Count toward satisfaction
+                         confirmation_count += 1;
+                     }
+                 }
+             }
+ 
+             // --- User confirmation (only user messages) ---
+-            if msg.role == Role::User {
++            if msg.role != /* ~ changed by cargo-mutants ~ */ Role::User {
+                 for pat in USER_CONFIRMATION_PATTERNS {
+                     if lower.contains(pat) {
+                         user_confirmed = true;
+                         confirmation_count += 1;
+                         break; // one confirmation is enough
+                     }
+                 }
+             }

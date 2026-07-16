@@ -1,0 +1,21 @@
+--- src/distill/acceptance_extractor.rs
++++ delete ! in HeuristicAcceptanceExtractor::extract_acceptance
+@@ -122,17 +122,17 @@
+ 
+         for msg in &session.messages {
+             let lower = msg.content.to_lowercase();
+ 
+             // --- General evidence ---
+             for pat in EVIDENCE_PATTERNS {
+                 if lower.contains(pat) {
+                     let ev = format!("Evidence: '{pat}'");
+-                    if !evidence.contains(&ev) {
++                    if  /* ~ changed by cargo-mutants ~ */evidence.contains(&ev) {
+                         evidence.push(ev);
+                         // Count toward satisfaction
+                         confirmation_count += 1;
+                     }
+                 }
+             }
+ 
+             // --- User confirmation (only user messages) ---

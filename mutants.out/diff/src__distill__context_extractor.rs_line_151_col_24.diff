@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ delete ! in HeuristicContextExtractor::extract_context
+@@ -143,17 +143,17 @@
+                     }
+                 }
+             }
+ 
+             // --- Environment notes ---
+             for pat in ENVIRONMENT_PATTERNS {
+                 if lower.contains(pat) {
+                     let note = format!("Session mentions '{pat}'");
+-                    if !environment_notes.contains(&note) {
++                    if  /* ~ changed by cargo-mutants ~ */environment_notes.contains(&note) {
+                         environment_notes.push(note);
+                     }
+                 }
+             }
+         }
+ 
+         // Deduplicate environment notes by prefix (collapse "Session mentions 'npm'"
+         // and "Session mentions 'cargo'" into a single note if both appear from

@@ -1,0 +1,21 @@
+--- src/distill/extractor.rs
++++ replace <impl IntentExtractor for HeuristicIntentExtractor>::extract -> Result<Intent, PortError> with Ok(Default::default())
+@@ -121,17 +121,17 @@
+         }
+ 
+         Intent { goal, acceptance_signals, constraints, user_turn_count }
+     }
+ }
+ 
+ impl IntentExtractor for HeuristicIntentExtractor {
+     fn extract(&self, session: &Session) -> Result<Intent, PortError> {
+-        Ok(Self::extract_intent(session))
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+     use crate::domain::session::{Corpus, Message, Role};
+ 

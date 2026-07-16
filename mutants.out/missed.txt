@@ -1,0 +1,30 @@
+src/distill/acceptance_extractor.rs:133:44: replace += with *= in HeuristicAcceptanceExtractor::extract_acceptance
+src/distill/acceptance_extractor.rs:143:44: replace += with -= in HeuristicAcceptanceExtractor::extract_acceptance
+src/distill/acceptance_extractor.rs:143:44: replace += with *= in HeuristicAcceptanceExtractor::extract_acceptance
+src/distill/compiler.rs:100:55: replace || with && in BundleCompiler<IE, CE, CtrE, AE>::compile
+src/distill/compiler.rs:100:51: replace > with == in BundleCompiler<IE, CE, CtrE, AE>::compile
+src/distill/compiler.rs:100:51: replace > with < in BundleCompiler<IE, CE, CtrE, AE>::compile
+src/distill/compiler.rs:100:51: replace > with >= in BundleCompiler<IE, CE, CtrE, AE>::compile
+src/distill/compiler.rs:100:58: delete ! in BundleCompiler<IE, CE, CtrE, AE>::compile
+src/distill/context_extractor.rs:104:47: replace != with == in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:104:59: replace != with == in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:104:71: replace != with == in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:104:83: replace != with == in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:125:25: replace || with && in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:124:25: replace || with && in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:123:25: replace || with && in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:122:25: replace || with && in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:121:25: replace || with && in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:120:25: replace || with && in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:119:25: replace || with && in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:141:64: replace == with != in HeuristicContextExtractor::extract_context
+src/distill/context_extractor.rs:184:5: replace is_file_path -> bool with true
+src/distill/context_extractor.rs:184:25: replace || with && in is_file_path
+src/distill/context_extractor.rs:184:40: replace < with == in is_file_path
+src/distill/context_extractor.rs:184:40: replace < with <= in is_file_path
+src/distill/context_extractor.rs:193:59: replace && with || in is_file_path
+src/distill/context_extractor.rs:193:74: replace > with == in is_file_path
+src/distill/context_extractor.rs:193:74: replace > with < in is_file_path
+src/distill/context_extractor.rs:193:74: replace > with >= in is_file_path
+src/distill/extractor.rs:94:35: replace > with >= in HeuristicIntentExtractor::extract_intent
+src/domain/acceptance.rs:47:9: replace Acceptance::is_empty -> bool with true

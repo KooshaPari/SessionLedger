@@ -1,0 +1,21 @@
+--- src/distill/acceptance_extractor.rs
++++ delete ! in HeuristicAcceptanceExtractor::extract_acceptance
+@@ -145,17 +145,17 @@
+                     }
+                 }
+             }
+ 
+             // --- Testing evidence ---
+             for pat in TESTING_EVIDENCE_PATTERNS {
+                 if lower.contains(pat) {
+                     let te = format!("Testing: '{pat}'");
+-                    if !testing_evidence.contains(&te) {
++                    if  /* ~ changed by cargo-mutants ~ */testing_evidence.contains(&te) {
+                         testing_evidence.push(te);
+                     }
+                 }
+             }
+         }
+ 
+         // Heuristic satisfaction score: clamp to 0–100.
+         // Base: 10 per confirmation up to max 100.

@@ -1,0 +1,21 @@
+--- src/distill/contract_extractor.rs
++++ replace <impl ContractExtractor for HeuristicContractExtractor>::extract -> Result<Contract, PortError> with Ok(Default::default())
+@@ -167,17 +167,17 @@
+         }
+ 
+         Contract { success_criteria, tests_or_verifications, constraints, do_not_touch }
+     }
+ }
+ 
+ impl ContractExtractor for HeuristicContractExtractor {
+     fn extract(&self, session: &Session) -> Result<Contract, PortError> {
+-        Ok(Self::extract_contract(session))
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+     use crate::domain::session::{Corpus, Message, Role};
+ 

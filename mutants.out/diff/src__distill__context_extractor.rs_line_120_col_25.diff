@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ replace || with && in HeuristicContextExtractor::extract_context
+@@ -112,17 +112,17 @@
+             }
+ 
+             // --- Symbols (identifiers with :: or () pattern) ---
+             // Look for token-like patterns (CamelCase, snake_case with parens or ::)
+             for token in &tokens {
+                 let clean = token.trim_matches(|c: char| {
+                     c == '('
+                         || c == ')'
+-                        || c == ','
++                        && /* ~ changed by cargo-mutants ~ */ c == ','
+                         || c == ';'
+                         || c == '{'
+                         || c == '}'
+                         || c == '['
+                         || c == ']'
+                 });
+                 let is_func_call = token.contains("()");
+                 if clean.contains("::") || is_func_call {

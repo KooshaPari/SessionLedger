@@ -1,0 +1,21 @@
+--- src/distill/contract_extractor.rs
++++ delete ! in HeuristicContractExtractor::extract_contract
+@@ -134,17 +134,17 @@
+                     }
+                 }
+             }
+ 
+             // --- Tests / verifications ---
+             for pat in TEST_PATTERNS {
+                 if lower.contains(pat) {
+                     let test = format!("Verification: '{pat}'");
+-                    if !tests_or_verifications.contains(&test) {
++                    if  /* ~ changed by cargo-mutants ~ */tests_or_verifications.contains(&test) {
+                         tests_or_verifications.push(test);
+                     }
+                 }
+             }
+ 
+             // --- Constraints ---
+             for pat in CONSTRAINT_PATTERNS {
+                 if lower.contains(pat) {

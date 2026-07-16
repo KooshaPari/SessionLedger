@@ -1,0 +1,15 @@
+--- src/domain/acceptance.rs
++++ replace Acceptance::is_empty -> bool with false
+@@ -39,11 +39,11 @@
+             testing_evidence: Vec::new(),
+             satisfaction_score: 0,
+         }
+     }
+ 
+     /// Whether the extractor found any meaningful acceptance data.
+     #[must_use]
+     pub fn is_empty(&self) -> bool {
+-        self.evidence.is_empty() && !self.user_confirmed && self.testing_evidence.is_empty()
++        false /* ~ changed by cargo-mutants ~ */
+     }
+ }

@@ -1,0 +1,21 @@
+--- src/distill/acceptance_extractor.rs
++++ replace <impl AcceptanceExtractor for HeuristicAcceptanceExtractor>::extract -> Result<Acceptance, PortError> with Ok(Default::default())
+@@ -171,17 +171,17 @@
+         evidence.dedup();
+ 
+         Acceptance { evidence, user_confirmed, testing_evidence, satisfaction_score }
+     }
+ }
+ 
+ impl AcceptanceExtractor for HeuristicAcceptanceExtractor {
+     fn extract(&self, session: &Session) -> Result<Acceptance, PortError> {
+-        Ok(Self::extract_acceptance(session))
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+     use crate::domain::session::{Corpus, Message, Role};
+ 

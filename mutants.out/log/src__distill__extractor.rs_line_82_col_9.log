@@ -1,0 +1,151 @@
+
+*** src/distill/extractor.rs:82:9: replace HeuristicIntentExtractor::extract_intent -> Intent with Default::default()
+
+*** mutation diff:
+--- src/distill/extractor.rs
++++ replace HeuristicIntentExtractor::extract_intent -> Intent with Default::default()
+@@ -74,58 +74,17 @@
+ 
+     /// Heuristically extract intent from a session's messages.
+     ///
+     /// This is factored as a public associated function so it can be used
+     /// directly by the compiler without going through the trait when no
+     /// adapter injection is needed (P1 default).
+     #[must_use]
+     pub fn extract_intent(session: &Session) -> Intent {
+-        let user_messages: Vec<&str> = session
+-            .messages
+-            .iter()
+-            .filter(|m| m.role == Role::User)
+-            .map(|m| m.content.as_str())
+-            .collect();
+-
+-        let user_turn_count = user_messages.len();
+-
+-        // Goal: first substantial user message (>20 chars) or the very first one.
+-        let goal = user_messages
+-            .iter()
+-            .find(|msg| msg.len() > 20)
+-            .or_else(|| user_messages.first())
+-            .map(|msg| (*msg).to_string());
+-
+-        // Acceptance signals: collect matched patterns found in user messages.
+-        let mut acceptance_signals: Vec<String> = Vec::new();
+-        // Constraints: collect matched patterns found in user messages.
+-        let mut constraints: Vec<String> = Vec::new();
+-
+-        for msg in &user_messages {
+-            let lower = msg.to_lowercase();
+-            for pat in ACCEPTANCE_PATTERNS {
+-                if lower.contains(pat) {
+-                    let signal = pat.to_string();
+-                    if !acceptance_signals.contains(&signal) {
+-                        acceptance_signals.push(signal);
+-                    }
+-                }
+-            }
+-            for pat in CONSTRAINT_PATTERNS {
+-                if lower.contains(pat) {
+-                    let constraint = pat.to_string();
+-                    if !constraints.contains(&constraint) {
+-                        constraints.push(constraint);
+-                    }
+-                }
+-            }
+-        }
+-
+-        Intent { goal, acceptance_signals, constraints, user_turn_count }
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ impl IntentExtractor for HeuristicIntentExtractor {
+     fn extract(&self, session: &Session) -> Result<Intent, PortError> {
+         Ok(Self::extract_intent(session))
+     }
+ }
+
+
+*** /opt/homebrew/bin/cargo test --no-run --verbose --package=session-ledger@0.1.0
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+       Fresh version_check v0.9.5
+       Fresh unicode-ident v1.0.24
+       Fresh typenum v1.20.1
+       Fresh proc-macro2 v1.0.106
+       Fresh itoa v1.0.18
+       Fresh quote v1.0.46
+       Fresh serde_core v1.0.228
+       Fresh libc v0.2.186
+       Fresh zmij v1.0.21
+       Fresh time-core v0.1.9
+       Fresh cfg-if v1.0.4
+       Fresh memchr v2.8.2
+       Fresh powerfmt v0.2.0
+       Fresh generic-array v0.14.7
+       Fresh syn v2.0.118
+       Fresh cpufeatures v0.2.17
+       Fresh deranged v0.5.8
+       Fresh num-conv v0.2.2
+       Fresh serde_json v1.0.150
+       Fresh crypto-common v0.1.7
+       Fresh block-buffer v0.10.4
+       Fresh serde_derive v1.0.228
+       Fresh thiserror-impl v2.0.18
+       Fresh time v0.3.51
+       Fresh digest v0.10.7
+       Fresh thiserror v2.0.18
+       Fresh serde v1.0.228
+       Fresh sha2 v0.10.9
+       Dirty session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp): the file `src/distill/contract_extractor.rs` has changed (1782977683.242433023s, 6s after last build at 1782977677.977496474s)
+   Compiling session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp)
+     Running `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ac9771b5e95f2e1d -C extra-filename=-88642e5ed190f524 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rlib --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rlib --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rlib --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rlib --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rlib`
+     Running `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=eef283a138a36869 -C extra-filename=-d13352b219282d17 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rmeta --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rmeta --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rmeta --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rmeta --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rmeta`
+warning: unused import: `Role`
+  --> src/distill/extractor.rs:11:30
+   |
+11 | use crate::domain::session::{Role, Session};
+   |                              ^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0277]: the trait bound `Intent: Default` is not satisfied
+  --> src/distill/extractor.rs:82:9
+   |
+82 |         Default::default() /* ~ changed by cargo-mutants ~ */
+   |         ^^^^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `Intent`
+   |
+help: consider annotating `Intent` with `#[derive(Default)]`
+  --> src/domain/intent.rs:20:1
+   |
+20 + #[derive(Default)]
+21 | pub struct Intent {
+   |
+
+error[E0277]: the trait bound `intent::Intent: Default` is not satisfied
+  --> src/distill/extractor.rs:82:9
+   |
+82 |         Default::default() /* ~ changed by cargo-mutants ~ */
+   |         ^^^^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `intent::Intent`
+   |
+help: consider annotating `intent::Intent` with `#[derive(Default)]`
+  --> src/domain/intent.rs:20:1
+   |
+20 + #[derive(Default)]
+21 | pub struct Intent {
+   |
+
+For more information about this error, try `rustc --explain E0277`.
+warning: `session-ledger` (lib) generated 1 warning (1 duplicate)
+error: could not compile `session-ledger` (lib) due to 1 previous error; 1 warning emitted
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=eef283a138a36869 -C extra-filename=-d13352b219282d17 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rmeta --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rmeta --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rmeta --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rmeta --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rmeta` (exit status: 1)
+warning: build failed, waiting for other jobs to finish...
+warning: `session-ledger` (lib test) generated 1 warning
+error: could not compile `session-ledger` (lib test) due to 1 previous error; 1 warning emitted
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ac9771b5e95f2e1d -C extra-filename=-88642e5ed190f524 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rlib --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rlib --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rlib --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rlib --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rlib` (exit status: 1)
+
+*** result: Failure(101)

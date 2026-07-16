@@ -1,0 +1,26 @@
+--- src/domain/acceptance.rs
++++ replace Acceptance::empty -> Self with Default::default()
+@@ -28,22 +28,17 @@
+     /// confirmation signals appear in the session.
+     pub satisfaction_score: u8,
+ }
+ 
+ impl Acceptance {
+     /// Empty acceptance — nothing extracted yet.
+     #[must_use]
+     pub fn empty() -> Self {
+-        Self {
+-            evidence: Vec::new(),
+-            user_confirmed: false,
+-            testing_evidence: Vec::new(),
+-            satisfaction_score: 0,
+-        }
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Whether the extractor found any meaningful acceptance data.
+     #[must_use]
+     pub fn is_empty(&self) -> bool {
+         self.evidence.is_empty() && !self.user_confirmed && self.testing_evidence.is_empty()
+     }
+ }

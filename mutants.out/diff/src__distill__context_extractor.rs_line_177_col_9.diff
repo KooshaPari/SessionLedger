@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ replace <impl ContextExtractor for HeuristicContextExtractor>::extract -> Result<Context, PortError> with Ok(Default::default())
+@@ -169,17 +169,17 @@
+             key_symbols,
+             environment_notes,
+         }
+     }
+ }
+ 
+ impl ContextExtractor for HeuristicContextExtractor {
+     fn extract(&self, session: &Session) -> Result<Context, PortError> {
+-        Ok(Self::extract_context(session))
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ /// Whether a whitespace-delimited token looks like a file path.
+ #[must_use]
+ fn is_file_path(token: &str) -> bool {
+     if token.is_empty() || token.len() < 3 {
+         return false;

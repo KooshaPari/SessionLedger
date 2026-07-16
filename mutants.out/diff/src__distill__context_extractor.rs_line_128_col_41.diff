@@ -1,0 +1,21 @@
+--- src/distill/context_extractor.rs
++++ replace || with && in HeuristicContextExtractor::extract_context
+@@ -120,17 +120,17 @@
+                         || c == ','
+                         || c == ';'
+                         || c == '{'
+                         || c == '}'
+                         || c == '['
+                         || c == ']'
+                 });
+                 let is_func_call = token.contains("()");
+-                if clean.contains("::") || is_func_call {
++                if clean.contains("::") && /* ~ changed by cargo-mutants ~ */ is_func_call {
+                     let sym = clean.to_string();
+                     if !key_symbols.contains(&sym) {
+                         key_symbols.push(sym);
+                     }
+                 }
+             }
+ 
+             // --- Decisions ---

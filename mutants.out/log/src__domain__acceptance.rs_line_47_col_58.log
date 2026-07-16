@@ -1,0 +1,55 @@
+
+*** src/domain/acceptance.rs:47:58: replace && with || in Acceptance::is_empty
+
+*** mutation diff:
+--- src/domain/acceptance.rs
++++ replace && with || in Acceptance::is_empty
+@@ -39,11 +39,11 @@
+             testing_evidence: Vec::new(),
+             satisfaction_score: 0,
+         }
+     }
+ 
+     /// Whether the extractor found any meaningful acceptance data.
+     #[must_use]
+     pub fn is_empty(&self) -> bool {
+-        self.evidence.is_empty() && !self.user_confirmed && self.testing_evidence.is_empty()
++        self.evidence.is_empty() && !self.user_confirmed || /* ~ changed by cargo-mutants ~ */ self.testing_evidence.is_empty()
+     }
+ }
+
+
+*** /opt/homebrew/bin/cargo test --no-run --verbose --package=session-ledger@0.1.0
+       Fresh version_check v0.9.5
+       Fresh unicode-ident v1.0.24
+       Fresh typenum v1.20.1
+       Fresh proc-macro2 v1.0.106
+       Fresh powerfmt v0.2.0
+       Fresh memchr v2.8.2
+       Fresh quote v1.0.46
+       Fresh serde_core v1.0.228
+       Fresh libc v0.2.186
+       Fresh zmij v1.0.21
+       Fresh cfg-if v1.0.4
+       Fresh num-conv v0.2.2
+       Fresh itoa v1.0.18
+       Fresh time-core v0.1.9
+       Fresh syn v2.0.118
+       Fresh generic-array v0.14.7
+       Fresh cpufeatures v0.2.17
+       Fresh deranged v0.5.8
+       Fresh serde_json v1.0.150
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.7
+       Fresh thiserror-impl v2.0.18
+       Fresh serde_derive v1.0.228
+       Fresh time v0.3.51
+       Fresh digest v0.10.7
+       Fresh serde v1.0.228
+       Fresh thiserror v2.0.18
+       Fresh sha2 v0.10.9
+       Dirty session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp): the file `src/domain/acceptance.rs` has changed (1782977707.550678933s, 3s after last build at 1782977704.134964048s)
+   Compiling session-ledger v0.1.0 (/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp)
+     Running `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ac9771b5e95f2e1d -C extra-filename=-88642e5ed190f524 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rlib --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rlib --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rlib --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rlib --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rlib`
+     Running `rustc --crate-name session_ledger --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=eef283a138a36869 -C extra-filename=-d13352b219282d17 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rmeta --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rmeta --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rmeta --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rmeta --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rmeta`
+     Running `rustc --crate-name skeleton --edition=2021 tests/skeleton.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked '--warn=clippy::pedantic' '--deny=clippy::all' --forbid=unsafe_code --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=46808918e2ab5b4b -C extra-filename=-f5cd9ce5cdb6eb09 --out-dir /private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps -C incremental=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/incremental -L dependency=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps --extern serde=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde-1c41851e60a5db1e.rlib --extern serde_json=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libserde_json-831252b49069eef3.rlib --extern session_ledger=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsession_ledger-d13352b219282d17.rlib --extern sha2=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libsha2-bc6f53d88a65a721.rlib --extern thiserror=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libthiserror-01b248626c37c884.rlib --extern time=/private/var/folders/wl/z8733y815nzg28yy0_1_lh7w0000gn/T/cargo-mutants-SessionLedger-Yobutl.tmp/target/debug/deps/libtime-ee30f8939d83ad23.rlib`

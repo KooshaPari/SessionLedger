@@ -61,6 +61,20 @@ function Assert-Contains {
     }
 }
 
+function Assert-Matches {
+    param(
+        [Parameter(Mandatory = $true)][string]$Doc,
+        [Parameter(Mandatory = $true)][string]$Pattern,
+        [Parameter(Mandatory = $true)][string]$Label,
+        [string]$Context = "document"
+    )
+    $ok = $Doc -match $Pattern
+    [void](Write-Check -Label $Label -Ok $ok)
+    if (-not $ok) {
+        throw "$Context missing required pattern: '$Pattern'"
+    }
+}
+
 Write-Host "i18n scaffold check (C01 L16)"
 if ($SelfCheck) {
     Write-Host "Mode: SelfCheck (en+es catalogs + helper + docs; no cargo / no network / no Fluent runtime)"
@@ -127,7 +141,7 @@ Assert-Contains -Doc $helper -Label "include_str locales/es.json" `
     -Needle 'include_str!("../locales/es.json")' -Context "src/i18n.rs"
 Assert-Contains -Doc $helper -Label "pub fn t" -Needle "pub fn t(" `
     -Context "src/i18n.rs"
-Assert-Contains -Doc $helper -Label "pub fn t_locale" -Needle "pub fn t_locale(" `
+Assert-Matches -Doc $helper -Label "pub fn t_locale" -Pattern "pub\s+fn\s+t_locale\s*(?:<[^>]+>)?\s*\(" `
     -Context "src/i18n.rs"
 Assert-Contains -Doc $helper -Label "pub fn try_catalog" -Needle "pub fn try_catalog(" `
     -Context "src/i18n.rs"

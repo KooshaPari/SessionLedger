@@ -161,7 +161,7 @@ fn append_sqlite(
     event: &AuditEvent<'_>,
 ) -> io::Result<()> {
     let conn = conn.lock().map_err(|error| {
-        io::Error::new(io::ErrorKind::Other, format!("audit sqlite lock poisoned: {error}"))
+        io::Error::other(format!("audit sqlite lock poisoned: {error}"))
     })?;
     conn.execute(
         "INSERT INTO audit_events (timestamp, actor, action, outcome, request_id, reason, resource)

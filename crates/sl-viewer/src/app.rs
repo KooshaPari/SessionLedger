@@ -302,6 +302,12 @@ pub fn App() -> Element {
                 }}
               }}, true);
             }}
+
+            // Visual and browser harnesses must not send global shortcuts until
+            // the document-level bridge above exists.  Publish readiness only
+            // after installing (or confirming) that listener.
+            document.documentElement.dataset.slHotkeysReady = 'true';
+            window.dispatchEvent(new Event('sl-viewer-hotkeys-ready'));
             "#
         );
         let _ = document::eval(&script);

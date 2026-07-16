@@ -18,17 +18,15 @@
 //! # Example
 //!
 //! ```no_run
-//! use std::path::PathBuf;
+//! use std::path::Path;
 //! use tokio::sync::mpsc;
-//! use sl_daemon::{spawn_fs_watcher, run_worker_pool, DaemonError};
+//! use sl_daemon::{spawn_fs_watcher, DaemonError};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), DaemonError> {
-//!     let (tx, rx) = mpsc::unbounded_channel();
-//!     let rx = std::sync::Arc::new(tokio::sync::Mutex::new(rx));
+//!     let (tx, _rx) = mpsc::channel(64);
 //!
-//!     let _handle = spawn_fs_watcher(PathBuf::from("./sessions"), tx)?;
-//!     run_worker_pool(rx, PathBuf::from("./out"), 4).await;
+//!     let _watcher = spawn_fs_watcher(Path::new("./sessions"), tx)?;
 //!     Ok(())
 //! }
 //! ```

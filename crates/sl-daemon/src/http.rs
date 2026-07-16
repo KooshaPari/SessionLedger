@@ -31,8 +31,8 @@ use serde_json::Value;
 use tokio::sync::broadcast;
 
 use crate::export::BundleMeta;
-use crate::metrics::compute_metrics;
 use crate::filter::{apply_filters, FilterSpec};
+use crate::metrics::compute_metrics;
 use crate::validation::{validate_okf_bundle, PostBundle};
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt as _;
@@ -362,6 +362,10 @@ async fn replay_bundle(
     Sse::new(stream).keep_alive(KeepAlive::default()).into_response()
 }
 
+async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
+    Json(compute_metrics(&state.out_dir))
+}
+
 // ---------------------------------------------------------------------------
 // Unit tests for params_to_spec
 // ---------------------------------------------------------------------------
@@ -451,8 +455,4 @@ mod tests {
         // 200 / 1000 = 0.2 → rounds to 0 → clamped to 1.
         assert!(delay_ms_for_speed(1000.0) >= 1);
     }
-}
-
-async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
-    Json(compute_metrics(&state.out_dir))
 }

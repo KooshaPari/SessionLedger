@@ -296,7 +296,7 @@ mod tests {
     fn restore_decompresses() {
         let src_dir = TempDir::new().unwrap();
         let dst_dir = TempDir::new().unwrap();
-        let bundle_path = make_bundle(src_dir.path(), "bundle-003", "2023-05-01");
+        make_bundle(src_dir.path(), "bundle-003", "2023-05-01");
 
         let before = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
         archive_bundles(src_dir.path(), before, false).unwrap();

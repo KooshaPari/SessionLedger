@@ -29,9 +29,9 @@ mod etl;
 mod export;
 mod filter;
 mod http;
+mod metrics;
 mod tag;
 mod validation;
-mod metrics;
 mod watcher;
 
 use std::net::SocketAddr;

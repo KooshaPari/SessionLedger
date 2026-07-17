@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "389/402",
+    "score": "390/402",
     "pct": 97,
     "grade": "A",
-    "commit": "5bec516",
-    "wave": "Wave-36"
+    "commit": "9845a70",
+    "wave": "Wave-37"
   },
   "fr": [
     {
@@ -868,6 +868,33 @@
         "audit/SCORECARD.md",
         "docs/ops/WBS.md"
       ]
+    },
+    {
+      "id": "WBS-8.54",
+      "status": "done",
+      "evidence": [
+        "scripts/shuttle-permutation-check.ps1",
+        ".github/workflows/shuttle-permutation.yml",
+        "tests/shuttle_permutation.rs",
+        "scripts/miri-permutation-check.ps1",
+        ".github/workflows/miri-permutation.yml",
+        "docs/ops/source-provenance.md",
+        "scripts/source-provenance-check.ps1",
+        "tests/source_provenance.rs",
+        ".github/workflows/reusable-hermetic-build.yml",
+        "scripts/reusable-provenance-check.ps1",
+        "docs/ops/maintainer-2fa.md",
+        "scripts/maintainer-2fa-check.ps1",
+        "tests/maintainer_2fa.rs"
+      ]
+    },
+    {
+      "id": "WBS-8.55",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md",
+        "docs/ops/WBS.md"
+      ]
     }
   ],
   "clusters": [
@@ -908,8 +935,14 @@
         ".github/workflows/shuttle-soft.yml",
         "scripts/loom-permutation-check.ps1",
         ".github/workflows/loom-permutation.yml",
-        "tests/loom_permutation.rs"
-      ]
+        "tests/loom_permutation.rs",
+        "scripts/shuttle-permutation-check.ps1",
+        ".github/workflows/shuttle-permutation.yml",
+        "tests/shuttle_permutation.rs",
+        "scripts/miri-permutation-check.ps1",
+        ".github/workflows/miri-permutation.yml"
+      ],
+      "remaining": "TSan; shuttle crate in default graph; broadcast/SSE daemon-graph permutation ports (L7 residual); default-on jemalloc (L8)"
     },
     {
       "id": "C01",
@@ -980,8 +1013,12 @@
         "scripts/sandbox-boundary-check.ps1",
         "docs/ops/cve-feed-subscription.md",
         "scripts/cve-feed-check.ps1",
-        "CONTRIBUTING.md"
-      ]
+        "CONTRIBUTING.md",
+        "docs/ops/maintainer-2fa.md",
+        "scripts/maintainer-2fa-check.ps1",
+        "tests/maintainer_2fa.rs"
+      ],
+      "remaining": "Human org 2FA attestation (L36 NOT_VERIFIABLE_IN_REPO); hard rootless/no-net CI (L40 residual)"
     },
     {
       "id": "C05",
@@ -1014,8 +1051,8 @@
     },
     {
       "id": "C06",
-      "score": "29/30",
-      "status": "partial",
+      "score": "30/30",
+      "status": "done",
       "evidence": [
         "scripts/provenance-contract-check.ps1",
         ".github/workflows/provenance-contract.yml",
@@ -1030,9 +1067,14 @@
         "tests/mcp_scope.rs",
         "scripts/slsa-isolation-check.ps1",
         "docs/ops/hermetic-builds.md",
-        "packaging/README.md"
+        "packaging/README.md",
+        "docs/ops/source-provenance.md",
+        "scripts/source-provenance-check.ps1",
+        "tests/source_provenance.rs",
+        ".github/workflows/reusable-hermetic-build.yml",
+        "scripts/reusable-provenance-check.ps1"
       ],
-      "remaining": "Full reusable-workflow SLSA-L3 attestation, cross-host/Windows proof, and source-code provenance breadth (L59)"
+      "remaining": "Full protected-environment SLSA Build L3 attestation; human branch-protection signed-commits attestation (L59 residual)"
     },
     {
       "id": "C07",

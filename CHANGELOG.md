@@ -6,6 +6,15 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- ADR 0006: explicit no MCP host/server / pin list (C06 L57) + `mcp-scope` SelfCheck.
+
+- Go OKF adapter stub (`adapters/go`) beside Python for C08 L75 cross-language parity (validate/emit CLI; SelfCheck skips runtime when `go` absent).
+
+- Soft Alertmanager packaging sample + SelfCheck (C05; local placeholder only, live webhook unpaid).
+
+- Soft shuttle SelfCheck evidence (C00 L7): `docs/ops/shuttle-soft.md`, `scripts/shuttle-soft-check.ps1 -SelfCheck`, `tests/shuttle_soft.rs` (full shuttle permutation coverage remains unpaid).
+
+- Soft continuous-profiling HTTP push (`push_backend: http_soft` + optional `SL_PROFILE_PUSH_URL`; DryRun / continue-on-error) (C05 L45).
 
 - Soft multi-locale i18n: `locales/es.json` + `SL_LOCALE` / `t_locale` selection (C01 L16; Fluent/ICU still deferred).
 

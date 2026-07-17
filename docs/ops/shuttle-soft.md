@@ -17,6 +17,9 @@ port of `tests/race_model.rs` / `tests/loom_model.rs`.
 | [`scripts/shuttle-soft-check.ps1`](../../scripts/shuttle-soft-check.ps1) | Hermetic `-SelfCheck` for docs/workflow/test anchors |
 | [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Default `cargo test` wrapper that runs SelfCheck |
 | [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft CI SelfCheck (`continue-on-error: true`) |
+| [`scripts/shuttle-permutation-check.ps1`](../../scripts/shuttle-permutation-check.ps1) | Blocking permutation `-SelfCheck` for docs/workflow anchors |
+| [`tests/shuttle_permutation.rs`](../../tests/shuttle_permutation.rs) | Blocking `cargo test` wrapper that runs permutation SelfCheck |
+| [`.github/workflows/shuttle-permutation.yml`](../../.github/workflows/shuttle-permutation.yml) | Blocking permutation CI on `pull_request` |
 
 No `[dependencies]` / `[dev-dependencies]` entry for `shuttle`. Prefer this
 SelfCheck over adding a heavy permutation checker until a paid follow-up lands.
@@ -27,7 +30,9 @@ SelfCheck over adding a heavy permutation checker until a paid follow-up lands.
 |------|--------|----------|
 | Soft shuttle SelfCheck | **done** | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`) |
 | Soft shuttle CI job | **done** | `.github/workflows/shuttle-soft.yml` (`continue-on-error`) |
-| Full shuttle permutation coverage | **unpaid** | Broad broadcast/SSE/daemon graph + shuttle crate exploration still outside soft smoke |
+| Shuttle permutation SelfCheck | **done** | `scripts/shuttle-permutation-check.ps1 -SelfCheck` (+ `tests/shuttle_permutation.rs`) |
+| Shuttle permutation suite CI | **done** | `.github/workflows/shuttle-permutation.yml` (blocking on PR) |
+| Full shuttle permutation coverage | **unpaid** | Broad broadcast/SSE/daemon graph + shuttle crate exploration still outside hermetic lane |
 
 ## How to run locally
 
@@ -41,6 +46,18 @@ Focused Rust wrapper (spawns the same SelfCheck):
 
 ```powershell
 cargo test --test shuttle_soft --locked
+```
+
+Blocking permutation SelfCheck (no shuttle crate download):
+
+```powershell
+pwsh ./scripts/shuttle-permutation-check.ps1 -SelfCheck
+```
+
+Blocking permutation Rust wrapper:
+
+```powershell
+cargo test shuttle_permutation --release --locked -- --test-threads=1
 ```
 
 ## Relation to loom / race model

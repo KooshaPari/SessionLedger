@@ -27,12 +27,14 @@ those checkers, not a claim of unsafe coverage.
 | [`tests/loom_soft.rs`](../../tests/loom_soft.rs) | Hermetic SelfCheck for soft loom docs/workflow anchors |
 | [`tests/loom_permutation.rs`](../../tests/loom_permutation.rs) | Hermetic SelfCheck for loom permutation docs/workflow anchors |
 | [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Hermetic SelfCheck for soft shuttle docs/workflow anchors |
+| [`tests/shuttle_permutation.rs`](../../tests/shuttle_permutation.rs) | Hermetic SelfCheck for shuttle permutation docs/workflow anchors |
 | [`.github/workflows/race-smoke.yml`](../../.github/workflows/race-smoke.yml) | Both race tests, 3 OS × 3 repeats, `--test-threads=1` |
 | [`.github/workflows/miri-smoke.yml`](../../.github/workflows/miri-smoke.yml) | Soft nightly / dispatch: `cargo miri test --test race_model` (`continue-on-error`) |
 | [`.github/workflows/miri-permutation.yml`](../../.github/workflows/miri-permutation.yml) | Blocking permutation SelfCheck + `cargo miri test --test race_model` |
 | [`.github/workflows/loom-smoke.yml`](../../.github/workflows/loom-smoke.yml) | Soft SelfCheck + `RUSTFLAGS='--cfg loom'` `loom_model` (`continue-on-error`) |
 | [`.github/workflows/loom-permutation.yml`](../../.github/workflows/loom-permutation.yml) | Blocking permutation SelfCheck + `cargo test loom` under `RUSTFLAGS='--cfg loom'` |
 | [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft hermetic shuttle SelfCheck only (`continue-on-error`) |
+| [`.github/workflows/shuttle-permutation.yml`](../../.github/workflows/shuttle-permutation.yml) | Blocking permutation SelfCheck + `cargo test shuttle_permutation` (no shuttle crate) |
 
 The model uses `try_send` (never blocks) and an `AtomicBool` cancel bit so
 assertions are conservation / capacity based — no sleeps, no OS event timing.
@@ -122,8 +124,33 @@ permutation evidence lives in `loom-permutation.yml`.
 
 `shuttle-soft.yml` is **non-blocking** (`continue-on-error: true`). It runs only
 `scripts/shuttle-soft-check.ps1 -SelfCheck` — docs/workflow/test anchors, **no**
-`shuttle` crate on the Cargo graph. Full shuttle permutation coverage remains
-unpaid; details live in [`shuttle-soft.md`](shuttle-soft.md).
+`shuttle` crate on the Cargo graph. Blocking permutation evidence lives in
+[`shuttle-permutation.yml`](../../.github/workflows/shuttle-permutation.yml);
+details and cross-links live in [`shuttle-soft.md`](shuttle-soft.md).
+
+### Shuttle permutation checkers
+
+`shuttle-permutation.yml` is **blocking** on `pull_request`. It:
+
+1. Runs `scripts/shuttle-permutation-check.ps1 -SelfCheck` (docs/workflow/cfg anchors).
+2. Runs `cargo test shuttle_permutation --release` (hermetic wrapper; no shuttle crate).
+
+`tests/race_model.rs` documents the unpaid permutation targets for a future
+cfg-gated shuttle model: bounded `sync_channel` capacity conservation
+(`bounded_capacity_is_respected_then_cancel_drains_exactly`) and concurrent
+producer fan-in under cancel (`concurrent_producers_conserve_messages_under_cancel`).
+These are conservation / capacity models — not a full port of
+`crates/sl-daemon` tokio `broadcast` / `mpsc` graph.
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| Shuttle permutation SelfCheck | **done** | `scripts/shuttle-permutation-check.ps1 -SelfCheck` (+ `tests/shuttle_permutation.rs`) |
+| Shuttle permutation suite CI | **done** | `.github/workflows/shuttle-permutation.yml` (blocking on PR) |
+| Full tokio broadcast / daemon graph under shuttle | **unpaid** | Real `sl-daemon` watcher/SSE graph still outside shuttle permutation suite |
+| Full shuttle crate permutation | **unpaid** | `shuttle` crate + live daemon ports still outside hermetic permutation lane |
+
+Soft `shuttle-soft.yml` remains `continue-on-error` for nightly signal; blocking
+permutation evidence lives in `shuttle-permutation.yml`.
 
 ## How to run locally
 
@@ -200,6 +227,19 @@ Soft shuttle SelfCheck (hermetic; no shuttle crate):
 
 ```powershell
 pwsh ./scripts/shuttle-soft-check.ps1 -SelfCheck
+```
+
+Shuttle permutation SelfCheck (no shuttle crate download):
+
+```powershell
+pwsh ./scripts/shuttle-permutation-check.ps1 -SelfCheck
+```
+
+Blocking shuttle permutation suite (hermetic wrapper only):
+
+```powershell
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w37-c00-shuttle"
+cargo test shuttle_permutation --release --locked -- --test-threads=1
 ```
 
 ## Loom / shuttle follow-up

@@ -3,8 +3,8 @@
 Status: **C08 L75 expanded** — OKF conformance fixtures stay aligned across
 programming-language shapes already present in the corpus (Python, TypeScript,
 Go), plus a thin structural-invariant harness and a **language-agnostic OKF
-adapter interface** with one Python reference implementation that can
-validate/emit a non-Rust fixture path. This is **fixture + structural + adapter
+adapter interface** with Python and Go reference implementations that can
+validate/emit non-Rust fixture paths. This is **fixture + structural + adapter
 stub** evidence, not a multi-language runtime SDK and **not** Harbor / agent-eval.
 
 Related: [`docs/EVAL_SCOPE.md`](../EVAL_SCOPE.md) (eval boundary),
@@ -26,9 +26,9 @@ matrix fixture and asserts the same OKF v1.0 core invariants (version, ids,
 required entity types, relation endpoints, provenance alignment). That is a
 thin cross-language check over fixtures.
 
-Wave-33 adds a documented **adapter stub**: a language-agnostic
-`load` / `validate` / `emit` contract plus a Python reference CLI that exercises
-the Python matrix fixture path end-to-end (still not a shipped SDK).
+Wave-33 added a documented **adapter stub**: a language-agnostic
+`load` / `validate` / `emit` contract plus a Python reference CLI. Wave-35 adds
+a matching **Go** stdlib CLI beside Python (still not a shipped SDK).
 
 Parity does **not** require:
 
@@ -87,16 +87,17 @@ Language-agnostic contract (see [`adapters/README.md`](../../adapters/README.md)
 | `validate(doc)` | Enforce the same v1.0 structural rules as the harness |
 | `emit(doc)` | Pretty-print validated OKF JSON |
 
-Reference implementation (Python, stdlib only):
+Reference implementations (stdlib only):
 
 | Path | CLI |
 |------|-----|
 | [`adapters/python/okf_adapter.py`](../../adapters/python/okf_adapter.py) | `validate` / `emit` against a fixture path |
+| [`adapters/go/main.go`](../../adapters/go/main.go) | `validate` / `emit` against a fixture path (`go run .`) |
 
-SelfCheck runs the Python adapter against the Python matrix fixture
-(`cursor-python-029.okf.json`) to prove validate + emit beyond PowerShell-only
-structural comparison. Additional host languages may mirror the same interface
-later; this wave ships one reference impl only.
+SelfCheck always verifies Python + Go adapter sources and runs the Python
+adapter against `cursor-python-029.okf.json`. When `go` is installed it also
+runs the Go adapter against `forge-go-module-026.okf.json`; otherwise the Go
+execute step is an explicit skip while hermetic doc/source anchors still pass.
 
 ## Explicit non-goals
 
@@ -114,8 +115,9 @@ later; this wave ships one reference impl only.
 
 ## Machine verification (SelfCheck)
 
-Hermetic doc + fixture path + structural harness + Python adapter stub check
-(no daemon, no network, no cargo; uses host `python`/`python3` stdlib only):
+Hermetic doc + fixture path + structural harness + Python/Go adapter stub check
+(no daemon, no network, no cargo; uses host `python`/`python3` stdlib; optional
+host `go` for the Go CLI smoke):
 
 ```powershell
 pwsh ./scripts/cross-language-parity-check.ps1 -SelfCheck
@@ -125,8 +127,9 @@ pwsh ./scripts/cross-language-parity-check.ps1 -SelfCheck
 structural invariant harness section, native language adapter stub section,
 EVAL_SCOPE / Harbor N/A boundary, that each matrix fixture exists with a
 matching `source_id` language tag, that the structural harness finds an
-identical shared-core fingerprint across rows, and that the Python reference
-adapter validates and emits the Python fixture. `tests/cross_language_parity.rs`
+identical shared-core fingerprint across rows, that the Python reference
+adapter validates and emits the Python fixture, and that Go adapter sources
+exist (with runtime `go run` when available). `tests/cross_language_parity.rs`
 wraps the same command for optional `cargo test` proof.
 
 CI: [`.github/workflows/eval-compression.yml`](../../.github/workflows/eval-compression.yml)

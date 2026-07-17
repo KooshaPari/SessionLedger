@@ -1,16 +1,17 @@
 <#
 .SYNOPSIS
   Machine-check the C08 L75 cross-language OKF fixture parity SSOT + structural
-  harness + Python adapter stub.
+  harness + Python/Go adapter stubs.
 
 .DESCRIPTION
   Verifies docs/ops/cross-language-parity.md documents the Python / TypeScript /
   Go parity matrix, language-tag rule, Harbor N/A boundary, and native language
   adapter stub; that each matrix fixture exists with a matching source_id
   language tag; that a thin structural-invariant harness finds the same OKF
-  v1.0 core shape across those fixtures; and that the Python reference adapter
-  can validate + emit the Python fixture path. Hermetic: no daemon, no network,
-  no cargo (stdlib python only).
+  v1.0 core shape across those fixtures; that the Python reference adapter can
+  validate + emit the Python fixture path; and that Go adapter sources exist
+  (runtime go run when go is installed; otherwise explicit skip). Hermetic: no
+  daemon, no network, no cargo (stdlib python always; optional host go).
 
 .PARAMETER SelfCheck
   Explicit docs/fixture/structural/adapter smoke (CI unit proof). Same checks as
@@ -38,6 +39,10 @@ $fixturesDir = Join-Path $repoRoot "docs/reference/conformance/fixtures"
 $adapterReadme = Join-Path $repoRoot "adapters/README.md"
 $pythonAdapter = Join-Path $repoRoot "adapters/python/okf_adapter.py"
 $pythonFixture = Join-Path $fixturesDir "cursor-python-029.okf.json"
+$goMod = Join-Path $repoRoot "adapters/go/go.mod"
+$goMain = Join-Path $repoRoot "adapters/go/main.go"
+$goDir = Join-Path $repoRoot "adapters/go"
+$goFixture = Join-Path $fixturesDir "forge-go-module-026.okf.json"
 
 $parityRows = @(
     @{ Language = "Python"; Tag = "python"; Fixture = "cursor-python-029.okf.json" }
@@ -194,6 +199,14 @@ function Resolve-Python {
     throw "python3/python not found on PATH (needed for adapters/python/okf_adapter.py SelfCheck)."
 }
 
+function Resolve-Go {
+    $cmd = Get-Command "go" -ErrorAction SilentlyContinue
+    if ($null -ne $cmd) {
+        return $cmd.Source
+    }
+    return $null
+}
+
 function Invoke-PythonAdapter {
     param(
         [Parameter(Mandatory = $true)][string]$Python,
@@ -211,9 +224,26 @@ function Invoke-PythonAdapter {
     return $text
 }
 
+function Invoke-GoAdapter {
+    param(
+        [Parameter(Mandatory = $true)][string]$Go,
+        [Parameter(Mandatory = $true)][string]$GoDir,
+        [Parameter(Mandatory = $true)][string]$Command,
+        [Parameter(Mandatory = $true)][string]$FixturePath
+    )
+
+    $output = & $Go -C $GoDir run . $Command $FixturePath 2>&1
+    $exitCode = $LASTEXITCODE
+    $text = ($output | Out-String).TrimEnd()
+    if ($exitCode -ne 0) {
+        throw "Go OKF adapter '$Command' failed (exit $exitCode): $text"
+    }
+    return $text
+}
+
 Write-Host "Cross-language parity checklist check (C08 L75)"
 if ($SelfCheck) {
-    Write-Host "Mode: SelfCheck (docs + fixture tags + structural harness + Python adapter; no cargo / no network)"
+    Write-Host "Mode: SelfCheck (docs + fixture tags + structural harness + Python/Go adapters; no cargo / no network)"
 }
 
 Assert-File -Path $docPath -Label "cross-language parity doc"
@@ -225,6 +255,9 @@ Assert-File -Path $workflowPath -Label "eval-compression workflow"
 Assert-File -Path $adapterReadme -Label "adapters README (language-agnostic interface)"
 Assert-File -Path $pythonAdapter -Label "Python OKF adapter reference"
 Assert-File -Path $pythonFixture -Label "Python matrix fixture for adapter SelfCheck"
+Assert-File -Path $goMod -Label "Go OKF adapter go.mod"
+Assert-File -Path $goMain -Label "Go OKF adapter main.go"
+Assert-File -Path $goFixture -Label "Go matrix fixture for adapter SelfCheck"
 
 $doc = Get-Content -LiteralPath $docPath -Raw
 $evalScope = Get-Content -LiteralPath $evalScopePath -Raw
@@ -232,6 +265,8 @@ $manifest = Get-Content -LiteralPath $manifestPath -Raw
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $adapterDoc = Get-Content -LiteralPath $adapterReadme -Raw
 $adapterSrc = Get-Content -LiteralPath $pythonAdapter -Raw
+$goSrc = Get-Content -LiteralPath $goMain -Raw
+$goModSrc = Get-Content -LiteralPath $goMod -Raw
 
 Write-Host "Doc anchors:"
 Test-DocContains -Doc $doc -Needle "# Cross-language OKF fixture parity (SSOT)" `
@@ -262,6 +297,8 @@ Test-DocContains -Doc $doc -Needle "tests/cross_language_parity.rs" `
     -Label "rust wrapper reference"
 Test-DocContains -Doc $doc -Needle "adapters/python/okf_adapter.py" `
     -Label "Python adapter path reference"
+Test-DocContains -Doc $doc -Needle "adapters/go/main.go" `
+    -Label "Go adapter path reference"
 
 Write-Host "Adapter interface anchors:"
 $ifaceOk = $adapterDoc.Contains("load(path)") -and `
@@ -275,6 +312,11 @@ $harborOk = $adapterDoc.Contains("not") -and $adapterDoc.ToLowerInvariant().Cont
 [void](Write-Check -Label "adapters/README.md Harbor non-goal" -Ok $harborOk)
 if (-not $harborOk) {
     throw "adapters/README.md must keep Harbor out of scope"
+}
+$goReadmeOk = $adapterDoc.Contains("go/main.go") -or $adapterDoc.Contains("adapters/go")
+[void](Write-Check -Label "adapters/README.md Go adapter row" -Ok $goReadmeOk)
+if (-not $goReadmeOk) {
+    throw "adapters/README.md missing Go adapter reference"
 }
 
 $pyAnchors = @(
@@ -291,6 +333,27 @@ foreach ($anchor in $pyAnchors) {
     if (-not $ok) {
         throw "adapters/python/okf_adapter.py missing anchor: '$($anchor.Needle)'"
     }
+}
+
+$goAnchors = @(
+    @{ Needle = "func load("; Label = "Go load()" }
+    @{ Needle = "func validate("; Label = "Go validate()" }
+    @{ Needle = "func emit("; Label = "Go emit()" }
+    @{ Needle = 'okfDialect = "1.0"'; Label = "Go OKF dialect 1.0" }
+    @{ Needle = '"validate"'; Label = "Go validate CLI" }
+    @{ Needle = '"emit"'; Label = "Go emit CLI" }
+)
+foreach ($anchor in $goAnchors) {
+    $ok = $goSrc.Contains($anchor.Needle)
+    [void](Write-Check -Label $anchor.Label -Ok $ok)
+    if (-not $ok) {
+        throw "adapters/go/main.go missing anchor: '$($anchor.Needle)'"
+    }
+}
+$goModOk = $goModSrc.Contains("module ") -and $goModSrc.Contains("go ")
+[void](Write-Check -Label "adapters/go/go.mod module + go version" -Ok $goModOk)
+if (-not $goModOk) {
+    throw "adapters/go/go.mod missing module/go directives"
 }
 
 Write-Host "Cross-links:"
@@ -365,6 +428,32 @@ if ([string]$emitted.source_id -ne "cursor-python-029") {
 }
 [void](Write-Check -Label "python okf_adapter.py emit cursor-python-029" -Ok $true)
 
+Write-Host "Go reference adapter (validate + emit when go is installed):"
+$go = Resolve-Go
+if ($null -eq $go) {
+    Write-Host "  [SKIP] go not found on PATH — retaining hermetic Go source/doc anchors only"
+    [void](Write-Check -Label "go adapter runtime skipped (go absent)" -Ok $true)
+}
+else {
+    $goValidateOut = Invoke-GoAdapter -Go $go -GoDir $goDir `
+        -Command "validate" -FixturePath $goFixture
+    if ($goValidateOut -notmatch "OKF validate ok") {
+        throw "Go adapter validate missing success line: $goValidateOut"
+    }
+    [void](Write-Check -Label "go run . validate forge-go-module-026" -Ok $true)
+
+    $goEmitOut = Invoke-GoAdapter -Go $go -GoDir $goDir `
+        -Command "emit" -FixturePath $goFixture
+    $goEmitted = $goEmitOut | ConvertFrom-Json
+    if ([string]$goEmitted.okf -ne "1.0") {
+        throw "Go adapter emit produced unexpected okf dialect '$($goEmitted.okf)'."
+    }
+    if ([string]$goEmitted.source_id -ne "forge-go-module-026") {
+        throw "Go adapter emit produced unexpected source_id '$($goEmitted.source_id)'."
+    }
+    [void](Write-Check -Label "go run . emit forge-go-module-026" -Ok $true)
+}
+
 Write-Host "Workflow anchors:"
 $wfOk = $workflow.Contains("cross-language-parity-check.ps1")
 [void](Write-Check -Label "eval-compression.yml SelfCheck step" -Ok $wfOk)
@@ -372,4 +461,4 @@ if (-not $wfOk) {
     throw ".github/workflows/eval-compression.yml missing cross-language-parity-check.ps1"
 }
 
-Write-Host "Cross-language parity SelfCheck passed (C08 L75 SSOT + structural invariant harness + Python adapter stub)."
+Write-Host "Cross-language parity SelfCheck passed (C08 L75 SSOT + structural invariant harness + Python/Go adapter stubs)."

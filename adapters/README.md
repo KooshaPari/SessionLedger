@@ -23,18 +23,27 @@ validate <path-to.okf.json>   # exit 0 on pass; non-zero + message on fail
 emit <path-to.okf.json>       # print validated OKF JSON to stdout
 ```
 
-## Reference implementation
+## Reference implementations
 
 | Language | Path | Fixture path exercised by SelfCheck |
 |----------|------|-------------------------------------|
 | Python | [`python/okf_adapter.py`](python/okf_adapter.py) | `docs/reference/conformance/fixtures/cursor-python-029.okf.json` |
+| Go | [`go/main.go`](go/main.go) (+ [`go/go.mod`](go/go.mod)) | `docs/reference/conformance/fixtures/forge-go-module-026.okf.json` |
 
 ```powershell
 python adapters/python/okf_adapter.py validate docs/reference/conformance/fixtures/cursor-python-029.okf.json
 python adapters/python/okf_adapter.py emit docs/reference/conformance/fixtures/cursor-python-029.okf.json
+
+go -C adapters/go run . validate ../../docs/reference/conformance/fixtures/forge-go-module-026.okf.json
+go -C adapters/go run . emit ../../docs/reference/conformance/fixtures/forge-go-module-026.okf.json
 ```
 
-Stdlib only (`json` / `sys` / `pathlib`). No pip packages.
+Python: stdlib only (`json` / `sys` / `pathlib`). No pip packages.
+Go: stdlib only (`encoding/json` / `os` / `fmt`). No external modules.
+
+SelfCheck always verifies Go adapter sources exist. Runtime `go run` is executed
+when `go` is on PATH; otherwise the Go execute step is an explicit skip (doc +
+source anchors still pass).
 
 ## Explicit non-goals
 

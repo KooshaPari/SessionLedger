@@ -925,6 +925,23 @@
         "audit/SCORECARD.md",
         "docs/ops/WBS.md"
       ]
+    },
+    {
+      "id": "WBS-8.58",
+      "status": "todo",
+      "evidence": [
+        "WAVE39_SCOPE.md",
+        "docs/ops/WAVE39_PERT.md",
+        "WORK_DAG.md"
+      ]
+    },
+    {
+      "id": "WBS-8.59",
+      "status": "todo",
+      "evidence": [
+        "audit/SCORECARD.md",
+        "docs/ops/WBS.md"
+      ]
     }
   ],
   "clusters": [

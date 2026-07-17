@@ -244,7 +244,8 @@ Continuous profiling is intentionally local-only and off by default. The daemon'
 HTTP bind parser still rejects non-loopback addresses, and the debug routes are
 only registered when explicitly enabled. The **continuous profiling agent stub**
 ([`continuous-profiling.md`](continuous-profiling.md)) documents the intended
-poll-and-retain loop, unpaid Pyroscope/OTLP export gaps, and soft scheduled
+poll-and-retain loop, optional soft HTTP push (`http_soft` +
+`SL_PROFILE_PUSH_URL`), unpaid Pyroscope/OTLP export gaps, and soft scheduled
 evidence on top of on-demand unix sampling ([#232](https://github.com/KooshaPari/SessionLedger/pull/232)).
 
 ### Operator contract

@@ -4,11 +4,12 @@ Soft continuous-profiling agent stub for sl-daemon (L45 evidence).
 
 .DESCRIPTION
 Documents and exercises a one-shot agent loop against the gated loopback pprof
-surface (Wave-27 #232). Retains a local CPU protobuf sample on unix; does not
-push to Pyroscope/OTLP (push_backend remains none).
+surface (Wave-27 #232). Retains a local CPU protobuf sample on unix. Optional
+soft HTTP push (`push_backend: http_soft`) posts the retained sample only when
+SL_PROFILE_PUSH_URL is set; -DryRun logs intent without network.
 
 Modes:
-  - -SelfCheck: validate agent config + doc anchors (no daemon).
+  - -SelfCheck: validate agent config + doc anchors (no daemon, no network).
   - -RunOnce: start a local daemon on unix, sample once, write under samples/.
   - -AttachOnly: probe a running daemon; skip when SL_ENABLE_PPROF is off.
 
@@ -26,13 +27,17 @@ param(
 
     [string]$WorkRoot = $env:RUNNER_TEMP,
 
+    [string]$PushUrl = "",
+
     [switch]$SelfCheck,
 
     [switch]$RunOnce,
 
     [switch]$AttachOnly,
 
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+
+    [switch]$DryRun
 )
 
 Set-StrictMode -Version Latest
@@ -52,6 +57,18 @@ function Test-IsWindowsHost {
     return ($IsWindows -eq $true) -or ($env:OS -eq "Windows_NT")
 }
 
+function Get-ResolvedPushUrl {
+    param([string]$Override)
+
+    if (-not [string]::IsNullOrWhiteSpace($Override)) {
+        return $Override.Trim()
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:SL_PROFILE_PUSH_URL)) {
+        return $env:SL_PROFILE_PUSH_URL.Trim()
+    }
+    return ""
+}
+
 function Get-AgentConfig {
     param([Parameter(Mandatory = $true)][string]$ConfigPath)
 
@@ -66,16 +83,19 @@ function Get-AgentConfig {
     if ($null -eq $config.sample_seconds -or [int]$config.sample_seconds -lt 1) {
         throw "Agent config '$ConfigPath' must set sample_seconds >= 1."
     }
-    if ($null -eq $config.push_backend -or [string]$config.push_backend -ne "none") {
-        throw "Agent config '$ConfigPath' must keep push_backend 'none' until export is wired."
+
+    $backend = [string]$config.push_backend
+    $allowed = @("none", "http_soft")
+    if ([string]::IsNullOrWhiteSpace($backend) -or ($allowed -notcontains $backend)) {
+        throw "Agent config '$ConfigPath' push_backend must be one of: none, http_soft (got '$backend')."
     }
 
     return [pscustomobject]@{
-        SampleSeconds        = [int]$config.sample_seconds
-        PollIntervalSeconds  = [int]$config.poll_interval_seconds
-        RetainSamples        = [int]$config.retain_samples
-        PushBackend          = [string]$config.push_backend
-        ConfigPath           = $ConfigPath
+        SampleSeconds       = [int]$config.sample_seconds
+        PollIntervalSeconds = [int]$config.poll_interval_seconds
+        RetainSamples       = [int]$config.retain_samples
+        PushBackend         = $backend
+        ConfigPath          = $ConfigPath
     }
 }
 
@@ -97,6 +117,56 @@ function Save-AgentSample {
     return $outPath
 }
 
+function Invoke-SoftHttpProfilePush {
+    param(
+        [Parameter(Mandatory = $true)][string]$Backend,
+        [Parameter(Mandatory = $true)][string]$SamplePath,
+        [Parameter(Mandatory = $true)][byte[]]$Bytes,
+        [string]$Url,
+        [switch]$DryRunMode
+    )
+
+    if ($Backend -eq "none") {
+        Write-Host "skip: push_backend=none (local retain only)."
+        return
+    }
+
+    if ($Backend -ne "http_soft") {
+        throw "Unsupported push_backend '$Backend'."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Url)) {
+        Write-Host "skip: http_soft push (SL_PROFILE_PUSH_URL unset; local retain only)."
+        return
+    }
+
+    if ($DryRunMode) {
+        Write-Host "dry-run: would soft-POST $($Bytes.Length) bytes from '$SamplePath' to $Url (no network)."
+        return
+    }
+
+    try {
+        Write-Host "soft-push: POSTing $($Bytes.Length) bytes to $Url ..."
+        $response = Invoke-WebRequest `
+            -Uri $Url `
+            -Method Post `
+            -ContentType "application/octet-stream" `
+            -Body $Bytes `
+            -TimeoutSec 15 `
+            -SkipHttpErrorCheck
+        $code = [int]$response.StatusCode
+        if ($code -ge 200 -and $code -lt 300) {
+            Write-Host "ok: soft HTTP profile push succeeded (HTTP $code)."
+        }
+        else {
+            Write-Host "warn: soft HTTP profile push returned HTTP $code (continue-on-error; local sample retained)."
+        }
+    }
+    catch {
+        Write-Host "warn: soft HTTP profile push failed: $($_.Exception.Message) (continue-on-error; local sample retained)."
+    }
+}
+
 function Assert-AgentDocAnchors {
     if (-not (Test-Path -LiteralPath $agentDoc -PathType Leaf)) {
         throw "Missing agent doc at '$agentDoc'."
@@ -106,7 +176,16 @@ function Assert-AgentDocAnchors {
     }
 
     $docText = Get-Content -LiteralPath $agentDoc -Raw
-    foreach ($anchor in @("#232", "push_backend", "unpaid", "pprof-smoke.ps1")) {
+    foreach ($anchor in @(
+            "#232",
+            "push_backend",
+            "http_soft",
+            "SL_PROFILE_PUSH_URL",
+            "DryRun",
+            "continue-on-error",
+            "unpaid",
+            "pprof-smoke.ps1"
+        )) {
         if ($docText -notmatch [regex]::Escape($anchor)) {
             throw "continuous-profiling.md missing anchor '$anchor'."
         }
@@ -114,12 +193,16 @@ function Assert-AgentDocAnchors {
 }
 
 $config = Get-AgentConfig -ConfigPath $AgentConfig
+$resolvedPushUrl = Get-ResolvedPushUrl -Override $PushUrl
 
 if ($SelfCheck) {
     Assert-AgentDocAnchors
     Write-Host "ok: agent config schema $($config.ConfigPath)"
     Write-Host "ok: sample_seconds=$($config.SampleSeconds) poll_interval_seconds=$($config.PollIntervalSeconds) retain_samples=$($config.RetainSamples)"
-    Write-Host "ok: push_backend=$($config.PushBackend) (export unpaid)"
+    Write-Host "ok: push_backend=$($config.PushBackend) (http_soft uses SL_PROFILE_PUSH_URL; unset/DryRun skips network)"
+    if ($DryRun) {
+        Write-Host "ok: -DryRun acknowledged (SelfCheck remains hermetic; no sockets)."
+    }
     Write-Host "Self-check passed: continuous profiling agent stub is coherent."
     exit 0
 }
@@ -236,8 +319,15 @@ try {
         -TimeoutSec ([Math]::Max(20, $seconds + 10)) `
         -OutFile $tmpSample
     $sampleBytes = [System.IO.File]::ReadAllBytes($tmpSample)
-    Save-AgentSample -Directory $SamplesDir -Bytes $sampleBytes -SampleSeconds $seconds | Out-Null
+    $savedPath = Save-AgentSample -Directory $SamplesDir -Bytes $sampleBytes -SampleSeconds $seconds
     Remove-Item -LiteralPath $tmpSample -Force -ErrorAction SilentlyContinue
+
+    Invoke-SoftHttpProfilePush `
+        -Backend $config.PushBackend `
+        -SamplePath $savedPath `
+        -Bytes $sampleBytes `
+        -Url $resolvedPushUrl `
+        -DryRunMode:$DryRun
 
     Write-Host "continuous profiling agent stub cycle complete (push_backend=$($config.PushBackend))."
 }

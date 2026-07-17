@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Source provenance policy SSOT + SelfCheck (C06 L59): `docs/ops/source-provenance.md`, `scripts/source-provenance-check.ps1 -SelfCheck`, `branch-protection-check.ps1 -PolicyOnly` hermetic hook, CONTRIBUTING cross-link (signed commits + CODEOWNERS + human org gates; live Settings remain NOT_VERIFIABLE_IN_REPO).
+
 - SLSA L3 environment isolation SelfCheck (C06 L53): `scripts/slsa-isolation-check.ps1 -SelfCheck`, isolated container rebuild evidence row in `hermetic-builds.md`, `repro-check.ps1 -PolicyOnly` isolation hook, soft CI in `hermetic.yml` (not a full L3 attestation).
 
 - ADR 0006: explicit no MCP host/server / pin list (C06 L57) + `mcp-scope` SelfCheck.

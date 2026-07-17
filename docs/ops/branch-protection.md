@@ -63,8 +63,22 @@ unless maintainers pass `-Strict` manually.
 without elevated permissions; treat CI as advisory evidence that the script runs,
 not as proof that Settings are correct.
 
+## PolicyOnly (hermetic hook)
+
+[`scripts/branch-protection-check.ps1`](../../scripts/branch-protection-check.ps1)
+`-PolicyOnly` validates in-repo source-provenance policy anchors (signed commits,
+CODEOWNERS, human org gate rows) without calling the GitHub API. Use it in CI or
+local smoke when tokens are unavailable:
+
+```powershell
+pwsh ./scripts/branch-protection-check.ps1 -PolicyOnly
+```
+
+See [`source-provenance.md`](source-provenance.md) (C06 L59 SSOT).
+
 ## Related
 
+- [Source provenance policy](source-provenance.md) — signed commits + CODEOWNERS + org gates SSOT
 - [Commit signing ops](commit-signing.md) — tip signature check + soft checklist
 - [ADR 0004](../adr/0004-commit-signing-policy.md) — signed-commit policy
 - [SECURITY.md](../../SECURITY.md) — supply-chain index

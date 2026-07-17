@@ -14,19 +14,10 @@ fn repo_root() -> PathBuf {
 #[test]
 fn shuttle_permutation_doc_self_check_validates_anchors() {
     let script = repo_root().join("scripts/shuttle-permutation-check.ps1");
-    assert!(
-        script.is_file(),
-        "expected shuttle permutation check script at {}",
-        script.display()
-    );
+    assert!(script.is_file(), "expected shuttle permutation check script at {}", script.display());
 
     let output = Command::new("pwsh")
-        .args([
-            "-NoProfile",
-            "-File",
-            script.to_str().expect("utf-8 script path"),
-            "-SelfCheck",
-        ])
+        .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()
         .unwrap_or_else(|error| panic!("failed to spawn pwsh for SelfCheck: {error}"));
 

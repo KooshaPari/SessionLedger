@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "390/402",
+    "score": "391/402",
     "pct": 97,
     "grade": "A",
-    "commit": "9845a70",
-    "wave": "Wave-37"
+    "commit": "758f5e5",
+    "wave": "Wave-38"
   },
   "fr": [
     {
@@ -895,6 +895,36 @@
         "audit/SCORECARD.md",
         "docs/ops/WBS.md"
       ]
+    },
+    {
+      "id": "WBS-8.56",
+      "status": "done",
+      "evidence": [
+        "scripts/tsan-permutation-check.ps1",
+        ".github/workflows/tsan-permutation.yml",
+        "tests/tsan_permutation.rs",
+        "scripts/rootless-nonet-check.ps1",
+        ".github/workflows/rootless-nonet.yml",
+        "tests/rootless_nonet.rs",
+        "docs/ops/slsa-protected-environment.md",
+        "scripts/slsa-protected-env-check.ps1",
+        "tests/slsa_protected_env.rs",
+        "locales/en.ftl",
+        "locales/es.ftl",
+        "src/i18n_fluent.rs",
+        "scripts/fluent-i18n-check.ps1",
+        "tests/fluent_i18n.rs",
+        "scripts/use-gauges-check.ps1",
+        "tests/use_gauges.rs"
+      ]
+    },
+    {
+      "id": "WBS-8.57",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md",
+        "docs/ops/WBS.md"
+      ]
     }
   ],
   "clusters": [
@@ -940,14 +970,17 @@
         ".github/workflows/shuttle-permutation.yml",
         "tests/shuttle_permutation.rs",
         "scripts/miri-permutation-check.ps1",
-        ".github/workflows/miri-permutation.yml"
+        ".github/workflows/miri-permutation.yml",
+        "scripts/tsan-permutation-check.ps1",
+        ".github/workflows/tsan-permutation.yml",
+        "tests/tsan_permutation.rs"
       ],
-      "remaining": "TSan; shuttle crate in default graph; broadcast/SSE daemon-graph permutation ports (L7 residual); default-on jemalloc (L8)"
+      "remaining": "shuttle crate in default graph; broadcast/SSE daemon-graph permutation ports (L7 residual); default-on jemalloc (L8)"
     },
     {
       "id": "C01",
-      "score": "29/30",
-      "status": "partial",
+      "score": "30/30",
+      "status": "done",
       "evidence": [
         ".env.example",
         "scripts/env-example-check.ps1",
@@ -963,8 +996,14 @@
         "locales/es.json",
         "src/i18n.rs",
         "docs/ops/i18n.md",
-        "scripts/i18n-check.ps1"
-      ]
+        "scripts/i18n-check.ps1",
+        "locales/en.ftl",
+        "locales/es.ftl",
+        "src/i18n_fluent.rs",
+        "scripts/fluent-i18n-check.ps1",
+        "tests/fluent_i18n.rs"
+      ],
+      "remaining": "Viewer/CLI production string migration through Fluent catalogs (L16 residual)"
     },
     {
       "id": "C02",
@@ -1016,9 +1055,12 @@
         "CONTRIBUTING.md",
         "docs/ops/maintainer-2fa.md",
         "scripts/maintainer-2fa-check.ps1",
-        "tests/maintainer_2fa.rs"
+        "tests/maintainer_2fa.rs",
+        "scripts/rootless-nonet-check.ps1",
+        ".github/workflows/rootless-nonet.yml",
+        "tests/rootless_nonet.rs"
       ],
-      "remaining": "Human org 2FA attestation (L36 NOT_VERIFIABLE_IN_REPO); hard rootless/no-net CI (L40 residual)"
+      "remaining": "Human org 2FA attestation (L36 NOT_VERIFIABLE_IN_REPO); live rootless-only runner matrix + cargo-fetch no-net (L40 residual)"
     },
     {
       "id": "C05",
@@ -1046,7 +1088,9 @@
         "crates/sl-daemon/src/otel_metrics.rs",
         "scripts/otlp-metrics-check.ps1",
         "tests/otlp_metrics.rs",
-        "docs/ops/otlp-metrics.md"
+        "docs/ops/otlp-metrics.md",
+        "scripts/use-gauges-check.ps1",
+        "tests/use_gauges.rs"
       ]
     },
     {
@@ -1072,7 +1116,10 @@
         "scripts/source-provenance-check.ps1",
         "tests/source_provenance.rs",
         ".github/workflows/reusable-hermetic-build.yml",
-        "scripts/reusable-provenance-check.ps1"
+        "scripts/reusable-provenance-check.ps1",
+        "docs/ops/slsa-protected-environment.md",
+        "scripts/slsa-protected-env-check.ps1",
+        "tests/slsa_protected_env.rs"
       ],
       "remaining": "Full protected-environment SLSA Build L3 attestation; human branch-protection signed-commits attestation (L59 residual)"
     },

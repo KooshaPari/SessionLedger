@@ -26,10 +26,26 @@ fully hermetic across every host and target. The same workflow also runs
 `scripts/repro-check.ps1 -PolicyOnly` so release packaging keeps exporting
 `SOURCE_DATE_EPOCH` without a second compile matrix.
 
-A second job rebuilds `sl-daemon` inside the digest-pinned builder image recorded
-in [`hermetic-builder.json`](hermetic-builder.json). The image digest must match
-the `container.image` reference in the workflow; bump both together when the
-builder stage changes.
+A second job rebuilds `sl-daemon` inside the Repository-maintained builder image
+recorded in [`hermetic-builder.json`](hermetic-builder.json). The GHCR manifest
+digest must match the `container.image` reference in the workflow; never replace
+it with a mutable tag.
+
+## Repository-maintained builder image
+
+`ci/hermetic-builder/Containerfile` starts from an exact `rust:1.87-slim`
+digest and installs **Git + CA roots** (`ca-certificates`). GitHub starts the
+job inside this image before `actions/checkout`, so Git must be available or
+checkout falls back to a less reliable REST path. The image retains an immutable
+Rust base and is consumed only by final GHCR manifest digest.
+
+`.github/workflows/hermetic-builder.yml` publishes a SHA-tagged
+`ghcr.io/kooshapari/sessionledger-hermetic-builder` whenever the builder
+definition changes. After it succeeds, copy the reported manifest digest into
+both `hermetic-builder.json` and `hermetic.yml`; the latter is the only image
+reference used by the blocking offline container gate. The isolation SelfCheck
+validates the Rust-base digest, Git/CA installation, publish workflow, and
+consuming digest without contacting a registry.
 
 The optional root-package check can be run locally with:
 
@@ -78,7 +94,7 @@ Optional soft CI runs the same SelfCheck from `hermetic.yml`
 | Gate | Status | Evidence / next step |
 |------|--------|----------------------|
 | Offline `sl-daemon` fetch+build | **done** | `scripts/hermetic-check.ps1` + `hermetic.yml` |
-| Digest-pinned builder image | **done** | `hermetic-builder.json` + container job |
+| Repository-maintained digest-pinned builder image | **done** | `ci/hermetic-builder/Containerfile` + `hermetic-builder.json` + container job |
 | `SOURCE_DATE_EPOCH` release wiring | **done** | `repro-check.ps1 -PolicyOnly` |
 | GHCR build + keyless cosign + attest + release verify | **done** | `release.yml` `oci-image` (blocking on canonical repo; explicit skip on forks) |
 | Verify-on-deploy (cosign / attestation) | **done (deploy-time)** | `scripts/oci-cosign-verify.ps1` + [distribution.md](distribution.md#verify-an-oci-image-cosign) |
@@ -98,5 +114,6 @@ is missing or skipped.
 ## Builder pin
 
 [`hermetic-builder.json`](hermetic-builder.json) records the MSRV, immutable
-`rust:1.87-slim` digest, and offline target path. `scripts/hermetic-check.ps1`
-asserts the host `rustc` meets the pinned MSRV before running the offline build.
+GHCR builder digest, exact upstream `rust:1.87-slim` digest, and offline target
+path. `scripts/hermetic-check.ps1` asserts the host `rustc` meets the pinned
+MSRV before running the offline build.

@@ -56,17 +56,27 @@ jobs:
         run: ./scripts/hermetic-check.ps1
 
   sl-daemon-offline-container:
-    name: sl-daemon · pinned builder image offline build
+    name: sl-daemon · repository builder image offline build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     container:
-      image: rust:1.87-slim@sha256:437507c3e719e4f968033b88d851ffa9f5aceeb2dcc2482cc6cb7647811a55eb
+      image: ghcr.io/kooshapari/sessionledger-hermetic-builder@sha256:fe71c757a13cb864e5f15f4a1384f63129b15bcd037bc44b46a056c814ca4cb7
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: prove builder checkout prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          git --version
+          test -f /etc/ssl/certs/ca-certificates.crt
+          git rev-parse --is-inside-work-tree | grep -qx true
       - name: verify builder pin file matches container digest
         shell: bash
         run: |
           set -euo pipefail
-          expected='sha256:437507c3e719e4f968033b88d851ffa9f5aceeb2dcc2482cc6cb7647811a55eb'
+          expected='sha256:fe71c757a13cb864e5f15f4a1384f63129b15bcd037bc44b46a056c814ca4cb7'
           actual="$(sed -n 's/.*"builder_image_digest": "\([^"]*\)".*/\1/p' docs/ops/hermetic-builder.json)"
           test -n "$actual"
           test "$actual" = "$expected"

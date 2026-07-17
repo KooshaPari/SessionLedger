@@ -1,6 +1,6 @@
 {
   "schema": "sessionledger.traceability/v1",
-  "updated": "2026-07-14",
+  "updated": "2026-07-17",
   "status_vocabulary": [
     "done",
     "partial",
@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "372/402",
-    "pct": 93,
+    "score": "384/402",
+    "pct": 95,
     "grade": "A",
-    "commit": "a7d1a8e",
-    "wave": "Wave-31"
+    "commit": "f1355a3",
+    "wave": "Wave-34"
   },
   "fr": [
     {
@@ -831,7 +831,7 @@
     },
     {
       "id": "C01",
-      "score": "27/30",
+      "score": "29/30",
       "status": "partial",
       "evidence": [
         ".env.example",
@@ -843,12 +843,17 @@
         ".pre-commit-config.yaml",
         "crates/sl-daemon/completions/",
         "scripts/install-sl-daemon-completions.ps1",
-        "crates/sl-daemon/tests/completions.rs"
+        "crates/sl-daemon/tests/completions.rs",
+        "locales/en.json",
+        "locales/es.json",
+        "src/i18n.rs",
+        "docs/ops/i18n.md",
+        "scripts/i18n-check.ps1"
       ]
     },
     {
       "id": "C02",
-      "score": "28/30",
+      "score": "29/30",
       "status": "partial",
       "evidence": [
         "crates/sl-daemon/src/audit.rs",
@@ -879,7 +884,7 @@
     },
     {
       "id": "C04",
-      "score": "26/30",
+      "score": "27/30",
       "status": "partial",
       "evidence": [
         ".pre-commit-config.yaml",
@@ -958,7 +963,7 @@
     },
     {
       "id": "C08",
-      "score": "27/30",
+      "score": "29/30",
       "status": "partial",
       "evidence": [
         "docs/ops/eval-manifest.json",
@@ -979,8 +984,8 @@
     },
     {
       "id": "C09",
-      "score": "43/45",
-      "status": "partial",
+      "score": "45/45",
+      "status": "done",
       "evidence": [
         "crates/sl-viewer/src/help_overlay.rs",
         "crates/sl-viewer/src/command_palette.rs",
@@ -996,7 +1001,8 @@
         "scripts/inclusive-language-check.ps1",
         "tests/visual/harness/a11y.spec.js",
         "tests/fixtures/a11y/help_shortcuts.golden.tsv",
-        "crates/sl-viewer/src/search_view.rs"
+        "crates/sl-viewer/src/search_view.rs",
+        "crates/sl-viewer/src/async_states.rs"
       ]
     },
     {
@@ -1023,10 +1029,14 @@
     },
     {
       "id": "C11",
-      "score": "37/45",
+      "score": "41/45",
       "status": "partial",
       "evidence": [
         "docs/adr/0003-platform-code-signing.md",
+        "docs/adr/0005-no-serverless-edge.md",
+        "docs/ops/versioning-policy.md",
+        "scripts/versioning-policy-check.ps1",
+        "scripts/edge-deploy-scope-check.ps1",
         "docs/ops/signing-readiness.md",
         "scripts/signing-readiness-check.ps1",
         "Containerfile",
@@ -1044,7 +1054,8 @@
         "packaging/caddy/Caddyfile",
         "packaging/nginx/sessionledger.conf",
         "scripts/package-msi.ps1",
-        ".github/workflows/release.yml"
+        ".github/workflows/release.yml",
+        "CHANGELOG.md"
       ]
     }
   ]

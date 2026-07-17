@@ -91,6 +91,8 @@ are not recomputed here.
 | WBS-8.45 | Wave-30 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 368/402 (92% A) |
 | WBS-8.46 | Wave-31 evidence packages (C04 CVE feed, C08 cross-lang parity, C07 FSM properties, C02 KMS guidance, C09 design tokens, C00 soft loom) | done | machine | `docs/ops/cve-feed-subscription.md`; `scripts/cve-feed-check.ps1`; `docs/ops/cross-language-parity.md`; `scripts/cross-language-parity-check.ps1`; `tests/properties.rs`; `docs/ops/crypto-inventory.md`; `docs/a11y/design-tokens.md`; `crates/sl-viewer/src/tokens.rs`; `.github/workflows/loom-smoke.yml` | C00, C02, C04, C07, C08, C09; PRs #259-#264 |
 | WBS-8.47 | Wave-31 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 372/402 (93% A) |
+| WBS-8.48 | Wave-34 evidence packages (C04 blocking sandbox-boundary, C11 ADR 0005 + versioning policy, C09 ErrorState non-color cues, C01 soft es i18n) | done | machine | `.github/workflows/security.yml`; `docs/adr/0005-no-serverless-edge.md`; `scripts/edge-deploy-scope-check.ps1`; `docs/ops/versioning-policy.md`; `scripts/versioning-policy-check.ps1`; `crates/sl-viewer/src/async_states.rs`; `locales/es.json`; `src/i18n.rs`; `docs/ops/i18n.md` | C01, C04, C09, C11; PRs #280-#284 |
+| WBS-8.49 | Wave-34 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 384/402 (95% A) |
 
 ## Organization-level control plane
 

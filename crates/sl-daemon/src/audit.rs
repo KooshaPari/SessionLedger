@@ -160,9 +160,9 @@ fn append_sqlite(
     conn: &Arc<Mutex<rusqlite::Connection>>,
     event: &AuditEvent<'_>,
 ) -> io::Result<()> {
-    let conn = conn.lock().map_err(|error| {
-        io::Error::other(format!("audit sqlite lock poisoned: {error}"))
-    })?;
+    let conn = conn
+        .lock()
+        .map_err(|error| io::Error::other(format!("audit sqlite lock poisoned: {error}")))?;
     conn.execute(
         "INSERT INTO audit_events (timestamp, actor, action, outcome, request_id, reason, resource)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",

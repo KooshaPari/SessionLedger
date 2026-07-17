@@ -39,6 +39,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 - Versioning policy SSOT + CHANGELOG tagged-section SelfCheck (C11 L119).
 - ADR 0005: explicit no Workers/Vercel/edge deploy target (C11 L114) + `edge-deploy-scope` SelfCheck.
 - Blocking `sandbox-boundary` SelfCheck job in `security.yml` (C04 L40; hard no-net/rootless still unpaid).
+- Hard rootless/no-net CI evidence (C04 L40): `scripts/rootless-nonet-check.ps1 -SelfCheck`, blocking `.github/workflows/rootless-nonet.yml`, `tests/rootless_nonet.rs`, `security.yml`/`ci.yml` anchors (live runner matrix + cargo-fetch no-net still unpaid).
 
 ## [0.2.0] - 2026-07-04
 

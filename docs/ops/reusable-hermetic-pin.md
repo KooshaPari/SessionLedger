@@ -8,7 +8,7 @@ SessionLedger calls the in-repo reusable hermetic build slice from
 | Field | Value |
 |-------|-------|
 | Workflow | `KooshaPari/SessionLedger/.github/workflows/reusable-hermetic-build.yml` |
-| Commit SHA | `PLACEHOLDER_SHA` |
+| Commit SHA | `b52c9f7bc15756a35e8f64789db6bcc0b042fd26` |
 | Caller job | `hermetic.yml` → `sl-daemon-offline-container` |
 | `builder_image_digest` input | `sha256:fe71c757a13cb864e5f15f4a1384f63129b15bcd037bc44b46a056c814ca4cb7` (must match [`hermetic-builder.json`](hermetic-builder.json)) |
 

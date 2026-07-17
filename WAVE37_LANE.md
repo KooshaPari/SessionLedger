@@ -1,27 +1,28 @@
-# Wave-37 lane: w37-shuttle-hard — C00 L7 blocking shuttle permutation
+# Wave-37 lane: w37-2fa-ssot — C04 L36 maintainer 2FA policy SSOT
 
-**Branch:** `feat/sl-w37-shuttle-hard`
-**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w37-shuttle-hard`
-**Cluster / pillar:** C00 L7
-**Wave-36 overlap:** #296 blocking loom permutation; #290 soft shuttle only
+**Branch:** `feat/sl-w37-2fa-ssot`
+**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w37-2fa-ssot`
+**Cluster / pillar:** C04 L36 (score 0)
 
 ## Gap
 
-Post-W36 SCORECARD: *full shuttle/miri/TSan blocking CI* unpaid. Soft shuttle
-(`continue-on-error`) exists; promote to blocking permutation evidence mirroring
-`loom-permutation.yml` without adding `shuttle` crate to default graph yet.
+Org 2FA cannot be proven from checkout. Add explicit maintainer 2FA policy SSOT
++ SelfCheck with NOT_VERIFIABLE_IN_REPO human attestation row (no false claims).
 
 ## Acceptance criteria
 
-1. Add `scripts/shuttle-permutation-check.ps1 -SelfCheck` with done/unpaid rows.
-2. Add `tests/shuttle_permutation.rs` wrapper.
-3. Add blocking `.github/workflows/shuttle-permutation.yml` (SelfCheck + focused tests).
-4. Update `docs/ops/concurrency-safety.md` + `docs/ops/shuttle-soft.md` cross-links.
-5. CHANGELOG Unreleased bullet. **Do not edit** audit scorecard/traceability files.
+1. Add `docs/ops/maintainer-2fa.md` policy SSOT.
+2. Add `scripts/maintainer-2fa-check.ps1 -SelfCheck`.
+3. Cross-link `SECURITY.md` + `CONTRIBUTING.md`.
+4. Optional `tests/maintainer_2fa.rs` wrapper.
+5. CHANGELOG bullet. **Do not edit** audit scorecard/traceability files.
 
 ## Verify
 
 ```powershell
-pwsh ./scripts/shuttle-permutation-check.ps1 -SelfCheck
-cargo test shuttle_permutation
+pwsh ./scripts/maintainer-2fa-check.ps1 -SelfCheck
 ```
+
+## Score expectation
+
+Evidence toward L36; score held until human/org attestation recorded (conservative).

@@ -104,7 +104,7 @@ Test-DocContains -Doc $doc -Needle "-SelfCheck" `
     -Label "SelfCheck invocation"
 Test-DocContains -Doc $doc -Needle "Offline ``sl-daemon`` fetch+build" `
     -Label "offline sl-daemon gate row"
-Test-DocContains -Doc $doc -Needle "Digest-pinned builder image" `
+Test-DocContains -Doc $doc -Needle "Repository-maintained digest-pinned builder image" `
     -Label "builder pin gate row"
 Test-DocContains -Doc $doc -Needle "Repository-maintained builder image" `
     -Label "repository builder section"

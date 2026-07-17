@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
   Machine-check the C08 L75 cross-language OKF fixture parity SSOT + structural
-  harness + Python/Go adapter stubs.
+  harness + Python/Go/TypeScript adapter stubs.
 
 .DESCRIPTION
   Verifies docs/ops/cross-language-parity.md documents the Python / TypeScript /
@@ -9,9 +9,10 @@
   adapter stub; that each matrix fixture exists with a matching source_id
   language tag; that a thin structural-invariant harness finds the same OKF
   v1.0 core shape across those fixtures; that the Python reference adapter can
-  validate + emit the Python fixture path; and that Go adapter sources exist
-  (runtime go run when go is installed; otherwise explicit skip). Hermetic: no
-  daemon, no network, no cargo (stdlib python always; optional host go).
+  validate + emit the Python fixture path; that Go and TypeScript adapter sources
+  exist (runtime go run / Node >=22 when installed; otherwise explicit skip).
+  Hermetic: no daemon, no network, no cargo (stdlib python always; optional host
+  go / node).
 
 .PARAMETER SelfCheck
   Explicit docs/fixture/structural/adapter smoke (CI unit proof). Same checks as
@@ -43,6 +44,8 @@ $goMod = Join-Path $repoRoot "adapters/go/go.mod"
 $goMain = Join-Path $repoRoot "adapters/go/main.go"
 $goDir = Join-Path $repoRoot "adapters/go"
 $goFixture = Join-Path $fixturesDir "forge-go-module-026.okf.json"
+$tsAdapter = Join-Path $repoRoot "adapters/typescript/okf_adapter.ts"
+$tsFixture = Join-Path $fixturesDir "codex-typescript-023.okf.json"
 
 $parityRows = @(
     @{ Language = "Python"; Tag = "python"; Fixture = "cursor-python-029.okf.json" }
@@ -241,9 +244,46 @@ function Invoke-GoAdapter {
     return $text
 }
 
+function Resolve-Node {
+    $cmd = Get-Command node -ErrorAction SilentlyContinue
+    if ($null -eq $cmd) {
+        return $null
+    }
+    $versionOut = & $cmd.Source --version 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        return $null
+    }
+    $match = [regex]::Match([string]$versionOut, 'v(\d+)\.')
+    if (-not $match.Success) {
+        return $null
+    }
+    $major = [int]$match.Groups[1].Value
+    if ($major -lt 22) {
+        return $null
+    }
+    return $cmd.Source
+}
+
+function Invoke-TypeScriptAdapter {
+    param(
+        [Parameter(Mandatory = $true)][string]$Node,
+        [Parameter(Mandatory = $true)][string]$AdapterPath,
+        [Parameter(Mandatory = $true)][string]$Command,
+        [Parameter(Mandatory = $true)][string]$FixturePath
+    )
+
+    $output = & $Node --experimental-strip-types $AdapterPath $Command $FixturePath 2>&1
+    $exitCode = $LASTEXITCODE
+    $text = ($output | Out-String).TrimEnd()
+    if ($exitCode -ne 0) {
+        throw "TypeScript OKF adapter '$Command' failed (exit $exitCode): $text"
+    }
+    return $text
+}
+
 Write-Host "Cross-language parity checklist check (C08 L75)"
 if ($SelfCheck) {
-    Write-Host "Mode: SelfCheck (docs + fixture tags + structural harness + Python/Go adapters; no cargo / no network)"
+    Write-Host "Mode: SelfCheck (docs + fixture tags + structural harness + Python/Go/TypeScript adapters; no cargo / no network)"
 }
 
 Assert-File -Path $docPath -Label "cross-language parity doc"
@@ -258,6 +298,8 @@ Assert-File -Path $pythonFixture -Label "Python matrix fixture for adapter SelfC
 Assert-File -Path $goMod -Label "Go OKF adapter go.mod"
 Assert-File -Path $goMain -Label "Go OKF adapter main.go"
 Assert-File -Path $goFixture -Label "Go matrix fixture for adapter SelfCheck"
+Assert-File -Path $tsAdapter -Label "TypeScript OKF adapter reference"
+Assert-File -Path $tsFixture -Label "TypeScript matrix fixture for adapter SelfCheck"
 
 $doc = Get-Content -LiteralPath $docPath -Raw
 $evalScope = Get-Content -LiteralPath $evalScopePath -Raw
@@ -267,6 +309,7 @@ $adapterDoc = Get-Content -LiteralPath $adapterReadme -Raw
 $adapterSrc = Get-Content -LiteralPath $pythonAdapter -Raw
 $goSrc = Get-Content -LiteralPath $goMain -Raw
 $goModSrc = Get-Content -LiteralPath $goMod -Raw
+$tsSrc = Get-Content -LiteralPath $tsAdapter -Raw
 
 Write-Host "Doc anchors:"
 Test-DocContains -Doc $doc -Needle "# Cross-language OKF fixture parity (SSOT)" `
@@ -299,6 +342,8 @@ Test-DocContains -Doc $doc -Needle "adapters/python/okf_adapter.py" `
     -Label "Python adapter path reference"
 Test-DocContains -Doc $doc -Needle "adapters/go/main.go" `
     -Label "Go adapter path reference"
+Test-DocContains -Doc $doc -Needle "adapters/typescript/okf_adapter.ts" `
+    -Label "TypeScript adapter path reference"
 
 Write-Host "Adapter interface anchors:"
 $ifaceOk = $adapterDoc.Contains("load(path)") -and `
@@ -317,6 +362,11 @@ $goReadmeOk = $adapterDoc.Contains("go/main.go") -or $adapterDoc.Contains("adapt
 [void](Write-Check -Label "adapters/README.md Go adapter row" -Ok $goReadmeOk)
 if (-not $goReadmeOk) {
     throw "adapters/README.md missing Go adapter reference"
+}
+$tsReadmeOk = $adapterDoc.Contains("typescript/okf_adapter.ts") -or $adapterDoc.Contains("adapters/typescript")
+[void](Write-Check -Label "adapters/README.md TypeScript adapter row" -Ok $tsReadmeOk)
+if (-not $tsReadmeOk) {
+    throw "adapters/README.md missing TypeScript adapter reference"
 }
 
 $pyAnchors = @(
@@ -354,6 +404,22 @@ $goModOk = $goModSrc.Contains("module ") -and $goModSrc.Contains("go ")
 [void](Write-Check -Label "adapters/go/go.mod module + go version" -Ok $goModOk)
 if (-not $goModOk) {
     throw "adapters/go/go.mod missing module/go directives"
+}
+
+$tsAnchors = @(
+    @{ Needle = "function load("; Label = "TypeScript load()" }
+    @{ Needle = "function validate("; Label = "TypeScript validate()" }
+    @{ Needle = "function emit("; Label = "TypeScript emit()" }
+    @{ Needle = 'const OKF_DIALECT = "1.0"'; Label = "TypeScript OKF dialect 1.0" }
+    @{ Needle = '"validate"'; Label = "TypeScript validate CLI" }
+    @{ Needle = '"emit"'; Label = "TypeScript emit CLI" }
+)
+foreach ($anchor in $tsAnchors) {
+    $ok = $tsSrc.Contains($anchor.Needle)
+    [void](Write-Check -Label $anchor.Label -Ok $ok)
+    if (-not $ok) {
+        throw "adapters/typescript/okf_adapter.ts missing anchor: '$($anchor.Needle)'"
+    }
 }
 
 Write-Host "Cross-links:"
@@ -454,6 +520,32 @@ else {
     [void](Write-Check -Label "go run . emit forge-go-module-026" -Ok $true)
 }
 
+Write-Host "TypeScript reference adapter (validate + emit when Node >=22 is installed):"
+$node = Resolve-Node
+if ($null -eq $node) {
+    Write-Host "  [SKIP] node >=22 not found on PATH — retaining hermetic TypeScript source/doc anchors only"
+    [void](Write-Check -Label "typescript adapter runtime skipped (node absent or <22)" -Ok $true)
+}
+else {
+    $tsValidateOut = Invoke-TypeScriptAdapter -Node $node -AdapterPath $tsAdapter `
+        -Command "validate" -FixturePath $tsFixture
+    if ($tsValidateOut -notmatch "OKF validate ok") {
+        throw "TypeScript adapter validate missing success line: $tsValidateOut"
+    }
+    [void](Write-Check -Label "node --experimental-strip-types okf_adapter.ts validate codex-typescript-023" -Ok $true)
+
+    $tsEmitOut = Invoke-TypeScriptAdapter -Node $node -AdapterPath $tsAdapter `
+        -Command "emit" -FixturePath $tsFixture
+    $tsEmitted = $tsEmitOut | ConvertFrom-Json
+    if ([string]$tsEmitted.okf -ne "1.0") {
+        throw "TypeScript adapter emit produced unexpected okf dialect '$($tsEmitted.okf)'."
+    }
+    if ([string]$tsEmitted.source_id -ne "codex-typescript-023") {
+        throw "TypeScript adapter emit produced unexpected source_id '$($tsEmitted.source_id)'."
+    }
+    [void](Write-Check -Label "node --experimental-strip-types okf_adapter.ts emit codex-typescript-023" -Ok $true)
+}
+
 Write-Host "Workflow anchors:"
 $wfOk = $workflow.Contains("cross-language-parity-check.ps1")
 [void](Write-Check -Label "eval-compression.yml SelfCheck step" -Ok $wfOk)
@@ -461,4 +553,4 @@ if (-not $wfOk) {
     throw ".github/workflows/eval-compression.yml missing cross-language-parity-check.ps1"
 }
 
-Write-Host "Cross-language parity SelfCheck passed (C08 L75 SSOT + structural invariant harness + Python/Go adapter stubs)."
+Write-Host "Cross-language parity SelfCheck passed (C08 L75 SSOT + structural invariant harness + Python/Go/TypeScript adapter stubs)."

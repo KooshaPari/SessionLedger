@@ -11,7 +11,7 @@ P0 product work. Remaining deep-obs work tracks [issue #65](https://github.com/K
 | Liveness | `GET /healthz` | Returns `200` + body `ok`. Process is up. |
 | Readiness | `GET /readyz` | Returns `200` + `ready` when `out_dir` exists and optional `SL_MEMORY_DB` passes a probe; else `503`. Used by process-compose. |
 | Metrics | `GET /api/metrics` | Aggregated bundle stats: totals, avg tokens, model + daily histograms (`crates/sl-daemon/src/metrics.rs`). |
-| Prometheus RED metrics | `GET /metrics` | Process-local request count, HTTP errors, and request-duration sum/count. |
+| Prometheus RED + USE metrics | `GET /metrics` | Process-local HTTP RED counters plus USE process gauges (`process_cpu_seconds_total`, `process_resident_memory_bytes`, `process_open_fds`). |
 | Local pprof debug | `GET /debug/pprof/*` | Optional loopback-only pprof-style surface when `SL_ENABLE_PPROF=1`. Disabled by default. |
 | Live events | `GET /api/stream` | SSE of newly written `*.okf.json` paths (viewer LiveFeed). |
 | Replay | `GET /api/replay/:id` | SSE entity playback (not ops metrics; product replay). |
@@ -99,6 +99,29 @@ observability systems.
 
 App-level JSON (`/api/metrics`) stays the product summary. RED exporters must
 **not** break that contract — add parallel scrape/OTLP paths instead.
+
+## USE process gauges (Prometheus `/metrics`)
+
+[USE](https://www.brendangregg.com/usemethod/use.html) (Utilization, Saturation,
+Errors) for the sl-daemon process on the default Prometheus scrape path. Linux
+reads `/proc/self`; Windows and macOS builds stub `0` until platform APIs land.
+
+| USE | Meaning | Current signal | Metric | Export path |
+|-----|---------|----------------|--------|-------------|
+| **U**tilization | CPU time accumulated | Process user+system jiffies (Linux `/proc/self/stat`) | `process_cpu_seconds_total` | `/metrics` |
+| **U**tilization | Resident memory | VmRSS (Linux `/proc/self/status`) | `process_resident_memory_bytes` | `/metrics` |
+| **S**aturation (proxy) | Open file descriptors | FD count (Linux `/proc/self/fd`) | `process_open_fds` | `/metrics` |
+
+Implementation: `append_process_use_gauges` in
+[`crates/sl-daemon/src/metrics.rs`](../../crates/sl-daemon/src/metrics.rs), appended
+from `HttpMetrics::render_prometheus()`. Hermetic evidence:
+
+```powershell
+pwsh ./scripts/use-gauges-check.ps1 -SelfCheck
+```
+
+OTLP export of the same gauges remains a soft goal — see
+[`otlp-metrics.md`](otlp-metrics.md).
 
 ## Alert stubs
 
@@ -232,9 +255,10 @@ neither variable is set, the daemon keeps its normal fmt subscriber and
 
 Remaining future work:
 
-1. Bridge labeled RED signals to OTLP and add process gauges (OTLP export path
-   landed — see [`otlp-metrics.md`](otlp-metrics.md); `otel-metrics` +
-   `SL_OTLP_METRICS_ENDPOINT`; labeled RED mirror still unpaid).
+1. Bridge labeled RED signals and USE gauges to OTLP (Prometheus `/metrics` USE
+   gauges landed — see [USE process gauges](#use-process-gauges-prometheus-metrics);
+   OTLP export path — [`otlp-metrics.md`](otlp-metrics.md); `otel-metrics` +
+   `SL_OTLP_METRICS_ENDPOINT`; labeled RED/USE mirror still unpaid).
 2. Optional channel-carried `WorkItem` parent (today: sidecar file convention).
 
 Operators without the `otel` / `otel-metrics` features continue to rely on

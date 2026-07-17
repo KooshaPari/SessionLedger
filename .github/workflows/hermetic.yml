@@ -35,6 +35,18 @@ jobs:
         shell: pwsh
         run: ./scripts/slsa-isolation-check.ps1 -SelfCheck
 
+  # Soft C06 L53 protected-environment checklist — GitHub Environments SSOT
+  # (non-blocking). Docs + release wiring only; live Environment unpaid.
+  slsa-protected-env-check:
+    name: hermetic · SLSA protected-environment checklist (soft)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: SelfCheck SLSA protected-environment checklist
+        shell: pwsh
+        run: ./scripts/slsa-protected-env-check.ps1 -SelfCheck
+
   # Soft C06 L60 exact rustc pin — toml/json/docs + CI wiring (non-blocking).
   rustc-toolchain-pin:
     name: hermetic · exact rustc toolchain pin (soft)

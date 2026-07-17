@@ -78,6 +78,7 @@ See [`source-provenance.md`](source-provenance.md) (C06 L59 SSOT).
 
 ## Related
 
+- [Protected environment policy (SLSA Build L3)](slsa-protected-environment.md) — GitHub Environments + release gate SSOT (C06 L53)
 - [Source provenance policy](source-provenance.md) — signed commits + CODEOWNERS + org gates SSOT
 - [Commit signing ops](commit-signing.md) — tip signature check + soft checklist
 - [ADR 0004](../adr/0004-commit-signing-policy.md) — signed-commit policy

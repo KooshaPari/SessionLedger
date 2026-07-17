@@ -145,8 +145,7 @@ async fn invalid_jsonl_does_not_crash() {
 fn direct_pipeline_call_works() {
     use session_ledger::*;
 
-    let sessions = parse_jsonl_sessions(FORGE_SESSION_JSONL.as_bytes())
-        .expect("parse JSONL");
+    let sessions = parse_jsonl_sessions(FORGE_SESSION_JSONL.as_bytes()).expect("parse JSONL");
     assert_eq!(sessions.len(), 1);
     let doc = process_session(&sessions[0]);
     assert_eq!(doc.source_id, "test-forge");

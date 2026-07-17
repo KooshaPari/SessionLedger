@@ -38,11 +38,11 @@ mod export;
 mod filter;
 mod http;
 mod metrics;
-mod resilience;
 #[cfg(feature = "otel")]
 mod otel;
 #[cfg(feature = "otel-metrics")]
 mod otel_metrics;
+mod resilience;
 mod shutdown;
 mod tag;
 mod validation;

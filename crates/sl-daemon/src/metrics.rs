@@ -114,7 +114,8 @@ impl HttpMetrics {
             );
             for route in &route_names {
                 let route_requests = routes[route].requests.load(Ordering::Relaxed);
-                let _ = writeln!(out, "sl_http_requests_total{{route=\"{route}\"}} {route_requests}");
+                let _ =
+                    writeln!(out, "sl_http_requests_total{{route=\"{route}\"}} {route_requests}");
             }
 
             out.push_str(
@@ -307,7 +308,8 @@ mod tests {
         metrics.request_completed("healthz", false, 12_000);
         let text = metrics.render_prometheus();
         assert!(text.contains("sl_http_requests_total{route=\"healthz\"} 1"));
-        assert!(text.contains("sl_http_request_duration_seconds_bucket{route=\"healthz\",le=\"0.025\"} 1"));
+        assert!(text
+            .contains("sl_http_request_duration_seconds_bucket{route=\"healthz\",le=\"0.025\"} 1"));
         assert!(text.contains("sl_http_request_duration_seconds_count{route=\"healthz\"} 1"));
     }
 }

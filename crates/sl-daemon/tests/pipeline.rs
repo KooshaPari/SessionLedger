@@ -25,10 +25,8 @@ fn write_fixture(dir: &Path, ids: &[&str]) -> PathBuf {
     for id in ids {
         let mut s = Session::new(*id, Corpus::Forge);
         s.title = Some("add auth middleware".into());
-        s.messages
-            .push(Message::new(Role::User, "gate the api behind jwt"));
-        s.messages
-            .push(Message::new(Role::Assistant, "adding jsonwebtoken + middleware"));
+        s.messages.push(Message::new(Role::User, "gate the api behind jwt"));
+        s.messages.push(Message::new(Role::Assistant, "adding jsonwebtoken + middleware"));
         s.messages.push(Message::new(Role::User, "lgtm ship it"));
         buf.push_str(&serde_json::to_string(&s).expect("serialize"));
         buf.push('\n');

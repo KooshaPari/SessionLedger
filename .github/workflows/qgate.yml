@@ -85,7 +85,11 @@ jobs:
   # Reusable workflow — job-level call, pinned to phenotype-tooling commit SHA.
   # Pin: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad (phenotype-tooling main 2026-07-13)
   quality-gate:
-    continue-on-error: true   # remove once per-module coverage ≥85%
+    # Reusable-workflow call jobs accept only the job-call keys below; notably,
+    # `continue-on-error` is not valid here. Keep this gate advisory through
+    # branch protection until the coverage target is reached, rather than
+    # making the workflow syntactically invalid before any jobs can start.
+    needs: prepare
     uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad # main 2026-07-13
     with:
       coverage-report: coverage/lcov.info

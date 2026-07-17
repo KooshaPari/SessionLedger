@@ -60,10 +60,8 @@ pub fn transform_file(
     let mut written = Vec::with_capacity(sessions.len());
     for session in &sessions {
         let doc = if let Some(store) = memory_store {
-            let output = compile_and_store(session, store).map_err(|source| EtlError::Memory {
-                path: jsonl_path.to_path_buf(),
-                source,
-            })?;
+            let output = compile_and_store(session, store)
+                .map_err(|source| EtlError::Memory { path: jsonl_path.to_path_buf(), source })?;
             export_to_okf(&output.bundle, session.corpus.as_str())
         } else {
             process_session(session)

@@ -27,9 +27,7 @@ impl ServeShutdown {
     }
 
     /// Future that completes when [`Self::cancel`] is called.
-    pub fn cancelled(
-        &self,
-    ) -> tokio_util::sync::WaitForCancellationFuture<'_> {
+    pub fn cancelled(&self) -> tokio_util::sync::WaitForCancellationFuture<'_> {
         self.0.cancelled()
     }
 

@@ -28,9 +28,13 @@ pub(crate) struct AuditSink {
 
 #[derive(Clone, Debug)]
 enum AuditBackend {
-    Jsonl { path: Arc<PathBuf> },
+    Jsonl {
+        path: Arc<PathBuf>,
+    },
     #[cfg(feature = "sqlite")]
-    Sqlite { conn: Arc<Mutex<rusqlite::Connection>> },
+    Sqlite {
+        conn: Arc<Mutex<rusqlite::Connection>>,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -152,9 +156,12 @@ fn append_jsonl(path: &Path, event: &AuditEvent<'_>) -> io::Result<()> {
 }
 
 #[cfg(feature = "sqlite")]
-fn append_sqlite(conn: &Arc<Mutex<rusqlite::Connection>>, event: &AuditEvent<'_>) -> io::Result<()> {
+fn append_sqlite(
+    conn: &Arc<Mutex<rusqlite::Connection>>,
+    event: &AuditEvent<'_>,
+) -> io::Result<()> {
     let conn = conn.lock().map_err(|error| {
-        io::Error::new(io::ErrorKind::Other, format!("audit sqlite lock poisoned: {error}"))
+        io::Error::other(format!("audit sqlite lock poisoned: {error}"))
     })?;
     conn.execute(
         "INSERT INTO audit_events (timestamp, actor, action, outcome, request_id, reason, resource)
@@ -277,8 +284,7 @@ mod tests {
         #[test]
         fn sqlite_sink_appends_rows_without_rewriting_existing_records() {
             let dir = tempfile::TempDir::new().unwrap();
-            let sink =
-                AuditSink::open_with_backend(dir.path(), AuditBackendKind::Sqlite).unwrap();
+            let sink = AuditSink::open_with_backend(dir.path(), AuditBackendKind::Sqlite).unwrap();
 
             sink.append(&sample_event("ingest", "req-1")).unwrap();
             sink.append(&AuditEvent {
@@ -298,11 +304,9 @@ mod tests {
             assert_eq!(count, 2);
 
             let (action, request_id): (String, String) = conn
-                .query_row(
-                    "SELECT action, request_id FROM audit_events WHERE id = 1",
-                    [],
-                    |row| Ok((row.get(0)?, row.get(1)?)),
-                )
+                .query_row("SELECT action, request_id FROM audit_events WHERE id = 1", [], |row| {
+                    Ok((row.get(0)?, row.get(1)?))
+                })
                 .unwrap();
             assert_eq!(action, "ingest");
             assert_eq!(request_id, "req-1");

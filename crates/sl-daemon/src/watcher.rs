@@ -135,9 +135,8 @@ mod tests {
         let dir = tmp.path().to_path_buf();
         let sender = tx.clone();
 
-        let scan_task = tokio::spawn(async move {
-            scan_once(&dir, &sender, &cancel_for_task).await
-        });
+        let scan_task =
+            tokio::spawn(async move { scan_once(&dir, &sender, &cancel_for_task).await });
 
         cancel.cancel();
         let sent = tokio::time::timeout(Duration::from_secs(1), scan_task)

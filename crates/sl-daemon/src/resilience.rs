@@ -74,9 +74,7 @@ impl ApiCircuitBreaker {
             Some("0") | Some("off") | Some("Off") | Some("OFF") => false,
             Some("1") | Some("on") | Some("On") | Some("ON") => true,
             Some(raw) => {
-                return Err(format!(
-                    "{SL_API_CIRCUIT_BREAKER} must be on/off/0/1, got {raw:?}"
-                ));
+                return Err(format!("{SL_API_CIRCUIT_BREAKER} must be on/off/0/1, got {raw:?}"));
             }
         };
         if !enabled {
@@ -306,13 +304,8 @@ mod tests {
         assert_eq!(custom.open_for, Duration::from_millis(100));
 
         assert!(ApiCircuitBreaker::from_values(true, Some("maybe".into()), None, None).is_err());
-        assert!(ApiCircuitBreaker::from_values(
-            true,
-            Some("on".into()),
-            Some("0".into()),
-            None
-        )
-        .is_err());
+        assert!(ApiCircuitBreaker::from_values(true, Some("on".into()), Some("0".into()), None)
+            .is_err());
     }
 
     #[test]
@@ -363,8 +356,7 @@ mod tests {
         let off = RetryPolicy::from_values(Some("off".into()), None).unwrap();
         assert_eq!(off.max_retries, 0);
 
-        let custom =
-            RetryPolicy::from_values(Some("3".into()), Some("25".into())).unwrap();
+        let custom = RetryPolicy::from_values(Some("3".into()), Some("25".into())).unwrap();
         assert_eq!(custom.max_retries, 3);
         assert_eq!(custom.base_delay, Duration::from_millis(25));
 
@@ -374,10 +366,7 @@ mod tests {
 
     #[tokio::test]
     async fn retry_policy_retries_then_succeeds() {
-        let policy = RetryPolicy {
-            max_retries: 2,
-            base_delay: Duration::from_millis(1),
-        };
+        let policy = RetryPolicy { max_retries: 2, base_delay: Duration::from_millis(1) };
         let attempts = Arc::new(Mutex::new(0u32));
         let attempts_clone = attempts.clone();
         let result = policy
@@ -403,10 +392,7 @@ mod tests {
 
     #[tokio::test]
     async fn retry_policy_stops_when_not_retryable() {
-        let policy = RetryPolicy {
-            max_retries: 5,
-            base_delay: Duration::from_millis(1),
-        };
+        let policy = RetryPolicy { max_retries: 5, base_delay: Duration::from_millis(1) };
         let attempts = Arc::new(Mutex::new(0u32));
         let attempts_clone = attempts.clone();
         let result: Result<(), &str> = policy

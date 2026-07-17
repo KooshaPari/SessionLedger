@@ -9,6 +9,10 @@ const viewports = [
   { width: 1280, height: 720 },
 ];
 
+async function waitForViewerHotkeys(page) {
+  await expect(page.locator("html")).toHaveAttribute("data-sl-hotkeys-ready", "true");
+}
+
 for (const viewport of viewports) {
   test.describe(`${viewport.width}px viewport`, () => {
     test.use({ viewport });
@@ -111,6 +115,7 @@ test("Escape closes help overlay even when focus is in a search field", async ({
 
 test("Ctrl+K opens command palette and Escape closes it", async ({ page }) => {
   await page.goto("/");
+  await waitForViewerHotkeys(page);
   const palette = page.locator('[data-testid="command-palette-dialog"]');
   await expect(palette).toHaveCount(0);
 
@@ -135,6 +140,7 @@ test("command palette Focus search switches to Search and focuses the filter", a
   page,
 }) => {
   await page.goto("/");
+  await waitForViewerHotkeys(page);
   const palette = page.locator('[data-testid="command-palette-dialog"]');
   await page.keyboard.press("Control+k");
   await expect(palette).toHaveCount(1);
@@ -150,6 +156,7 @@ test("command palette Focus search switches to Search and focuses the filter", a
 
 test("command palette Open keyboard help opens the help overlay", async ({ page }) => {
   await page.goto("/");
+  await waitForViewerHotkeys(page);
   const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
   const palette = page.locator('[data-testid="command-palette-dialog"]');
   await page.keyboard.press("Control+k");
@@ -163,6 +170,7 @@ test("command palette Open keyboard help opens the help overlay", async ({ page 
 
 test("command palette Next view tab advances the active tab", async ({ page }) => {
   await page.goto("/");
+  await waitForViewerHotkeys(page);
   await expect(page.getByRole("tab", { name: "Bundles" })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -182,6 +190,7 @@ test("command palette Next view tab advances the active tab", async ({ page }) =
 
 test("command palette Clear search resets filters on the Search tab", async ({ page }) => {
   await page.goto("/");
+  await waitForViewerHotkeys(page);
   await page.getByRole("tab", { name: "Search", exact: true }).click();
   const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
   await since.fill("2026-01-01");

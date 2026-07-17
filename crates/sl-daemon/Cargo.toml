@@ -29,10 +29,10 @@ async-stream = "0.3"
 # Structured logging / spans (RUST_LOG env filter)
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-opentelemetry = { version = "0.32.0", default-features = false, features = ["trace"], optional = true }
-opentelemetry_sdk = { version = "0.32.1", default-features = false, features = ["trace"], optional = true }
+opentelemetry = { version = "0.32.0", default-features = false, features = ["trace", "metrics"], optional = true }
+opentelemetry_sdk = { version = "0.32.1", default-features = false, features = ["trace", "metrics"], optional = true }
 tracing-opentelemetry = { version = "0.33.0", default-features = false, optional = true }
-opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["trace", "grpc-tonic"], optional = true }
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["trace", "metrics", "grpc-tonic"], optional = true }
 clap_complete = "4.6.7"
 rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 
@@ -67,9 +67,13 @@ otel = [
     "dep:opentelemetry-otlp",
     "dep:tracing-opentelemetry",
 ]
-# Soft stub: compile-time acknowledgment of unpaid OTLP metrics push.
-# Does not pull OpenTelemetry metrics deps; Prometheus GET /metrics stays default.
-otel-metrics = []
+# OTLP metrics export over gRPC when SL_OTLP_METRICS_ENDPOINT is set.
+# Prometheus GET /metrics stays the default scrape path.
+otel-metrics = [
+    "dep:opentelemetry",
+    "dep:opentelemetry_sdk",
+    "dep:opentelemetry-otlp",
+]
 # Soft optional jemalloc global allocator (Unix). Default builds stay on the
 # system allocator — Windows-safe / unchanged. Enable: --features jemalloc
 jemalloc = ["dep:tikv-jemallocator"]

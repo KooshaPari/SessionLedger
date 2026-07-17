@@ -383,7 +383,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "otel"))]
     init_tracing();
     #[cfg(feature = "otel-metrics")]
-    otel_metrics::maybe_log_stub_status();
+    let otel_metrics_provider = otel_metrics::maybe_init();
     let args = Args::parse();
 
     match args.command {
@@ -433,6 +433,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(feature = "otel")]
     if let Some(provider) = otel_provider {
+        let _ = provider.shutdown();
+    }
+    #[cfg(feature = "otel-metrics")]
+    if let Some(provider) = otel_metrics_provider {
         let _ = provider.shutdown();
     }
 

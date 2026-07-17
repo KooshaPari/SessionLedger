@@ -213,7 +213,7 @@ are addressed here; **remaining code work**:
 | `tracing` subscriber + env log discipline | **Done** | fmt subscriber + `RUST_LOG` |
 | Optional production JSON logs | **Done** | `json-logs` feature + `SL_LOG_FORMAT=json` |
 | Soft-goal OTLP export sketch | **Feature-gated sketch** | `otel` Cargo feature; traces only |
-| Soft-goal OTLP **metrics** export | **Feature-gated soft stub** | `otel-metrics` + [`otlp-metrics.md`](otlp-metrics.md); push unpaid |
+| Soft-goal OTLP **metrics** export | **Feature-gated export** | `otel-metrics` + [`otlp-metrics.md`](otlp-metrics.md); OTLP/gRPC when `SL_OTLP_METRICS_ENDPOINT` set |
 | W3C `traceparent` propagation | **Done (HTTP + ETL sidecar)** | Shared parse/propagate helper; HTTP ingress + `{path}.traceparent` worker parentage |
 | Prometheus / OTLP RED exporters | **Prometheus HTTP RED subset done** | `/metrics`, parallel to `/api/metrics` |
 
@@ -232,9 +232,9 @@ neither variable is set, the daemon keeps its normal fmt subscriber and
 
 Remaining future work:
 
-1. Bridge labeled RED signals to OTLP and add process gauges (soft stub:
-   [`otlp-metrics.md`](otlp-metrics.md); `otel-metrics` + `SL_OTLP_METRICS=1`
-   acknowledges intent without changing Prometheus `/metrics`).
+1. Bridge labeled RED signals to OTLP and add process gauges (OTLP export path
+   landed — see [`otlp-metrics.md`](otlp-metrics.md); `otel-metrics` +
+   `SL_OTLP_METRICS_ENDPOINT`; labeled RED mirror still unpaid).
 2. Optional channel-carried `WorkItem` parent (today: sidecar file convention).
 
 Operators without the `otel` / `otel-metrics` features continue to rely on

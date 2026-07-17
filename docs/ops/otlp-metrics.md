@@ -1,10 +1,10 @@
-# OTLP metrics export soft stub (L43 / L42 evidence)
+# OTLP metrics export (L43 / L42 evidence)
 
 SessionLedger ships **Prometheus HTTP RED** metrics at `GET /metrics` with no
-collector or Cargo feature required. This document describes the **soft OTLP
-metrics export stub**: operator contract, optional `otel-metrics` feature
-acknowledgment, and hermetic SelfCheck evidence. It does **not** replace or
-break the default Prometheus scrape path.
+collector or Cargo feature required. This document describes the **OTLP metrics
+export path**: operator contract, optional `otel-metrics` feature wiring, and
+hermetic SelfCheck evidence. It does **not** replace or break the default
+Prometheus scrape path.
 
 ## What exists today
 
@@ -13,8 +13,8 @@ break the default Prometheus scrape path.
 | Prometheus HTTP RED (`/metrics`) | **landed** | `crates/sl-daemon/src/metrics.rs`; per-route labels + histogram buckets |
 | App JSON aggregates | **landed** | `GET /api/metrics` (product summary; parallel to RED) |
 | Feature-gated OTLP **traces** | **landed** | `otel` feature + `SL_OTLP_ENDPOINT` ([`observability.md`](observability.md#opentelemetry-feature-gated-sketch--issue-65)) |
-| OTLP **metrics** push | **stub** | `otel-metrics` feature + this doc; `otlp_metrics_export: none` |
-| Labeled RED → OTLP bridge | **unpaid** | Future: counters/histograms over OTLP/gRPC |
+| OTLP **metrics** push | **landed** | `otel-metrics` + `SL_OTLP_METRICS_ENDPOINT`; `otlp_metrics_export: otlp-grpc` |
+| Labeled RED → OTLP bridge | **unpaid** | Future: counters/histograms mirrored as OTLP instruments |
 | Process USE gauges | **unpaid** | Soft goal alongside OTLP metrics |
 
 See also the RED mapping table in
@@ -25,13 +25,14 @@ See also the RED mapping table in
 1. **Default builds** — only `GET /metrics` (Prometheus text) and `GET /api/metrics`
    (JSON). No OTLP metrics client, no collector required.
 2. **Optional feature** — `cargo build -p sl-daemon --features otel-metrics`
-   compiles the soft stub module. It does **not** open sockets or alter scrape
-   output.
-3. **Acknowledgment env** — with the feature enabled, set `SL_OTLP_METRICS=1` to
-   log that the unpaid push path is acknowledged. Prometheus `/metrics` stays
-   unchanged.
-4. **Endpoint reuse (future)** — when push lands, reuse `SL_OTLP_ENDPOINT` /
-   `OTEL_EXPORTER_OTLP_ENDPOINT` (same precedence as OTLP traces).
+   compiles the OTLP metrics module. Without an endpoint env var it does **not**
+   open sockets or alter scrape output.
+3. **Endpoint env** — with the feature enabled, set `SL_OTLP_METRICS_ENDPOINT`
+   (or `OTEL_EXPORTER_OTLP_ENDPOINT` as fallback) to the collector's OTLP/gRPC
+   endpoint (for example, `http://localhost:4317`). SessionLedger env takes
+   precedence when both are set.
+4. **Legacy acknowledgment** — `SL_OTLP_METRICS=1` logs intent when no endpoint
+   is configured. Prometheus `/metrics` stays unchanged.
 
 ```text
 ┌─────────────┐  always on          ┌──────────────────┐
@@ -39,24 +40,25 @@ See also the RED mapping table in
 │ GET /metrics│  HTTP RED text      │ (default path)   │
 └─────────────┘                     └──────────────────┘
        │
-       │  otel-metrics + SL_OTLP_METRICS=1 (stub today)
+       │  otel-metrics + SL_OTLP_METRICS_ENDPOINT
        ▼
-┌──────────────────┐   unpaid  ───► OTLP metrics push
-│ acknowledgment   │
-│ log only         │
+┌──────────────────┐   OTLP/gRPC ───► collector
+│ MetricExporter   │   periodic push
+│ + up gauge       │
 └──────────────────┘
 ```
 
-## Stub configuration
+## Export configuration
 
-[`otlp-metrics.json`](otlp-metrics.json) pins the stub knobs:
+[`otlp-metrics.json`](otlp-metrics.json) pins the export knobs:
 
 | Field | Default | Meaning |
 |-------|---------|---------|
 | `prometheus_http` | `/metrics` | Default RED scrape path (must remain) |
-| `otlp_metrics_export` | `none` | Push target — **unpaid** until wired |
-| `cargo_feature` | `otel-metrics` | Soft compile-time stub flag |
-| `ack_env` | `SL_OTLP_METRICS` | Operator acknowledgment env |
+| `otlp_metrics_export` | `otlp-grpc` | Push transport when endpoint is set |
+| `cargo_feature` | `otel-metrics` | Compile-time OTLP metrics flag |
+| `endpoint_env` | `SL_OTLP_METRICS_ENDPOINT` | Primary collector endpoint |
+| `ack_env` | `SL_OTLP_METRICS` | Legacy stub acknowledgment (no endpoint) |
 
 ## How to run
 
@@ -66,14 +68,16 @@ See also the RED mapping table in
 pwsh ./scripts/otlp-metrics-check.ps1 -SelfCheck
 ```
 
-Validates doc/JSON anchors, the `otel-metrics` Cargo feature, and that the
-Prometheus `/metrics` renderer remains present.
+Validates doc/JSON anchors, the `otel-metrics` Cargo feature, export-path
+symbols in `otel_metrics.rs`, and that the Prometheus `/metrics` renderer remains
+present.
 
-### Feature-gated stub build (optional)
+### Feature-gated OTLP metrics export
 
 ```bash
 cargo build -p sl-daemon --manifest-path crates/sl-daemon/Cargo.toml --features otel-metrics
-SL_OTLP_METRICS=1 cargo run -p sl-daemon --manifest-path crates/sl-daemon/Cargo.toml \
+SL_OTLP_METRICS_ENDPOINT=http://localhost:4317 \
+  cargo run -p sl-daemon --manifest-path crates/sl-daemon/Cargo.toml \
   --features otel-metrics -- serve --watch ./sessions --out ./okf-out
 ```
 
@@ -81,16 +85,12 @@ SL_OTLP_METRICS=1 cargo run -p sl-daemon --manifest-path crates/sl-daemon/Cargo.
 
 | Job | Workflow | Blocking? | Notes |
 |-----|----------|-----------|-------|
-| `otlp-metrics-stub` | [`ops-load.yml`](../../.github/workflows/ops-load.yml) | **soft** (`continue-on-error: true`) | SelfCheck + `cargo check --features otel-metrics` |
+| `otlp-metrics-export` | [`ops-load.yml`](../../.github/workflows/ops-load.yml) | **blocking** | SelfCheck + `cargo test -p sl-daemon otlp_metrics` + feature compile |
 
 ## Unpaid gaps (explicit)
 
-1. **OTLP metrics exporter** — no `MetricExporter` / periodic reader wiring yet.
-2. **RED bridge** — process-local counters are not mirrored as OTLP instruments.
-3. **USE gauges** — CPU/memory/FD gauges remain soft goals.
-4. **Exemplars** — not claimed by this stub.
+1. **RED bridge** — process-local counters are not mirrored as OTLP instruments.
+2. **USE gauges** — CPU/memory/FD gauges remain soft goals.
+3. **Exemplars** — not claimed by this export path.
 
-When export lands, set `otlp_metrics_export` in
-[`otlp-metrics.json`](otlp-metrics.json) to the collector protocol (e.g.
-`otlp-grpc`) and extend `crates/sl-daemon/src/otel_metrics.rs` with a real
-exporter. Until then, Prometheus `/metrics` remains the supported scrape path.
+Prometheus `/metrics` remains the supported scrape path for labeled RED series.

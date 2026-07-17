@@ -45,7 +45,7 @@ tracing = "0.1"
 rusqlite = { version = "0.40", features = ["bundled"] }
 zstd = { version = "0.13" }
 tempfile = "3"
-criterion = { version = "0.7.0", default-features = false, features = ["cargo_bench_support"] }
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 proptest = "1.11.0"
 # Counting allocator for the L8 allocation-budget smoke (tests/allocation_budget.rs).
 # Keeps unsafe inside the dependency; production builds stay on the System allocator.

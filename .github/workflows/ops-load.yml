@@ -234,6 +234,7 @@ jobs:
         run: cargo check --locked --features otel-metrics
 
   # Soft L45 continuous profiling agent stub — unix-only; reuses pprof-smoke contract.
+  # Optional http_soft push stays off in CI (no SL_PROFILE_PUSH_URL); SelfCheck is hermetic.
   continuous-profiling-agent:
     name: scheduled continuous profiling agent stub (soft)
     runs-on: ubuntu-latest

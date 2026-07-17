@@ -16,19 +16,10 @@ fn repo_root() -> PathBuf {
 #[test]
 fn fluent_i18n_self_check_validates_anchors() {
     let script = repo_root().join("scripts/fluent-i18n-check.ps1");
-    assert!(
-        script.is_file(),
-        "expected fluent i18n check script at {}",
-        script.display()
-    );
+    assert!(script.is_file(), "expected fluent i18n check script at {}", script.display());
 
     let output = Command::new("pwsh")
-        .args([
-            "-NoProfile",
-            "-File",
-            script.to_str().expect("utf-8 script path"),
-            "-SelfCheck",
-        ])
+        .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()
         .unwrap_or_else(|error| panic!("failed to spawn pwsh for SelfCheck: {error}"));
 

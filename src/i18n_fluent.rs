@@ -46,9 +46,7 @@ mod fluent_impl {
             let resource =
                 FluentResource::try_new(ftl.to_string()).expect("embedded FTL must parse");
             let mut bundle = FluentBundle::new(vec![lang]);
-            bundle
-                .add_resource(resource)
-                .expect("embedded FTL must attach to bundle");
+            bundle.add_resource(resource).expect("embedded FTL must attach to bundle");
             Self { bundle }
         }
 

@@ -29,7 +29,7 @@ pub fn t_fluent(key: &str, locale: Option<&str>) -> String {
 #[cfg(feature = "fluent-catalog")]
 mod fluent_impl {
     use super::json_key_to_fluent_id;
-    use crate::i18n::{self, normalize_locale, DEFAULT_LOCALE, SOFT_LOCALE_ES};
+    use crate::i18n::{self, normalize_locale, SOFT_LOCALE_ES};
     use fluent_bundle::{FluentBundle, FluentResource};
     use std::cell::RefCell;
     use unic_langid::LanguageIdentifier;
@@ -109,7 +109,6 @@ mod fluent_impl {
         let tag = i18n::active_locale(locale);
         match normalize_locale(&tag) {
             SOFT_LOCALE_ES => with_es_bundle(f),
-            DEFAULT_LOCALE => with_en_bundle(f),
             _ => with_en_bundle(f),
         }
     }

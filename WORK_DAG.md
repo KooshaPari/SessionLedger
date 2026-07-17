@@ -73,3 +73,23 @@ flowchart TD
 - **P0 obs (done):** T-014 → {T-020, T-023, T-025}; T-005 → T-021 → T-022.
 - **P0 recovery (done):** T-005+T-001 → T-024.
 - **P1 depth (done):** T-032…T-038 landed Wave-5 (#100–#103).
+
+## Wave-39 (audit-v38 391/402 → target 392+)
+
+```mermaid
+flowchart TD
+  W39S[W39 scope WBS-8.58]
+  L1[w39-envelope-hard C02 L22]
+  L2[w39-fuzz-blocking C07 L67]
+  L3[w39-jemalloc-hard C00 L8]
+  L4[w39-cargo-nonet C04 L40]
+  L5[w39-daemon-graph C00 L7]
+  MERGE[W39 merge greens]
+  REAUDIT[W39 reaudit WBS-8.59]
+  W39S --> L1 & L2 & L3 & L4 & L5
+  L1 & L2 & L3 & L4 & L5 --> MERGE --> REAUDIT
+```
+
+- **Scope:** [`WAVE39_SCOPE.md`](WAVE39_SCOPE.md); PERT: [`docs/ops/WAVE39_PERT.md`](docs/ops/WAVE39_PERT.md)
+- **Merge order (suggested):** envelope → fuzz → jemalloc → cargo-nonet → daemon-graph
+- **Reaudit conservative candidates:** C00 L8, C07 L67, C02 L22 (+1 each); L7/L40 held at pillar max

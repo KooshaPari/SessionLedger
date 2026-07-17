@@ -793,6 +793,29 @@
       "evidence": [
         "audit/SCORECARD.md"
       ]
+    },
+    {
+      "id": "WBS-8.48",
+      "status": "done",
+      "evidence": [
+        ".github/workflows/security.yml",
+        "docs/adr/0005-no-serverless-edge.md",
+        "scripts/edge-deploy-scope-check.ps1",
+        "docs/ops/versioning-policy.md",
+        "scripts/versioning-policy-check.ps1",
+        "crates/sl-viewer/src/async_states.rs",
+        "locales/es.json",
+        "src/i18n.rs",
+        "docs/ops/i18n.md"
+      ]
+    },
+    {
+      "id": "WBS-8.49",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md",
+        "docs/ops/WBS.md"
+      ]
     }
   ],
   "clusters": [

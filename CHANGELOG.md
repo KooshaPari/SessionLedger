@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- SLSA L3 environment isolation SelfCheck (C06 L53): `scripts/slsa-isolation-check.ps1 -SelfCheck`, isolated container rebuild evidence row in `hermetic-builds.md`, `repro-check.ps1 -PolicyOnly` isolation hook, soft CI in `hermetic.yml` (not a full L3 attestation).
+
 - ADR 0006: explicit no MCP host/server / pin list (C06 L57) + `mcp-scope` SelfCheck.
 
 - Go OKF adapter stub (`adapters/go`) beside Python for C08 L75 cross-language parity (validate/emit CLI; SelfCheck skips runtime when `go` absent).

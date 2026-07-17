@@ -10,6 +10,46 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
+function Assert-SlsaIsolationPolicy {
+    $hermeticDocPath = Join-Path $repoRoot "docs/ops/hermetic-builds.md"
+    $reproDocPath = Join-Path $repoRoot "docs/ops/reproducible-builds.md"
+    $hermeticWorkflowPath = Join-Path $repoRoot ".github/workflows/hermetic.yml"
+    $slsaCheckPath = Join-Path $repoRoot "scripts/slsa-isolation-check.ps1"
+
+    foreach ($pair in @(
+            @{ Path = $hermeticDocPath; Label = "hermetic builds doc" },
+            @{ Path = $reproDocPath; Label = "reproducible builds doc" },
+            @{ Path = $hermeticWorkflowPath; Label = "hermetic workflow" },
+            @{ Path = $slsaCheckPath; Label = "SLSA isolation check script" }
+        )) {
+        if (-not (Test-Path -LiteralPath $pair.Path -PathType Leaf)) {
+            throw "Missing $($pair.Label) at '$($pair.Path)'."
+        }
+    }
+
+    $hermeticDoc = Get-Content -LiteralPath $hermeticDocPath -Raw
+    $reproDoc = Get-Content -LiteralPath $reproDocPath -Raw
+    $hermeticWorkflow = Get-Content -LiteralPath $hermeticWorkflowPath -Raw
+
+    if ($hermeticDoc -notmatch 'scripts/slsa-isolation-check\.ps1') {
+        throw "docs/ops/hermetic-builds.md must reference scripts/slsa-isolation-check.ps1."
+    }
+    if ($hermeticDoc -notmatch 'Isolated container rebuild evidence \| \*\*done\*\*') {
+        throw "docs/ops/hermetic-builds.md must mark isolated container rebuild evidence as done."
+    }
+    if ($reproDoc -notmatch 'environment-isolation-checklist-slsa-l3-gaps|environment isolation') {
+        throw "docs/ops/reproducible-builds.md must cross-link hermetic-builds environment isolation."
+    }
+    if ($hermeticWorkflow -notmatch 'sl-daemon-offline-container') {
+        throw ".github/workflows/hermetic.yml must keep the isolated container rebuild job."
+    }
+    if ($hermeticWorkflow -notmatch 'slsa-isolation-check\.ps1') {
+        throw ".github/workflows/hermetic.yml must run scripts/slsa-isolation-check.ps1."
+    }
+
+    Write-Host "SLSA isolation policy OK (docs + isolated container rebuild wiring; not L3 claim)."
+}
+
 function Assert-SourceDateEpochPolicy {
     $docsPath = Join-Path $repoRoot "docs/ops/reproducible-builds.md"
     $releasePath = Join-Path $repoRoot ".github/workflows/release.yml"
@@ -41,6 +81,7 @@ function Assert-SourceDateEpochPolicy {
 }
 
 Assert-SourceDateEpochPolicy
+Assert-SlsaIsolationPolicy
 
 if ($PolicyOnly) {
     Write-Host "Policy-only mode: skipping dual release builds."

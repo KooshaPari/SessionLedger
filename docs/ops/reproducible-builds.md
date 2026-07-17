@@ -87,6 +87,21 @@ image, vendor and build dependencies offline, pin the exact Rust toolchain and
 system packages, and run the comparison on two fresh workers. Compare unpacked
 binaries separately from ZIP or tar metadata.
 
+### Environment isolation (partial SLSA L3)
+
+SessionLedger does **not** claim SLSA Build Level 3. Incremental isolation
+evidence lives in the [environment isolation checklist](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps):
+
+- `scripts/slsa-isolation-check.ps1 -SelfCheck` machine-verifies checklist
+  anchors, digest-pinned builder wiring, and the isolated container rebuild job
+  in `.github/workflows/hermetic.yml` (single pinned GHCR image — not
+  two-independent-builder proof).
+- `scripts/repro-check.ps1 -PolicyOnly` also asserts the isolation doc anchors
+  and container rebuild wiring alongside `SOURCE_DATE_EPOCH` release policy.
+
+Protected GitHub Environments, hardened runners, vendored dependencies, and
+two-builder rebuilds remain unpaid operator work documented in the checklist.
+
 ## Provenance enforcement path
 
 The release workflow requires GitHub build provenance for assets published from
@@ -152,6 +167,10 @@ metadata; the CycloneDX SBOM complements but does not replace provenance
 materials on the archive subject.
 
 Remaining gaps toward full SLSA-L3 include reusable-workflow provenance,
-environment isolation proofs, and mandatory SBOM-to-subject attestations for
-every matrix artifact. Platform code-signing remains deferred per
+protected release Environments, two-independent-builder rebuilds, and mandatory
+SBOM-to-subject attestations for every matrix artifact. Partial environment
+isolation evidence is tracked in
+[`hermetic-builds.md` § Environment isolation](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps)
+and checked by `scripts/slsa-isolation-check.ps1 -SelfCheck`. Platform
+code-signing remains deferred per
 [`0003-platform-code-signing.md`](../adr/0003-platform-code-signing.md).

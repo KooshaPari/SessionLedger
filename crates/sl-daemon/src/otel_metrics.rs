@@ -17,14 +17,13 @@ pub const ENV_OTEL_EXPORTER_OTLP_ENDPOINT: &str = "OTEL_EXPORTER_OTLP_ENDPOINT";
 /// Resolve the OTLP metrics collector endpoint, if configured.
 #[must_use]
 pub fn metrics_endpoint() -> Option<String> {
-    std::env::var(ENV_OTLP_METRICS_ENDPOINT)
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .or_else(|| {
+    std::env::var(ENV_OTLP_METRICS_ENDPOINT).ok().filter(|value| !value.trim().is_empty()).or_else(
+        || {
             std::env::var(ENV_OTEL_EXPORTER_OTLP_ENDPOINT)
                 .ok()
                 .filter(|value| !value.trim().is_empty())
-        })
+        },
+    )
 }
 
 /// Returns whether the soft OTLP metrics stub is operator-acknowledged.
@@ -74,8 +73,7 @@ fn init_exporter(
         .with_endpoint(endpoint)
         .build()?;
 
-    let provider =
-        SdkMeterProvider::builder().with_periodic_exporter(exporter).build();
+    let provider = SdkMeterProvider::builder().with_periodic_exporter(exporter).build();
 
     global::set_meter_provider(provider.clone());
 
@@ -147,10 +145,7 @@ mod tests {
         assert!(metrics_endpoint().is_none());
 
         std::env::set_var(ENV_OTEL_EXPORTER_OTLP_ENDPOINT, "http://otel-fallback:4317");
-        assert_eq!(
-            metrics_endpoint().as_deref(),
-            Some("http://otel-fallback:4317")
-        );
+        assert_eq!(metrics_endpoint().as_deref(), Some("http://otel-fallback:4317"));
 
         std::env::set_var(ENV_OTLP_METRICS_ENDPOINT, "http://sl-metrics:4317");
         assert_eq!(metrics_endpoint().as_deref(), Some("http://sl-metrics:4317"));

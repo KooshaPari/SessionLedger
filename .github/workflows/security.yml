@@ -107,6 +107,10 @@ jobs:
   # .github/workflows/rootless-nonet.yml (rootless-nonet-check.ps1 -SelfCheck).
   # Does not enforce rootless-only runners or blocking no-net on cargo-fetch jobs.
 
+  # Hard C02 L22 envelope-crypto CI evidence — blocking PR workflow in
+  # .github/workflows/envelope-crypto.yml (envelope-crypto-check.ps1 -SelfCheck).
+  # Does not claim in-tree KMS, sealed secrets, KEK wrap, or OKF/audit encryption.
+
   # Soft C04 L38 CVE feed subscription evidence — hermetic SelfCheck only.
   cve-feed:
     name: CVE feed subscription smoke (soft)

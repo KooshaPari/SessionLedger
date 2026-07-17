@@ -54,8 +54,11 @@ Critical supply-chain or remote-code issues may be accelerated at maintainer dis
   [`docs/ops/branch-protection.md`](docs/ops/branch-protection.md) +
   [`.github/workflows/branch-protection.yml`](.github/workflows/branch-protection.yml)
   (best-effort `gh api`; soft-skip without admin token; fork PRs continue-on-error).
-- Maintainer **2FA** is recommended org hygiene but is not attestable from this
-  repository (out of scope for commit-signing and branch-protection evidence).
+- Maintainer **2FA** policy SSOT:
+  [`docs/ops/maintainer-2fa.md`](docs/ops/maintainer-2fa.md);
+  hermetic proof: `pwsh ./scripts/maintainer-2fa-check.ps1 -SelfCheck`.
+  Org/account 2FA is **not** attestable from this repository (human attestation
+  only; see `NOT_VERIFIABLE_IN_REPO` row in the policy doc).
 
 ## Supply Chain & SBOM
 

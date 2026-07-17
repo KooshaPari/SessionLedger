@@ -218,5 +218,16 @@ pwsh -NoProfile -File scripts/branch-protection-check.ps1 -PolicyOnly
 Live branch protection remains a maintainer Settings control; the scripts above
 document anchors and do not claim org Settings are enforced from the tree.
 
+## Maintainer 2FA (org hygiene)
+
+Merge-capable maintainers must use GitHub **2FA** and prefer hardware security keys.
+Policy and the human attestation path:
+[`docs/ops/maintainer-2fa.md`](docs/ops/maintainer-2fa.md).
+Org enforcement cannot be verified from checkout; local docs smoke:
+
+```powershell
+pwsh -NoProfile -File scripts/maintainer-2fa-check.ps1 -SelfCheck
+```
+
 ## Governance
 This repository follows governance guidelines defined in ~/.claude/CLAUDE.md at a high level.

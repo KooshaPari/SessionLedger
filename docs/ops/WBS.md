@@ -93,6 +93,8 @@ are not recomputed here.
 | WBS-8.47 | Wave-31 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 372/402 (93% A) |
 | WBS-8.48 | Wave-34 evidence packages (C04 blocking sandbox-boundary, C11 ADR 0005 + versioning policy, C09 ErrorState non-color cues, C01 soft es i18n) | done | machine | `.github/workflows/security.yml`; `docs/adr/0005-no-serverless-edge.md`; `scripts/edge-deploy-scope-check.ps1`; `docs/ops/versioning-policy.md`; `scripts/versioning-policy-check.ps1`; `crates/sl-viewer/src/async_states.rs`; `locales/es.json`; `src/i18n.rs`; `docs/ops/i18n.md` | C01, C04, C09, C11; PRs #280-#284 |
 | WBS-8.49 | Wave-34 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 384/402 (95% A) |
+| WBS-8.50 | Wave-35 evidence packages (C05 soft http_soft profile push, C00 soft shuttle, C05 soft Alertmanager packaging, C08 Go OKF adapter, C06 MCP host N/A ADR) | done | machine | `docs/ops/continuous-profiling.md`; `scripts/continuous-profiling-agent.ps1`; `tests/continuous_profiling.rs`; `docs/ops/shuttle-soft.md`; `scripts/shuttle-soft-check.ps1`; `.github/workflows/shuttle-soft.yml`; `docs/ops/alertmanager-soft.md`; `packaging/alertmanager/alertmanager.yml.sample`; `scripts/alertmanager-soft-check.ps1`; `adapters/go/main.go`; `docs/adr/0006-no-mcp-server.md`; `scripts/mcp-scope-check.ps1` | C00, C05, C06, C08; PRs #289-#293 |
+| WBS-8.51 | Wave-35 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 388/402 (96% A) |
 
 ## Organization-level control plane
 

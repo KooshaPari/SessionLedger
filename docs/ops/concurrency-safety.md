@@ -11,8 +11,11 @@ interpreter (UB / provenance). A **blocking Miri permutation** job gates PRs on
 that same `race_model` subset via `cargo miri`. A **soft loom smoke** explores
 a tiny cancel + capacity conservation model under `RUSTFLAGS='--cfg loom'`. A
 **soft shuttle SelfCheck** documents the shuttle lane hermetically (no
-`shuttle` crate) — see [`shuttle-soft.md`](shuttle-soft.md). Full loom /
-shuttle permutation checkers and `loom_model` under Miri remain unpaid.
+`shuttle` crate) — see [`shuttle-soft.md`](shuttle-soft.md). A **blocking TSan
+permutation** job gates PRs on the same pure-`std` `race_model` subset under
+`-Zsanitizer=thread` (ubuntu x86_64, `rust-src` / `-Zbuild-std`). Full loom /
+shuttle permutation checkers, `loom_model` under Miri, and full tokio broadcast
+/ daemon SSE graph ports under TSan remain unpaid.
 Workspace
 `unsafe_code = forbid` still holds; these soft gates are early evidence toward
 those checkers, not a claim of unsafe coverage.
@@ -28,6 +31,7 @@ those checkers, not a claim of unsafe coverage.
 | [`tests/loom_permutation.rs`](../../tests/loom_permutation.rs) | Hermetic SelfCheck for loom permutation docs/workflow anchors |
 | [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Hermetic SelfCheck for soft shuttle docs/workflow anchors |
 | [`tests/shuttle_permutation.rs`](../../tests/shuttle_permutation.rs) | Hermetic SelfCheck for shuttle permutation docs/workflow anchors |
+| [`tests/tsan_permutation.rs`](../../tests/tsan_permutation.rs) | Hermetic SelfCheck for TSan permutation docs/workflow anchors |
 | [`.github/workflows/race-smoke.yml`](../../.github/workflows/race-smoke.yml) | Both race tests, 3 OS × 3 repeats, `--test-threads=1` |
 | [`.github/workflows/miri-smoke.yml`](../../.github/workflows/miri-smoke.yml) | Soft nightly / dispatch: `cargo miri test --test race_model` (`continue-on-error`) |
 | [`.github/workflows/miri-permutation.yml`](../../.github/workflows/miri-permutation.yml) | Blocking permutation SelfCheck + `cargo miri test --test race_model` |
@@ -35,6 +39,7 @@ those checkers, not a claim of unsafe coverage.
 | [`.github/workflows/loom-permutation.yml`](../../.github/workflows/loom-permutation.yml) | Blocking permutation SelfCheck + `cargo test loom` under `RUSTFLAGS='--cfg loom'` |
 | [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft hermetic shuttle SelfCheck only (`continue-on-error`) |
 | [`.github/workflows/shuttle-permutation.yml`](../../.github/workflows/shuttle-permutation.yml) | Blocking permutation SelfCheck + `cargo test shuttle_permutation` (no shuttle crate) |
+| [`.github/workflows/tsan-permutation.yml`](../../.github/workflows/tsan-permutation.yml) | Blocking permutation SelfCheck + `cargo +nightly test --test race_model` under `-Zsanitizer=thread` (ubuntu x86_64) |
 
 The model uses `try_send` (never blocks) and an `AtomicBool` cancel bit so
 assertions are conservation / capacity based — no sleeps, no OS event timing.
@@ -152,6 +157,25 @@ These are conservation / capacity models — not a full port of
 Soft `shuttle-soft.yml` remains `continue-on-error` for nightly signal; blocking
 permutation evidence lives in `shuttle-permutation.yml`.
 
+### TSan permutation checkers
+
+`tsan-permutation.yml` is **blocking** on `pull_request`. It:
+
+1. Runs `scripts/tsan-permutation-check.ps1 -SelfCheck` (docs/workflow/path anchors).
+2. Runs `cargo +nightly test --test race_model` with `RUSTFLAGS='-Zsanitizer=thread'`,
+   `-Zbuild-std`, and `--target x86_64-unknown-linux-gnu` (requires `rust-src`).
+
+The job exercises the same pure-`std` `race_model` subset as Miri permutation
+— bounded `sync_channel` + cooperative cancel — without pulling `rusqlite`/`zstd`
+FFI. Full tokio broadcast / daemon SSE graph ports under TSan remain unpaid.
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| TSan permutation SelfCheck | **done** | `scripts/tsan-permutation-check.ps1 -SelfCheck` (+ `tests/tsan_permutation.rs`) |
+| TSan permutation race_model CI | **done** | `.github/workflows/tsan-permutation.yml` (blocking on PR; ubuntu x86_64) |
+| Full tokio broadcast / daemon graph under TSan | **unpaid** | Real `sl-daemon` watcher/SSE graph still outside TSan permutation suite |
+| Full daemon SSE graph ports under TSan | **unpaid** | Live broadcast/SSE daemon ports still outside `race_model` TSan subset |
+
 ## How to run locally
 
 Prefer a worktree-local Cargo target dir so parallel agents do not collide:
@@ -242,9 +266,31 @@ $env:CARGO_TARGET_DIR = Join-Path $PWD "target-w37-c00-shuttle"
 cargo test shuttle_permutation --release --locked -- --test-threads=1
 ```
 
+TSan permutation SelfCheck (no nightly TSan build):
+
+```powershell
+pwsh ./scripts/tsan-permutation-check.ps1 -SelfCheck
+```
+
+Blocking TSan permutation suite (Linux nightly + `rust-src` only):
+
+```powershell
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w38-c00-tsan"
+$env:RUSTFLAGS = "-Zsanitizer=thread"
+rustup toolchain install nightly --component rust-src
+rustup target add x86_64-unknown-linux-gnu
+cargo +nightly test --test race_model -Zbuild-std --target x86_64-unknown-linux-gnu --locked -- --test-threads=1
+```
+
+Hermetic TSan permutation wrapper (default `cargo test`):
+
+```powershell
+cargo test tsan_permutation --release --locked -- --test-threads=1
+```
+
 ## Loom / shuttle follow-up
 
-Full loom / shuttle coverage of daemon broadcast/SSE and a loom-native port of
-`race_model`'s `sync_channel` remain unpaid. Soft shuttle SelfCheck does **not**
-pay that debt. Keep permutation jobs off the default PR matrix so ordinary
+Full loom / shuttle / TSan coverage of daemon broadcast/SSE and a loom-native
+port of `race_model`'s `sync_channel` remain unpaid. Soft shuttle SelfCheck does
+**not** pay that debt. Keep permutation jobs off the default PR matrix so ordinary
 `cargo test` stays green without special flags.

@@ -30,6 +30,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Soft multi-locale i18n: `locales/es.json` + `SL_LOCALE` / `t_locale` selection (C01 L16; Fluent/ICU still deferred).
 
+- Fluent catalog stub (C01 L16 Phase-1): `locales/en.ftl` + `locales/es.ftl`, optional `fluent-catalog` feature (`fluent-bundle` + `unic-langid`), `src/i18n_fluent.rs` (`t_fluent` with JSON fallback), `scripts/fluent-i18n-check.ps1 -SelfCheck` (viewer migration still deferred).
+
 - Soft envelope helper (`SL_ENVELOPE_KEY` + SHA-256 keystream) in `src/envelope.rs` (C02 L22; not a KMS).
 
 - Viewer `ErrorState` non-color cues: warning glyph + `aria-invalid` (C09 L81.15).

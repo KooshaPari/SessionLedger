@@ -1,4 +1,4 @@
-//! Hermetic `SelfCheck` for TSan permutation checker anchors (C00 L7).
+//! Hermetic `SelfCheck` for `TSan` permutation checker anchors (C00 L7).
 //!
 //! Local: `pwsh ./scripts/tsan-permutation-check.ps1 -SelfCheck`
 //! Does not build or run under `-Zsanitizer=thread` — safe under default Windows `cargo test`.

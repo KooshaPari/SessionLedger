@@ -97,6 +97,8 @@ are not recomputed here.
 | WBS-8.51 | Wave-35 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 388/402 (96% A) |
 | WBS-8.52 | Wave-36 evidence packages (C00 blocking loom permutation, C08 TypeScript OKF adapter, C05 OTLP metrics export, C06 unconditional OCI + partial SLSA L3) | done | machine | `scripts/loom-permutation-check.ps1`; `.github/workflows/loom-permutation.yml`; `adapters/typescript/okf_adapter.ts`; `crates/sl-daemon/src/otel_metrics.rs`; `scripts/otlp-metrics-check.ps1`; `scripts/oci-cosign-verify.ps1`; `scripts/slsa-isolation-check.ps1`; `docs/ops/hermetic-builds.md` | C00, C05, C06, C08; PRs #295-#299 |
 | WBS-8.53 | Wave-36 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 389/402 (97% A) |
+| WBS-8.54 | Wave-37 evidence packages (C00 blocking shuttle/Miri permutation, C06 source provenance + reusable workflow, C04 maintainer 2FA policy SSOT) | done | machine | `scripts/shuttle-permutation-check.ps1`; `.github/workflows/miri-permutation.yml`; `docs/ops/source-provenance.md`; `.github/workflows/reusable-hermetic-build.yml`; `docs/ops/maintainer-2fa.md` | C00, C04, C06; PRs #303-#307 |
+| WBS-8.55 | Wave-37 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 390/402 (97% A) |
 
 ## Organization-level control plane
 

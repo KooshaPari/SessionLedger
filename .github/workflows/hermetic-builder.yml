@@ -1,0 +1,82 @@
+name: Hermetic Builder Image
+
+on:
+  push:
+    # The immutable SHA tag is needed before a PR can switch its consuming
+    # hermetic gate to the new image.  Restrict by path, not by branch: every
+    # canonical branch push can therefore bootstrap and verify its own pin.
+    branches: ["**"]
+    paths:
+      - ci/hermetic-builder/Containerfile
+      - .github/workflows/hermetic-builder.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: hermetic-builder-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: publish · digest-pinned builder
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: normalize image name (GHCR requires lowercase)
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "name=ghcr.io/${owner}/sessionledger-hermetic-builder" >> "$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push hermetic builder
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: ci/hermetic-builder/Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          provenance: false
+          sbom: false
+
+      - name: report immutable builder digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='${{ steps.image.outputs.name }}'
+          digest='${{ steps.build.outputs.digest }}'
+          test -n "$digest"
+          {
+            echo '### Hermetic builder image published'
+            echo
+            echo "Pin this exact reference in docs/ops/hermetic-builder.json and .github/workflows/hermetic.yml:"
+            echo
+            echo "\`${image}@${digest}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

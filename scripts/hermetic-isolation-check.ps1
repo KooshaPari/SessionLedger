@@ -39,6 +39,8 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $docPath = Join-Path $repoRoot "docs/ops/hermetic-builds.md"
 $builderPinPath = Join-Path $repoRoot "docs/ops/hermetic-builder.json"
 $hermeticWorkflow = Join-Path $repoRoot ".github/workflows/hermetic.yml"
+$builderContainerfile = Join-Path $repoRoot "ci/hermetic-builder/Containerfile"
+$builderWorkflow = Join-Path $repoRoot ".github/workflows/hermetic-builder.yml"
 $releaseWorkflow = Join-Path $repoRoot ".github/workflows/release.yml"
 $hermeticCheck = Join-Path $repoRoot "scripts/hermetic-check.ps1"
 $reproCheck = Join-Path $repoRoot "scripts/repro-check.ps1"
@@ -85,6 +87,8 @@ Assert-File -Path $isolationCheck -Label "hermetic isolation check script"
 Assert-File -Path $hermeticCheck -Label "hermetic offline check script"
 Assert-File -Path $builderPinPath -Label "hermetic builder pin"
 Assert-File -Path $hermeticWorkflow -Label "hermetic workflow"
+Assert-File -Path $builderContainerfile -Label "repository hermetic builder Containerfile"
+Assert-File -Path $builderWorkflow -Label "hermetic builder publish workflow"
 Assert-File -Path $reproCheck -Label "repro-check script"
 Assert-File -Path $ociVerify -Label "oci cosign verify script"
 Assert-File -Path $releaseWorkflow -Label "release workflow"
@@ -100,8 +104,12 @@ Test-DocContains -Doc $doc -Needle "-SelfCheck" `
     -Label "SelfCheck invocation"
 Test-DocContains -Doc $doc -Needle "Offline ``sl-daemon`` fetch+build" `
     -Label "offline sl-daemon gate row"
-Test-DocContains -Doc $doc -Needle "Digest-pinned builder image" `
+Test-DocContains -Doc $doc -Needle "Repository-maintained digest-pinned builder image" `
     -Label "builder pin gate row"
+Test-DocContains -Doc $doc -Needle "Repository-maintained builder image" `
+    -Label "repository builder section"
+Test-DocContains -Doc $doc -Needle "Git + CA roots" `
+    -Label "builder checkout prerequisites"
 Test-DocContains -Doc $doc -Needle "SOURCE_DATE_EPOCH" `
     -Label "SOURCE_DATE_EPOCH gate row"
 Test-DocContains -Doc $doc -Needle "Verify-on-deploy" `
@@ -120,7 +128,7 @@ Test-DocContains -Doc $doc -Needle "Isolation checklist SelfCheck" `
 # Done-gate evidence must stay marked done in the table.
 $doneNeedles = @(
     @{ Needle = "Offline ``sl-daemon`` fetch+build | **done**"; Label = "offline gate marked done" },
-    @{ Needle = "Digest-pinned builder image | **done**"; Label = "builder pin marked done" },
+    @{ Needle = "Repository-maintained digest-pinned builder image | **done**"; Label = "builder pin marked done" },
     @{ Needle = "``SOURCE_DATE_EPOCH`` release wiring | **done**"; Label = "SOURCE_DATE_EPOCH marked done" },
     @{ Needle = "GHCR build + keyless cosign + attest + release verify | **done**"; Label = "OCI release-blocking gate marked done" },
     @{ Needle = "Verify-on-deploy (cosign / attestation) | **done (deploy-time)**"; Label = "verify-on-deploy marked done" },
@@ -165,6 +173,27 @@ if ([string]::IsNullOrWhiteSpace($pin.msrv)) {
 if ([string]::IsNullOrWhiteSpace($pin.verify_command)) {
     throw "hermetic-builder.json missing verify_command."
 }
+[string[]]$requiredPinFields = @(
+    "builder_definition",
+    "builder_publish_workflow",
+    "upstream_rust_image",
+    "upstream_rust_image_digest"
+)
+foreach ($field in $requiredPinFields) {
+    if ([string]::IsNullOrWhiteSpace([string]$pin.$field)) {
+        throw "hermetic-builder.json missing $field."
+    }
+}
+if ($pin.builder_image -notmatch '^ghcr\.io/kooshapari/sessionledger-hermetic-builder$') {
+    throw "hermetic-builder.json must pin the repository-maintained GHCR builder image."
+}
+if ($pin.upstream_rust_image_digest -notmatch '^sha256:[0-9a-f]{64}$') {
+    throw "hermetic-builder.json upstream_rust_image_digest is not a sha256 digest."
+}
+[string[]]$requiredTools = @($pin.required_tools)
+if ($requiredTools -notcontains "git" -or $requiredTools -notcontains "ca-certificates") {
+    throw "hermetic-builder.json must declare git and ca-certificates as builder prerequisites."
+}
 [void](Write-Check -Label "builder pin JSON parses (MSRV=$($pin.msrv))" -Ok $true)
 
 $wf = Get-Content -LiteralPath $hermeticWorkflow -Raw
@@ -172,6 +201,32 @@ if ($wf -notmatch [regex]::Escape($pin.builder_image_digest)) {
     throw "hermetic.yml container image digest does not match hermetic-builder.json ($($pin.builder_image_digest))."
 }
 [void](Write-Check -Label "hermetic.yml pins matching builder digest" -Ok $true)
+
+if ($wf -notmatch [regex]::Escape($pin.builder_image)) {
+    throw "hermetic.yml does not use the repository-maintained builder image $($pin.builder_image)."
+}
+foreach ($needle in @("packages: read", "git --version", "ca-certificates.crt")) {
+    if (-not $wf.Contains($needle)) {
+        throw "hermetic.yml missing builder prerequisite proof: $needle"
+    }
+}
+[void](Write-Check -Label "hermetic.yml proves Git + CA-root checkout prerequisites" -Ok $true)
+
+$builderContainer = Get-Content -LiteralPath $builderContainerfile -Raw
+foreach ($needle in @($pin.upstream_rust_image_digest, "ca-certificates git", "git --version", "ca-certificates.crt")) {
+    if (-not $builderContainer.Contains($needle)) {
+        throw "repository builder Containerfile missing required provenance/prerequisite anchor: $needle"
+    }
+}
+[void](Write-Check -Label "repository builder pins Rust base and installs Git + CA roots" -Ok $true)
+
+$builderPublish = Get-Content -LiteralPath $builderWorkflow -Raw
+foreach ($needle in @("packages: write", "docker/build-push-action", "steps.build.outputs.digest", "ci/hermetic-builder/Containerfile")) {
+    if (-not $builderPublish.Contains($needle)) {
+        throw "hermetic builder publish workflow missing required anchor: $needle"
+    }
+}
+[void](Write-Check -Label "builder workflow publishes immutable GHCR digest" -Ok $true)
 
 if ($wf -notmatch 'hermetic-check\.ps1') {
     throw "hermetic.yml does not invoke scripts/hermetic-check.ps1."

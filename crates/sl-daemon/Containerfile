@@ -25,8 +25,8 @@ COPY . .
 
 # Build ONLY the daemon crate in isolation — never the bare workspace root,
 # because sl-viewer pulls webkit2gtk-sys which will not resolve here.
-RUN cargo build -p sl-daemon --release \
-    && strip target/release/sl-daemon
+RUN cargo build --manifest-path crates/sl-daemon/Cargo.toml --release --locked \
+    && strip crates/sl-daemon/target/release/sl-daemon
 
 # ---- runtime stage ------------------------------------------------------
 FROM debian:stable-slim AS runtime
@@ -45,7 +45,7 @@ RUN useradd --system --create-home --uid 10001 sl \
     && chown -R sl:sl /data
 USER sl
 
-COPY --from=build /src/target/release/sl-daemon /usr/local/bin/sl-daemon
+COPY --from=build /src/crates/sl-daemon/target/release/sl-daemon /usr/local/bin/sl-daemon
 
 EXPOSE 8080
 VOLUME ["/data/sessions", "/data/out"]

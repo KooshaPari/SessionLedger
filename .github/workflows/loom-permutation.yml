@@ -1,0 +1,44 @@
+# Blocking loom permutation checker for C00 L7 concurrency evidence.
+# Runs scripts/loom-permutation-check.ps1 + cargo test loom under RUSTFLAGS='--cfg loom'.
+# Soft loom-smoke.yml remains continue-on-error; this job gates merges.
+name: loom permutation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  loom-permutation-selfcheck:
+    name: loom permutation · SelfCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: loom permutation SelfCheck
+        shell: pwsh
+        run: ./scripts/loom-permutation-check.ps1 -SelfCheck
+
+  loom-permutation-suite:
+    name: loom permutation · cargo test loom
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          key: loom-permutation-cfg
+      - name: loom permutation suite (blocking)
+        env:
+          RUSTFLAGS: "--cfg loom"
+        run: cargo test loom --release --locked -- --test-threads=1

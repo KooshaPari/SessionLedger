@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "388/402",
-    "pct": 96,
+    "score": "389/402",
+    "pct": 97,
     "grade": "A",
-    "commit": "3e6fd5d",
-    "wave": "Wave-35"
+    "commit": "5bec516",
+    "wave": "Wave-36"
   },
   "fr": [
     {
@@ -842,12 +842,38 @@
         "audit/SCORECARD.md",
         "docs/ops/WBS.md"
       ]
+    },
+    {
+      "id": "WBS-8.52",
+      "status": "done",
+      "evidence": [
+        "adapters/typescript/okf_adapter.ts",
+        "scripts/loom-permutation-check.ps1",
+        ".github/workflows/loom-permutation.yml",
+        "tests/loom_permutation.rs",
+        "crates/sl-daemon/src/otel_metrics.rs",
+        "scripts/otlp-metrics-check.ps1",
+        "tests/otlp_metrics.rs",
+        "scripts/oci-cosign-verify.ps1",
+        "docs/ops/distribution.md",
+        "scripts/slsa-isolation-check.ps1",
+        "docs/ops/hermetic-builds.md",
+        ".github/workflows/hermetic.yml"
+      ]
+    },
+    {
+      "id": "WBS-8.53",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md",
+        "docs/ops/WBS.md"
+      ]
     }
   ],
   "clusters": [
     {
       "id": "C00",
-      "score": "28/30",
+      "score": "29/30",
       "status": "partial",
       "evidence": [
         "docs/api/openapi.yaml",
@@ -879,7 +905,10 @@
         "docs/ops/shuttle-soft.md",
         "scripts/shuttle-soft-check.ps1",
         "tests/shuttle_soft.rs",
-        ".github/workflows/shuttle-soft.yml"
+        ".github/workflows/shuttle-soft.yml",
+        "scripts/loom-permutation-check.ps1",
+        ".github/workflows/loom-permutation.yml",
+        "tests/loom_permutation.rs"
       ]
     },
     {
@@ -976,7 +1005,11 @@
         "docs/ops/alertmanager-soft.md",
         "packaging/alertmanager/alertmanager.yml.sample",
         "scripts/alertmanager-soft-check.ps1",
-        "tests/alertmanager_soft.rs"
+        "tests/alertmanager_soft.rs",
+        "crates/sl-daemon/src/otel_metrics.rs",
+        "scripts/otlp-metrics-check.ps1",
+        "tests/otlp_metrics.rs",
+        "docs/ops/otlp-metrics.md"
       ]
     },
     {
@@ -994,9 +1027,12 @@
         "docs/ops/distribution.md",
         "docs/adr/0006-no-mcp-server.md",
         "scripts/mcp-scope-check.ps1",
-        "tests/mcp_scope.rs"
+        "tests/mcp_scope.rs",
+        "scripts/slsa-isolation-check.ps1",
+        "docs/ops/hermetic-builds.md",
+        "packaging/README.md"
       ],
-      "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and unconditional release-blocking OCI attest"
+      "remaining": "Full reusable-workflow SLSA-L3 attestation, cross-host/Windows proof, and source-code provenance breadth (L59)"
     },
     {
       "id": "C07",
@@ -1042,7 +1078,8 @@
         "scripts/cross-language-parity-check.ps1",
         "tests/cross_language_parity.rs",
         "adapters/go/main.go",
-        "adapters/go/main_test.go"
+        "adapters/go/main_test.go",
+        "adapters/typescript/okf_adapter.ts"
       ]
     },
     {

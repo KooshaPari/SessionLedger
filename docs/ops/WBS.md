@@ -95,6 +95,8 @@ are not recomputed here.
 | WBS-8.49 | Wave-34 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 384/402 (95% A) |
 | WBS-8.50 | Wave-35 evidence packages (C05 soft http_soft profile push, C00 soft shuttle, C05 soft Alertmanager packaging, C08 Go OKF adapter, C06 MCP host N/A ADR) | done | machine | `docs/ops/continuous-profiling.md`; `scripts/continuous-profiling-agent.ps1`; `tests/continuous_profiling.rs`; `docs/ops/shuttle-soft.md`; `scripts/shuttle-soft-check.ps1`; `.github/workflows/shuttle-soft.yml`; `docs/ops/alertmanager-soft.md`; `packaging/alertmanager/alertmanager.yml.sample`; `scripts/alertmanager-soft-check.ps1`; `adapters/go/main.go`; `docs/adr/0006-no-mcp-server.md`; `scripts/mcp-scope-check.ps1` | C00, C05, C06, C08; PRs #289-#293 |
 | WBS-8.51 | Wave-35 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 388/402 (96% A) |
+| WBS-8.52 | Wave-36 evidence packages (C00 blocking loom permutation, C08 TypeScript OKF adapter, C05 OTLP metrics export, C06 unconditional OCI + partial SLSA L3) | done | machine | `scripts/loom-permutation-check.ps1`; `.github/workflows/loom-permutation.yml`; `adapters/typescript/okf_adapter.ts`; `crates/sl-daemon/src/otel_metrics.rs`; `scripts/otlp-metrics-check.ps1`; `scripts/oci-cosign-verify.ps1`; `scripts/slsa-isolation-check.ps1`; `docs/ops/hermetic-builds.md` | C00, C05, C06, C08; PRs #295-#299 |
+| WBS-8.53 | Wave-36 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 389/402 (97% A) |
 
 ## Organization-level control plane
 

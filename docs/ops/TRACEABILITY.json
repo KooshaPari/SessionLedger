@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "384/402",
-    "pct": 95,
+    "score": "388/402",
+    "pct": 96,
     "grade": "A",
-    "commit": "f1355a3",
-    "wave": "Wave-34"
+    "commit": "3e6fd5d",
+    "wave": "Wave-35"
   },
   "fr": [
     {
@@ -816,6 +816,32 @@
         "audit/SCORECARD.md",
         "docs/ops/WBS.md"
       ]
+    },
+    {
+      "id": "WBS-8.50",
+      "status": "done",
+      "evidence": [
+        "docs/ops/continuous-profiling.md",
+        "scripts/continuous-profiling-agent.ps1",
+        "tests/continuous_profiling.rs",
+        "docs/ops/shuttle-soft.md",
+        "scripts/shuttle-soft-check.ps1",
+        ".github/workflows/shuttle-soft.yml",
+        "docs/ops/alertmanager-soft.md",
+        "packaging/alertmanager/alertmanager.yml.sample",
+        "scripts/alertmanager-soft-check.ps1",
+        "adapters/go/main.go",
+        "docs/adr/0006-no-mcp-server.md",
+        "scripts/mcp-scope-check.ps1"
+      ]
+    },
+    {
+      "id": "WBS-8.51",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md",
+        "docs/ops/WBS.md"
+      ]
     }
   ],
   "clusters": [
@@ -849,7 +875,11 @@
         ".github/workflows/race-smoke.yml",
         "tests/loom_model.rs",
         ".github/workflows/loom-smoke.yml",
-        "scripts/loom-smoke-check.ps1"
+        "scripts/loom-smoke-check.ps1",
+        "docs/ops/shuttle-soft.md",
+        "scripts/shuttle-soft-check.ps1",
+        "tests/shuttle_soft.rs",
+        ".github/workflows/shuttle-soft.yml"
       ]
     },
     {
@@ -926,8 +956,8 @@
     },
     {
       "id": "C05",
-      "score": "29/30",
-      "status": "partial",
+      "score": "30/30",
+      "status": "done",
       "evidence": [
         "crates/sl-daemon/src/metrics.rs",
         "crates/sl-daemon/src/http.rs",
@@ -941,12 +971,17 @@
         "scripts/pprof-smoke.ps1",
         "docs/ops/continuous-profiling.md",
         "scripts/continuous-profiling-agent.ps1",
-        ".github/workflows/ops-load.yml"
+        "tests/continuous_profiling.rs",
+        ".github/workflows/ops-load.yml",
+        "docs/ops/alertmanager-soft.md",
+        "packaging/alertmanager/alertmanager.yml.sample",
+        "scripts/alertmanager-soft-check.ps1",
+        "tests/alertmanager_soft.rs"
       ]
     },
     {
       "id": "C06",
-      "score": "26/30",
+      "score": "29/30",
       "status": "partial",
       "evidence": [
         "scripts/provenance-contract-check.ps1",
@@ -956,7 +991,10 @@
         "docs/ops/reproducible-builds.md",
         "scripts/repro-check.ps1",
         "scripts/oci-cosign-verify.ps1",
-        "docs/ops/distribution.md"
+        "docs/ops/distribution.md",
+        "docs/adr/0006-no-mcp-server.md",
+        "scripts/mcp-scope-check.ps1",
+        "tests/mcp_scope.rs"
       ],
       "remaining": "SLSA-L3 environment isolation, cross-host/Windows proof, and unconditional release-blocking OCI attest"
     },
@@ -1002,7 +1040,9 @@
         "scripts/bench-gate.ps1",
         "docs/ops/cross-language-parity.md",
         "scripts/cross-language-parity-check.ps1",
-        "tests/cross_language_parity.rs"
+        "tests/cross_language_parity.rs",
+        "adapters/go/main.go",
+        "adapters/go/main_test.go"
       ]
     },
     {

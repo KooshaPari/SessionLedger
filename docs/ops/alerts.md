@@ -3,7 +3,9 @@
 **Status:** PromQL examples and routing evidence for shipped RED metrics.
 Alertmanager paging is **not** enabled by this repository — operators replace
 the webhook placeholder in [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml)
-before production use.
+before production use. Soft packaging sample (loopback placeholder, no secrets):
+[`alertmanager.yml.sample`](../../packaging/alertmanager/alertmanager.yml.sample)
+— see [`alertmanager-soft.md`](alertmanager-soft.md).
 
 Canonical severity + promotion table:
 [`observability.md`](observability.md#alert-stubs). Operator triage:

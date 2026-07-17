@@ -29,7 +29,9 @@ Scheduled evidence:
 Prometheus SLO alert rules live in
 [`alerts/sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) and are meant
 to be loaded with Prometheus `rule_files`. The Alertmanager routing placeholder
-lives in [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml).
+lives in [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml). Soft packaging
+evidence (local placeholder only; live webhook unpaid):
+[`alertmanager-soft.md`](alertmanager-soft.md).
 
 ### `/healthz` vs `/readyz`
 

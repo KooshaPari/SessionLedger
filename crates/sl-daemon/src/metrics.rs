@@ -136,6 +136,7 @@ impl HttpMetrics {
             }
         }
 
+        append_process_use_gauges(&mut out);
         out
     }
 
@@ -158,6 +159,81 @@ impl HttpMetrics {
              sl_http_request_duration_seconds_count{{route=\"{route}\"}} {completed}"
         );
     }
+}
+
+/// Append best-effort process USE gauges to a Prometheus text snapshot.
+fn append_process_use_gauges(out: &mut String) {
+    let cpu_seconds = process_cpu_seconds_total();
+    let rss_bytes = process_resident_memory_bytes();
+    let open_fds = process_open_fds();
+    let _ = write!(
+        out,
+        "# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.\n\
+         # TYPE process_cpu_seconds_total counter\n\
+         process_cpu_seconds_total {cpu_seconds:.6}\n\
+         # HELP process_resident_memory_bytes Resident memory size in bytes.\n\
+         # TYPE process_resident_memory_bytes gauge\n\
+         process_resident_memory_bytes {rss_bytes}\n\
+         # HELP process_open_fds Number of open file descriptors.\n\
+         # TYPE process_open_fds gauge\n\
+         process_open_fds {open_fds}\n"
+    );
+}
+
+fn process_cpu_seconds_total() -> f64 {
+    #[cfg(target_os = "linux")]
+    if let Some(seconds) = linux_cpu_seconds_total() {
+        return seconds;
+    }
+    // Windows/macOS: no /proc/self reader yet; stub 0 until platform APIs land.
+    0.0
+}
+
+fn process_resident_memory_bytes() -> u64 {
+    #[cfg(target_os = "linux")]
+    if let Some(bytes) = linux_resident_memory_bytes() {
+        return bytes;
+    }
+    // Windows/macOS: no /proc/self reader yet; stub 0 until platform APIs land.
+    0
+}
+
+fn process_open_fds() -> u64 {
+    #[cfg(target_os = "linux")]
+    if let Some(count) = linux_open_fds() {
+        return count;
+    }
+    // Windows/macOS: no /proc/self reader yet; stub 0 until platform APIs land.
+    0
+}
+
+#[cfg(target_os = "linux")]
+fn linux_cpu_seconds_total() -> Option<f64> {
+    let stat = std::fs::read_to_string("/proc/self/stat").ok()?;
+    let rest = stat.rsplit(')').next()?.trim();
+    let fields: Vec<&str> = rest.split_whitespace().collect();
+    let utime: u64 = fields.get(11)?.parse().ok()?;
+    let stime: u64 = fields.get(12)?.parse().ok()?;
+    // Linux reports jiffies; CLK_TCK is typically 100 on supported targets.
+    Some((utime + stime) as f64 / 100.0)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_resident_memory_bytes() -> Option<u64> {
+    let status = std::fs::read_to_string("/proc/self/status").ok()?;
+    for line in status.lines() {
+        if let Some(kb) = line.strip_prefix("VmRSS:").map(str::trim) {
+            let kb: u64 = kb.split_whitespace().next()?.parse().ok()?;
+            return Some(kb.saturating_mul(1024));
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "linux")]
+fn linux_open_fds() -> Option<u64> {
+    let count = std::fs::read_dir("/proc/self/fd").ok()?.count();
+    Some(count as u64)
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -311,5 +387,15 @@ mod tests {
         assert!(text
             .contains("sl_http_request_duration_seconds_bucket{route=\"healthz\",le=\"0.025\"} 1"));
         assert!(text.contains("sl_http_request_duration_seconds_count{route=\"healthz\"} 1"));
+    }
+
+    #[test]
+    fn prometheus_snapshot_contains_process_use_gauges() {
+        let metrics = HttpMetrics::default();
+        let text = metrics.render_prometheus();
+        assert!(text.contains("process_resident_memory_bytes"));
+        assert!(text.contains("# TYPE process_resident_memory_bytes gauge"));
+        assert!(text.contains("process_cpu_seconds_total"));
+        assert!(text.contains("process_open_fds"));
     }
 }

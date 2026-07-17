@@ -96,6 +96,9 @@ evidence lives in the [environment isolation checklist](hermetic-builds.md#envir
   anchors, digest-pinned builder wiring, and the isolated container rebuild job
   in `.github/workflows/hermetic.yml` (single pinned GHCR image — not
   two-independent-builder proof).
+- `scripts/reusable-provenance-check.ps1 -SelfCheck` machine-verifies the in-repo
+  reusable hermetic build workflow caller SHA pin and `builder_image_digest`
+  input contract ([`reusable-hermetic-pin.md`](reusable-hermetic-pin.md)).
 - `scripts/repro-check.ps1 -PolicyOnly` also asserts the isolation doc anchors
   and container rebuild wiring alongside `SOURCE_DATE_EPOCH` release policy.
 
@@ -131,8 +134,10 @@ require GitHub build provenance that binds each published archive **subject**
 (name + SHA-256 digest) to **materials** describing the source inputs GitHub
 Actions consumed (notably the tagged repository checkout). This is partial
 material-metadata evidence: it documents what was built and from which commit, but
-it does not prove hermetic isolation, reusable-workflow signing, or complete
-dependency closure.
+it does not prove hermetic isolation, full reusable-workflow SLSA signing, or
+complete dependency closure. Partial in-repo reusable-workflow caller evidence
+is tracked in [`reusable-hermetic-pin.md`](reusable-hermetic-pin.md) and checked
+by `scripts/reusable-provenance-check.ps1 -SelfCheck`.
 
 ### Contract and fixture
 
@@ -166,11 +171,13 @@ Cross-check `session-ledger.cdx.json` when you need component-level dependency
 metadata; the CycloneDX SBOM complements but does not replace provenance
 materials on the archive subject.
 
-Remaining gaps toward full SLSA-L3 include reusable-workflow provenance,
-protected release Environments, two-independent-builder rebuilds, and mandatory
-SBOM-to-subject attestations for every matrix artifact. Partial environment
-isolation evidence is tracked in
+Remaining gaps toward full SLSA-L3 include full reusable-workflow SLSA signing
+and attestation breadth, protected release Environments, two-independent-builder
+rebuilds, and mandatory SBOM-to-subject attestations for every matrix artifact.
+Partial environment isolation and caller-pin evidence is tracked in
 [`hermetic-builds.md` § Environment isolation](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps)
-and checked by `scripts/slsa-isolation-check.ps1 -SelfCheck`. Platform
-code-signing remains deferred per
+(`scripts/slsa-isolation-check.ps1 -SelfCheck`) and
+[`reusable-hermetic-pin.md`](reusable-hermetic-pin.md)
+(`scripts/reusable-provenance-check.ps1 -SelfCheck`). Platform code-signing
+remains deferred per
 [`0003-platform-code-signing.md`](../adr/0003-platform-code-signing.md).

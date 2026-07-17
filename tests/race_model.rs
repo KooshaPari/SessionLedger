@@ -8,7 +8,9 @@
 //!
 //! Soft loom smoke for a tiny cancel/capacity model lives in
 //! `tests/loom_model.rs` (`RUSTFLAGS='--cfg loom'`, `.github/workflows/loom-smoke.yml`).
-//! Full loom / shuttle coverage of this `sync_channel` model remains unpaid.
+//! Loom permutation checkers add `bounded_try_send_respects_capacity` and related
+//! models under `.github/workflows/loom-permutation.yml`; full tokio daemon ports
+//! of this `sync_channel` graph remain unpaid.
 //! See `docs/ops/concurrency-safety.md`.
 
 use std::collections::HashSet;

@@ -21,12 +21,14 @@ those checkers, not a claim of unsafe coverage.
 |----------|------|
 | [`tests/race_smoke.rs`](../../tests/race_smoke.rs) | Threaded merge + OKF determinism across shuffled inputs |
 | [`tests/race_model.rs`](../../tests/race_model.rs) | Bounded `sync_channel` + cancel flag model of watcher `scan_once` |
-| [`tests/loom_model.rs`](../../tests/loom_model.rs) | Tiny loom cancel/capacity model (`cfg(loom)` only) |
+| [`tests/loom_model.rs`](../../tests/loom_model.rs) | Loom permutation models: cancel/capacity, bounded `try_send`, broadcast epoch, watcher pipeline (`cfg(loom)` only) |
 | [`tests/loom_soft.rs`](../../tests/loom_soft.rs) | Hermetic SelfCheck for soft loom docs/workflow anchors |
+| [`tests/loom_permutation.rs`](../../tests/loom_permutation.rs) | Hermetic SelfCheck for loom permutation docs/workflow anchors |
 | [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Hermetic SelfCheck for soft shuttle docs/workflow anchors |
 | [`.github/workflows/race-smoke.yml`](../../.github/workflows/race-smoke.yml) | Both race tests, 3 OS × 3 repeats, `--test-threads=1` |
 | [`.github/workflows/miri-smoke.yml`](../../.github/workflows/miri-smoke.yml) | Soft nightly / dispatch: `cargo miri test --test race_model` (`continue-on-error`) |
 | [`.github/workflows/loom-smoke.yml`](../../.github/workflows/loom-smoke.yml) | Soft SelfCheck + `RUSTFLAGS='--cfg loom'` `loom_model` (`continue-on-error`) |
+| [`.github/workflows/loom-permutation.yml`](../../.github/workflows/loom-permutation.yml) | Blocking permutation SelfCheck + `cargo test loom` under `RUSTFLAGS='--cfg loom'` |
 | [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft hermetic shuttle SelfCheck only (`continue-on-error`) |
 
 The model uses `try_send` (never blocks) and an `AtomicBool` cancel bit so
@@ -59,10 +61,34 @@ skip marker so the harness stays discoverable without special flags.
 | Soft loom SelfCheck | **done** | `scripts/loom-smoke-check.ps1 -SelfCheck` (+ `tests/loom_soft.rs`) |
 | Soft loom `loom_model` CI | **done** | `.github/workflows/loom-smoke.yml` (`continue-on-error`) |
 | Soft shuttle SelfCheck | **done** | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`); [`shuttle-soft.md`](shuttle-soft.md) |
-| Full loom / shuttle permutation checkers | **unpaid** | Broad broadcast/SSE/daemon graph still outside soft smoke |
+| Full loom / shuttle permutation checkers | **unpaid** | Tokio broadcast + live daemon graph still outside loom models |
 
 Schedule: nightly UTC + `pull_request` + `workflow_dispatch`. Soft failures do
 not gate merges.
+
+### Loom permutation checkers
+
+`loom-permutation.yml` is **blocking** on `pull_request`. It:
+
+1. Runs `scripts/loom-permutation-check.ps1 -SelfCheck` (docs/workflow/cfg anchors).
+2. Runs `cargo test loom --release` with `RUSTFLAGS='--cfg loom'`.
+
+`tests/loom_model.rs` expands the soft cancel/capacity smoke with loom-native
+permutations for `race_model`'s bounded `try_send` (`bounded_try_send_respects_capacity`),
+SSE broadcast epoch fan-out (`broadcast_epoch_fans_out_to_subscribers`), and the
+watcher bounded-queue → broadcast pipeline (`watcher_pipeline_bounded_enqueue_under_cancel`).
+These are conservation / capacity models — not a full port of
+`crates/sl-daemon` tokio `broadcast` / `mpsc` graph.
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| Loom permutation SelfCheck | **done** | `scripts/loom-permutation-check.ps1 -SelfCheck` (+ `tests/loom_permutation.rs`) |
+| Loom permutation suite CI | **done** | `.github/workflows/loom-permutation.yml` (blocking on PR) |
+| Full tokio broadcast / daemon graph under loom | **unpaid** | Real `sl-daemon` watcher/SSE graph still outside loom permutation suite |
+| Full loom / shuttle permutation checkers | **unpaid** | Shuttle crate + live daemon ports still outside soft smoke |
+
+Soft `loom-smoke.yml` remains `continue-on-error` for nightly signal; blocking
+permutation evidence lives in `loom-permutation.yml`.
 
 ### Soft shuttle
 
@@ -111,6 +137,20 @@ Soft loom permutation smoke (pulls loom under `--cfg loom` only):
 $env:CARGO_TARGET_DIR = Join-Path $PWD "target-w31-c00-loom"
 $env:RUSTFLAGS = "--cfg loom"
 cargo test --test loom_model --release --locked -- --test-threads=1
+```
+
+Loom permutation SelfCheck (no loom download):
+
+```powershell
+pwsh ./scripts/loom-permutation-check.ps1 -SelfCheck
+```
+
+Blocking loom permutation suite (all `loom*` integration tests + cfg-gated models):
+
+```powershell
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w36-c00-loom"
+$env:RUSTFLAGS = "--cfg loom"
+cargo test loom --release --locked -- --test-threads=1
 ```
 
 Soft shuttle SelfCheck (hermetic; no shuttle crate):

@@ -16,6 +16,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Soft shuttle SelfCheck evidence (C00 L7): `docs/ops/shuttle-soft.md`, `scripts/shuttle-soft-check.ps1 -SelfCheck`, `tests/shuttle_soft.rs` (full shuttle permutation coverage remains unpaid).
 
+- Loom permutation checkers (C00 L7): expanded `tests/loom_model.rs` (bounded `try_send`, broadcast epoch, watcher pipeline), `scripts/loom-permutation-check.ps1 -SelfCheck`, blocking `.github/workflows/loom-permutation.yml` (full tokio broadcast / daemon graph remains unpaid).
+
 - Soft continuous-profiling HTTP push (`push_backend: http_soft` + optional `SL_PROFILE_PUSH_URL`; DryRun / continue-on-error) (C05 L45).
 
 - OTLP metrics export (`otel-metrics` + `SL_OTLP_METRICS_ENDPOINT` / `OTEL_EXPORTER_OTLP_ENDPOINT`; MetricExporter + SdkMeterProvider; RED bridge unpaid) (C05 L43).

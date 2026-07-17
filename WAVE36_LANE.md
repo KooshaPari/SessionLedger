@@ -1,45 +1,41 @@
-# Wave-36 lane: w36-loom — C00 L7 full loom permutation checkers
+# Wave-36 lane: w36-oci-uncond — C06 L56 unconditional release-blocking OCI
 
-**Branch:** `feat/sl-w36-loom`  
-**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w36-loom`  
-**Cluster / pillar:** C00 L7 (concurrency safety)  
+**Branch:** `feat/sl-w36-oci-uncond`  
+**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w36-oci-uncond`  
+**Cluster / pillar:** C06 L56 (OCI cosign verify on release)  
 **Status:** scoped — implementation deferred  
-**Wave-35 overlap:** none (`w35-shuttle` covers shuttle soft smoke only)
+**Wave-35 overlap:** none (#293 MCP N/A is C06 L57)
 
 ## Gap (audit-v38)
 
-SCORECARD headline: *full loom/shuttle/miri* remain unpaid. Wave-31 landed soft
-loom smoke (`continue-on-error`); Wave-35 #290 lands shuttle soft SelfCheck.
-**Full loom permutation checkers** for broadcast/SSE/daemon graph remain.
+Wave-29 #246 made OCI cosign verify **release-blocking when GHCR/OIDC credentials
+are present**. SCORECARD: *unconditional release-blocking OCI* on all canonical
+releases remains unpaid (credential-absent matrix still best-effort).
 
 ## Acceptance criteria
 
-1. Expand `tests/loom_model.rs` (or sibling) with permutation coverage beyond
-   the current `sync_channel` capacity model.
-2. Add `scripts/loom-permutation-check.ps1 -SelfCheck` documenting unpaid vs
-   done rows in `docs/ops/concurrency-safety.md`.
-3. Promote `.github/workflows/loom-smoke.yml` toward blocking **or** add a new
-   `loom-permutation.yml` job that runs `cargo test --cfg loom` permutation suite.
-4. `tests/loom_model.rs` / rust wrapper proves hermetic doc anchors.
-5. **Do not edit** `audit/SCORECARD.md` in this PR.
+1. `.github/workflows/release.yml` — require `oci-cosign-verify` (or inline
+   equivalent) on every canonical tag release path, with documented
+   `continue-on-error: false` policy.
+2. `docs/ops/distribution.md` — unconditional vs credential-gated matrix.
+3. `scripts/oci-cosign-verify.ps1 -SelfCheck` — policy anchors + dry-run paths.
+4. `packaging/README.md` cross-link if operator flow changes.
+5. **Do not edit** `audit/SCORECARD.md`.
 
 ## Files to touch (exclusive)
 
-- `tests/loom_model.rs`, `tests/race_model.rs` (read-only cross-link only)
-- `scripts/loom-smoke-check.ps1`, new `scripts/loom-permutation-check.ps1`
-- `docs/ops/concurrency-safety.md`
-- `.github/workflows/loom-smoke.yml` (or new workflow)
-- `CHANGELOG.md` (Unreleased)
+- `.github/workflows/release.yml`
+- `docs/ops/distribution.md`, `packaging/README.md`, `packaging/channels.md`
+- `scripts/oci-cosign-verify.ps1`
+- `CHANGELOG.md`
 
 ## Verify
 
 ```powershell
-$env:CARGO_TARGET_DIR = "C:\Users\koosh\SessionLedger-wtrees\w36-loom\target-w36-loom"
-pwsh ./scripts/loom-permutation-check.ps1 -SelfCheck
-cargo test loom
+pwsh ./scripts/oci-cosign-verify.ps1 -SelfCheck
+# Review release.yml policy-only diff; full cosign needs GHCR creds
 ```
 
 ## Score expectation
 
-Conservative: evidence toward L7; score held until blocking permutation CI
-lands (per Wave-31/Wave-35 soft-gate precedent).
+L56 already pillar max; closes operational gap toward unconditional blocking.

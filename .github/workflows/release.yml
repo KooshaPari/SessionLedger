@@ -11,9 +11,10 @@
 # Authenticode and Apple notarization stay out of scope per ADR 0003.
 # Release checksums are signed with cosign keyless signing on a best-effort
 # basis. The sl-daemon OCI image (crates/sl-daemon/Containerfile → GHCR) is
-# built, keyless-cosign-signed, attested, and release-verified on the canonical
-# KooshaPari/SessionLedger repository (blocking when GHCR/OIDC credentials are
-# present). Forks skip OCI with an explicit reason. Deploy-time verify-on-deploy
+# built, keyless-cosign-signed, attested, and release-verified unconditionally on
+# every canonical KooshaPari/SessionLedger `v*` tag (blocking;
+# continue-on-error: false). Forks credential-gate OCI with an explicit skip
+# reason. Deploy-time verify-on-deploy
 # also lives in scripts/oci-cosign-verify.ps1 (fails closed when a signature is
 # expected).
 # Release assets receive blocking GitHub build provenance in the canonical
@@ -502,10 +503,10 @@ jobs:
             is required for canonical KooshaPari/SessionLedger releases and can be
             verified with `gh attestation`.
 
-            CI builds and pushes `ghcr.io/kooshapari/sl-daemon` from
-            `crates/sl-daemon/Containerfile`, then keyless-cosign signs,
-            attests, and verifies the image digest on the canonical repository.
-            Forks skip OCI; portable archives remain valid when OCI is skipped.
+            CI unconditionally builds, pushes, keyless-cosign signs, attests,
+            and blocking-verifies `ghcr.io/kooshapari/sl-daemon` on every
+            canonical `v*` tag (`continue-on-error: false`). Forks credential-gate
+            OCI; portable archives remain valid when OCI is skipped.
 
             See [`docs/ops/distribution.md`](https://github.com/KooshaPari/SessionLedger/blob/main/docs/ops/distribution.md).
           draft: false
@@ -656,9 +657,12 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-      - name: verify OCI image (cosign + attestation)
+      # Policy: continue-on-error: false (default). Canonical tag releases require
+      # oci-cosign-verify before the Release job publishes assets.
+      - name: oci-cosign-verify (blocking)
         id: verify
         if: steps.oci_gate.outputs.required == 'true'
+        continue-on-error: false
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -673,12 +677,12 @@ jobs:
         run: |
           if [ "${{ steps.oci_gate.outputs.required }}" != "true" ]; then
             echo "::notice::OCI image build/sign/verify skipped: ${{ steps.oci_gate.outputs.skip_reason }}"
-            echo "### OCI cosign: skipped (no release credentials)" >> "$GITHUB_STEP_SUMMARY"
+            echo "### OCI cosign: skipped (credential-gated fork)" >> "$GITHUB_STEP_SUMMARY"
             echo "${{ steps.oci_gate.outputs.skip_reason }}" >> "$GITHUB_STEP_SUMMARY"
-            echo "Portable Release archives remain valid. Deploy gate: \`scripts/oci-cosign-verify.ps1\` when a digest was published on a prior canonical release." >> "$GITHUB_STEP_SUMMARY"
+            echo "Portable Release archives remain valid. Canonical releases require unconditional blocking verify; deploy gate: \`scripts/oci-cosign-verify.ps1\` when a digest was published on a prior canonical release." >> "$GITHUB_STEP_SUMMARY"
           elif [ "${{ steps.verify.outcome }}" = "success" ]; then
             echo "::notice::Published and verified keyless cosign + attestation for ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}."
-            echo "### OCI cosign: published + verified (blocking)" >> "$GITHUB_STEP_SUMMARY"
+            echo "### OCI cosign: published + verified (unconditional blocking)" >> "$GITHUB_STEP_SUMMARY"
             echo "Digest: \`${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
             echo "Verify-on-deploy: \`pwsh ./scripts/oci-cosign-verify.ps1 -Tag ${{ github.ref_name }} -Digest ${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
           else

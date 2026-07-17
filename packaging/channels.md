@@ -79,8 +79,10 @@ sl-viewer-<tag>-x86_64-pc-windows-msvc.zip
 ```
 
 Each Release also publishes `SHA256SUMS`, `session-ledger.cdx.json`, and a
-best-effort `SHA256SUMS.sigstore.json`. On the same tag, CI best-effort pushes
-`ghcr.io/kooshapari/sl-daemon` and keyless-cosign signs it. Verify archives with
+best-effort `SHA256SUMS.sigstore.json`. On the same tag, canonical CI
+unconditionally builds/pushes `ghcr.io/kooshapari/sl-daemon`, keyless-cosign
+signs it, and blocking-verifies with `oci-cosign-verify` (`continue-on-error:
+false`); forks credential-gate OCI. Verify archives with
 the checksum / cosign flow in
 [`docs/ops/distribution.md`](../docs/ops/distribution.md); for OCI deploy checks
 run [`scripts/oci-cosign-verify.ps1`](../scripts/oci-cosign-verify.ps1).

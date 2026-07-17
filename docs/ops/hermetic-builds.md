@@ -31,6 +31,24 @@ recorded in [`hermetic-builder.json`](hermetic-builder.json). The GHCR manifest
 digest must match the `container.image` reference in the workflow; never replace
 it with a mutable tag.
 
+## Reusable hermetic build workflow
+
+The isolated container offline rebuild is extracted into
+[`.github/workflows/reusable-hermetic-build.yml`](../../.github/workflows/reusable-hermetic-build.yml).
+The caller [`.github/workflows/hermetic.yml`](../../.github/workflows/hermetic.yml)
+invokes it via `workflow_call` with a **full commit SHA** pin and a
+`builder_image_digest` input that must match [`hermetic-builder.json`](hermetic-builder.json).
+See [`reusable-hermetic-pin.md`](reusable-hermetic-pin.md) for the bump procedure.
+
+Machine-verify the caller provenance contract (no cargo, no network):
+
+```powershell
+pwsh ./scripts/reusable-provenance-check.ps1 -SelfCheck
+```
+
+This is partial reusable-workflow provenance evidence (C06 L53), not SLSA Build
+Level 3 signing for nested workflow calls.
+
 ## Repository-maintained builder image
 
 `ci/hermetic-builder/Containerfile` starts from an exact `rust:1.87-slim`
@@ -99,7 +117,8 @@ same SelfCheck from `hermetic.yml` (`continue-on-error: true`). The legacy
 | `SOURCE_DATE_EPOCH` release wiring | **done** | `repro-check.ps1 -PolicyOnly` |
 | GHCR build + keyless cosign + attest + release verify | **done** | `release.yml` `oci-image` (blocking on canonical repo; explicit skip on forks) |
 | Verify-on-deploy (cosign / attestation) | **done (deploy-time)** | `scripts/oci-cosign-verify.ps1` + [distribution.md](distribution.md#verify-an-oci-image-cosign) |
-| Isolated container rebuild evidence | **done** | `hermetic.yml` `sl-daemon-offline-container` (digest-pinned GHCR image; **single builder** — not two-independent-builder L3) |
+| Isolated container rebuild evidence | **done** | `reusable-hermetic-build.yml` + `hermetic.yml` `sl-daemon-offline-container` caller (digest-pinned GHCR image; **single builder** — not two-independent-builder L3) |
+| Reusable-workflow caller SHA pin | **done** | `reusable-hermetic-build.yml` + [`reusable-hermetic-pin.md`](reusable-hermetic-pin.md) + `scripts/reusable-provenance-check.ps1 -SelfCheck` |
 | Protected GitHub Environment for releases | unpaid | Create `release` (or similar) Environment with required reviewers; bind `oci-image` / publish jobs with `environment:` |
 | Immutable / ephemeral runners for release | unpaid | Pin self-hosted or hardened runners; avoid mutable `ubuntu-latest` as sole L3 claim |
 | Vendored deps + two-builder rebuild | unpaid | Vendor or remote-cache proof; rebuild on a second independent builder |

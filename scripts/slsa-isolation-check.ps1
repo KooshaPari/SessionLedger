@@ -40,6 +40,8 @@ $docPath = Join-Path $repoRoot "docs/ops/hermetic-builds.md"
 $reproDocPath = Join-Path $repoRoot "docs/ops/reproducible-builds.md"
 $builderPinPath = Join-Path $repoRoot "docs/ops/hermetic-builder.json"
 $hermeticWorkflow = Join-Path $repoRoot ".github/workflows/hermetic.yml"
+$reusableHermeticWorkflow = Join-Path $repoRoot ".github/workflows/reusable-hermetic-build.yml"
+$reusableProvenanceCheck = Join-Path $repoRoot "scripts/reusable-provenance-check.ps1"
 $builderContainerfile = Join-Path $repoRoot "ci/hermetic-builder/Containerfile"
 $builderWorkflow = Join-Path $repoRoot ".github/workflows/hermetic-builder.yml"
 $releaseWorkflow = Join-Path $repoRoot ".github/workflows/release.yml"
@@ -89,6 +91,8 @@ Assert-File -Path $isolationCheck -Label "SLSA isolation check script"
 Assert-File -Path $hermeticCheck -Label "hermetic offline check script"
 Assert-File -Path $builderPinPath -Label "hermetic builder pin"
 Assert-File -Path $hermeticWorkflow -Label "hermetic workflow"
+Assert-File -Path $reusableHermeticWorkflow -Label "reusable hermetic build workflow"
+Assert-File -Path $reusableProvenanceCheck -Label "reusable provenance check script"
 Assert-File -Path $builderContainerfile -Label "repository hermetic builder Containerfile"
 Assert-File -Path $builderWorkflow -Label "hermetic builder publish workflow"
 Assert-File -Path $reproCheck -Label "repro-check script"
@@ -212,28 +216,36 @@ if ($requiredTools -notcontains "git" -or $requiredTools -notcontains "ca-certif
 [void](Write-Check -Label "builder pin JSON parses (MSRV=$($pin.msrv))" -Ok $true)
 
 $wf = Get-Content -LiteralPath $hermeticWorkflow -Raw
-if ($wf -notmatch [regex]::Escape($pin.builder_image_digest)) {
-    throw "hermetic.yml container image digest does not match hermetic-builder.json ($($pin.builder_image_digest))."
+$reusableWf = Get-Content -LiteralPath $reusableHermeticWorkflow -Raw
+$digestInHermetic = $wf -match [regex]::Escape($pin.builder_image_digest)
+$digestInReusable = $reusableWf -match [regex]::Escape($pin.builder_image_digest)
+if (-not $digestInHermetic -and -not $digestInReusable) {
+    throw "hermetic caller or reusable-hermetic-build.yml must reference builder digest $($pin.builder_image_digest)."
 }
-[void](Write-Check -Label "hermetic.yml pins matching builder digest" -Ok $true)
+[void](Write-Check -Label "hermetic/reusable workflow pins matching builder digest" -Ok $true)
 
 if ($wf -notmatch [regex]::Escape($pin.builder_image)) {
-    throw "hermetic.yml does not use the repository-maintained builder image $($pin.builder_image)."
-}
-foreach ($needle in @("packages: read", "git --version", "ca-certificates.crt")) {
-    if (-not $wf.Contains($needle)) {
-        throw "hermetic.yml missing builder prerequisite proof: $needle"
+    if ($reusableWf -notmatch [regex]::Escape($pin.builder_image)) {
+        throw "hermetic or reusable workflow must use the repository-maintained builder image $($pin.builder_image)."
     }
 }
-[void](Write-Check -Label "hermetic.yml proves Git + CA-root checkout prerequisites" -Ok $true)
+foreach ($needle in @("packages: read", "git --version", "ca-certificates.crt")) {
+    if (-not $wf.Contains($needle) -and -not $reusableWf.Contains($needle)) {
+        throw "hermetic or reusable workflow missing builder prerequisite proof: $needle"
+    }
+}
+[void](Write-Check -Label "hermetic/reusable workflow proves Git + CA-root checkout prerequisites" -Ok $true)
 
 if ($wf -notmatch 'sl-daemon-offline-container') {
-    throw "hermetic.yml missing isolated container rebuild job (sl-daemon-offline-container)."
+    throw "hermetic.yml missing isolated container rebuild caller job (sl-daemon-offline-container)."
 }
-if ($wf -notmatch 'cargo build --locked --offline') {
-    throw "hermetic.yml container job must run locked offline cargo build."
+$inlineOffline = $wf -match 'cargo build --locked --offline'
+$reusableCaller = $wf -match 'reusable-hermetic-build\.yml'
+$reusableOffline = $reusableWf -match 'cargo build --locked --offline'
+if (-not $inlineOffline -and -not ($reusableCaller -and $reusableOffline)) {
+    throw "hermetic.yml or reusable-hermetic-build.yml must run locked offline cargo build."
 }
-[void](Write-Check -Label "hermetic.yml isolated container rebuild evidence job" -Ok $true)
+[void](Write-Check -Label "isolated container rebuild evidence (inline or reusable caller)" -Ok $true)
 
 if ($wf -notmatch 'slsa-isolation-check\.ps1') {
     throw "hermetic.yml must run scripts/slsa-isolation-check.ps1 -SelfCheck."

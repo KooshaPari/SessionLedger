@@ -56,36 +56,22 @@ jobs:
         shell: pwsh
         run: ./scripts/hermetic-check.ps1
 
-  sl-daemon-offline-container:
-    name: sl-daemon · repository builder image offline build
+  # Soft C06 L53 reusable-workflow provenance — caller SHA pin + digest input
+  # (non-blocking). See docs/ops/reusable-hermetic-pin.md.
+  reusable-provenance-checklist:
+    name: hermetic · reusable workflow provenance (soft)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-    container:
-      image: ghcr.io/kooshapari/sessionledger-hermetic-builder@sha256:fe71c757a13cb864e5f15f4a1384f63129b15bcd037bc44b46a056c814ca4cb7
+    continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - name: prove builder checkout prerequisites
-        shell: bash
-        run: |
-          set -euo pipefail
-          git --version
-          test -f /etc/ssl/certs/ca-certificates.crt
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git rev-parse --is-inside-work-tree | grep -qx true
-      - name: verify builder pin file matches container digest
-        shell: bash
-        run: |
-          set -euo pipefail
-          expected='sha256:fe71c757a13cb864e5f15f4a1384f63129b15bcd037bc44b46a056c814ca4cb7'
-          actual="$(sed -n 's/.*"builder_image_digest": "\([^"]*\)".*/\1/p' docs/ops/hermetic-builder.json)"
-          test -n "$actual"
-          test "$actual" = "$expected"
-      - name: cargo fetch then offline build in pinned image
-        shell: bash
-        working-directory: crates/sl-daemon
-        run: |
-          set -euo pipefail
-          cargo fetch --locked
-          cargo build --locked --offline
+      - name: SelfCheck reusable workflow caller pin
+        shell: pwsh
+        run: ./scripts/reusable-provenance-check.ps1 -SelfCheck
+
+  # Reusable workflow — job-level call, pinned to SessionLedger commit SHA.
+  # Pin: b52c9f7bc15756a35e8f64789db6bcc0b042fd26 (see docs/ops/reusable-hermetic-pin.md)
+  sl-daemon-offline-container:
+    name: sl-daemon · repository builder image offline build
+    uses: KooshaPari/SessionLedger/.github/workflows/reusable-hermetic-build.yml@b52c9f7bc15756a35e8f64789db6bcc0b042fd26
+    with:
+      builder_image_digest: sha256:fe71c757a13cb864e5f15f4a1384f63129b15bcd037bc44b46a056c814ca4cb7

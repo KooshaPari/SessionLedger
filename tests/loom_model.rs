@@ -5,7 +5,7 @@
 //! The loom crate is a `[target.'cfg(loom)'.dev-dependencies]` entry so default
 //! `cargo test` never builds it.
 //!
-//! Covers cancel + bounded capacity, `sync_channel`-style try_send, broadcast/SSE
+//! Covers cancel + bounded capacity, `sync_channel`-style `try_send`, broadcast/SSE
 //! epoch fan-out, and watcher-queue → broadcast pipeline permutations. Full
 //! tokio broadcast / daemon graph ports remain unpaid.
 

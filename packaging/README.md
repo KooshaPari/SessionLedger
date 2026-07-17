@@ -164,11 +164,14 @@ Channel status: [`channels.md`](channels.md).
   (Gatekeeper / SmartScreen notes for unsigned builds)
 - Release CI publishes `SHA256SUMS` and attempts a best-effort GitHub OIDC
   cosign signature (`SHA256SUMS.sigstore.json`); signing failures do not block
-  the Release. The same soft-fail policy covers the GHCR `sl-daemon` OCI image
-  (build/push + keyless cosign + attestation). See the
-  [cosign and attestation path](../docs/ops/distribution.md#release-integrity-signing-cosign)
-  — installer assets are covered too, but that path does not replace platform
-  signing. Deploy-time OCI gate:
+  the Release. On every canonical `v*` tag, the GHCR `sl-daemon` OCI image is
+  built, keyless-cosign signed, attested, and **unconditionally**
+  release-blocking via `oci-cosign-verify` (`continue-on-error: false`); forks
+  credential-gate OCI. See the
+  [OCI cosign policy matrix](../docs/ops/distribution.md#oci-cosign-policy-matrix-unconditional-vs-credential-gated)
+  and [cosign verification path](../docs/ops/distribution.md#release-integrity-signing-cosign).
+  Deploy-time OCI gate:
   [`scripts/oci-cosign-verify.ps1`](../scripts/oci-cosign-verify.ps1)
+  (`pwsh ./scripts/oci-cosign-verify.ps1 -SelfCheck` for policy anchors).
 - Data root for local compose: `SL_DATA_DIR` (default `./.sl-data`); uninstall
   steps documented in the distribution guide

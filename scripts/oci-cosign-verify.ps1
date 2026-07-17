@@ -47,7 +47,12 @@
   When set, a missing signature prints a warning and exits 0. Use only for
   dry-runs; do not use for production verify-on-deploy.
 
+.PARAMETER SelfCheck
+  Hermetic policy anchor check (docs + release.yml + dry-run path). No registry
+  access required; cosign dry-run runs only when cosign is on PATH.
+
 .EXAMPLE
+  pwsh ./scripts/oci-cosign-verify.ps1 -SelfCheck
   pwsh ./scripts/oci-cosign-verify.ps1 -Tag v0.1.0 -Digest sha256:abc…
 
 .EXAMPLE
@@ -57,8 +62,7 @@
 param(
     [string]$Image = "ghcr.io/kooshapari/sl-daemon",
 
-    [Parameter(Mandatory = $true)]
-    [string]$Tag,
+    [string]$Tag = "",
 
     [string]$Digest = "",
 
@@ -72,10 +76,146 @@ param(
 
     [switch]$RequireAttestation,
 
-    [switch]$AllowUnsigned
+    [switch]$AllowUnsigned,
+
+    [switch]$SelfCheck
 )
 
 $ErrorActionPreference = "Stop"
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+
+function Write-Check {
+    param([string]$Label, [bool]$Ok)
+    $mark = if ($Ok) { "PASS" } else { "FAIL" }
+    Write-Host "  [$mark] $Label"
+    return $Ok
+}
+
+function Assert-File {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Missing $Label at '$Path'."
+    }
+}
+
+function Assert-Contains {
+    param(
+        [Parameter(Mandatory = $true)][string]$Doc,
+        [Parameter(Mandatory = $true)][string]$Needle,
+        [Parameter(Mandatory = $true)][string]$Label,
+        [string]$Context = "document"
+    )
+    $ok = $Doc.Contains($Needle)
+    [void](Write-Check -Label $Label -Ok $ok)
+    if (-not $ok) {
+        throw "$Context missing required anchor: '$Needle'"
+    }
+}
+
+function Test-CommandAvailable {
+    param([Parameter(Mandatory = $true)][string]$Name)
+    return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+if ($SelfCheck) {
+    Write-Host "OCI cosign verify policy check (C06 L56)"
+    Write-Host "Mode: SelfCheck (docs + release.yml anchors; optional cosign dry-run)"
+
+    $distDoc = Join-Path $repoRoot "docs/ops/distribution.md"
+    $releaseWorkflow = Join-Path $repoRoot ".github/workflows/release.yml"
+    $packagingReadme = Join-Path $repoRoot "packaging/README.md"
+    $selfScript = Join-Path $repoRoot "scripts/oci-cosign-verify.ps1"
+
+    Assert-File -Path $distDoc -Label "distribution doc"
+    Assert-File -Path $releaseWorkflow -Label "release workflow"
+    Assert-File -Path $packagingReadme -Label "packaging README"
+    Assert-File -Path $selfScript -Label "oci-cosign-verify script"
+
+    $dist = Get-Content -LiteralPath $distDoc -Raw
+    $release = Get-Content -LiteralPath $releaseWorkflow -Raw
+    $packaging = Get-Content -LiteralPath $packagingReadme -Raw
+    $selfText = Get-Content -LiteralPath $selfScript -Raw
+
+    Write-Host "distribution.md anchors:"
+    Assert-Contains -Doc $dist -Needle "OCI cosign policy matrix (unconditional vs credential-gated)" `
+        -Label "unconditional vs credential-gated matrix" -Context "docs/ops/distribution.md"
+    Assert-Contains -Doc $dist -Needle "Canonical ``KooshaPari/SessionLedger`` ``v*`` tag | **Required, release-blocking**" `
+        -Label "canonical unconditional row" -Context "docs/ops/distribution.md"
+    Assert-Contains -Doc $dist -Needle "Fork ``v*`` tag push | Skipped with explicit reason" `
+        -Label "fork credential-gated row" -Context "docs/ops/distribution.md"
+    Assert-Contains -Doc $dist -Needle "oci-cosign-verify.ps1 -SelfCheck" `
+        -Label "SelfCheck invocation" -Context "docs/ops/distribution.md"
+
+    Write-Host "release.yml anchors:"
+    if ($release -notmatch '(?m)^\s*oci-image:\s*$') {
+        throw "release.yml missing oci-image job."
+    }
+    [void](Write-Check -Label "oci-image job present" -Ok $true)
+
+    if ($release -notmatch 'detect OCI release gate') {
+        throw "release.yml missing detect OCI release gate step."
+    }
+    [void](Write-Check -Label "detect OCI release gate step" -Ok $true)
+
+    if ($release -notmatch 'name:\s*oci-cosign-verify \(blocking\)') {
+        throw "release.yml missing blocking oci-cosign-verify step."
+    }
+    [void](Write-Check -Label "blocking oci-cosign-verify step" -Ok $true)
+
+    $verifyBlock = [regex]::Match(
+        $release,
+        '(?ms)name:\s*oci-cosign-verify \(blocking\).*?(?=^\s{6}- name:|\z)'
+    )
+    if (-not $verifyBlock.Success) {
+        throw "release.yml could not extract oci-cosign-verify step block."
+    }
+    if ($verifyBlock.Value -match 'continue-on-error:\s*true') {
+        throw "oci-cosign-verify step must not set continue-on-error: true."
+    }
+    if ($verifyBlock.Value -notmatch 'continue-on-error:\s*false') {
+        throw "oci-cosign-verify step must document continue-on-error: false."
+    }
+    [void](Write-Check -Label "oci-cosign-verify continue-on-error: false" -Ok $true)
+
+    if ($release -notmatch 'needs:.*oci-image') {
+        throw "release.yml release job should depend on oci-image."
+    }
+    [void](Write-Check -Label "release job needs oci-image" -Ok $true)
+
+    Write-Host "packaging/README.md anchors:"
+    Assert-Contains -Doc $packaging -Needle "oci-cosign-verify.ps1" `
+        -Label "oci-cosign-verify cross-link" -Context "packaging/README.md"
+    Assert-Contains -Doc $packaging -Needle "unconditional" `
+        -Label "unconditional OCI policy note" -Context "packaging/README.md"
+
+    Assert-Contains -Doc $selfText -Needle "AllowUnsigned set: exiting 0 despite failed cosign verify" `
+        -Label "AllowUnsigned dry-run anchor" -Context "scripts/oci-cosign-verify.ps1"
+
+    Write-Host "Dry-run path (AllowUnsigned + policy dry-run; no registry):"
+    $dryDigest = "sha256:$('0' * 64)"
+    $prevDryRun = $env:SL_OCI_VERIFY_POLICY_DRYRUN
+    $env:SL_OCI_VERIFY_POLICY_DRYRUN = "1"
+    try {
+        & $PSCommandPath -Tag "v0.0.0-selfcheck" -Digest $dryDigest -AllowUnsigned
+        if ($LASTEXITCODE -ne 0) {
+            throw "AllowUnsigned dry-run path exited $LASTEXITCODE (expected 0)."
+        }
+    } finally {
+        if ($null -eq $prevDryRun) {
+            Remove-Item Env:SL_OCI_VERIFY_POLICY_DRYRUN -ErrorAction SilentlyContinue
+        } else {
+            $env:SL_OCI_VERIFY_POLICY_DRYRUN = $prevDryRun
+        }
+    }
+    [void](Write-Check -Label "AllowUnsigned dry-run exits 0" -Ok $true)
+
+    Write-Host "OCI cosign verify SelfCheck passed (C06 L56 unconditional release-blocking OCI on canonical tags)."
+    exit 0
+}
 
 function Fail {
     param(
@@ -107,11 +247,6 @@ if ($Tag -notmatch '^v') {
 
 if ([string]::IsNullOrWhiteSpace($CertificateIdentity)) {
     $CertificateIdentity = "https://github.com/KooshaPari/SessionLedger/.github/workflows/release.yml@refs/tags/$Tag"
-}
-
-function Test-CommandAvailable {
-    param([Parameter(Mandatory = $true)][string]$Name)
-    return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
 function Resolve-ImageDigest {
@@ -166,7 +301,7 @@ or install crane/cosign with registry access.
     }
 }
 
-if (-not (Test-CommandAvailable -Name "cosign")) {
+if (-not (Test-CommandAvailable -Name "cosign") -and $env:SL_OCI_VERIFY_POLICY_DRYRUN -ne "1") {
     Fail -Code 1 -Message "cosign is not on PATH. Install from https://docs.sigstore.dev/cosign/installation/"
 }
 
@@ -183,6 +318,17 @@ $cosignArgs = @(
 )
 
 Write-Host "==> cosign $($cosignArgs -join ' ')"
+if ($env:SL_OCI_VERIFY_POLICY_DRYRUN -eq "1") {
+  if ($AllowUnsigned) {
+    Write-Warning @"
+Policy dry-run: simulating failed cosign verify for $subject with AllowUnsigned.
+Do not set SL_OCI_VERIFY_POLICY_DRYRUN outside SelfCheck.
+"@
+    Write-Warning "AllowUnsigned set: exiting 0 despite failed cosign verify (dry-run only)."
+    exit 0
+  }
+  Fail -Code 1 -Message "Policy dry-run without AllowUnsigned would fail closed for $subject."
+}
 & cosign @cosignArgs
 $cosignExit = $LASTEXITCODE
 

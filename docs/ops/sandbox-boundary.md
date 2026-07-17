@@ -93,6 +93,29 @@ The daemon rejects non-loopback `--http-bind` without a non-empty `SL_API_KEY`
 | Blocking sandbox SelfCheck (no network beyond checkout) | **done** | `sandbox-boundary` job runs hermetic SelfCheck (**blocking**; no `continue-on-error`) |
 | Hard no-network job sandbox | **unpaid** | Hosted runners still reach the network for `cargo install` / registry fetches |
 | Hard seccomp for CI steps | **unpaid** | Not configured; standard GitHub-hosted isolation only |
+| Hard rootless/no-net CI evidence | **done** | [`rootless-nonet.yml`](../../.github/workflows/rootless-nonet.yml) blocking SelfCheck |
+
+## Hard rootless / no-net CI
+
+Extends the soft sandbox-boundary checklist with **machine-verified CI evidence**
+for hard rootless / no-net policy rows. Hermetic SelfCheck only — does **not** enforce rootless-only runners or blocking no-net on cargo-fetch jobs.
+
+| Gate | Status | Evidence / prerequisite |
+|------|--------|-------------------------|
+| Rootless/no-net SelfCheck | **done** | `scripts/rootless-nonet-check.ps1 -SelfCheck` |
+| Blocking rootless-no-net CI workflow | **done** | [`.github/workflows/rootless-nonet.yml`](../../.github/workflows/rootless-nonet.yml) (PR gate; no `continue-on-error`) |
+| cargo test wrapper | **done** | `tests/rootless_nonet.rs` |
+| security.yml cross-reference | **done** | [`.github/workflows/security.yml`](../../.github/workflows/security.yml) anchors hard rootless/no-net lane |
+| ci.yml cross-reference | **done** | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) `rootless-nonet-policy` smoke |
+| Hard rootless-only runner matrix | **unpaid** | Requires podman/rootless runner labels on hosted runners |
+| Hard no-network for cargo-fetch security jobs | **unpaid** | Would block `cargo install` / advisory DB refresh in `security.yml` |
+
+```powershell
+pwsh ./scripts/rootless-nonet-check.ps1 -SelfCheck
+```
+
+The script asserts this section, the blocking workflow, and `security.yml` /
+`ci.yml` anchors. It does **not** enforce rootless-only runners or blocking no-net on cargo-fetch jobs, and does **not** claim maintainer 2FA enforcement.
 
 ## Sandbox boundary checklist
 
@@ -107,7 +130,8 @@ The daemon rejects non-loopback `--http-bind` without a non-empty `SL_API_KEY`
 | Soft `no-new-privileges` + `cap-drop ALL` guidance | **done** | this page + compose sample |
 | Soft no-net policy documented | **done** | Soft SelfCheck + optional `network_mode: none` for offline ETL |
 | Sandbox boundary SelfCheck | **done** | `scripts/sandbox-boundary-check.ps1 -SelfCheck` |
-| Rootless-only OCI policy in CI | **unpaid** | Requires runner capability matrix |
+| Hard rootless/no-net CI evidence | **done** | `scripts/rootless-nonet-check.ps1 -SelfCheck` + blocking `rootless-nonet.yml` |
+| Rootless-only OCI policy in CI | **unpaid** | Requires runner capability matrix (SelfCheck docs only) |
 | Hard no-network CI sandbox for security jobs | **unpaid** | Would block `cargo install` / advisory DB refresh |
 
 ## SelfCheck (machine proof)
@@ -130,7 +154,12 @@ The script asserts:
 - CI workflows keep least-privilege defaults (no `privileged: true`)
 
 The same SelfCheck runs as a **blocking** `sandbox-boundary` job in
-[`.github/workflows/security.yml`](../../.github/workflows/security.yml) (hermetic docs/path smoke only — still unpaid: hard no-net / rootless-only runner matrix).
+[`.github/workflows/security.yml`](../../.github/workflows/security.yml) (hermetic docs/path smoke only).
+
+Hard rootless / no-net CI evidence (blocking PR SelfCheck, `security.yml` /
+`ci.yml` anchors) lives in
+[`.github/workflows/rootless-nonet.yml`](../../.github/workflows/rootless-nonet.yml).
+Live rootless-only runner matrix and blocking no-net for cargo-fetch jobs remain **unpaid**.
 
 ## Hard vs soft (Wave-34)
 
@@ -140,6 +169,7 @@ The same SelfCheck runs as a **blocking** `sandbox-boundary` job in
 | Hermetic SelfCheck | Docs/profile/Containerfile anchors | **Blocking** `sandbox-boundary` job |
 | Rootless-only OCI | Documented | **Unpaid** runner matrix |
 | No-net security jobs | Soft `network_mode: none` note | **Unpaid** (would break cargo/deny fetches) |
+| Hard rootless/no-net CI evidence | Docs + blocking SelfCheck workflow | **Done** (`rootless-nonet.yml`; live runner enforcement unpaid) |
 
 ## Related
 

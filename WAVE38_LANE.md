@@ -1,35 +1,33 @@
-# Wave-38 lane: w38-use-gauges — C05 L42 USE process gauges
+# Wave-38 lane: w38-rootless-hard — C04 L40 hard rootless/no-net CI evidence
 
-**Branch:** `feat/sl-w38-use-gauges`
-**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w38-use-gauges`
-**Cluster / pillar:** C05 L42 (process USE gauges on Prometheus `/metrics`)
+**Branch:** `feat/sl-w38-rootless-hard`
+**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w38-rootless-hard`
+**Cluster / pillar:** C04 L40 (score 3, residual unpaid)
 
 ## Gap
 
-Process USE gauges (CPU, RSS, open FDs) were soft goals alongside OTLP metrics.
-Prometheus `/metrics` exported RED only; operators could not scrape basic process
-utilization from the default path.
+Sandbox boundary SelfCheck is blocking but hard rootless-only runner matrix and
+blocking no-net for cargo-fetch security jobs remain unpaid. Add explicit hard
+rootless/no-net CI evidence (docs + blocking workflow + security/ci anchors)
+without false claims about live runner enforcement.
 
 ## Acceptance criteria
 
-1. `crates/sl-daemon/src/metrics.rs` — `append_process_use_gauges` emits
-   `process_cpu_seconds_total`, `process_resident_memory_bytes`, and
-   `process_open_fds` from `HttpMetrics::render_prometheus()` (Linux via
-   `/proc/self`; Windows/macOS stub 0 with comment).
-2. `docs/ops/observability.md` — RED/USE section documents the three series.
-3. `scripts/use-gauges-check.ps1 -SelfCheck` — hermetic doc + code anchors.
-4. `tests/use_gauges.rs` — SelfCheck wrapper at repo root.
-5. Unit test in `metrics.rs` asserting `process_resident_memory_bytes` in output.
-6. CHANGELOG bullet. **Do not edit** audit scorecard/traceability files.
+1. Add `scripts/rootless-nonet-check.ps1 -SelfCheck`.
+2. Add blocking `.github/workflows/rootless-nonet.yml` (no `continue-on-error`).
+3. Extend `docs/ops/sandbox-boundary.md` with **Hard rootless / no-net CI** section (done/unpaid gates).
+4. Add `tests/rootless_nonet.rs` pwsh SelfCheck wrapper.
+5. Cross-reference anchors in `security.yml` + `ci.yml`.
+6. CHANGELOG Unreleased bullet. **Do not edit** audit scorecard/traceability files.
 
 ## Verify
 
 ```powershell
-pwsh ./scripts/use-gauges-check.ps1 -SelfCheck
-cargo test -p sl-daemon prometheus_snapshot_contains_process_use_gauges --manifest-path crates/sl-daemon/Cargo.toml
-cargo test use_gauges_doc_self_check_validates_anchors
+pwsh ./scripts/rootless-nonet-check.ps1 -SelfCheck
+cargo test --test rootless_nonet --locked
 ```
 
 ## Score expectation
 
-Evidence toward L42 USE gauges on default Prometheus scrape; OTLP mirror remains unpaid.
+Evidence toward L40 hard rootless/no-net CI; score held until live runner matrix
+and blocking no-net for cargo-fetch jobs land (conservative).

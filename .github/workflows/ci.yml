@@ -33,6 +33,17 @@ jobs:
         shell: pwsh
         run: ./scripts/eval-repro-check.ps1
 
+  # Blocking C04 L40 hard rootless/no-net CI evidence — full PR gate in
+  # .github/workflows/rootless-nonet.yml; this job is a fast ci.yml anchor smoke.
+  rootless-nonet-policy:
+    name: rootless/no-net policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: assert hard rootless/no-net CI evidence anchors
+        shell: pwsh
+        run: ./scripts/rootless-nonet-check.ps1 -SelfCheck
+
   # Fast policy smoke for the blocking bench-gate workflow (full Criterion run
   # stays in .github/workflows/bench-gate.yml). Do not mark continue-on-error.
   perf-budget-policy:

@@ -1,0 +1,10 @@
+C:\Users\koosh\SessionLedger-wtrees\w38-use-gauges\target-w38-use-gauges\debug\deps\thousands-200607e44bf56d2c.d: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\digits.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\policies.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\traits.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\display.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\helpers.rs
+
+C:\Users\koosh\SessionLedger-wtrees\w38-use-gauges\target-w38-use-gauges\debug\deps\libthousands-200607e44bf56d2c.rmeta: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\digits.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\policies.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\traits.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\display.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\helpers.rs
+
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\lib.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\digits.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\policies.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\traits.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\display.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thousands-0.2.0\src\helpers.rs:

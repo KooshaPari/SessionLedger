@@ -1,0 +1,10 @@
+C:\Users\koosh\SessionLedger-wtrees\w38-use-gauges\target-w38-use-gauges\debug\deps\tinytemplate-2dcb0a80d97b901b.d: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\compiler.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\error.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\instruction.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\syntax.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\template.rs
+
+C:\Users\koosh\SessionLedger-wtrees\w38-use-gauges\target-w38-use-gauges\debug\deps\libtinytemplate-2dcb0a80d97b901b.rmeta: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\compiler.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\error.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\instruction.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\syntax.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\template.rs
+
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\lib.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\compiler.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\error.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\instruction.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\syntax.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tinytemplate-1.2.1\src\template.rs:

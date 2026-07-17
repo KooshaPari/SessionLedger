@@ -214,22 +214,24 @@ jobs:
           $daemon = Join-Path $metadata.target_directory "debug/sl-daemon"
           ./scripts/pprof-smoke.ps1 -DaemonPath $daemon -SkipBuild -AlsoAssertDisabled
 
-  # Soft C05 L43/L42 OTLP metrics export stub — hermetic SelfCheck + feature compile.
-  otlp-metrics-stub:
-    name: OTLP metrics export soft stub
+  # C05 L43/L42 OTLP metrics export — hermetic SelfCheck + feature compile + unit tests.
+  otlp-metrics-export:
+    name: OTLP metrics export
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: crates/sl-daemon
-      - name: self-check OTLP metrics soft stub
+      - name: self-check OTLP metrics export anchors
         shell: pwsh
         run: ./scripts/otlp-metrics-check.ps1 -SelfCheck
-      - name: cargo check otel-metrics stub (Prometheus path unchanged)
+      - name: cargo test otel_metrics (sl-daemon)
+        working-directory: crates/sl-daemon
+        run: cargo test --locked --features otel-metrics otel_metrics
+      - name: cargo check otel-metrics export (Prometheus path unchanged)
         working-directory: crates/sl-daemon
         run: cargo check --locked --features otel-metrics
 

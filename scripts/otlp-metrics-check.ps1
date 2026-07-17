@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-  Machine-check the C05 L43/L42 OTLP metrics soft stub anchors.
+  Machine-check the C05 L43/L42 OTLP metrics export anchors.
 
 .DESCRIPTION
-  Verifies docs/ops/otlp-metrics.md + otlp-metrics.json document the unpaid
-  OTLP metrics push path while preserving default Prometheus GET /metrics.
-  Also asserts the otel-metrics Cargo feature and soft stub module exist.
+  Verifies docs/ops/otlp-metrics.md + otlp-metrics.json document the OTLP metrics
+  export path while preserving default Prometheus GET /metrics. Also asserts the
+  otel-metrics Cargo feature, MetricExporter wiring, and export env contract.
   Hermetic: no network, no collector, no cargo build required for -SelfCheck.
 
 .PARAMETER SelfCheck
@@ -27,7 +27,7 @@ $docPath = Join-Path $repoRoot "docs/ops/otlp-metrics.md"
 $jsonPath = Join-Path $repoRoot "docs/ops/otlp-metrics.json"
 $obsPath = Join-Path $repoRoot "docs/ops/observability.md"
 $cargoPath = Join-Path $repoRoot "crates/sl-daemon/Cargo.toml"
-$stubPath = Join-Path $repoRoot "crates/sl-daemon/src/otel_metrics.rs"
+$exportPath = Join-Path $repoRoot "crates/sl-daemon/src/otel_metrics.rs"
 $metricsPath = Join-Path $repoRoot "crates/sl-daemon/src/metrics.rs"
 $selfPath = Join-Path $repoRoot "scripts/otlp-metrics-check.ps1"
 $workflowPath = Join-Path $repoRoot ".github/workflows/ops-load.yml"
@@ -63,16 +63,16 @@ function Test-DocContains {
     }
 }
 
-Write-Host "OTLP metrics soft stub check (C05 L43/L42)"
+Write-Host "OTLP metrics export check (C05 L43/L42)"
 if ($SelfCheck) {
-    Write-Host "Mode: SelfCheck (docs + feature stub; no cargo / no network)"
+    Write-Host "Mode: SelfCheck (docs + export path; no cargo / no network)"
 }
 
 Assert-File -Path $docPath -Label "OTLP metrics doc"
 Assert-File -Path $jsonPath -Label "OTLP metrics JSON"
 Assert-File -Path $obsPath -Label "observability.md"
 Assert-File -Path $cargoPath -Label "sl-daemon Cargo.toml"
-Assert-File -Path $stubPath -Label "otel_metrics stub module"
+Assert-File -Path $exportPath -Label "otel_metrics export module"
 Assert-File -Path $metricsPath -Label "Prometheus metrics module"
 Assert-File -Path $selfPath -Label "OTLP metrics check script"
 Assert-File -Path $workflowPath -Label "ops-load workflow"
@@ -81,12 +81,12 @@ $doc = Get-Content -LiteralPath $docPath -Raw
 $json = Get-Content -LiteralPath $jsonPath -Raw
 $obs = Get-Content -LiteralPath $obsPath -Raw
 $cargo = Get-Content -LiteralPath $cargoPath -Raw
-$stub = Get-Content -LiteralPath $stubPath -Raw
+$export = Get-Content -LiteralPath $exportPath -Raw
 $metrics = Get-Content -LiteralPath $metricsPath -Raw
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 
 Write-Host "OTLP metrics doc anchors:"
-Test-DocContains -Doc $doc -Needle "OTLP metrics export soft stub (L43 / L42 evidence)" `
+Test-DocContains -Doc $doc -Needle "OTLP metrics export (L43 / L42 evidence)" `
     -Label "doc heading"
 Test-DocContains -Doc $doc -Needle "Prometheus HTTP RED" `
     -Label "Prometheus RED preserved"
@@ -94,38 +94,44 @@ Test-DocContains -Doc $doc -Needle "GET /metrics" `
     -Label "GET /metrics contract"
 Test-DocContains -Doc $doc -Needle "otel-metrics" `
     -Label "otel-metrics feature named"
-Test-DocContains -Doc $doc -Needle "SL_OTLP_METRICS" `
-    -Label "acknowledgment env"
+Test-DocContains -Doc $doc -Needle "SL_OTLP_METRICS_ENDPOINT" `
+    -Label "metrics endpoint env"
 Test-DocContains -Doc $doc -Needle "otlp_metrics_export" `
     -Label "export status field"
 Test-DocContains -Doc $doc -Needle "scripts/otlp-metrics-check.ps1" `
     -Label "SelfCheck script reference"
 Test-DocContains -Doc $doc -Needle "-SelfCheck" `
     -Label "SelfCheck invocation"
-Test-DocContains -Doc $doc -Needle "otlp-metrics-stub" `
-    -Label "soft CI job named"
+Test-DocContains -Doc $doc -Needle "otlp-metrics-export" `
+    -Label "blocking CI job named"
 Test-DocContains -Doc $doc -Needle "Unpaid gaps (explicit)" `
     -Label "unpaid gaps section"
 
 Write-Host "OTLP metrics JSON anchors:"
 Test-DocContains -Doc $json -Needle "sessionledger.otlp-metrics.v1" `
     -Label "JSON schema id" -Context "docs/ops/otlp-metrics.json"
-Test-DocContains -Doc $json -Needle '"otlp_metrics_export": "none"' `
-    -Label "export unpaid" -Context "docs/ops/otlp-metrics.json"
+Test-DocContains -Doc $json -Needle '"otlp_metrics_export": "otlp-grpc"' `
+    -Label "export otlp-grpc" -Context "docs/ops/otlp-metrics.json"
 Test-DocContains -Doc $json -Needle '"prometheus_http": "/metrics"' `
     -Label "Prometheus path pinned" -Context "docs/ops/otlp-metrics.json"
 Test-DocContains -Doc $json -Needle '"cargo_feature": "otel-metrics"' `
     -Label "feature pin" -Context "docs/ops/otlp-metrics.json"
+Test-DocContains -Doc $json -Needle '"SL_OTLP_METRICS_ENDPOINT"' `
+    -Label "endpoint env pin" -Context "docs/ops/otlp-metrics.json"
 Test-DocContains -Doc $json -Needle '"ack_env": "SL_OTLP_METRICS"' `
     -Label "ack env pin" -Context "docs/ops/otlp-metrics.json"
 
-Write-Host "Feature + Prometheus evidence:"
+Write-Host "Feature + export-path evidence:"
 Test-DocContains -Doc $cargo -Needle "otel-metrics" `
     -Label "Cargo feature present" -Context "crates/sl-daemon/Cargo.toml"
-Test-DocContains -Doc $stub -Needle "SL_OTLP_METRICS" `
-    -Label "stub env constant" -Context "crates/sl-daemon/src/otel_metrics.rs"
-Test-DocContains -Doc $stub -Needle "Prometheus /metrics unchanged" `
-    -Label "non-breaking stub note" -Context "crates/sl-daemon/src/otel_metrics.rs"
+Test-DocContains -Doc $export -Needle "SL_OTLP_METRICS_ENDPOINT" `
+    -Label "metrics endpoint constant" -Context "crates/sl-daemon/src/otel_metrics.rs"
+Test-DocContains -Doc $export -Needle "MetricExporter" `
+    -Label "MetricExporter wired" -Context "crates/sl-daemon/src/otel_metrics.rs"
+Test-DocContains -Doc $export -Needle "SdkMeterProvider" `
+    -Label "SdkMeterProvider wired" -Context "crates/sl-daemon/src/otel_metrics.rs"
+Test-DocContains -Doc $export -Needle "Prometheus /metrics unchanged" `
+    -Label "non-breaking export note" -Context "crates/sl-daemon/src/otel_metrics.rs"
 Test-DocContains -Doc $metrics -Needle "render_prometheus" `
     -Label "Prometheus renderer intact" -Context "crates/sl-daemon/src/metrics.rs"
 Test-DocContains -Doc $metrics -Needle "sl_http_requests_total" `
@@ -133,11 +139,11 @@ Test-DocContains -Doc $metrics -Needle "sl_http_requests_total" `
 
 Write-Host "Ops cross-links:"
 Test-DocContains -Doc $obs -Needle "otlp-metrics.md" `
-    -Label "observability links stub doc" -Context "docs/ops/observability.md"
+    -Label "observability links export doc" -Context "docs/ops/observability.md"
 Test-DocContains -Doc $obs -Needle "otel-metrics" `
     -Label "observability names feature" -Context "docs/ops/observability.md"
-Test-DocContains -Doc $workflow -Needle "otlp-metrics-stub" `
-    -Label "soft job in ops-load" -Context ".github/workflows/ops-load.yml"
+Test-DocContains -Doc $workflow -Needle "otlp-metrics-export" `
+    -Label "export job in ops-load" -Context ".github/workflows/ops-load.yml"
 Test-DocContains -Doc $workflow -Needle "otlp-metrics-check.ps1" `
     -Label "workflow invokes SelfCheck" -Context ".github/workflows/ops-load.yml"
 

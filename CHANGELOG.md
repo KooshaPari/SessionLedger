@@ -10,6 +10,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Soft shuttle SelfCheck evidence (C00 L7): `docs/ops/shuttle-soft.md`, `scripts/shuttle-soft-check.ps1 -SelfCheck`, `tests/shuttle_soft.rs` (full shuttle permutation coverage remains unpaid).
 
+- Soft Alertmanager packaging sample + SelfCheck (C05; local placeholder only, live webhook unpaid).
+
 - Soft multi-locale i18n: `locales/es.json` + `SL_LOCALE` / `t_locale` selection (C01 L16; Fluent/ICU still deferred).
 
 - Soft envelope helper (`SL_ENVELOPE_KEY` + SHA-256 keystream) in `src/envelope.rs` (C02 L22; not a KMS).

@@ -39,6 +39,7 @@ Fast inner loop: `cargo test --manifest-path crates/sl-daemon/Cargo.toml` /
 | `docs/ops/runbook.md` | `make dev`, healthz :8080, common failures |
 | `docs/ops/feedback-budgets.md` | measured check/test/`make lint` loop budgets + nextest |
 | `README.md` | overview + Releases link | `.github/workflows/release.yml` | per-OS viewer build |
+| `docs/adr/0006-no-mcp-server.md` | Explicit N/A: not an MCP host/server; no MCP pin list (C06 L57) |
 
 ## Forbidden
 

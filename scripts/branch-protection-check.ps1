@@ -4,10 +4,60 @@ param(
     [string]$Repo = "KooshaPari/SessionLedger",
     # When set, exit 1 only if the API succeeds and required controls are missing.
     # Without -Strict, missing token / 404 / insufficient scope always soft-exit 0.
-    [switch]$Strict
+    [switch]$Strict,
+    # Hermetic policy anchors only (C06 L59 source-provenance hook). No gh / no network.
+    [switch]$PolicyOnly
 )
 
 $ErrorActionPreference = "Stop"
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+
+function Assert-SourceProvenancePolicy {
+    $sourceProvDocPath = Join-Path $RepoRoot "docs/ops/source-provenance.md"
+    $branchProtectionDocPath = Join-Path $RepoRoot "docs/ops/branch-protection.md"
+    $codeownersPath = Join-Path $RepoRoot "CODEOWNERS"
+
+    foreach ($pair in @(
+            @{ Path = $sourceProvDocPath; Label = "source provenance policy doc" },
+            @{ Path = $branchProtectionDocPath; Label = "branch protection doc" },
+            @{ Path = $codeownersPath; Label = "CODEOWNERS" }
+        )) {
+        if (-not (Test-Path -LiteralPath $pair.Path -PathType Leaf)) {
+            throw "Missing $($pair.Label) at '$($pair.Path)'."
+        }
+    }
+
+    $sourceProvDoc = Get-Content -LiteralPath $sourceProvDocPath -Raw
+    $branchProtectionDoc = Get-Content -LiteralPath $branchProtectionDocPath -Raw
+
+    if ($sourceProvDoc -notmatch 'Require signed commits') {
+        throw "docs/ops/source-provenance.md must document Require signed commits."
+    }
+    if ($sourceProvDoc -notmatch 'scripts/branch-protection-check\.ps1') {
+        throw "docs/ops/source-provenance.md must reference scripts/branch-protection-check.ps1."
+    }
+    if ($sourceProvDoc -notmatch '-PolicyOnly') {
+        throw "docs/ops/source-provenance.md must document branch-protection-check.ps1 -PolicyOnly."
+    }
+    if ($sourceProvDoc -notmatch 'NOT_VERIFIABLE_IN_REPO') {
+        throw "docs/ops/source-provenance.md must include NOT_VERIFIABLE_IN_REPO human org rows."
+    }
+    if ($branchProtectionDoc -notmatch 'source-provenance\.md') {
+        throw "docs/ops/branch-protection.md must cross-link docs/ops/source-provenance.md."
+    }
+    if ($branchProtectionDoc -notmatch 'Require signed commits') {
+        throw "docs/ops/branch-protection.md must document Require signed commits."
+    }
+
+    Write-Host "Source provenance policy OK (docs + CODEOWNERS anchors; no live Settings claim)."
+}
+
+if ($PolicyOnly) {
+    Write-Host "Branch protection check (PolicyOnly — C06 L59 hermetic policy hook)"
+    Assert-SourceProvenancePolicy
+    Write-Host "PolicyOnly: skipping GitHub API branch protection query."
+    exit 0
+}
 
 function Write-Skip {
     param([string]$Reason)

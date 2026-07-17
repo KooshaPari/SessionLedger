@@ -201,5 +201,22 @@ Verify locally:
 pwsh -NoProfile -File scripts/commit-signing-check.ps1 -Ref HEAD -Count 5
 ```
 
+## Source provenance (signed commits + CODEOWNERS)
+
+SessionLedger's **source provenance** policy SSOT covers cryptographic commit
+signatures, [`CODEOWNERS`](CODEOWNERS) review expectations, and human org gates
+(branch protection, maintainer 2FA) that cannot be verified from checkout alone.
+See [`docs/ops/source-provenance.md`](docs/ops/source-provenance.md).
+
+Hermetic policy smoke (no GitHub API):
+
+```powershell
+pwsh -NoProfile -File scripts/source-provenance-check.ps1 -SelfCheck
+pwsh -NoProfile -File scripts/branch-protection-check.ps1 -PolicyOnly
+```
+
+Live branch protection remains a maintainer Settings control; the scripts above
+document anchors and do not claim org Settings are enforced from the tree.
+
 ## Governance
 This repository follows governance guidelines defined in ~/.claude/CLAUDE.md at a high level.

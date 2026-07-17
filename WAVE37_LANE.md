@@ -1,25 +1,25 @@
-# Wave-37 lane: w37-miri-hard — C00 L7 blocking Miri permutation CI
+# Wave-37 lane: w37-source-prov — C06 L59 source-code provenance policy
 
-**Branch:** `feat/sl-w37-miri-hard`
-**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w37-miri-hard`
-**Cluster / pillar:** C00 L7
-**Wave-36 overlap:** #296 loom permutation blocking
+**Branch:** `feat/sl-w37-source-prov`
+**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w37-source-prov`
+**Cluster / pillar:** C06 L59
 
 ## Gap
 
-`miri-smoke.yml` is nightly + `continue-on-error`. Add PR-blocking Miri job for
-`race_model` (and optional `loom_model` subset) with policy doc anchors.
+L59 score 2: signed merges present but no in-repo signed-commit policy SSOT.
+Extend branch-protection + contributor policy with machine-verifiable anchors.
 
 ## Acceptance criteria
 
-1. Add `scripts/miri-permutation-check.ps1 -SelfCheck` documenting policy.
-2. Add `.github/workflows/miri-permutation.yml` blocking on PR/push (ubuntu, race_model).
-3. Keep existing `miri-smoke.yml` soft nightly or document split.
-4. Update `docs/ops/concurrency-safety.md`.
+1. Add `docs/ops/source-provenance.md` SSOT (signed commits, CODEOWNERS, human org gates).
+2. Add `scripts/source-provenance-check.ps1 -SelfCheck`.
+3. Extend `scripts/branch-protection-check.ps1` policy hooks if needed.
+4. Update `CONTRIBUTING.md` cross-link.
 5. CHANGELOG bullet. **Do not edit** audit scorecard/traceability files.
 
 ## Verify
 
 ```powershell
-pwsh ./scripts/miri-permutation-check.ps1 -SelfCheck
+pwsh ./scripts/source-provenance-check.ps1 -SelfCheck
+pwsh ./scripts/branch-protection-check.ps1 -PolicyOnly
 ```

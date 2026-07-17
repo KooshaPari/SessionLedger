@@ -95,7 +95,12 @@ jobs:
           echo "version=${ver}" >> "$GITHUB_OUTPUT"
 
       - name: build sl-viewer + sl-daemon
-        run: cargo build -p sl-viewer -p sl-daemon --release --target ${{ matrix.target }} --locked
+        run: |
+          cargo build -p sl-viewer --release --target ${{ matrix.target }} --locked
+          # sl-daemon is an intentionally standalone workspace so its build
+          # cannot be selected from the root workspace with `-p`.
+          cargo build --manifest-path crates/sl-daemon/Cargo.toml \
+            --release --target ${{ matrix.target }} --locked
         env:
           CARGO_FEATURES: desktop
           CARGO_INCREMENTAL: "0"
@@ -113,13 +118,17 @@ jobs:
             local pkg="$1"
             local dir="${pkg}-${VER}-${TARGET}"
             mkdir -p "${dir}"
+            local root="target/${TARGET}/release"
+            if [ "${pkg}" = "sl-daemon" ]; then
+              root="crates/sl-daemon/target/${TARGET}/release"
+            fi
             if [ "${{ matrix.os }}" = "windows-latest" ]; then
-              cp "target/${TARGET}/release/${pkg}.exe" "${dir}/"
+              cp "${root}/${pkg}.exe" "${dir}/"
               7z a -tzip "${dir}.zip" "${dir}"
               cp "${dir}.zip" "dist-out/"
               echo "${dir}.zip"
             else
-              cp "target/${TARGET}/release/${pkg}" "${dir}/"
+              cp "${root}/${pkg}" "${dir}/"
               tar czf "${dir}.tar.gz" "${dir}"
               cp "${dir}.tar.gz" "dist-out/"
               echo "${dir}.tar.gz"

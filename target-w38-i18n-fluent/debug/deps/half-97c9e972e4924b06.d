@@ -1,0 +1,12 @@
+C:\Users\koosh\SessionLedger-wtrees\w38-i18n-fluent\target-w38-i18n-fluent\debug\deps\half-97c9e972e4924b06.d: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\bfloat.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\bfloat\convert.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16\arch.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16\arch\x86.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\leading_zeros.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\slice.rs
+
+C:\Users\koosh\SessionLedger-wtrees\w38-i18n-fluent\target-w38-i18n-fluent\debug\deps\libhalf-97c9e972e4924b06.rmeta: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\bfloat.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\bfloat\convert.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16\arch.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16\arch\x86.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\leading_zeros.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\slice.rs
+
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\lib.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\bfloat.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\bfloat\convert.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16\arch.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\binary16\arch\x86.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\leading_zeros.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\half-2.7.1\src\slice.rs:

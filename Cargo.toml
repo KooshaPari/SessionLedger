@@ -23,6 +23,8 @@ compress = ["dep:zstd"]
 sqlite = ["dep:rusqlite", "compress"]
 # Optional dhat heap-profiling smoke (tests/alloc_profile_dhat.rs only).
 alloc-profile = []
+# Optional Fluent catalog stub (C01 L16 Phase-1; src/i18n_fluent.rs).
+fluent-catalog = ["dep:fluent-bundle", "dep:unic-langid"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -32,6 +34,8 @@ sha2 = "0.11"
 time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
 rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 zstd = { version = "0.13", optional = true }
+fluent-bundle = { version = "0.16", optional = true }
+unic-langid = { version = "0.9", optional = true }
 tracing = "0.1"
 
 # FFI / native build scripts (rusqlite bundled, zstd) cannot run under Miri.

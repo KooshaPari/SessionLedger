@@ -23,6 +23,7 @@ pub mod domain;
 pub mod envelope;
 pub mod export;
 pub mod i18n;
+pub mod i18n_fluent;
 pub mod ingestion;
 pub mod inject;
 pub mod pii_redact;

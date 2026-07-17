@@ -2,7 +2,10 @@ name: Hermetic Builder Image
 
 on:
   push:
-    branches: [main]
+    # The immutable SHA tag is needed before a PR can switch its consuming
+    # hermetic gate to the new image.  Restrict by path, not by branch: every
+    # canonical branch push can therefore bootstrap and verify its own pin.
+    branches: ["**"]
     paths:
       - ci/hermetic-builder/Containerfile
       - .github/workflows/hermetic-builder.yml

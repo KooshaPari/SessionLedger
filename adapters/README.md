@@ -28,21 +28,27 @@ emit <path-to.okf.json>       # print validated OKF JSON to stdout
 | Language | Path | Fixture path exercised by SelfCheck |
 |----------|------|-------------------------------------|
 | Python | [`python/okf_adapter.py`](python/okf_adapter.py) | `docs/reference/conformance/fixtures/cursor-python-029.okf.json` |
+| TypeScript | [`typescript/okf_adapter.ts`](typescript/okf_adapter.ts) | `docs/reference/conformance/fixtures/codex-typescript-023.okf.json` |
 | Go | [`go/main.go`](go/main.go) (+ [`go/go.mod`](go/go.mod)) | `docs/reference/conformance/fixtures/forge-go-module-026.okf.json` |
 
 ```powershell
 python adapters/python/okf_adapter.py validate docs/reference/conformance/fixtures/cursor-python-029.okf.json
 python adapters/python/okf_adapter.py emit docs/reference/conformance/fixtures/cursor-python-029.okf.json
 
+node --experimental-strip-types adapters/typescript/okf_adapter.ts validate docs/reference/conformance/fixtures/codex-typescript-023.okf.json
+node --experimental-strip-types adapters/typescript/okf_adapter.ts emit docs/reference/conformance/fixtures/codex-typescript-023.okf.json
+
 go -C adapters/go run . validate ../../docs/reference/conformance/fixtures/forge-go-module-026.okf.json
 go -C adapters/go run . emit ../../docs/reference/conformance/fixtures/forge-go-module-026.okf.json
 ```
 
 Python: stdlib only (`json` / `sys` / `pathlib`). No pip packages.
+TypeScript: Node stdlib only (`node:fs` / `node:path`). No npm packages.
 Go: stdlib only (`encoding/json` / `os` / `fmt`). No external modules.
 
-SelfCheck always verifies Go adapter sources exist. Runtime `go run` is executed
-when `go` is on PATH; otherwise the Go execute step is an explicit skip (doc +
+SelfCheck always verifies Python, TypeScript, and Go adapter sources exist.
+Runtime `go run` runs when `go` is on PATH; Node ≥22 `--experimental-strip-types`
+runs when available; otherwise those execute steps are explicit skips (doc +
 source anchors still pass).
 
 ## Explicit non-goals

@@ -1,5 +1,5 @@
 //! Hermetic `SelfCheck` for docs/ops/cross-language-parity.md anchors +
-//! structural invariant harness across Python/TS/Go OKF fixtures + Python/Go
+//! structural invariant harness across Python/TS/Go OKF fixtures + Python/Go/TypeScript
 //! reference OKF adapter stubs (C08 L75).
 //!
 //! Local: `pwsh ./scripts/cross-language-parity-check.ps1 -SelfCheck`
@@ -34,7 +34,7 @@ fn cross_language_parity_doc_self_check_validates_anchors() {
     assert!(
         stdout.contains("Cross-language parity SelfCheck passed")
             && stdout.contains("structural invariant harness")
-            && stdout.contains("Python/Go adapter stubs"),
-        "expected SelfCheck success with structural harness + Python/Go adapters, got:\n{stdout}"
+            && stdout.contains("Python/Go/TypeScript adapter stubs"),
+        "expected SelfCheck success with structural harness + Python/Go/TypeScript adapters, got:\n{stdout}"
     );
 }

@@ -8,7 +8,9 @@ messages without CI flakes.
 
 A **soft nightly Miri smoke** exercises the same `race_model` subset under the
 interpreter (UB / provenance). A **soft loom smoke** explores a tiny cancel +
-capacity conservation model under `RUSTFLAGS='--cfg loom'`. Full loom / shuttle
+capacity conservation model under `RUSTFLAGS='--cfg loom'`. A **soft shuttle
+SelfCheck** documents the shuttle lane hermetically (no `shuttle` crate) —
+see [`shuttle-soft.md`](shuttle-soft.md). Full loom / shuttle
 permutation checkers (and blocking Miri) remain unpaid. Workspace
 `unsafe_code = forbid` still holds; these soft gates are early evidence toward
 those checkers, not a claim of unsafe coverage.
@@ -21,9 +23,11 @@ those checkers, not a claim of unsafe coverage.
 | [`tests/race_model.rs`](../../tests/race_model.rs) | Bounded `sync_channel` + cancel flag model of watcher `scan_once` |
 | [`tests/loom_model.rs`](../../tests/loom_model.rs) | Tiny loom cancel/capacity model (`cfg(loom)` only) |
 | [`tests/loom_soft.rs`](../../tests/loom_soft.rs) | Hermetic SelfCheck for soft loom docs/workflow anchors |
+| [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Hermetic SelfCheck for soft shuttle docs/workflow anchors |
 | [`.github/workflows/race-smoke.yml`](../../.github/workflows/race-smoke.yml) | Both race tests, 3 OS × 3 repeats, `--test-threads=1` |
 | [`.github/workflows/miri-smoke.yml`](../../.github/workflows/miri-smoke.yml) | Soft nightly / dispatch: `cargo miri test --test race_model` (`continue-on-error`) |
 | [`.github/workflows/loom-smoke.yml`](../../.github/workflows/loom-smoke.yml) | Soft SelfCheck + `RUSTFLAGS='--cfg loom'` `loom_model` (`continue-on-error`) |
+| [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft hermetic shuttle SelfCheck only (`continue-on-error`) |
 
 The model uses `try_send` (never blocks) and an `AtomicBool` cancel bit so
 assertions are conservation / capacity based — no sleeps, no OS event timing.
@@ -54,10 +58,18 @@ skip marker so the harness stays discoverable without special flags.
 |------|--------|----------|
 | Soft loom SelfCheck | **done** | `scripts/loom-smoke-check.ps1 -SelfCheck` (+ `tests/loom_soft.rs`) |
 | Soft loom `loom_model` CI | **done** | `.github/workflows/loom-smoke.yml` (`continue-on-error`) |
+| Soft shuttle SelfCheck | **done** | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`); [`shuttle-soft.md`](shuttle-soft.md) |
 | Full loom / shuttle permutation checkers | **unpaid** | Broad broadcast/SSE/daemon graph still outside soft smoke |
 
 Schedule: nightly UTC + `pull_request` + `workflow_dispatch`. Soft failures do
 not gate merges.
+
+### Soft shuttle
+
+`shuttle-soft.yml` is **non-blocking** (`continue-on-error: true`). It runs only
+`scripts/shuttle-soft-check.ps1 -SelfCheck` — docs/workflow/test anchors, **no**
+`shuttle` crate on the Cargo graph. Full shuttle permutation coverage remains
+unpaid; details live in [`shuttle-soft.md`](shuttle-soft.md).
 
 ## How to run locally
 
@@ -101,8 +113,15 @@ $env:RUSTFLAGS = "--cfg loom"
 cargo test --test loom_model --release --locked -- --test-threads=1
 ```
 
-## Loom follow-up
+Soft shuttle SelfCheck (hermetic; no shuttle crate):
+
+```powershell
+pwsh ./scripts/shuttle-soft-check.ps1 -SelfCheck
+```
+
+## Loom / shuttle follow-up
 
 Full loom / shuttle coverage of daemon broadcast/SSE and a loom-native port of
-`race_model`'s `sync_channel` remain unpaid. Keep permutation jobs off the
-default PR matrix so ordinary `cargo test` stays green without special flags.
+`race_model`'s `sync_channel` remain unpaid. Soft shuttle SelfCheck does **not**
+pay that debt. Keep permutation jobs off the default PR matrix so ordinary
+`cargo test` stays green without special flags.

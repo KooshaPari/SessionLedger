@@ -7,11 +7,13 @@ daemon's watcher contract (bounded queue + cooperative cancel) conserves
 messages without CI flakes.
 
 A **soft nightly Miri smoke** exercises the same `race_model` subset under the
-interpreter (UB / provenance). A **soft loom smoke** explores a tiny cancel +
-capacity conservation model under `RUSTFLAGS='--cfg loom'`. A **soft shuttle
-SelfCheck** documents the shuttle lane hermetically (no `shuttle` crate) —
-see [`shuttle-soft.md`](shuttle-soft.md). Full loom / shuttle
-permutation checkers (and blocking Miri) remain unpaid. Workspace
+interpreter (UB / provenance). A **blocking Miri permutation** job gates PRs on
+that same `race_model` subset via `cargo miri`. A **soft loom smoke** explores
+a tiny cancel + capacity conservation model under `RUSTFLAGS='--cfg loom'`. A
+**soft shuttle SelfCheck** documents the shuttle lane hermetically (no
+`shuttle` crate) — see [`shuttle-soft.md`](shuttle-soft.md). Full loom /
+shuttle permutation checkers and `loom_model` under Miri remain unpaid.
+Workspace
 `unsafe_code = forbid` still holds; these soft gates are early evidence toward
 those checkers, not a claim of unsafe coverage.
 
@@ -27,6 +29,7 @@ those checkers, not a claim of unsafe coverage.
 | [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Hermetic SelfCheck for soft shuttle docs/workflow anchors |
 | [`.github/workflows/race-smoke.yml`](../../.github/workflows/race-smoke.yml) | Both race tests, 3 OS × 3 repeats, `--test-threads=1` |
 | [`.github/workflows/miri-smoke.yml`](../../.github/workflows/miri-smoke.yml) | Soft nightly / dispatch: `cargo miri test --test race_model` (`continue-on-error`) |
+| [`.github/workflows/miri-permutation.yml`](../../.github/workflows/miri-permutation.yml) | Blocking permutation SelfCheck + `cargo miri test --test race_model` |
 | [`.github/workflows/loom-smoke.yml`](../../.github/workflows/loom-smoke.yml) | Soft SelfCheck + `RUSTFLAGS='--cfg loom'` `loom_model` (`continue-on-error`) |
 | [`.github/workflows/loom-permutation.yml`](../../.github/workflows/loom-permutation.yml) | Blocking permutation SelfCheck + `cargo test loom` under `RUSTFLAGS='--cfg loom'` |
 | [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft hermetic shuttle SelfCheck only (`continue-on-error`) |
@@ -43,7 +46,32 @@ Daemon unit coverage for the same contract lives in
 `tests/race_model.rs` (pure `std` concurrency) so the job does not pull
 `rusqlite`/`zstd` FFI via `[target.'cfg(not(miri))'.dev-dependencies]`.
 Schedule: nightly UTC; also `workflow_dispatch`. Failures surface as soft
-signals — they do not gate merges.
+signals — they do not gate merges. Blocking Miri permutation evidence lives in
+`miri-permutation.yml` (see below).
+
+### Miri permutation checkers
+
+`miri-permutation.yml` is **blocking** on `pull_request` and `push` to `main`.
+It:
+
+1. Runs `scripts/miri-permutation-check.ps1 -SelfCheck` (docs/workflow/miri anchors).
+2. Runs `cargo miri test --test race_model` with `MIRIFLAGS='-Zmiri-strict-provenance'`.
+
+The job exercises the same pure-`std` `race_model` subset as soft
+`miri-smoke.yml` — bounded `sync_channel` + cooperative cancel — without
+pulling `rusqlite`/`zstd` FFI. `loom_model` under Miri and full tokio broadcast
+/ daemon graph ports remain unpaid.
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| Miri permutation SelfCheck | **done** | `scripts/miri-permutation-check.ps1 -SelfCheck` |
+| Miri permutation race_model CI | **done** | `.github/workflows/miri-permutation.yml` (blocking on PR) |
+| Soft Miri smoke (nightly) | **done** | `.github/workflows/miri-smoke.yml` (`continue-on-error`) |
+| loom_model under Miri | **unpaid** | Loom cfg graph + FFI still outside Miri permutation suite |
+| Full loom / shuttle permutation checkers | **unpaid** | Shuttle crate + live daemon ports still outside soft smoke |
+
+Soft `miri-smoke.yml` remains `continue-on-error` for nightly signal; blocking
+Miri permutation evidence lives in `miri-permutation.yml`.
 
 ### Soft loom smoke
 
@@ -121,6 +149,21 @@ Miri (nightly + `miri` component; same subset as CI):
 $env:CARGO_TARGET_DIR = Join-Path $PWD "target-w28-c00-miri"
 $env:MIRIFLAGS = "-Zmiri-strict-provenance"
 rustup toolchain install nightly --component miri
+cargo +nightly miri setup
+cargo +nightly miri test --test race_model --locked -- --test-threads=1
+```
+
+Miri permutation SelfCheck (no miri download):
+
+```powershell
+pwsh ./scripts/miri-permutation-check.ps1 -SelfCheck
+```
+
+Blocking Miri permutation suite (same `race_model` subset as CI):
+
+```powershell
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w37-c00-miri"
+$env:MIRIFLAGS = "-Zmiri-strict-provenance"
 cargo +nightly miri setup
 cargo +nightly miri test --test race_model --locked -- --test-threads=1
 ```

@@ -1,0 +1,11 @@
+C:\Users\koosh\SessionLedger-wtrees\w38-slsa-protected\target-w38-slsa-protected\debug\deps\bitflags-a2aaed830ba3b921.d: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\iter.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\parser.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\traits.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\public.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\internal.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\external.rs
+
+C:\Users\koosh\SessionLedger-wtrees\w38-slsa-protected\target-w38-slsa-protected\debug\deps\libbitflags-a2aaed830ba3b921.rmeta: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\iter.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\parser.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\traits.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\public.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\internal.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\external.rs
+
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\lib.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\iter.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\parser.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\traits.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\public.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\internal.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bitflags-2.13.1\src\external.rs:

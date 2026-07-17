@@ -12,11 +12,7 @@ fn repo_root() -> PathBuf {
 #[test]
 fn slsa_protected_environment_doc_self_check_validates_anchors() {
     let script = repo_root().join("scripts/slsa-protected-env-check.ps1");
-    assert!(
-        script.is_file(),
-        "expected SLSA protected environment check script at {}",
-        script.display()
-    );
+    assert!(script.is_file(), "expected SLSA protected environment check script at {}", script.display());
 
     let output = Command::new("pwsh")
         .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])

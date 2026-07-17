@@ -99,6 +99,8 @@ are not recomputed here.
 | WBS-8.53 | Wave-36 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 389/402 (97% A) |
 | WBS-8.54 | Wave-37 evidence packages (C00 blocking shuttle/Miri permutation, C06 source provenance + reusable workflow, C04 maintainer 2FA policy SSOT) | done | machine | `scripts/shuttle-permutation-check.ps1`; `.github/workflows/miri-permutation.yml`; `docs/ops/source-provenance.md`; `.github/workflows/reusable-hermetic-build.yml`; `docs/ops/maintainer-2fa.md` | C00, C04, C06; PRs #303-#307 |
 | WBS-8.55 | Wave-37 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 390/402 (97% A) |
+| WBS-8.56 | Wave-38 evidence packages (C00 TSan permutation, C04 rootless/no-net hard CI, C06 protected-environment SLSA checklist, C01 Fluent catalog stub, C05 USE process gauges) | done | machine | `scripts/tsan-permutation-check.ps1`; `scripts/rootless-nonet-check.ps1`; `docs/ops/slsa-protected-environment.md`; `locales/en.ftl`; `scripts/use-gauges-check.ps1` | C00, C01, C04, C05, C06; PRs #309-#313 |
+| WBS-8.57 | Wave-38 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 391/402 (97% A) |
 
 ## Organization-level control plane
 

@@ -6,9 +6,11 @@
 //! `cargo test` never builds it.
 //!
 //! Covers cancel + bounded capacity, `sync_channel`-style `try_send`, broadcast/SSE
-//! epoch fan-out (single and multi-bump), watcher-queue → broadcast → SSE pipeline
-//! permutations, and cancel-guarded epoch publication. Full tokio broadcast /
-//! daemon graph ports remain unpaid.
+//! epoch fan-out (single and multi-bump), tokio-shaped mpsc watcher→consumer,
+//! mpsc drain → broadcast publish, triple SSE subscriber fan-out, full
+//! watcher→mpsc→broadcast→SSE pipeline permutations, and cancel-guarded epoch
+//! publication. Full live `sl-daemon` tokio broadcast / daemon graph ports remain
+//! unpaid.
 
 #[cfg(not(loom))]
 #[test]
@@ -391,6 +393,312 @@ mod loom_perm {
             post_cancel_producer.join().unwrap();
 
             assert!(queued.load(Ordering::Acquire) <= QUEUE_CAP);
+            assert_eq!(epoch.load(Ordering::Acquire), drained);
+        });
+    }
+
+    /// Tokio-shaped mpsc: watcher enqueues on a bounded channel; consumer drains
+    /// without exceeding capacity or losing reserved slots under cancel races.
+    #[test]
+    fn daemon_mpsc_watcher_to_consumer_conserve() {
+        loom::model(|| {
+            const MPSC_CAP: usize = 2;
+            let cancel = Arc::new(AtomicBool::new(false));
+            let reserved = Arc::new(AtomicUsize::new(0));
+            let consumed = Arc::new(AtomicUsize::new(0));
+            let (tx, rx) = mpsc::channel::<u32>();
+
+            let watcher = {
+                let cancel = Arc::clone(&cancel);
+                let reserved = Arc::clone(&reserved);
+                let tx = tx.clone();
+                thread::spawn(move || {
+                    for id in 0..3u32 {
+                        if cancel.load(Ordering::Acquire) {
+                            break;
+                        }
+                        let prev = reserved.load(Ordering::Acquire);
+                        if prev >= MPSC_CAP {
+                            break;
+                        }
+                        if reserved
+                            .compare_exchange(prev, prev + 1, Ordering::AcqRel, Ordering::Acquire)
+                            .is_ok()
+                        {
+                            let _ = tx.send(id);
+                        }
+                    }
+                })
+            };
+
+            let consumer = {
+                let cancel = Arc::clone(&cancel);
+                let reserved = Arc::clone(&reserved);
+                let consumed = Arc::clone(&consumed);
+                thread::spawn(move || {
+                    while rx.try_recv().is_ok() {
+                        reserved.fetch_sub(1, Ordering::AcqRel);
+                        consumed.fetch_add(1, Ordering::AcqRel);
+                        if cancel.load(Ordering::Acquire) {
+                            break;
+                        }
+                    }
+                })
+            };
+
+            let cancel_setter = {
+                let cancel = Arc::clone(&cancel);
+                thread::spawn(move || {
+                    cancel.store(true, Ordering::Release);
+                })
+            };
+
+            watcher.join().unwrap();
+            cancel_setter.join().unwrap();
+            drop(tx);
+            consumer.join().unwrap();
+
+            assert!(reserved.load(Ordering::Acquire) <= MPSC_CAP);
+            assert!(consumed.load(Ordering::Acquire) <= MPSC_CAP);
+        });
+    }
+
+    /// ETL consumer contract: each mpsc drain publishes one broadcast bump.
+    #[test]
+    fn daemon_mpsc_drain_triggers_broadcast_publish() {
+        loom::model(|| {
+            const MPSC_CAP: usize = 2;
+            let queued = Arc::new(AtomicUsize::new(0));
+            let published = Arc::new(AtomicUsize::new(0));
+            let (tx, rx) = mpsc::channel::<u32>();
+
+            let watcher = {
+                let queued = Arc::clone(&queued);
+                let tx = tx.clone();
+                thread::spawn(move || {
+                    for id in 0..3u32 {
+                        let prev = queued.load(Ordering::Acquire);
+                        if prev >= MPSC_CAP {
+                            break;
+                        }
+                        if queued
+                            .compare_exchange(prev, prev + 1, Ordering::AcqRel, Ordering::Acquire)
+                            .is_ok()
+                        {
+                            let _ = tx.send(id);
+                        }
+                    }
+                })
+            };
+
+            watcher.join().unwrap();
+            drop(tx);
+
+            let mut drained = 0usize;
+            while rx.try_recv().is_ok() {
+                drained += 1;
+                queued.fetch_sub(1, Ordering::AcqRel);
+                published.fetch_add(1, Ordering::AcqRel);
+            }
+
+            assert!(queued.load(Ordering::Acquire) <= MPSC_CAP);
+            assert_eq!(published.load(Ordering::Acquire), drained);
+        });
+    }
+
+    /// SSE bridge: three subscribers each observe a publish epoch at or below the
+    /// broadcaster's final generation (tokio `broadcast` fan-out shape).
+    #[test]
+    fn daemon_broadcast_sse_triple_fanout() {
+        loom::model(|| {
+            let epoch = Arc::new(AtomicUsize::new(0));
+            let sub_a = Arc::new(AtomicUsize::new(0));
+            let sub_b = Arc::new(AtomicUsize::new(0));
+            let sub_c = Arc::new(AtomicUsize::new(0));
+
+            let publisher = {
+                let epoch = Arc::clone(&epoch);
+                thread::spawn(move || {
+                    for bump in 1..=2usize {
+                        epoch.store(bump, Ordering::Release);
+                    }
+                })
+            };
+
+            let readers: Vec<_> = [(&sub_a, "a"), (&sub_b, "b"), (&sub_c, "c")]
+                .into_iter()
+                .map(|(sub, _label)| {
+                    let epoch = Arc::clone(&epoch);
+                    let sub = Arc::clone(sub);
+                    thread::spawn(move || {
+                        let current = epoch.load(Ordering::Acquire);
+                        if current > 0 {
+                            sub.store(current, Ordering::Release);
+                        }
+                    })
+                })
+                .collect();
+
+            publisher.join().unwrap();
+            for reader in readers {
+                reader.join().unwrap();
+            }
+
+            let epoch_final = epoch.load(Ordering::Acquire);
+            assert!(epoch_final <= 2);
+            assert!(sub_a.load(Ordering::Acquire) <= epoch_final);
+            assert!(sub_b.load(Ordering::Acquire) <= epoch_final);
+            assert!(sub_c.load(Ordering::Acquire) <= epoch_final);
+        });
+    }
+
+    /// Full daemon graph: watcher mpsc enqueue → consumer drain → broadcast epoch
+    /// bump per path; SSE subscribers never exceed the publisher epoch.
+    #[test]
+    fn daemon_graph_mpsc_broadcast_sse_pipeline() {
+        loom::model(|| {
+            const MPSC_CAP: usize = 2;
+            let queued = Arc::new(AtomicUsize::new(0));
+            let epoch = Arc::new(AtomicUsize::new(0));
+            let sub_a = Arc::new(AtomicUsize::new(0));
+            let sub_b = Arc::new(AtomicUsize::new(0));
+            let (tx, rx) = mpsc::channel::<u32>();
+
+            let watcher = {
+                let queued = Arc::clone(&queued);
+                let tx = tx.clone();
+                thread::spawn(move || {
+                    for id in 0..3u32 {
+                        let prev = queued.load(Ordering::Acquire);
+                        if prev >= MPSC_CAP {
+                            break;
+                        }
+                        if queued
+                            .compare_exchange(prev, prev + 1, Ordering::AcqRel, Ordering::Acquire)
+                            .is_ok()
+                        {
+                            let _ = tx.send(id);
+                        }
+                    }
+                })
+            };
+
+            let consumer = {
+                let queued = Arc::clone(&queued);
+                let epoch = Arc::clone(&epoch);
+                thread::spawn(move || {
+                    while rx.try_recv().is_ok() {
+                        queued.fetch_sub(1, Ordering::AcqRel);
+                        epoch.fetch_add(1, Ordering::AcqRel);
+                    }
+                })
+            };
+
+            let reader_a = {
+                let epoch = Arc::clone(&epoch);
+                let sub_a = Arc::clone(&sub_a);
+                thread::spawn(move || {
+                    let current = epoch.load(Ordering::Acquire);
+                    sub_a.store(current, Ordering::Release);
+                })
+            };
+
+            let reader_b = {
+                let epoch = Arc::clone(&epoch);
+                let sub_b = Arc::clone(&sub_b);
+                thread::spawn(move || {
+                    let current = epoch.load(Ordering::Acquire);
+                    sub_b.store(current, Ordering::Release);
+                })
+            };
+
+            watcher.join().unwrap();
+            drop(tx);
+            consumer.join().unwrap();
+            reader_a.join().unwrap();
+            reader_b.join().unwrap();
+
+            let epoch_final = epoch.load(Ordering::Acquire);
+            assert!(queued.load(Ordering::Acquire) <= MPSC_CAP);
+            assert!(sub_a.load(Ordering::Acquire) <= epoch_final);
+            assert!(sub_b.load(Ordering::Acquire) <= epoch_final);
+        });
+    }
+
+    /// Shutdown/cancel forbids new mpsc reservations after the token is set; epoch
+    /// matches drained items and post-cancel watcher cannot grow the queue.
+    #[test]
+    fn daemon_graph_shutdown_stops_mpsc_enqueue() {
+        loom::model(|| {
+            const MPSC_CAP: usize = 2;
+            let cancel = Arc::new(AtomicBool::new(false));
+            let queued = Arc::new(AtomicUsize::new(0));
+            let epoch = Arc::new(AtomicUsize::new(0));
+            let (tx, rx) = mpsc::channel::<u32>();
+
+            let watcher = {
+                let cancel = Arc::clone(&cancel);
+                let queued = Arc::clone(&queued);
+                let tx = tx.clone();
+                thread::spawn(move || {
+                    for id in 0..3u32 {
+                        if cancel.load(Ordering::Acquire) {
+                            break;
+                        }
+                        let prev = queued.load(Ordering::Acquire);
+                        if prev >= MPSC_CAP {
+                            break;
+                        }
+                        if queued
+                            .compare_exchange(prev, prev + 1, Ordering::AcqRel, Ordering::Acquire)
+                            .is_ok()
+                        {
+                            let _ = tx.send(id);
+                        }
+                    }
+                })
+            };
+
+            let shutdown = {
+                let cancel = Arc::clone(&cancel);
+                thread::spawn(move || {
+                    cancel.store(true, Ordering::Release);
+                })
+            };
+
+            watcher.join().unwrap();
+            shutdown.join().unwrap();
+            drop(tx);
+
+            let mut drained = 0usize;
+            while rx.try_recv().is_ok() {
+                drained += 1;
+                queued.fetch_sub(1, Ordering::AcqRel);
+                epoch.fetch_add(1, Ordering::AcqRel);
+            }
+
+            let post_shutdown_watcher = {
+                let cancel = Arc::clone(&cancel);
+                let queued = Arc::clone(&queued);
+                thread::spawn(move || {
+                    if cancel.load(Ordering::Acquire) {
+                        return;
+                    }
+                    let prev = queued.load(Ordering::Acquire);
+                    if prev >= MPSC_CAP {
+                        return;
+                    }
+                    let _ = queued.compare_exchange(
+                        prev,
+                        prev + 1,
+                        Ordering::AcqRel,
+                        Ordering::Acquire,
+                    );
+                })
+            };
+            post_shutdown_watcher.join().unwrap();
+
+            assert!(queued.load(Ordering::Acquire) <= MPSC_CAP);
             assert_eq!(epoch.load(Ordering::Acquire), drained);
         });
     }

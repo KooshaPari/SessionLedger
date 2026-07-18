@@ -10,6 +10,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Rootless-only OCI runner matrix scaffold (C04 L40): `scripts/rootless-matrix-check.ps1 -SelfCheck`, blocking `.github/workflows/rootless-matrix.yml`, `tests/rootless_matrix.rs`, `security.yml`/`ci.yml` anchors, `sandbox-boundary.md` matrix limits (live rootless runners + OCI build/smoke unpaid).
 
+- Wave-40 tokio-shaped mpsc/broadcast/SSE daemon graph loom ports (C00 L7): expanded `tests/loom_model.rs` (mpsc watcher→consumer, mpsc drain→broadcast publish, triple SSE fan-out, full mpsc→broadcast→SSE pipeline, shutdown stops mpsc enqueue), updated `scripts/loom-permutation-check.ps1 -SelfCheck` and `docs/ops/concurrency-safety.md` done/unpaid rows (full live `sl-daemon` tokio broadcast graph remains unpaid).
+
 - Blocking jemalloc CI (C00 L8): `scripts/jemalloc-check.ps1` hard gate anchors, `tests/jemalloc_hard.rs`, blocking `.github/workflows/jemalloc-hard.yml` (SelfCheck + `cargo build --features jemalloc` on Ubuntu PRs; soft `ops-load` job retained; always-on production jemalloc + Windows parity remain unpaid).
 
 - Cargo-fetch no-net policy evidence (C04 L40): `scripts/cargo-nonet-check.ps1 -SelfCheck`, blocking `cargo-nonet` anchor in `security.yml`, `tests/cargo_nonet.rs`, `sandbox-boundary.md` cargo-fetch section (live runner no-net unpaid).

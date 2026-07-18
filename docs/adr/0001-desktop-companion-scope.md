@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-07-10
 - Decision owners: SessionLedger maintainers
-- Related: `docs/ops/distribution.md`, issue #66
+- Related: `docs/ops/distribution.md`, `docs/ops/update-check.md`, issue #66
 
 ## Context
 
@@ -42,6 +42,10 @@ Updates remain user-initiated: users choose a GitHub Release, verify published
 checksums (and the Sigstore bundle when available), stop the running viewer, and
 replace the extracted binary. The repository may provide packaging and install
 helpers, but those helpers must not imply a resident agent or silent updater.
+
+**C11 L111:** operators may run `sl-daemon check-update` to compare the installed
+version against the latest GitHub Release tag. That command is check-only — it
+does not download or install updates. See [`docs/ops/update-check.md`](../ops/update-check.md).
 
 ## Consequences
 

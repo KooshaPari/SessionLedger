@@ -12,11 +12,7 @@ fn repo_root() -> PathBuf {
 #[test]
 fn eval_repro_manifest_self_check_validates_lockfile_and_fixtures() {
     let script = repo_root().join("scripts/eval-repro-check.ps1");
-    assert!(
-        script.is_file(),
-        "expected eval repro check script at {}",
-        script.display()
-    );
+    assert!(script.is_file(), "expected eval repro check script at {}", script.display());
 
     let output = Command::new("pwsh")
         .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])

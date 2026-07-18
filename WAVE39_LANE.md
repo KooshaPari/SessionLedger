@@ -1,29 +1,30 @@
-# Wave-39 lane: w39-fuzz-blocking — C07 L67 blocking sustained fuzz
+# Wave-39 lane: w39-jemalloc-hard — C00 L8 blocking jemalloc CI
 
-**Branch:** `feat/sl-w39-fuzz-blocking`
-**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w39-fuzz-blocking`
-**Cluster / pillar:** C07 L67 (score 2, soft cadence today)
+**Branch:** `feat/sl-w39-jemalloc-hard`
+**Worktree:** `C:\Users\koosh\SessionLedger-wtrees\w39-jemalloc-hard`
+**Cluster / pillar:** C00 L8 (score 2, soft optional feature today)
 
 ## Gap
 
-Soft `fuzz-cadence.yml` + SelfCheck (#266) remain `continue-on-error`. Add blocking
-sustained fuzz smoke on PR (bounded runtime) without claiming multi-hour corpus triage.
+`jemalloc` feature + soft `ops-load` job exist (#277) but remain `continue-on-error`.
+Promote to blocking PR evidence without claiming default-on production allocator or
+Windows parity.
 
 ## Acceptance criteria
 
-1. Extend `docs/ops/fuzz-cadence.md` with blocking vs soft matrix.
-2. Add blocking `.github/workflows/fuzz-blocking.yml` (SelfCheck + bounded `cargo fuzz` run).
-3. Extend `scripts/fuzz-cadence-check.ps1` done/unpaid rows.
-4. Extend `tests/fuzz_cadence.rs` if needed.
+1. Extend `docs/ops/jemalloc.md` with hard-vs-soft matrix + blocking CI row.
+2. Add blocking `.github/workflows/jemalloc-hard.yml` (SelfCheck + `cargo build --features jemalloc` on ubuntu).
+3. Extend `scripts/jemalloc-check.ps1` done/unpaid gates.
+4. Add or extend `tests/jemalloc_hard.rs` wrapper.
 5. CHANGELOG Unreleased bullet. **Do not edit** audit scorecard/traceability files.
 
 ## Verify
 
 ```powershell
-pwsh ./scripts/fuzz-cadence-check.ps1 -SelfCheck
-cargo test fuzz_cadence --locked
+pwsh ./scripts/jemalloc-check.ps1 -SelfCheck
+cargo test jemalloc --locked
 ```
 
 ## Score expectation
 
-Evidence toward L67 blocking sustained fuzz; conservative **+1** (2→3).
+Evidence toward L8 blocking jemalloc CI; conservative **+1** (2→3) if blocking gate lands.

@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Blocking jemalloc CI (C00 L8): `scripts/jemalloc-check.ps1` hard gate anchors, `tests/jemalloc_hard.rs`, blocking `.github/workflows/jemalloc-hard.yml` (SelfCheck + `cargo build --features jemalloc` on Ubuntu PRs; soft `ops-load` job retained; always-on production jemalloc + Windows parity remain unpaid).
+
 - TSan permutation checkers (C00 L7): `scripts/tsan-permutation-check.ps1 -SelfCheck`, `tests/tsan_permutation.rs`, blocking `.github/workflows/tsan-permutation.yml` (`cargo +nightly test --test race_model` under `-Zsanitizer=thread` on ubuntu x86_64; full tokio broadcast / daemon SSE graph ports remain unpaid).
 
 - Source provenance policy SSOT + SelfCheck (C06 L59): `docs/ops/source-provenance.md`, `scripts/source-provenance-check.ps1 -SelfCheck`, `branch-protection-check.ps1 -PolicyOnly` hermetic hook, CONTRIBUTING cross-link (signed commits + CODEOWNERS + human org gates; live Settings remain NOT_VERIFIABLE_IN_REPO).

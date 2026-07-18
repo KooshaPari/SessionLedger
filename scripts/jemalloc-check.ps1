@@ -3,11 +3,13 @@
   Machine-check soft optional jemalloc feature anchors (C00 L8).
 
 .DESCRIPTION
-  Verifies docs/ops/jemalloc.md documents the soft jemalloc feature and that
-  sl-daemon Cargo.toml / main.rs / ops-load soft job stay wired.
-  Hermetic: no cargo jemalloc compile — suitable for default Windows cargo test.
+  Verifies docs/ops/jemalloc.md documents soft + hard jemalloc gates and that
+  sl-daemon Cargo.toml / main.rs, ops-load soft job, and jemalloc-hard blocking
+  workflow stay wired. Hermetic: no cargo jemalloc compile — suitable for default
+  Windows cargo test.
 
-  Does not claim always-on production jemalloc or continuous profiling.
+  Does not claim always-on production jemalloc, Windows jemalloc parity, or
+  continuous profiling.
 
 .PARAMETER SelfCheck
   Explicit docs/path smoke (CI unit proof). Same checks as the default path.
@@ -33,10 +35,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $docPath = Join-Path $repoRoot "docs/ops/jemalloc.md"
 $workflowPath = Join-Path $repoRoot ".github/workflows/ops-load.yml"
+$hardWorkflowPath = Join-Path $repoRoot ".github/workflows/jemalloc-hard.yml"
 $daemonCargoPath = Join-Path $repoRoot "crates/sl-daemon/Cargo.toml"
 $daemonMainPath = Join-Path $repoRoot "crates/sl-daemon/src/main.rs"
 $selfPath = Join-Path $repoRoot "scripts/jemalloc-check.ps1"
 $softTestPath = Join-Path $repoRoot "tests/jemalloc_soft.rs"
+$hardTestPath = Join-Path $repoRoot "tests/jemalloc_hard.rs"
 
 function Assert-File {
     param(
@@ -80,6 +84,8 @@ Assert-File -Path $daemonCargoPath -Label "sl-daemon Cargo.toml"
 Assert-File -Path $daemonMainPath -Label "sl-daemon main.rs"
 Assert-File -Path $selfPath -Label "jemalloc check script"
 Assert-File -Path $softTestPath -Label "jemalloc_soft test"
+Assert-File -Path $hardWorkflowPath -Label "jemalloc-hard workflow"
+Assert-File -Path $hardTestPath -Label "jemalloc_hard test"
 
 $doc = Get-Content -LiteralPath $docPath -Raw
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
@@ -103,8 +109,18 @@ Test-DocContains -Doc $doc -Needle "continue-on-error" `
     -Label "soft continue-on-error note"
 Test-DocContains -Doc $doc -Needle "Windows-safe" `
     -Label "Windows-safe default note"
+Test-DocContains -Doc $doc -Needle "## Soft vs hard gates" `
+    -Label "soft vs hard gates matrix section"
+Test-DocContains -Doc $doc -Needle "Blocking jemalloc-hard CI workflow | **done**" `
+    -Label "blocking hard CI gate marked done"
+Test-DocContains -Doc $doc -Needle ".github/workflows/jemalloc-hard.yml" `
+    -Label "jemalloc-hard workflow path documented"
+Test-DocContains -Doc $doc -Needle "tests/jemalloc_hard.rs" `
+    -Label "jemalloc_hard test wrapper documented"
 Test-DocContains -Doc $doc -Needle "Continuous jemalloc profiling / production always-on jemalloc | **unpaid**" `
     -Label "always-on jemalloc unpaid gate"
+Test-DocContains -Doc $doc -Needle "Windows jemalloc parity | **unpaid**" `
+    -Label "Windows jemalloc parity unpaid gate"
 
 Write-Host "sl-daemon Cargo / main anchors:"
 if ($cargoToml -notmatch '(?m)^jemalloc\s*=') {
@@ -160,7 +176,62 @@ if (-not $jemallocBlock) {
 }
 [void](Write-Check -Label "jemalloc job continue-on-error: true" -Ok $true)
 
+$hardWorkflow = Get-Content -LiteralPath $hardWorkflowPath -Raw
+$hardTestRs = Get-Content -LiteralPath $hardTestPath -Raw
+
+Write-Host "Hard jemalloc CI blocking-gate anchors:"
+if ($hardWorkflow -match 'continue-on-error:\s*true') {
+    throw "jemalloc-hard.yml must not set continue-on-error (blocking PR CI)."
+}
+[void](Write-Check -Label "hard workflow has no continue-on-error" -Ok $true)
+
+if ($hardWorkflow -notmatch 'pull_request:') {
+    throw "jemalloc-hard.yml must run on pull_request."
+}
+[void](Write-Check -Label "hard workflow triggers on pull_request" -Ok $true)
+
+if ($hardWorkflow -notmatch 'jemalloc-check\.ps1 -SelfCheck') {
+    throw "jemalloc-hard.yml must run scripts/jemalloc-check.ps1 -SelfCheck."
+}
+[void](Write-Check -Label "hard workflow runs jemalloc-check.ps1 -SelfCheck" -Ok $true)
+
+if ($hardWorkflow -notmatch 'jemalloc-check\.ps1 -Build') {
+    throw "jemalloc-hard.yml must run scripts/jemalloc-check.ps1 -Build."
+}
+[void](Write-Check -Label "hard workflow runs jemalloc-check.ps1 -Build" -Ok $true)
+
+if ($hardWorkflow -notmatch '--features jemalloc') {
+    throw "jemalloc-hard.yml must exercise --features jemalloc build evidence."
+}
+[void](Write-Check -Label "hard workflow references --features jemalloc" -Ok $true)
+
+Write-Host "cargo test wrapper anchors:"
+if ($hardTestRs -notmatch 'jemalloc-check\.ps1') {
+    throw "tests/jemalloc_hard.rs must invoke scripts/jemalloc-check.ps1."
+}
+[void](Write-Check -Label "jemalloc_hard.rs invokes SelfCheck script" -Ok $true)
+
+if ($hardTestRs -notmatch 'Jemalloc hard CI SelfCheck passed') {
+    throw "tests/jemalloc_hard.rs must assert Jemalloc hard CI SelfCheck passed success line."
+}
+[void](Write-Check -Label "jemalloc_hard.rs asserts hard success line" -Ok $true)
+
 Write-Host "Soft jemalloc SelfCheck passed"
+
+$summary = @"
+## Hard jemalloc CI SelfCheck (C00 L8)
+
+SelfCheck passed: ``docs/ops/jemalloc.md`` soft/hard gate rows, blocking
+``jemalloc-hard.yml`` workflow, and ``tests/jemalloc_hard.rs`` wrapper.
+Soft ``ops-load`` jemalloc job retained. Always-on production jemalloc and
+Windows jemalloc parity remain unpaid.
+"@
+
+if ($env:GITHUB_STEP_SUMMARY) {
+    $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+}
+
+Write-Host "Jemalloc hard CI SelfCheck passed (C00 L8 blocking PR gate; soft ops-load retained; always-on jemalloc + Windows parity unpaid)."
 
 if ($Build) {
     if ($IsWindows -or $env:OS -match 'Windows') {

@@ -2,24 +2,28 @@
 
 SessionLedger ships two `cargo-fuzz` targets with a **seeded corpus** and a
 **blocking PR smoke** (`ci.yml` → `fuzz-smoke`, 10 seconds per target). This
-page is the SSOT for the **sustained / soft longer cadence** beyond that smoke:
-nightly campaigns, crash artifact triage, and how to keep PR CI fast.
+page is the SSOT for **sustained fuzz cadence** beyond that smoke: blocking PR
+campaigns, soft nightly runs, crash artifact triage, and how to keep default CI
+fast.
 
 Related: [`test-pyramid.md`](test-pyramid.md) (pyramid layer),
 [`fuzz/`](../../fuzz/), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)
-(`fuzz-smoke`), [`.github/workflows/fuzz-cadence.yml`](../../.github/workflows/fuzz-cadence.yml).
+(`fuzz-smoke`), [`.github/workflows/fuzz-blocking.yml`](../../.github/workflows/fuzz-blocking.yml),
+[`.github/workflows/fuzz-cadence.yml`](../../.github/workflows/fuzz-cadence.yml).
 
-## Cadence map
+## Cadence map (blocking vs soft)
 
 | Lane | Duration | When | Gate |
 |------|----------|------|------|
 | PR smoke | 10 s / target | every PR / push via `ci.yml` → `fuzz-smoke` | **blocking** |
+| PR sustained | 30 s / target | every PR via `fuzz-blocking.yml` | **blocking** |
 | Sustained soft | 120 s / target | nightly schedule + `workflow_dispatch` | **soft** (`continue-on-error`) |
 | Local campaign | operator-chosen | maintainer machine | manual |
 
-PR smoke stays short on purpose. Sustained runs **do not** join the default PR
-required-check surface — they live in `fuzz-cadence.yml` and stay soft so a
-flaky libFuzzer campaign cannot block merges.
+PR smoke stays short on purpose. **Blocking** sustained fuzz (30 s / target)
+gates merges via `fuzz-blocking.yml` without claiming multi-hour corpus triage.
+**Soft** 120 s campaigns stay in `fuzz-cadence.yml` (`continue-on-error`) so a
+flaky libFuzzer nightly run cannot block merges.
 
 ## Targets and corpora
 
@@ -27,6 +31,18 @@ flaky libFuzzer campaign cannot block merges.
 |--------|-------------|-----------|
 | `okf_roundtrip` | `fuzz/corpus/okf_roundtrip/` | OKF parse + roundtrip invariants |
 | `jsonl_ingest` | `fuzz/corpus/jsonl_ingest/` | JSONL ingest parse paths |
+
+## Blocking sustained workflow
+
+[`fuzz-blocking.yml`](../../.github/workflows/fuzz-blocking.yml) is **blocking**
+on `pull_request`. It:
+
+1. Runs `scripts/fuzz-cadence-check.ps1 -SelfCheck` (docs/workflow/path anchors).
+2. Runs each target for `-max_total_time=30` with ASAN on `x86_64-unknown-linux-gnu`
+   (same toolchain pins as `fuzz-smoke`).
+3. On failure, uploads `fuzz/artifacts/` for crash corpus triage.
+
+Does **not** replace the 10 s `fuzz-smoke` job in `ci.yml` — both run on PR.
 
 ## Soft sustained workflow
 
@@ -48,8 +64,8 @@ not lengthened by the 120 s campaigns.
 When a sustained (or local) run finds a crash, libFuzzer writes under
 `fuzz/artifacts/<target>/` (for example `crash-*`). Triage steps:
 
-1. Download the workflow artifact `fuzz-crash-artifacts` (or copy the local
-   `fuzz/artifacts/` tree).
+1. Download the workflow artifact `fuzz-crash-artifacts` or
+   `fuzz-blocking-crash-artifacts` (or copy the local `fuzz/artifacts/` tree).
 2. Reproduce with the failing input:
    `cargo +nightly fuzz run <target> fuzz/artifacts/<target>/<crash-file>`.
 3. Minimize when useful:
@@ -64,6 +80,7 @@ When a sustained (or local) run finds a crash, libFuzzer writes under
 | Gate | Status | Evidence |
 |------|--------|----------|
 | Fuzz cadence SelfCheck | **done** | `scripts/fuzz-cadence-check.ps1 -SelfCheck` (+ `tests/fuzz_cadence.rs`) |
+| Blocking sustained fuzz CI | **done** | `.github/workflows/fuzz-blocking.yml` (30 s / target on PR) |
 | Soft sustained fuzz CI | **done** | `.github/workflows/fuzz-cadence.yml` (`continue-on-error`, 120 s / target) |
 | PR `fuzz-smoke` (10 s) | **done** | `.github/workflows/ci.yml` (unchanged; stays blocking + short) |
 | Auto corpus promotion from CI crashes | **unpaid** | Triage remains maintainer-driven (see above) |

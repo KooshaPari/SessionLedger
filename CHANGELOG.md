@@ -35,6 +35,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 - Soft envelope helper (`SL_ENVELOPE_KEY` + SHA-256 keystream) in `src/envelope.rs` (C02 L22; not a KMS).
 - Hard envelope-crypto CI evidence (C02 L22): `scripts/envelope-crypto-check.ps1 -SelfCheck`, blocking `.github/workflows/envelope-crypto.yml`, `tests/envelope_crypto.rs` (`envelope-crypto` marker feature; KMS/sealed-secrets/KEK wrap unpaid).
 
+- Blocking sustained fuzz (C07 L67): extended `docs/ops/fuzz-cadence.md` blocking vs soft matrix, `scripts/fuzz-cadence-check.ps1` done/unpaid rows, blocking `.github/workflows/fuzz-blocking.yml` (SelfCheck + 30 s / target `cargo fuzz` on PR); soft `fuzz-cadence.yml` nightly (120 s) retained; auto corpus promotion remains unpaid.
+
 - Viewer `ErrorState` non-color cues: warning glyph + `aria-invalid` (C09 L81.15).
 
 - Versioning policy SSOT + CHANGELOG tagged-section SelfCheck (C11 L119).

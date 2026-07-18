@@ -3,11 +3,11 @@
   Machine-check fuzz cadence SSOT anchors (C07 L67).
 
 .DESCRIPTION
-  Verifies docs/ops/fuzz-cadence.md documents sustained soft fuzz beyond PR
-  smoke, and that the fuzz-cadence workflow, fuzz targets/corpus, and this
-  script stay wired. Hermetic: no cargo-fuzz, no network.
+  Verifies docs/ops/fuzz-cadence.md documents blocking vs soft sustained fuzz,
+  and that the fuzz-blocking / fuzz-cadence workflows, fuzz targets/corpus,
+  and this script stay wired. Hermetic: no cargo-fuzz, no network.
 
-  Does not claim blocking sustained fuzz or automatic corpus promotion.
+  Does not claim automatic corpus promotion or multi-hour corpus triage.
 
 .PARAMETER SelfCheck
   Explicit docs/path smoke (CI unit proof). Same checks as the default path.
@@ -25,6 +25,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $docPath = Join-Path $repoRoot "docs/ops/fuzz-cadence.md"
+$blockingWorkflowPath = Join-Path $repoRoot ".github/workflows/fuzz-blocking.yml"
 $workflowPath = Join-Path $repoRoot ".github/workflows/fuzz-cadence.yml"
 $ciPath = Join-Path $repoRoot ".github/workflows/ci.yml"
 $selfPath = Join-Path $repoRoot "scripts/fuzz-cadence-check.ps1"
@@ -70,6 +71,7 @@ if ($SelfCheck) {
 }
 
 Assert-File -Path $docPath -Label "fuzz cadence doc"
+Assert-File -Path $blockingWorkflowPath -Label "fuzz-blocking workflow"
 Assert-File -Path $workflowPath -Label "fuzz-cadence workflow"
 Assert-File -Path $ciPath -Label "ci.yml"
 Assert-File -Path $selfPath -Label "fuzz cadence check script"
@@ -79,18 +81,27 @@ Assert-File -Path $okfCorpus -Label "okf_roundtrip corpus seed"
 Assert-File -Path $jsonlCorpus -Label "jsonl_ingest corpus seed"
 
 $doc = Get-Content -LiteralPath $docPath -Raw
+$blockingWorkflow = Get-Content -LiteralPath $blockingWorkflowPath -Raw
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $ci = Get-Content -LiteralPath $ciPath -Raw
 
-Write-Host "Fuzz cadence doc anchors:"
+Write-Host "Fuzz cadence doc anchors (blocking vs soft):"
 Test-DocContains -Doc $doc -Needle "Fuzz cadence (C07 L67)" `
     -Label "doc heading"
+Test-DocContains -Doc $doc -Needle "Cadence map (blocking vs soft)" `
+    -Label "blocking vs soft cadence map heading"
 Test-DocContains -Doc $doc -Needle "scripts/fuzz-cadence-check.ps1" `
     -Label "SelfCheck script reference"
 Test-DocContains -Doc $doc -Needle "-SelfCheck" `
     -Label "SelfCheck invocation"
 Test-DocContains -Doc $doc -Needle "Fuzz cadence SelfCheck | **done**" `
     -Label "SelfCheck gate marked done"
+Test-DocContains -Doc $doc -Needle "Blocking sustained fuzz CI | **done**" `
+    -Label "blocking sustained fuzz CI gate marked done"
+Test-DocContains -Doc $doc -Needle "fuzz-blocking.yml" `
+    -Label "fuzz-blocking workflow reference"
+Test-DocContains -Doc $doc -Needle "max_total_time=30" `
+    -Label "blocking 30s budget"
 Test-DocContains -Doc $doc -Needle "fuzz-cadence.yml" `
     -Label "fuzz-cadence workflow reference"
 Test-DocContains -Doc $doc -Needle "continue-on-error" `
@@ -110,7 +121,28 @@ Test-DocContains -Doc $doc -Needle "okf_roundtrip" `
 Test-DocContains -Doc $doc -Needle "jsonl_ingest" `
     -Label "jsonl_ingest target"
 
-Write-Host "Workflow soft-gate anchors:"
+Write-Host "Blocking workflow gate anchors:"
+if ($blockingWorkflow -match 'continue-on-error:\s*true') {
+    throw "fuzz-blocking.yml must not set continue-on-error (blocking sustained fuzz CI)."
+}
+[void](Write-Check -Label "fuzz-blocking workflow has no continue-on-error" -Ok $true)
+
+if ($blockingWorkflow -notmatch 'fuzz-cadence-check\.ps1') {
+    throw "fuzz-blocking.yml must exercise scripts/fuzz-cadence-check.ps1."
+}
+[void](Write-Check -Label "blocking workflow references fuzz-cadence-check.ps1" -Ok $true)
+
+if ($blockingWorkflow -notmatch 'max_total_time=30') {
+    throw "fuzz-blocking.yml must run bounded sustained fuzz with -max_total_time=30."
+}
+[void](Write-Check -Label "blocking workflow max_total_time=30" -Ok $true)
+
+if ($blockingWorkflow -notmatch 'okf_roundtrip' -or $blockingWorkflow -notmatch 'jsonl_ingest') {
+    throw "fuzz-blocking.yml must exercise okf_roundtrip and jsonl_ingest."
+}
+[void](Write-Check -Label "blocking workflow exercises both fuzz targets" -Ok $true)
+
+Write-Host "Soft workflow gate anchors:"
 if ($workflow -notmatch 'continue-on-error:\s*true') {
     throw "fuzz-cadence.yml must set continue-on-error: true (soft gate)."
 }

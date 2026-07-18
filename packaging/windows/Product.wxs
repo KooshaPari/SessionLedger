@@ -25,8 +25,8 @@
   </Fragment>
 
   <Fragment>
-    <ComponentGroup Id="ApplicationComponents" Directory="INSTALLFOLDER">
-      <Component Guid="*">
+      <ComponentGroup Id="ApplicationComponents" Directory="INSTALLFOLDER">
+      <Component Guid="3A4E9A2C-8A55-4A11-B5E2-BAE8D89D3A1E">
         <File Id="ViewerExecutable" Source="$(var.SourceDir)\sl-viewer.exe">
           <Shortcut
             Id="StartMenuShortcut"
@@ -44,10 +44,10 @@
           KeyPath="yes" />
         <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
       </Component>
-      <Component Guid="*">
+      <Component Guid="D8F6B6D9-6DA4-4A57-92A4-E4C7D3D5EF1A">
         <File Source="$(var.SourceDir)\LICENSE-MIT" />
       </Component>
-      <Component Guid="*">
+      <Component Guid="E6D3D5A2-7E3B-4F58-9CC5-2B2F0B5D9F6F">
         <File Source="$(var.SourceDir)\LICENSE-APACHE" />
       </Component>
     </ComponentGroup>

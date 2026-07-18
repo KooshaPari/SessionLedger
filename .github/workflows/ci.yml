@@ -55,6 +55,17 @@ jobs:
         shell: pwsh
         run: ./scripts/rootless-nonet-check.ps1 -SelfCheck
 
+  # Blocking C04 L40 rootless-only OCI runner matrix scaffold — full PR gate in
+  # .github/workflows/rootless-matrix.yml; this job is a fast ci.yml anchor smoke.
+  rootless-matrix-policy:
+    name: rootless-only matrix policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: assert rootless-only OCI runner matrix scaffold anchors
+        shell: pwsh
+        run: ./scripts/rootless-matrix-check.ps1 -SelfCheck
+
   # Fast policy smoke for the blocking bench-gate workflow (full Criterion run
   # stays in .github/workflows/bench-gate.yml). Do not mark continue-on-error.
   perf-budget-policy:

@@ -11,6 +11,15 @@ From the repository root:
 
 ```powershell
 ./scripts/eval-repro-check.ps1
+# or explicit CI smoke (also validates doc/CI wiring):
+./scripts/eval-repro-check.ps1 -SelfCheck
+```
+
+Rust integration wrapper (runs the same `-SelfCheck` path):
+
+```powershell
+$env:CARGO_TARGET_DIR = 'target-w40-eval-repro'
+cargo test --test eval_repro
 ```
 
 The script asserts:
@@ -39,7 +48,8 @@ merge.
 ## CI
 
 `.github/workflows/ci.yml` runs `eval-repro-check.ps1` on every pull request
-alongside the existing bench gate workflow.
+alongside the existing bench gate workflow. `tests/eval_repro.rs` mirrors the
+`-SelfCheck` path for local `cargo test` proof.
 
 ## Related
 

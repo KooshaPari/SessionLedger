@@ -10,6 +10,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Cargo-fetch no-net policy evidence (C04 L40): `scripts/cargo-nonet-check.ps1 -SelfCheck`, blocking `cargo-nonet` anchor in `security.yml`, `tests/cargo_nonet.rs`, `sandbox-boundary.md` cargo-fetch section (live runner no-net unpaid).
 
+- Loom daemon-graph broadcast/SSE epoch permutations (C00 L7): expanded `tests/loom_model.rs` (multi-bump epoch fan-out, watcher→SSE pipeline, cancel-guarded conservation), updated `scripts/loom-permutation-check.ps1 -SelfCheck` and `docs/ops/concurrency-safety.md` done/unpaid rows (full tokio `sl-daemon` broadcast graph remains unpaid).
+
 - TSan permutation checkers (C00 L7): `scripts/tsan-permutation-check.ps1 -SelfCheck`, `tests/tsan_permutation.rs`, blocking `.github/workflows/tsan-permutation.yml` (`cargo +nightly test --test race_model` under `-Zsanitizer=thread` on ubuntu x86_64; full tokio broadcast / daemon SSE graph ports remain unpaid).
 
 - Source provenance policy SSOT + SelfCheck (C06 L59): `docs/ops/source-provenance.md`, `scripts/source-provenance-check.ps1 -SelfCheck`, `branch-protection-check.ps1 -PolicyOnly` hermetic hook, CONTRIBUTING cross-link (signed commits + CODEOWNERS + human org gates; live Settings remain NOT_VERIFIABLE_IN_REPO).

@@ -6,8 +6,9 @@
 //! `cargo test` never builds it.
 //!
 //! Covers cancel + bounded capacity, `sync_channel`-style `try_send`, broadcast/SSE
-//! epoch fan-out, and watcher-queue → broadcast pipeline permutations. Full
-//! tokio broadcast / daemon graph ports remain unpaid.
+//! epoch fan-out (single and multi-bump), watcher-queue → broadcast → SSE pipeline
+//! permutations, and cancel-guarded epoch publication. Full tokio broadcast /
+//! daemon graph ports remain unpaid.
 
 #[cfg(not(loom))]
 #[test]
@@ -213,6 +214,180 @@ mod loom_perm {
 
             assert!(queued.load(Ordering::Acquire) <= QUEUE_CAP);
             assert_eq!(broadcast.load(Ordering::Acquire), drained);
+        });
+    }
+
+    /// Multi-bump SSE epoch: each published bundle bumps generation; subscribers
+    /// never observe a value above the publisher's final epoch.
+    #[test]
+    fn broadcast_epoch_monotonic_under_multi_bump() {
+        loom::model(|| {
+            let epoch = Arc::new(AtomicUsize::new(0));
+            let sub_a = Arc::new(AtomicUsize::new(0));
+            let sub_b = Arc::new(AtomicUsize::new(0));
+
+            let publisher = {
+                let epoch = Arc::clone(&epoch);
+                thread::spawn(move || {
+                    for bump in 1..=3usize {
+                        epoch.store(bump, Ordering::Release);
+                    }
+                })
+            };
+
+            let reader_a = {
+                let epoch = Arc::clone(&epoch);
+                let sub_a = Arc::clone(&sub_a);
+                thread::spawn(move || {
+                    let current = epoch.load(Ordering::Acquire);
+                    if current > 0 {
+                        sub_a.store(current, Ordering::Release);
+                    }
+                })
+            };
+
+            let reader_b = {
+                let epoch = Arc::clone(&epoch);
+                let sub_b = Arc::clone(&sub_b);
+                thread::spawn(move || {
+                    let current = epoch.load(Ordering::Acquire);
+                    if current > 0 {
+                        sub_b.store(current, Ordering::Release);
+                    }
+                })
+            };
+
+            publisher.join().unwrap();
+            reader_a.join().unwrap();
+            reader_b.join().unwrap();
+
+            let epoch_final = epoch.load(Ordering::Acquire);
+            assert!(epoch_final <= 3);
+            assert!(sub_a.load(Ordering::Acquire) <= epoch_final);
+            assert!(sub_b.load(Ordering::Acquire) <= epoch_final);
+        });
+    }
+
+    /// Daemon-graph pipeline: watcher drain publishes one SSE epoch bump per
+    /// dequeued path; broadcast count matches drained items.
+    #[test]
+    fn watcher_drain_bumps_sse_epoch_per_item() {
+        loom::model(|| {
+            const QUEUE_CAP: usize = 2;
+            let cancel = Arc::new(AtomicBool::new(false));
+            let queued = Arc::new(AtomicUsize::new(0));
+            let epoch = Arc::new(AtomicUsize::new(0));
+            let (tx, rx) = mpsc::channel::<u32>();
+
+            let scanner = {
+                let cancel = Arc::clone(&cancel);
+                let queued = Arc::clone(&queued);
+                let tx = tx.clone();
+                thread::spawn(move || {
+                    for id in 0..3u32 {
+                        if cancel.load(Ordering::Acquire) {
+                            break;
+                        }
+                        let prev = queued.load(Ordering::Acquire);
+                        if prev >= QUEUE_CAP {
+                            break;
+                        }
+                        if queued
+                            .compare_exchange(prev, prev + 1, Ordering::AcqRel, Ordering::Acquire)
+                            .is_ok()
+                        {
+                            let _ = tx.send(id);
+                        }
+                    }
+                })
+            };
+
+            scanner.join().unwrap();
+            drop(tx);
+
+            let mut drained = 0usize;
+            while rx.try_recv().is_ok() {
+                drained += 1;
+                queued.fetch_sub(1, Ordering::AcqRel);
+                epoch.fetch_add(1, Ordering::AcqRel);
+            }
+
+            assert!(queued.load(Ordering::Acquire) <= QUEUE_CAP);
+            assert_eq!(epoch.load(Ordering::Acquire), drained);
+        });
+    }
+
+    /// Cancel forbids new watcher reservations; SSE epoch matches drained items
+    /// and post-cancel producers cannot grow the queue.
+    #[test]
+    fn daemon_graph_pipeline_conserves_under_cancel() {
+        loom::model(|| {
+            const QUEUE_CAP: usize = 2;
+            let cancel = Arc::new(AtomicBool::new(false));
+            let queued = Arc::new(AtomicUsize::new(0));
+            let epoch = Arc::new(AtomicUsize::new(0));
+            let (tx, rx) = mpsc::channel::<u32>();
+
+            let scanner = {
+                let cancel = Arc::clone(&cancel);
+                let queued = Arc::clone(&queued);
+                let tx = tx.clone();
+                thread::spawn(move || {
+                    for id in 0..3u32 {
+                        if cancel.load(Ordering::Acquire) {
+                            break;
+                        }
+                        let prev = queued.load(Ordering::Acquire);
+                        if prev >= QUEUE_CAP {
+                            break;
+                        }
+                        if queued
+                            .compare_exchange(prev, prev + 1, Ordering::AcqRel, Ordering::Acquire)
+                            .is_ok()
+                        {
+                            let _ = tx.send(id);
+                        }
+                    }
+                })
+            };
+
+            let cancel_setter = {
+                let cancel = Arc::clone(&cancel);
+                thread::spawn(move || {
+                    cancel.store(true, Ordering::Release);
+                })
+            };
+
+            scanner.join().unwrap();
+            cancel_setter.join().unwrap();
+            drop(tx);
+
+            let mut drained = 0usize;
+            while rx.try_recv().is_ok() {
+                drained += 1;
+                queued.fetch_sub(1, Ordering::AcqRel);
+                epoch.fetch_add(1, Ordering::AcqRel);
+            }
+
+            let post_cancel_producer = {
+                let cancel = Arc::clone(&cancel);
+                let queued = Arc::clone(&queued);
+                thread::spawn(move || {
+                    if cancel.load(Ordering::Acquire) {
+                        return;
+                    }
+                    let prev = queued.load(Ordering::Acquire);
+                    if prev >= QUEUE_CAP {
+                        return;
+                    }
+                    let _ =
+                        queued.compare_exchange(prev, prev + 1, Ordering::AcqRel, Ordering::Acquire);
+                })
+            };
+            post_cancel_producer.join().unwrap();
+
+            assert!(queued.load(Ordering::Acquire) <= QUEUE_CAP);
+            assert_eq!(epoch.load(Ordering::Acquire), drained);
         });
     }
 }

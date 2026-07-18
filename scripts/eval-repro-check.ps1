@@ -1,6 +1,22 @@
+<#
+.SYNOPSIS
+  Verify eval reproducibility manifest anchors (C08 L79).
+
+.DESCRIPTION
+  Asserts Cargo.lock SHA-256, MSRV, OKF fixture count/anchors, and bench policy
+  wiring match docs/ops/eval-manifest.json. Hermetic: no network.
+
+.PARAMETER SelfCheck
+  Explicit manifest/docs/CI smoke (same checks as default; also validates wiring).
+
+.EXAMPLE
+  pwsh ./scripts/eval-repro-check.ps1 -SelfCheck
+#>
 [CmdletBinding()]
 param(
-    [string]$ManifestPath
+    [string]$ManifestPath,
+
+    [switch]$SelfCheck
 )
 
 Set-StrictMode -Version Latest
@@ -11,6 +27,43 @@ if (-not $ManifestPath) {
     $ManifestPath = Join-Path $repoRoot "docs/ops/eval-manifest.json"
 }
 $ManifestPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ManifestPath)
+
+$docPath = Join-Path $repoRoot "docs/ops/eval-reproducibility.md"
+$rustWrapper = Join-Path $repoRoot "tests/eval_repro.rs"
+$ciWorkflow = Join-Path $repoRoot ".github/workflows/ci.yml"
+
+function Assert-File {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Missing $Label at '$Path'."
+    }
+}
+
+if ($SelfCheck) {
+    Write-Host "Eval reproducibility manifest check (C08 L79)"
+    Write-Host "Mode: SelfCheck (manifest + docs + CI wiring; no network)"
+    Assert-File -Path $ManifestPath -Label "eval manifest JSON"
+    Assert-File -Path $docPath -Label "eval reproducibility doc"
+    Assert-File -Path $rustWrapper -Label "eval repro rust SelfCheck wrapper"
+    Assert-File -Path $PSCommandPath -Label "eval repro check script"
+    Assert-File -Path $ciWorkflow -Label "ci.yml"
+
+    $doc = Get-Content -LiteralPath $docPath -Raw
+    $ci = Get-Content -LiteralPath $ciWorkflow -Raw
+    foreach ($pair in @(
+            @{ Text = $doc; Needle = "eval-manifest.json"; Label = "doc references eval-manifest.json" },
+            @{ Text = $doc; Needle = "eval-repro-check.ps1"; Label = "doc references eval-repro-check.ps1" },
+            @{ Text = $doc; Needle = "-SelfCheck"; Label = "doc references SelfCheck" },
+            @{ Text = $ci; Needle = "eval-repro-check.ps1"; Label = "ci.yml runs eval-repro-check.ps1" }
+        )) {
+        if (-not $pair.Text.Contains($pair.Needle)) {
+            throw "$($pair.Label) missing required anchor: '$($pair.Needle)'."
+        }
+    }
+}
 
 if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
     throw "Eval manifest not found at '$ManifestPath'."
@@ -87,7 +140,12 @@ if ($threshold -le 0) {
 }
 
 $commit = (& git -C $repoRoot rev-parse HEAD).Trim()
-Write-Host "Eval reproducibility check passed."
+if ($SelfCheck) {
+    Write-Host "Eval reproducibility manifest SelfCheck passed (C08 L79)."
+}
+else {
+    Write-Host "Eval reproducibility check passed."
+}
 Write-Host "  commit=$commit"
 Write-Host "  fixture_seed=$($manifest.fixture_seed) fixture_count=$fixtureCount anchor_count=$($anchors.Count)"
 Write-Host "  cargo_lock_sha256=$lockHash"

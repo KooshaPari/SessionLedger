@@ -67,6 +67,34 @@ function Test-DocContains {
     }
 }
 
+function Get-YamlJobBlock {
+    param(
+        [Parameter(Mandatory = $true)][string]$Document,
+        [Parameter(Mandatory = $true)][string]$JobName
+    )
+
+    $lines = $Document -split "\r?\n"
+    $start = -1
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -eq "  ${JobName}:") {
+            $start = $index
+            break
+        }
+    }
+    if ($start -lt 0) {
+        throw "Workflow missing '$JobName' job definition."
+    }
+
+    $end = $lines.Count
+    for ($index = $start + 1; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match '^  [A-Za-z0-9_-]+:\s*$') {
+            $end = $index
+            break
+        }
+    }
+    return ($lines[$start..($end - 1)] -join "`n")
+}
+
 Write-Host "Platform signing readiness check (C11 L112 hard evidence)"
 if ($SelfCheck) {
     Write-Host "Mode: SelfCheck (ADR + release.yml unsigned anchors + blocking hard CI; no secrets / no network)"
@@ -165,11 +193,9 @@ if ($release -notmatch '(?m)^\s*smoke-windows:\s*$') {
 if ($release -notmatch '(?ms)^  smoke-macos-pkg:\s*$') {
     throw "release.yml missing smoke-macos-pkg job definition."
 }
-if ($release -match '(?ms)^  signing-readiness:\s*\r?\n(?<block>(?:    .*\r?\n)*?)(?=^  [a-z][\w-]+:)') {
-    $signingBlock = $Matches['block']
-    if ($signingBlock -match 'continue-on-error:\s*true') {
-        throw "release.yml signing-readiness job must be blocking (no continue-on-error)."
-    }
+$signingBlock = Get-YamlJobBlock -Document $release -JobName "signing-readiness"
+if ($signingBlock -match 'continue-on-error:\s*true') {
+    throw "release.yml signing-readiness job must be blocking (no continue-on-error)."
 }
 [void](Write-Check -Label "release.yml smoke + signing-readiness job definitions present" -Ok $true)
 
@@ -195,7 +221,8 @@ Test-DocContains -Doc $ciWorkflow -Needle "signing-hard.yml" `
 Test-DocContains -Doc $ciWorkflow -Needle "signing-readiness-check.ps1" `
     -Label "ci.yml references signing-readiness SelfCheck script" -Context ".github/workflows/ci.yml"
 
-if ($ciWorkflow -match '(?ms)^  signing-readiness-policy:.*?continue-on-error:\s*true') {
+$signingPolicyBlock = Get-YamlJobBlock -Document $ciWorkflow -JobName "signing-readiness-policy"
+if ($signingPolicyBlock -match 'continue-on-error:\s*true') {
     throw "ci.yml signing-readiness-policy job must be blocking (no continue-on-error)."
 }
 [void](Write-Check -Label "ci.yml signing-readiness-policy job is blocking when present" -Ok $true)

@@ -405,6 +405,8 @@ jobs:
       - name: extract and run version
         shell: bash
         run: |
+          sudo apt-get update
+          sudo apt-get install -y libxdo3
           set -euo pipefail
           archive="$(printf '%s\n' artifact/sl-viewer-*.tar.gz)"
           test -f "${archive}"

@@ -33,6 +33,17 @@ jobs:
         shell: pwsh
         run: ./scripts/eval-repro-check.ps1
 
+  # Blocking C11 L112 signing-readiness hard CI evidence — full PR gate in
+  # .github/workflows/signing-hard.yml; this job is a fast ci.yml anchor smoke.
+  signing-readiness-policy:
+    name: signing readiness policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: assert hard signing-readiness CI evidence anchors
+        shell: pwsh
+        run: ./scripts/signing-readiness-check.ps1 -SelfCheck
+
   # Blocking C04 L40 hard rootless/no-net CI evidence — full PR gate in
   # .github/workflows/rootless-nonet.yml; this job is a fast ci.yml anchor smoke.
   rootless-nonet-policy:

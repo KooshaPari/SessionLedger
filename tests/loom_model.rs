@@ -380,8 +380,12 @@ mod loom_perm {
                     if prev >= QUEUE_CAP {
                         return;
                     }
-                    let _ =
-                        queued.compare_exchange(prev, prev + 1, Ordering::AcqRel, Ordering::Acquire);
+                    let _ = queued.compare_exchange(
+                        prev,
+                        prev + 1,
+                        Ordering::AcqRel,
+                        Ordering::Acquire,
+                    );
                 })
             };
             post_cancel_producer.join().unwrap();

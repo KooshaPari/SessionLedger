@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Wave-40 scope enumeration from 394/402 audit gaps (`WAVE40_SCOPE.md`, `docs/ops/WAVE40_PERT.md`) — five lanes: eval-repro, signing-hard, update-check, rootless-matrix, daemon-tokio.
+
 - Blocking jemalloc CI (C00 L8): `scripts/jemalloc-check.ps1` hard gate anchors, `tests/jemalloc_hard.rs`, blocking `.github/workflows/jemalloc-hard.yml` (SelfCheck + `cargo build --features jemalloc` on Ubuntu PRs; soft `ops-load` job retained; always-on production jemalloc + Windows parity remain unpaid).
 
 - Cargo-fetch no-net policy evidence (C04 L40): `scripts/cargo-nonet-check.ps1 -SelfCheck`, blocking `cargo-nonet` anchor in `security.yml`, `tests/cargo_nonet.rs`, `sandbox-boundary.md` cargo-fetch section (live runner no-net unpaid).

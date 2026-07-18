@@ -92,8 +92,13 @@ not an open implementation gap without product scope.
 | Host FDE / ACL / secret-injection guidance | **done** | Recommended host-side controls |
 | TLS-at-edge samples (Caddy/nginx) | **done** | [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge) |
 | Crypto inventory SelfCheck | **done** | `scripts/crypto-inventory-check.ps1 -SelfCheck` |
-| In-tree KMS / sealed-secret / HSM client | **deferred (Phase-0)** | No SDK; reconsider triggers above |
-| Application envelope encryption for OKF/audit | **deferred (Phase-0)** | No DEK/KEK format; host FDE is the control |
+| Envelope-crypto SelfCheck | **done** | `scripts/envelope-crypto-check.ps1 -SelfCheck` (+ `tests/envelope_crypto.rs`) |
+| Blocking envelope-crypto CI workflow | **done** | `.github/workflows/envelope-crypto.yml` |
+| Soft envelope helper (`src/envelope.rs`) | **done** | SHA-256 keystream + `SL_ENVELOPE_KEY`; `envelope-crypto` marker feature |
+| In-tree KMS / sealed-secret / HSM client | **unpaid** | No SDK; reconsider triggers above |
+| KEK wrap / cloud KMS for envelope DEK | **unpaid** | Soft DEK only; host FDE / vault injection is the control |
+| AES-GCM envelope revision | **unpaid** | Keystream stub until dep graph + ADR accepted |
+| Application envelope encryption for OKF/audit | **deferred (Phase-0)** | No DEK/KEK format wired into ETL; host FDE is the control |
 | In-process daemon TLS | **deferred** | Proxy termination remains the deploy path |
 
 ## Remote daemon deploy: TLS at the edge
@@ -145,16 +150,37 @@ X-API-Key: <SL_API_KEY>
 
 ## Soft envelope stub
 
-Opt-in feature (default off):
+Opt-in marker feature (default off in CI filters; module always compiled):
 
 ```powershell
-cargo test -p session-ledger envelope
+cargo test envelope_crypto --features envelope-crypto --locked
+pwsh ./scripts/envelope-crypto-check.ps1 -SelfCheck
 ```
 
 - Module: [`src/envelope.rs`](../../src/envelope.rs)
+- Feature: `envelope-crypto` (marker for SelfCheck / CI wiring)
 - Key: `SL_ENVELOPE_KEY` — 64 hex chars (32 bytes). **Never commit live keys.**
-- Blob: `v1:<12-byte-nonce-hex>:<ciphertext-hex>`
-- Non-goals: not called from daemon ingest; not a substitute for host FDE.
+- Blob: `v1:<16-byte-nonce-hex>:<ciphertext-hex>`
+- Non-goals: not called from daemon ingest; not a substitute for host FDE; **does not claim in-tree KMS**, sealed-secret clients, or automatic OKF/audit encryption.
+
+## Hard envelope-crypto CI evidence (C02 L22)
+
+Blocking hermetic SelfCheck for the soft envelope helper scope — docs, workflow,
+and `security.yml` anchors only. This section is the operator SSOT for what is
+**done** vs **unpaid** on envelope crypto; it does **not** claim in-tree KMS,
+sealed secrets, KEK wrap, or production at-rest encryption.
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| Envelope-crypto SelfCheck | **done** | `scripts/envelope-crypto-check.ps1 -SelfCheck` (+ `tests/envelope_crypto.rs`) |
+| Blocking envelope-crypto CI workflow | **done** | `.github/workflows/envelope-crypto.yml` |
+| Soft envelope helper (`src/envelope.rs`) | **done** | SHA-256 keystream + `SL_ENVELOPE_KEY`; `envelope-crypto` marker feature |
+| In-tree KMS / sealed-secret client | **unpaid** | No cloud KMS SDK or sealed-secret client in-tree |
+| KEK wrap / cloud KMS for envelope DEK | **unpaid** | Soft hex DEK via env only; no KEK hierarchy |
+| AES-GCM envelope revision | **unpaid** | Keystream stub until dep graph + ADR accepted |
+| OKF/audit automatic envelope encryption | **unpaid** | Host FDE / ACLs remain the Phase-0 control |
+
+Cross-check: general crypto inventory rows live in [KMS / at-rest evidence checklist](#kms--at-rest-evidence-checklist) above; `scripts/crypto-inventory-check.ps1 -SelfCheck` covers inventory + Phase-0 deferral without duplicating this blocking gate.
 
 ## Machine verification (SelfCheck)
 

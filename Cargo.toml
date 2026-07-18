@@ -17,6 +17,8 @@ readme = "README.md"
 
 [features]
 # Soft envelope stub is always compiled (sha2 keystream in src/envelope.rs; C02 L22).
+# Marker feature for envelope-crypto SelfCheck / CI evidence wiring.
+envelope-crypto = []
 # Enable reusable zstd compression adapters.
 compress = ["dep:zstd"]
 # Enable the rusqlite-backed Forge ingestion adapter and zstd decompression.
@@ -63,6 +65,11 @@ loom = "0.7"
 name = "alloc_profile_dhat"
 path = "tests/alloc_profile_dhat.rs"
 required-features = ["alloc-profile"]
+
+[[test]]
+name = "envelope_crypto"
+path = "tests/envelope_crypto.rs"
+required-features = ["envelope-crypto"]
 
 [[bench]]
 name = "pipeline"

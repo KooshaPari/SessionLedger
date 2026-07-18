@@ -484,8 +484,26 @@ jobs:
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
+          name: x86_64-unknown-linux-gnu
           path: artifacts
-          merge-multiple: true
+
+      - name: download x86_64 Apple x86_64 artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: x86_64-apple-darwin
+          path: artifacts
+
+      - name: download aarch64 Apple artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: aarch64-apple-darwin
+          path: artifacts
+
+      - name: download Windows artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: x86_64-pc-windows-msvc
+          path: artifacts
 
       - name: list assets
         run: ls -lh artifacts/

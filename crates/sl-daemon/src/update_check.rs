@@ -80,10 +80,7 @@ pub async fn fetch_latest_release_tag(
         .send()
         .await?;
     if !resp.status().is_success() {
-        return Err(UpdateCheckError::Parse(format!(
-            "GitHub API returned HTTP {}",
-            resp.status()
-        )));
+        return Err(UpdateCheckError::Parse(format!("GitHub API returned HTTP {}", resp.status())));
     }
     let body: serde_json::Value = resp.json().await?;
     body.get("tag_name")

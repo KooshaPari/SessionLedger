@@ -811,13 +811,9 @@ async fn run_serve(
 
 async fn run_check_update(repo: &str, json: bool, latest_override: Option<&str>) {
     let installed = env!("CARGO_PKG_VERSION");
-    let latest_override = latest_override
-        .map(str::to_owned)
-        .or_else(|| {
-            std::env::var("SL_CHECK_UPDATE_LATEST")
-                .ok()
-                .filter(|value| !value.trim().is_empty())
-        });
+    let latest_override = latest_override.map(str::to_owned).or_else(|| {
+        std::env::var("SL_CHECK_UPDATE_LATEST").ok().filter(|value| !value.trim().is_empty())
+    });
     let latest_tag = match latest_override {
         Some(tag) => tag,
         None => {

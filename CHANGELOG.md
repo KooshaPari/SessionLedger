@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- User-initiated update check (C11 L111): `sl-daemon check-update` (GitHub release tag compare; no download/install), `docs/ops/update-check.md`, `scripts/update-check-check.ps1 -SelfCheck`, `tests/update_check.rs`, `crates/sl-daemon/tests/check_update.rs`, blocking `.github/workflows/update-check-hard.yml` + soft `update-check-soft.yml` (SelfCheck + hermetic `--latest` smoke; auto-install remains unpaid).
+
 - Blocking jemalloc CI (C00 L8): `scripts/jemalloc-check.ps1` hard gate anchors, `tests/jemalloc_hard.rs`, blocking `.github/workflows/jemalloc-hard.yml` (SelfCheck + `cargo build --features jemalloc` on Ubuntu PRs; soft `ops-load` job retained; always-on production jemalloc + Windows parity remain unpaid).
 
 - Cargo-fetch no-net policy evidence (C04 L40): `scripts/cargo-nonet-check.ps1 -SelfCheck`, blocking `cargo-nonet` anchor in `security.yml`, `tests/cargo_nonet.rs`, `sandbox-boundary.md` cargo-fetch section (live runner no-net unpaid).

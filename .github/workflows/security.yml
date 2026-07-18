@@ -105,7 +105,19 @@ jobs:
 
   # Hard C04 L40 rootless/no-net CI evidence — blocking PR workflow in
   # .github/workflows/rootless-nonet.yml (rootless-nonet-check.ps1 -SelfCheck).
-  # Does not enforce rootless-only runners or blocking no-net on cargo-fetch jobs.
+  # Does not enforce rootless-only runners or live no-net on cargo-fetch jobs.
+
+  # Blocking C04 L40 cargo-fetch no-net policy evidence — hermetic SelfCheck only.
+  # Documents cargo audit / cargo deny fetch paths (cargo-audit, cargo-deny above);
+  # does not enforce live no-net on hosted runners (cargo install / advisory DB refresh).
+  cargo-nonet:
+    name: cargo-fetch no-net policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: cargo-fetch no-net policy SelfCheck
+        shell: pwsh
+        run: ./scripts/cargo-nonet-check.ps1 -SelfCheck
 
   # Hard C02 L22 envelope-crypto CI evidence — blocking PR workflow in
   # .github/workflows/envelope-crypto.yml (envelope-crypto-check.ps1 -SelfCheck).

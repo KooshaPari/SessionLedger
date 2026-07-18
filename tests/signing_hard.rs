@@ -15,19 +15,10 @@ fn repo_root() -> PathBuf {
 #[test]
 fn signing_hard_doc_self_check_validates_anchors() {
     let script = repo_root().join("scripts/signing-readiness-check.ps1");
-    assert!(
-        script.is_file(),
-        "missing {}",
-        script.display()
-    );
+    assert!(script.is_file(), "missing {}", script.display());
 
     let output = Command::new("pwsh")
-        .args([
-            "-NoProfile",
-            "-File",
-            script.to_str().expect("utf-8 script path"),
-            "-SelfCheck",
-        ])
+        .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()
         .unwrap_or_else(|error| panic!("failed to spawn pwsh for SelfCheck: {error}"));
 

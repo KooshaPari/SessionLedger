@@ -1,6 +1,6 @@
 {
   "schema": "sessionledger.traceability/v1",
-  "updated": "2026-07-17",
+  "updated": "2026-07-18",
   "status_vocabulary": [
     "done",
     "partial",
@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "391/402",
-    "pct": 97,
+    "score": "394/402",
+    "pct": 98,
     "grade": "A",
-    "commit": "758f5e5",
-    "wave": "Wave-38"
+    "commit": "6283ce5",
+    "wave": "Wave-39"
   },
   "fr": [
     {
@@ -310,6 +310,7 @@
         "fuzz/fuzz_targets/jsonl_ingest.rs",
         ".github/workflows/ci.yml",
         ".github/workflows/bench-gate.yml",
+        ".github/workflows/fuzz-blocking.yml",
         "docs/ops/perf-baseline.json",
         "scripts/bench-gate.ps1",
         "benches/pipeline.rs",
@@ -928,16 +929,26 @@
     },
     {
       "id": "WBS-8.58",
-      "status": "todo",
+      "status": "done",
       "evidence": [
-        "WAVE39_SCOPE.md",
-        "docs/ops/WAVE39_PERT.md",
-        "WORK_DAG.md"
+        ".github/workflows/jemalloc-hard.yml",
+        "scripts/jemalloc-check.ps1",
+        "tests/jemalloc_hard.rs",
+        ".github/workflows/fuzz-blocking.yml",
+        "scripts/fuzz-cadence-check.ps1",
+        ".github/workflows/envelope-crypto.yml",
+        "scripts/envelope-crypto-check.ps1",
+        "tests/envelope_crypto.rs",
+        "scripts/cargo-nonet-check.ps1",
+        "tests/cargo_nonet.rs",
+        "tests/loom_model.rs",
+        "scripts/loom-permutation-check.ps1",
+        "WAVE39_SCOPE.md"
       ]
     },
     {
       "id": "WBS-8.59",
-      "status": "todo",
+      "status": "done",
       "evidence": [
         "audit/SCORECARD.md",
         "docs/ops/WBS.md"
@@ -947,8 +958,8 @@
   "clusters": [
     {
       "id": "C00",
-      "score": "29/30",
-      "status": "partial",
+      "score": "30/30",
+      "status": "done",
       "evidence": [
         "docs/api/openapi.yaml",
         "src/schema/mod.rs",
@@ -990,9 +1001,13 @@
         ".github/workflows/miri-permutation.yml",
         "scripts/tsan-permutation-check.ps1",
         ".github/workflows/tsan-permutation.yml",
-        "tests/tsan_permutation.rs"
+        "tests/tsan_permutation.rs",
+        ".github/workflows/jemalloc-hard.yml",
+        "scripts/jemalloc-check.ps1",
+        "tests/jemalloc_hard.rs",
+        "docs/ops/jemalloc.md"
       ],
-      "remaining": "shuttle crate in default graph; broadcast/SSE daemon-graph permutation ports (L7 residual); default-on jemalloc (L8)"
+      "remaining": "shuttle crate in default graph; full tokio sl-daemon broadcast/SSE graph ports (L7 residual); default-on jemalloc / Windows parity (L8 residual)"
     },
     {
       "id": "C01",
@@ -1024,8 +1039,8 @@
     },
     {
       "id": "C02",
-      "score": "29/30",
-      "status": "partial",
+      "score": "30/30",
+      "status": "done",
       "evidence": [
         "crates/sl-daemon/src/audit.rs",
         "crates/sl-daemon/src/http.rs",
@@ -1034,10 +1049,14 @@
         "docs/ops/local-trust-boundary.md",
         "docs/ops/crypto-inventory.md",
         "scripts/crypto-inventory-check.ps1",
+        "scripts/envelope-crypto-check.ps1",
+        ".github/workflows/envelope-crypto.yml",
+        "tests/envelope_crypto.rs",
         "docs/ops/privacy-hygiene.md",
         "scripts/privacy-hygiene-check.ps1",
         "scripts/audit-review.ps1"
-      ]
+      ],
+      "remaining": "in-tree KMS (L22 residual); IdP/OAuth; auto-ETL PII redaction (L24 residual)"
     },
     {
       "id": "C03",
@@ -1075,9 +1094,11 @@
         "tests/maintainer_2fa.rs",
         "scripts/rootless-nonet-check.ps1",
         ".github/workflows/rootless-nonet.yml",
-        "tests/rootless_nonet.rs"
+        "tests/rootless_nonet.rs",
+        "scripts/cargo-nonet-check.ps1",
+        "tests/cargo_nonet.rs"
       ],
-      "remaining": "Human org 2FA attestation (L36 NOT_VERIFIABLE_IN_REPO); live rootless-only runner matrix + cargo-fetch no-net (L40 residual)"
+      "remaining": "Human org 2FA attestation (L36 NOT_VERIFIABLE_IN_REPO); live rootless-only runner matrix (L40 residual)"
     },
     {
       "id": "C05",
@@ -1142,8 +1163,8 @@
     },
     {
       "id": "C07",
-      "score": "29/30",
-      "status": "partial",
+      "score": "30/30",
+      "status": "done",
       "evidence": [
         "docs/ops/test-pyramid.md",
         "scripts/test-pyramid-check.ps1",
@@ -1160,9 +1181,13 @@
         "fuzz/",
         "fuzz/fuzz_targets/jsonl_ingest.rs",
         "fuzz/corpus/jsonl_ingest/two_sessions.jsonl",
+        ".github/workflows/fuzz-blocking.yml",
+        "docs/ops/fuzz-cadence.md",
+        "scripts/fuzz-cadence-check.ps1",
         ".github/workflows/bench-gate.yml",
         "docs/ops/perf-baseline.json"
-      ]
+      ],
+      "remaining": "optional extended crash-corpus triage beyond blocking cadence"
     },
     {
       "id": "C08",

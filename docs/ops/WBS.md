@@ -101,8 +101,8 @@ are not recomputed here.
 | WBS-8.55 | Wave-37 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 390/402 (97% A) |
 | WBS-8.56 | Wave-38 evidence packages (C00 TSan permutation, C04 rootless/no-net hard CI, C06 protected-environment SLSA checklist, C01 Fluent catalog stub, C05 USE process gauges) | done | machine | `scripts/tsan-permutation-check.ps1`; `scripts/rootless-nonet-check.ps1`; `docs/ops/slsa-protected-environment.md`; `locales/en.ftl`; `scripts/use-gauges-check.ps1` | C00, C01, C04, C05, C06; PRs #309-#313 |
 | WBS-8.57 | Wave-38 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 391/402 (97% A) |
-| WBS-8.58 | Wave-39 evidence packages (C00 jemalloc hard, C07 fuzz blocking, C02 envelope hard, C00 daemon-graph, C04 cargo-fetch no-net) | todo | machine | `WAVE39_SCOPE.md`; `docs/ops/WAVE39_PERT.md`; `WORK_DAG.md` | C00, C02, C04, C07; five parallel lanes |
-| WBS-8.59 | Wave-39 independent re-audit and scorecard refresh | todo | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; target 392+/402 conservative |
+| WBS-8.58 | Wave-39 evidence packages (C00 jemalloc hard, C07 fuzz blocking, C02 envelope hard, C00 daemon-graph, C04 cargo-fetch no-net) | done | machine | `.github/workflows/jemalloc-hard.yml`; `.github/workflows/fuzz-blocking.yml`; `.github/workflows/envelope-crypto.yml`; `scripts/cargo-nonet-check.ps1`; `tests/loom_model.rs`; `WAVE39_SCOPE.md` | C00, C02, C04, C07; PRs #316-#320 |
+| WBS-8.59 | Wave-39 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 394/402 (98% A) |
 
 ## Organization-level control plane
 

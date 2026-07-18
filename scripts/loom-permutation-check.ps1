@@ -101,6 +101,14 @@ Test-DocContains -Doc $doc -Needle "broadcast_epoch_fans_out_to_subscribers" `
     -Label "broadcast/SSE loom model reference"
 Test-DocContains -Doc $doc -Needle "watcher_pipeline_bounded_enqueue_under_cancel" `
     -Label "watcher pipeline loom model reference"
+Test-DocContains -Doc $doc -Needle "broadcast_epoch_monotonic_under_multi_bump" `
+    -Label "multi-bump broadcast/SSE loom model reference"
+Test-DocContains -Doc $doc -Needle "watcher_drain_bumps_sse_epoch_per_item" `
+    -Label "watcher-to-SSE epoch pipeline loom model reference"
+Test-DocContains -Doc $doc -Needle "daemon_graph_pipeline_conserves_under_cancel" `
+    -Label "daemon-graph cancel conservation loom model reference"
+Test-DocContains -Doc $doc -Needle "Loom daemon-graph broadcast/SSE epoch permutations | **done**" `
+    -Label "daemon-graph epoch permutations marked done"
 
 Write-Host "Workflow blocking-gate anchors:"
 if ($workflow -match 'continue-on-error:\s*true') {
@@ -143,6 +151,21 @@ if ($loomModel -notmatch 'watcher_pipeline_bounded_enqueue_under_cancel') {
     throw "tests/loom_model.rs must include watcher pipeline permutation."
 }
 [void](Write-Check -Label "loom_model watcher pipeline test" -Ok $true)
+
+if ($loomModel -notmatch 'broadcast_epoch_monotonic_under_multi_bump') {
+    throw "tests/loom_model.rs must include multi-bump broadcast/SSE epoch permutation."
+}
+[void](Write-Check -Label "loom_model multi-bump broadcast epoch test" -Ok $true)
+
+if ($loomModel -notmatch 'watcher_drain_bumps_sse_epoch_per_item') {
+    throw "tests/loom_model.rs must include watcher-to-SSE epoch pipeline permutation."
+}
+[void](Write-Check -Label "loom_model watcher-to-SSE epoch pipeline test" -Ok $true)
+
+if ($loomModel -notmatch 'daemon_graph_pipeline_conserves_under_cancel') {
+    throw "tests/loom_model.rs must include daemon-graph cancel conservation permutation."
+}
+[void](Write-Check -Label "loom_model daemon-graph cancel conservation test" -Ok $true)
 
 Write-Host "Loom permutation SelfCheck passed"
 exit 0

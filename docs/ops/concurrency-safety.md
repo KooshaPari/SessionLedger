@@ -26,7 +26,7 @@ those checkers, not a claim of unsafe coverage.
 |----------|------|
 | [`tests/race_smoke.rs`](../../tests/race_smoke.rs) | Threaded merge + OKF determinism across shuffled inputs |
 | [`tests/race_model.rs`](../../tests/race_model.rs) | Bounded `sync_channel` + cancel flag model of watcher `scan_once` |
-| [`tests/loom_model.rs`](../../tests/loom_model.rs) | Loom permutation models: cancel/capacity, bounded `try_send`, broadcast epoch, watcher pipeline (`cfg(loom)` only) |
+| [`tests/loom_model.rs`](../../tests/loom_model.rs) | Loom permutation models: cancel/capacity, bounded `try_send`, broadcast epoch (single + multi-bump), watcher→SSE pipeline, daemon-graph cancel conservation (`cfg(loom)` only) |
 | [`tests/loom_soft.rs`](../../tests/loom_soft.rs) | Hermetic SelfCheck for soft loom docs/workflow anchors |
 | [`tests/loom_permutation.rs`](../../tests/loom_permutation.rs) | Hermetic SelfCheck for loom permutation docs/workflow anchors |
 | [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Hermetic SelfCheck for soft shuttle docs/workflow anchors |
@@ -110,15 +110,19 @@ not gate merges.
 
 `tests/loom_model.rs` expands the soft cancel/capacity smoke with loom-native
 permutations for `race_model`'s bounded `try_send` (`bounded_try_send_respects_capacity`),
-SSE broadcast epoch fan-out (`broadcast_epoch_fans_out_to_subscribers`), and the
-watcher bounded-queue → broadcast pipeline (`watcher_pipeline_bounded_enqueue_under_cancel`).
-These are conservation / capacity models — not a full port of
+SSE broadcast epoch fan-out (`broadcast_epoch_fans_out_to_subscribers`,
+`broadcast_epoch_monotonic_under_multi_bump`), the watcher bounded-queue → broadcast
+pipeline (`watcher_pipeline_bounded_enqueue_under_cancel`,
+`watcher_drain_bumps_sse_epoch_per_item`), and cancel-guarded daemon-graph
+conservation (`daemon_graph_pipeline_conserves_under_cancel`). These are
+conservation / capacity models — not a full port of
 `crates/sl-daemon` tokio `broadcast` / `mpsc` graph.
 
 | Gate | Status | Evidence |
 |------|--------|----------|
 | Loom permutation SelfCheck | **done** | `scripts/loom-permutation-check.ps1 -SelfCheck` (+ `tests/loom_permutation.rs`) |
 | Loom permutation suite CI | **done** | `.github/workflows/loom-permutation.yml` (blocking on PR) |
+| Loom daemon-graph broadcast/SSE epoch permutations | **done** | `broadcast_epoch_*`, `watcher_drain_bumps_sse_epoch_per_item`, `daemon_graph_pipeline_conserves_under_cancel` in `tests/loom_model.rs` |
 | Full tokio broadcast / daemon graph under loom | **unpaid** | Real `sl-daemon` watcher/SSE graph still outside loom permutation suite |
 | Full loom / shuttle permutation checkers | **unpaid** | Shuttle crate + live daemon ports still outside soft smoke |
 

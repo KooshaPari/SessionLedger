@@ -508,6 +508,36 @@ jobs:
       - name: list assets
         run: ls -lh artifacts/
 
+      - name: validate required release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VER="${{ github.ref_name }}"
+          required=(
+            "SessionLedger-${VER}-x86_64.pkg"
+            "SessionLedger-${VER}-aarch64.pkg"
+            "SessionLedger-${VER}-x86_64.app.tar.gz"
+            "SessionLedger-${VER}-aarch64.app.tar.gz"
+            "SessionLedger-${VER}-x64.msi"
+            "sl-viewer-${VER}-x86_64-unknown-linux-gnu.tar.gz"
+            "sl-daemon-${VER}-x86_64-unknown-linux-gnu.tar.gz"
+            "sl-viewer-${VER}-x86_64-apple-darwin.tar.gz"
+            "sl-daemon-${VER}-x86_64-apple-darwin.tar.gz"
+            "sl-viewer-${VER}-aarch64-apple-darwin.tar.gz"
+            "sl-daemon-${VER}-aarch64-apple-darwin.tar.gz"
+            "sl-viewer-${VER}-x86_64-pc-windows-msvc.zip"
+            "sl-daemon-${VER}-x86_64-pc-windows-msvc.zip"
+          )
+
+          for rel in "${required[@]}"; do
+            if [[ ! -f "artifacts/${rel}" ]]; then
+              echo "::error::Required release artifact missing: ${rel}"
+              exit 1
+            fi
+            echo "Found required artifact: ${rel}"
+          done
+
       - name: create checksums
         working-directory: artifacts
         run: |

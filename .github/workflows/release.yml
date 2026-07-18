@@ -406,7 +406,14 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxdo3
+          sudo apt-get install -y \
+            libglib2.0-0 \
+            libgtk-3-0 \
+            libgdk-pixbuf-2.0-0 \
+            libjavascriptcoregtk-4.1-0 \
+            libwebkit2gtk-4.1-0 \
+            libxdo3 \
+            libsoup-3.0-0
           set -euo pipefail
           archive="$(printf '%s\n' artifact/sl-viewer-*.tar.gz)"
           test -f "${archive}"

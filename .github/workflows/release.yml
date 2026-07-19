@@ -513,7 +513,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          VER="${{ github.ref_name }}"
+          TAG="${{ github.ref_name }}"
+          VER="${TAG#v}"
           required=(
             "SessionLedger-${VER}-x86_64.pkg"
             "SessionLedger-${VER}-aarch64.pkg"

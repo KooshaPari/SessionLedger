@@ -10,6 +10,7 @@
 //! | `sl-daemon tail`   | Stream new bundle paths as they arrive (`GET /api/stream`)|
 //! | `sl-daemon export` | Export bundle metadata as CSV / Markdown / JSON            |
 //! | `sl-daemon summary`| Print aggregate statistics across all bundles              |
+//! | `sl-daemon check-update` | Compare installed version to GitHub latest release (no install) |
 //!
 //! ## HTTP API (exposed by `sl serve`)
 //!
@@ -45,6 +46,7 @@ mod otel_metrics;
 mod resilience;
 mod shutdown;
 mod tag;
+mod update_check;
 mod validation;
 mod watcher;
 
@@ -73,7 +75,17 @@ const CLI_AFTER_HELP: &str = r#"Examples:
   sl-daemon status
   sl-daemon search --tag production --format json
   sl-daemon completions zsh > _sl-daemon
+  sl-daemon check-update
   sh scripts/install-sl-daemon-completions.sh
+"#;
+
+const CHECK_UPDATE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon check-update
+  sl-daemon check-update --json
+  sl-daemon check-update --repo KooshaPari/SessionLedger
+
+Compares the installed sl-daemon version to the latest GitHub Release tag.
+Does not download or install updates — see docs/ops/update-check.md and ADR 0001.
 "#;
 
 const SERVE_AFTER_HELP: &str = r#"Examples:
@@ -336,6 +348,24 @@ enum Command {
         #[arg(value_enum)]
         shell: Shell,
     },
+
+    /// Compare installed version to the latest GitHub Release tag (no install).
+    ///
+    /// Exit 0 when up to date, 1 when a newer release exists, 2 on error.
+    #[command(after_help = CHECK_UPDATE_AFTER_HELP)]
+    CheckUpdate {
+        /// GitHub `owner/repo` to query (default: KooshaPari/SessionLedger).
+        #[arg(long, default_value = update_check::DEFAULT_REPO)]
+        repo: String,
+
+        /// Emit JSON instead of human-readable text.
+        #[arg(long)]
+        json: bool,
+
+        /// Use this release tag instead of calling the GitHub API (tests / offline).
+        #[arg(long)]
+        latest: Option<String>,
+    },
 }
 
 /// Sub-actions for `sl tag`.
@@ -428,6 +458,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Completions { shell } => {
             run_completions(shell);
+        }
+        Command::CheckUpdate { repo, json, latest } => {
+            run_check_update(&repo, json, latest.as_deref()).await;
         }
     }
 
@@ -770,6 +803,39 @@ async fn run_serve(
     let total = consumer.await?;
     info!(okf_docs = total, "ETL consumer finished");
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// check-update
+// ---------------------------------------------------------------------------
+
+async fn run_check_update(repo: &str, json: bool, latest_override: Option<&str>) {
+    let installed = env!("CARGO_PKG_VERSION");
+    let latest_override = latest_override.map(str::to_owned).or_else(|| {
+        std::env::var("SL_CHECK_UPDATE_LATEST").ok().filter(|value| !value.trim().is_empty())
+    });
+    let latest_tag = match latest_override {
+        Some(tag) => tag,
+        None => {
+            let client = reqwest::Client::new();
+            match update_check::fetch_latest_release_tag(&client, repo).await {
+                Ok(tag) => tag,
+                Err(error) => cli::exit_error(format!("update check failed: {error}")),
+            }
+        }
+    };
+
+    let status = update_check::compare_versions(installed, &latest_tag);
+    if json {
+        let payload = serde_json::to_string_pretty(&status).unwrap_or_default();
+        println!("{payload}");
+    } else {
+        println!("{}", update_check::format_status(&status));
+    }
+
+    if status.is_update_available() {
+        std::process::exit(cli::EXIT_NOT_OK);
+    }
 }
 
 // ---------------------------------------------------------------------------

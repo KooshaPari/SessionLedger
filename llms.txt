@@ -19,6 +19,8 @@ losslessly. Turns ephemeral tool sessions into durable ledgers and injectable
 | [`docs/ops/observability.md`](docs/ops/observability.md) | Metrics + OTel soft goal |
 | [`docs/ops/AGILEPLUS.md`](docs/ops/AGILEPLUS.md) | AgilePlus bootstrap, FR/NFR mapping, and GitHub sync |
 | [`docs/adr/0005-no-serverless-edge.md`](docs/adr/0005-no-serverless-edge.md) | No serverless/edge deploy (C11 L114) |
+| [`docs/adr/0001-desktop-companion-scope.md`](docs/adr/0001-desktop-companion-scope.md) | No tray/auto-update; user-initiated check (C11 L111) |
+| [`docs/ops/update-check.md`](docs/ops/update-check.md) | `sl-daemon check-update` — compare to GitHub latest (no install) |
 | [`docs/adr/0006-no-mcp-server.md`](docs/adr/0006-no-mcp-server.md) | No MCP host/server / pin list (C06 L57) |
 
 ## Key paths

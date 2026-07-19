@@ -28,6 +28,7 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 | Homebrew / winget | **Manifests in-repo (not live)** | Formula + winget YAML templates; fill via `scripts/fill-packaging-checksums.ps1`, then [`brew-winget-publish.md`](brew-winget-publish.md) publish-readiness checklist + `scripts/brew-winget-publish-check.ps1 -SelfCheck` — live tap / winget-pkgs remain **unpaid** |
 | Scoop / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, crate publication, DMG, or update automation exists yet |
 | Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
+| User-initiated update check | **Active** | `sl-daemon check-update` compares installed version to GitHub latest release tag (no install); see [update-check.md](update-check.md) |
 | Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
 
 ### Release matrix (CI)
@@ -277,6 +278,27 @@ CI does not yet automate these; use an isolated VM or user account.
 - Full `dpkg -i` / AppImage desktop integration smoke beyond artifact presence
 - Daemon install via systemd unit (documented separately above)
 - Automatic updates or signed update channels
+
+### User-initiated update check (no auto-install)
+
+Operators can check whether a newer GitHub Release exists without downloading
+or replacing binaries:
+
+```bash
+sl-daemon check-update
+sl-daemon check-update --json
+```
+
+Exit `0` when up to date, `1` when a newer tag exists, `2` on error. This path
+does **not** perform silent or background updates — see
+[ADR 0001](../adr/0001-desktop-companion-scope.md) and
+[update-check.md](update-check.md).
+
+Machine-check anchors:
+
+```powershell
+pwsh ./scripts/update-check-check.ps1 -SelfCheck
+```
 
 ---
 

@@ -10,10 +10,9 @@ coverage_threshold = 85.0
 coverage_path = "coverage/lcov.info"
 coverage_format = "lcov"
 
-# SessionLedger: Rust hexagonal (no UI, no schemathesis, no e2e).
+# SessionLedger: Rust hexagonal with a browser contract suite enforced by the
+# qgate workflow.
 # Mutation testing is wired (nightly via cargo-mutants).
 not_applicable = [
-    "a11y",          # no UI
-    "e2e",           # no browser tests
     "dast",          # no OpenAPI spec published
 ]

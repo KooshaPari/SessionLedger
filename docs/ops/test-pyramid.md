@@ -11,10 +11,9 @@ Related: [`flake-tracker.md`](flake-tracker.md) (quarantine policy),
 [`cross-platform-ci.md`](cross-platform-ci.md) (OS matrix for race smoke),
 [`runbook.md`](runbook.md) (operator load/chaos commands).
 
-Browser/UI end-to-end is intentionally **out of scope** today — see
-[`.qgate.toml`](../../.qgate.toml) (`not_applicable = ["e2e", …]`). In-repo
-**e2e** means deterministic pipeline and golden OKF acceptance, not Playwright
-or Selenium.
+Browser/UI end-to-end is enforced by the qgate browser contract job. In-repo
+**e2e** includes deterministic pipeline/golden OKF acceptance and the required
+Playwright browser contract suite (`.github/workflows/qgate.yml`).
 
 ## Pyramid overview
 
@@ -26,7 +25,7 @@ or Selenium.
                     ├─────────────┤
                     │    load     │  load-smoke SLO · ops-load + ops-chaos-smoke
                     ├─────────────┤
-                    │     e2e     │  pipeline + OKF golden/roundtrip (no browser)
+                    │     e2e     │  pipeline + OKF golden/roundtrip + Playwright browser contract
                     ├─────────────┤
                     │ integration │  sl-daemon HTTP/worker · workspace contract tests
                     ├─────────────┤

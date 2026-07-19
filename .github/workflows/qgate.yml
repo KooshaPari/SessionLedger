@@ -1,8 +1,9 @@
 # qgate quality gate for SessionLedger.
 #
 # Calls the reusable quality-gate workflow from KooshaPari/phenotype-tooling on a
-# Linux standard runner. Non-blocking until per-module coverage reaches
-# the .qgate.toml threshold (per the "1 via 2" protocol).
+# Linux standard runner and runs the browser contract suite as a required
+# sibling job. Coverage remains advisory until the per-module floor is reached,
+# but browser accessibility/responsive/visual regressions are blocking.
 #
 # Pin policy: both the workflow ref and qgate-ref must be full commit SHAs
 # (never @main / floating tags). See docs/ops/qgate-pin.md.
@@ -82,6 +83,36 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  # Browser quality is part of qgate, not an unrelated advisory workflow.
+  browser-e2e:
+    name: browser e2e · axe · responsive · visual
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/visual/harness
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/visual/harness/package-lock.json
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # v2
+        with:
+          tool: dioxus-cli@0.7.9
+      - name: Build sl-viewer web surface
+        working-directory: crates/sl-viewer
+        run: dx build --platform web --release --no-default-features --features web
+      - name: Install harness dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser contract suite
+        run: npm run test:a11y && npm run test:responsive && npm run test:visual
+
   # Reusable workflow — job-level call, pinned to phenotype-tooling commit SHA.
   # Pin: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad (phenotype-tooling main 2026-07-13)
   quality-gate:
@@ -89,13 +120,13 @@ jobs:
     # `continue-on-error` is not valid here. Keep this gate advisory through
     # branch protection until the coverage target is reached, rather than
     # making the workflow syntactically invalid before any jobs can start.
-    needs: prepare
+    needs: [prepare, browser-e2e]
     uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad # main 2026-07-13
     with:
       coverage-report: coverage/lcov.info
       coverage-format: lcov
       threshold: 85
-      not-applicable: 'a11y,e2e,dast'
+      not-applicable: 'dast'
       sast-config: 'auto'
       # Same SHA as the workflow pin — do not leave qgate-ref on floating main.
       qgate-ref: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad

@@ -140,6 +140,39 @@ The script asserts this section, the blocking `cargo-nonet` job in `security.yml
 and that `cargo-audit` / `cargo-deny` fetch paths are documented. It does **not**
 enforce live no-net on hosted runners and does **not** claim maintainer 2FA enforcement.
 
+## Rootless-only OCI runner matrix (C04 L40)
+
+Documents the **desired rootless-only OCI runner capability matrix** for future
+`sl-daemon` image build/smoke jobs. Hermetic SelfCheck only — does **not** execute
+OCI builds, provision podman/docker on GitHub-hosted runners, or claim live
+rootless-only matrix enforcement.
+
+| Dimension | SelfCheck scaffold | Live runner (unpaid) |
+|-----------|-------------------|----------------------|
+| `ubuntu-latest` hosted runner | Documented as **not** rootless-only OCI | Default CI path today |
+| Podman rootless + `runs-on` label | Documented prerequisite | Requires self-hosted / org runners |
+| Docker rootless / `container` | Documented prerequisite | Requires operator labels |
+| OCI image build in matrix | **unpaid** | Not executed in SelfCheck |
+
+| Gate | Status | Evidence / prerequisite |
+|------|--------|-------------------------|
+| Rootless-only matrix SelfCheck | **done** | `scripts/rootless-matrix-check.ps1 -SelfCheck` |
+| Blocking rootless-matrix CI workflow | **done** | [`.github/workflows/rootless-matrix.yml`](../../.github/workflows/rootless-matrix.yml) (PR gate; no `continue-on-error`) |
+| cargo test wrapper | **done** | `tests/rootless_matrix.rs` |
+| security.yml cross-reference | **done** | [`.github/workflows/security.yml`](../../.github/workflows/security.yml) blocking `rootless-matrix` anchor |
+| ci.yml cross-reference | **done** | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) `rootless-matrix-policy` smoke |
+| Runner capability matrix documented | **done** | this section + matrix limits table |
+| Live rootless-only runners on hosted CI | **unpaid** | Requires podman/rootless runner labels |
+| OCI build/smoke in matrix jobs | **unpaid** | SelfCheck is docs/workflow anchors only |
+
+```powershell
+pwsh ./scripts/rootless-matrix-check.ps1 -SelfCheck
+```
+
+The script asserts this section, the blocking workflow, and `security.yml` /
+`ci.yml` anchors. It does **not** execute OCI builds, provision rootless runners,
+or claim live rootless-only matrix enforcement on GitHub-hosted runners.
+
 ## Sandbox boundary checklist
 
 | Gate | Status | Evidence / prerequisite |
@@ -154,7 +187,7 @@ enforce live no-net on hosted runners and does **not** claim maintainer 2FA enfo
 | Soft no-net policy documented | **done** | Soft SelfCheck + optional `network_mode: none` for offline ETL |
 | Sandbox boundary SelfCheck | **done** | `scripts/sandbox-boundary-check.ps1 -SelfCheck` |
 | Hard rootless/no-net CI evidence | **done** | `scripts/rootless-nonet-check.ps1 -SelfCheck` + blocking `rootless-nonet.yml` |
-| Rootless-only OCI policy in CI | **unpaid** | Requires runner capability matrix (SelfCheck docs only) |
+| Rootless-only OCI policy in CI | **done** | SelfCheck scaffold (`rootless-matrix-check.ps1`); live runner matrix **unpaid** |
 | Hard no-network CI sandbox for security jobs | **unpaid** | SelfCheck in `cargo-nonet-check.ps1`; live runner isolation unpaid |
 | Cargo-fetch no-net policy SelfCheck | **done** | `scripts/cargo-nonet-check.ps1 -SelfCheck` + blocking `security.yml` anchor |
 
@@ -185,6 +218,11 @@ Hard rootless / no-net CI evidence (blocking PR SelfCheck, `security.yml` /
 [`.github/workflows/rootless-nonet.yml`](../../.github/workflows/rootless-nonet.yml).
 Live rootless-only runner matrix and blocking no-net for cargo-fetch jobs remain **unpaid**.
 
+Rootless-only OCI runner matrix scaffold evidence (blocking `rootless-matrix` job in
+[`.github/workflows/security.yml`](../../.github/workflows/security.yml)) lives in
+the [Rootless-only OCI runner matrix](#rootless-only-oci-runner-matrix-c04-l40) section.
+Live rootless-only runners and OCI build/smoke matrix jobs remain **unpaid**.
+
 Cargo-fetch no-net policy evidence (blocking `cargo-nonet` job in
 [`.github/workflows/security.yml`](../../.github/workflows/security.yml)) lives in
 the [Cargo-fetch no-net policy](#cargo-fetch-no-net-policy-c04-l40) section. Live
@@ -196,7 +234,7 @@ no-net for `cargo install` / advisory DB refresh on hosted runners remains **unp
 |-------|------------------------|---------------------------|
 | Seccomp profile + compose | Checked-in JSON + compose sample | Not enforced on GitHub-hosted runners |
 | Hermetic SelfCheck | Docs/profile/Containerfile anchors | **Blocking** `sandbox-boundary` job |
-| Rootless-only OCI | Documented | **Unpaid** runner matrix |
+| Rootless-only OCI | SelfCheck scaffold (`rootless-matrix-check.ps1`) | Live runner matrix **unpaid** |
 | No-net security jobs | Soft `network_mode: none` note | SelfCheck **done** (`cargo-nonet` anchor); live runner isolation **unpaid** |
 | Hard rootless/no-net CI evidence | Docs + blocking SelfCheck workflow | **Done** (`rootless-nonet.yml`; live runner enforcement unpaid) |
 

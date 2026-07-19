@@ -36,7 +36,7 @@ those checkers, not a claim of unsafe coverage.
 | [`.github/workflows/miri-smoke.yml`](../../.github/workflows/miri-smoke.yml) | Soft nightly / dispatch: `cargo miri test --test race_model` (`continue-on-error`) |
 | [`.github/workflows/miri-permutation.yml`](../../.github/workflows/miri-permutation.yml) | Blocking permutation SelfCheck + `cargo miri test --test race_model` |
 | [`.github/workflows/loom-smoke.yml`](../../.github/workflows/loom-smoke.yml) | Soft SelfCheck + `RUSTFLAGS='--cfg loom'` `loom_model` (`continue-on-error`) |
-| [`.github/workflows/loom-permutation.yml`](../../.github/workflows/loom-permutation.yml) | Blocking permutation SelfCheck + `cargo test loom` under `RUSTFLAGS='--cfg loom'` |
+| [`.github/workflows/loom-permutation.yml`](../../.github/workflows/loom-permutation.yml) | Blocking permutation SelfCheck + split `loom_model` core/daemon suites under `RUSTFLAGS='--cfg loom'` |
 | [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft hermetic shuttle SelfCheck only (`continue-on-error`) |
 | [`.github/workflows/shuttle-permutation.yml`](../../.github/workflows/shuttle-permutation.yml) | Blocking permutation SelfCheck + `cargo test shuttle_permutation` (no shuttle crate) |
 | [`.github/workflows/tsan-permutation.yml`](../../.github/workflows/tsan-permutation.yml) | Blocking permutation SelfCheck + `cargo +nightly test --test race_model` under `-Zsanitizer=thread` (ubuntu x86_64) |
@@ -106,7 +106,7 @@ not gate merges.
 `loom-permutation.yml` is **blocking** on `pull_request`. It:
 
 1. Runs `scripts/loom-permutation-check.ps1 -SelfCheck` (docs/workflow/cfg anchors).
-2. Runs `cargo test loom --release` with `RUSTFLAGS='--cfg loom'`.
+2. Runs split `cargo test --test loom_model` core (`--skip daemon_`) and daemon (`daemon_`) suites with `RUSTFLAGS='--cfg loom'`.
 
 `tests/loom_model.rs` expands the soft cancel/capacity smoke with loom-native
 permutations for `race_model`'s bounded `try_send` (`bounded_try_send_respects_capacity`),
@@ -247,12 +247,13 @@ Loom permutation SelfCheck (no loom download):
 pwsh ./scripts/loom-permutation-check.ps1 -SelfCheck
 ```
 
-Blocking loom permutation suite (all `loom*` integration tests + cfg-gated models):
+Blocking loom permutation suite (cfg-gated `loom_model`; CI splits core vs daemon graph):
 
 ```powershell
 $env:CARGO_TARGET_DIR = Join-Path $PWD "target-w40-daemon-tokio"
 $env:RUSTFLAGS = "--cfg loom"
-cargo test loom --release --locked -- --test-threads=1
+cargo test --test loom_model --release --locked -- --test-threads=1 --skip daemon_
+cargo test --test loom_model daemon_ --release --locked -- --test-threads=1
 ```
 
 Soft shuttle SelfCheck (hermetic; no shuttle crate):

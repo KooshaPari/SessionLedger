@@ -133,10 +133,15 @@ if ($workflow -notmatch 'loom-permutation-check\.ps1') {
 }
 [void](Write-Check -Label "workflow references loom-permutation-check.ps1" -Ok $true)
 
-if ($workflow -notmatch 'cargo test loom') {
-    throw "loom-permutation.yml must run cargo test loom under --cfg loom."
+if ($workflow -notmatch 'cargo test (--test )?loom') {
+    throw "loom-permutation.yml must run cargo test loom_model under --cfg loom."
 }
-[void](Write-Check -Label "workflow runs cargo test loom" -Ok $true)
+[void](Write-Check -Label "workflow runs cargo test loom_model" -Ok $true)
+
+if ($workflow -notmatch 'loom-permutation-(core|daemon|suite):') {
+    throw "loom-permutation.yml must define blocking loom permutation suite job(s)."
+}
+[void](Write-Check -Label "workflow defines blocking loom permutation suite job(s)" -Ok $true)
 
 if ($workflow -notmatch '--cfg loom') {
     throw "loom-permutation.yml must pass RUSTFLAGS --cfg loom."

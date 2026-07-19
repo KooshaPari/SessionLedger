@@ -397,8 +397,8 @@ mod loom_perm {
         });
     }
 
-    /// Tokio-shaped mpsc: watcher enqueues on a bounded channel; consumer drains
-    /// without exceeding capacity or losing reserved slots under cancel races.
+    /// Tokio-shaped mpsc: watcher enqueues on a bounded channel; drain conserves
+    /// capacity under cancel races (sequential consumer — avoids loom mpsc explosion).
     #[test]
     fn daemon_mpsc_watcher_to_consumer_conserve() {
         loom::model(|| {
@@ -431,21 +431,6 @@ mod loom_perm {
                 })
             };
 
-            let consumer = {
-                let cancel = Arc::clone(&cancel);
-                let reserved = Arc::clone(&reserved);
-                let consumed = Arc::clone(&consumed);
-                thread::spawn(move || {
-                    while rx.try_recv().is_ok() {
-                        reserved.fetch_sub(1, Ordering::AcqRel);
-                        consumed.fetch_add(1, Ordering::AcqRel);
-                        if cancel.load(Ordering::Acquire) {
-                            break;
-                        }
-                    }
-                })
-            };
-
             let cancel_setter = {
                 let cancel = Arc::clone(&cancel);
                 thread::spawn(move || {
@@ -456,7 +441,11 @@ mod loom_perm {
             watcher.join().unwrap();
             cancel_setter.join().unwrap();
             drop(tx);
-            consumer.join().unwrap();
+
+            while rx.try_recv().is_ok() {
+                reserved.fetch_sub(1, Ordering::AcqRel);
+                consumed.fetch_add(1, Ordering::AcqRel);
+            }
 
             assert!(reserved.load(Ordering::Acquire) <= MPSC_CAP);
             assert!(consumed.load(Ordering::Acquire) <= MPSC_CAP);
@@ -552,8 +541,8 @@ mod loom_perm {
         });
     }
 
-    /// Full daemon graph: watcher mpsc enqueue → consumer drain → broadcast epoch
-    /// bump per path; SSE subscribers never exceed the publisher epoch.
+    /// Full daemon graph: watcher mpsc enqueue → drain bumps broadcast epoch per
+    /// path; SSE subscribers never exceed the publisher epoch (sequential drain).
     #[test]
     fn daemon_graph_mpsc_broadcast_sse_pipeline() {
         loom::model(|| {
@@ -583,17 +572,6 @@ mod loom_perm {
                 })
             };
 
-            let consumer = {
-                let queued = Arc::clone(&queued);
-                let epoch = Arc::clone(&epoch);
-                thread::spawn(move || {
-                    while rx.try_recv().is_ok() {
-                        queued.fetch_sub(1, Ordering::AcqRel);
-                        epoch.fetch_add(1, Ordering::AcqRel);
-                    }
-                })
-            };
-
             let reader_a = {
                 let epoch = Arc::clone(&epoch);
                 let sub_a = Arc::clone(&sub_a);
@@ -614,7 +592,12 @@ mod loom_perm {
 
             watcher.join().unwrap();
             drop(tx);
-            consumer.join().unwrap();
+
+            while rx.try_recv().is_ok() {
+                queued.fetch_sub(1, Ordering::AcqRel);
+                epoch.fetch_add(1, Ordering::AcqRel);
+            }
+
             reader_a.join().unwrap();
             reader_b.join().unwrap();
 

@@ -26,7 +26,7 @@ those checkers, not a claim of unsafe coverage.
 |----------|------|
 | [`tests/race_smoke.rs`](../../tests/race_smoke.rs) | Threaded merge + OKF determinism across shuffled inputs |
 | [`tests/race_model.rs`](../../tests/race_model.rs) | Bounded `sync_channel` + cancel flag model of watcher `scan_once` |
-| [`tests/loom_model.rs`](../../tests/loom_model.rs) | Loom permutation models: cancel/capacity, bounded `try_send`, broadcast epoch (single + multi-bump), watcher→SSE pipeline, daemon-graph cancel conservation (`cfg(loom)` only) |
+| [`tests/loom_model.rs`](../../tests/loom_model.rs) | Loom permutation models: cancel/capacity, bounded `try_send`, broadcast epoch (single + multi-bump), tokio-shaped mpsc watcher→consumer, mpsc drain→broadcast, triple SSE fan-out, full watcher→mpsc→broadcast→SSE pipeline, daemon-graph cancel conservation (`cfg(loom)` only) |
 | [`tests/loom_soft.rs`](../../tests/loom_soft.rs) | Hermetic SelfCheck for soft loom docs/workflow anchors |
 | [`tests/loom_permutation.rs`](../../tests/loom_permutation.rs) | Hermetic SelfCheck for loom permutation docs/workflow anchors |
 | [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Hermetic SelfCheck for soft shuttle docs/workflow anchors |
@@ -36,7 +36,7 @@ those checkers, not a claim of unsafe coverage.
 | [`.github/workflows/miri-smoke.yml`](../../.github/workflows/miri-smoke.yml) | Soft nightly / dispatch: `cargo miri test --test race_model` (`continue-on-error`) |
 | [`.github/workflows/miri-permutation.yml`](../../.github/workflows/miri-permutation.yml) | Blocking permutation SelfCheck + `cargo miri test --test race_model` |
 | [`.github/workflows/loom-smoke.yml`](../../.github/workflows/loom-smoke.yml) | Soft SelfCheck + `RUSTFLAGS='--cfg loom'` `loom_model` (`continue-on-error`) |
-| [`.github/workflows/loom-permutation.yml`](../../.github/workflows/loom-permutation.yml) | Blocking permutation SelfCheck + `cargo test loom` under `RUSTFLAGS='--cfg loom'` |
+| [`.github/workflows/loom-permutation.yml`](../../.github/workflows/loom-permutation.yml) | Blocking permutation SelfCheck + split `loom_model` core/daemon suites under `RUSTFLAGS='--cfg loom'` |
 | [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft hermetic shuttle SelfCheck only (`continue-on-error`) |
 | [`.github/workflows/shuttle-permutation.yml`](../../.github/workflows/shuttle-permutation.yml) | Blocking permutation SelfCheck + `cargo test shuttle_permutation` (no shuttle crate) |
 | [`.github/workflows/tsan-permutation.yml`](../../.github/workflows/tsan-permutation.yml) | Blocking permutation SelfCheck + `cargo +nightly test --test race_model` under `-Zsanitizer=thread` (ubuntu x86_64) |
@@ -106,16 +106,19 @@ not gate merges.
 `loom-permutation.yml` is **blocking** on `pull_request`. It:
 
 1. Runs `scripts/loom-permutation-check.ps1 -SelfCheck` (docs/workflow/cfg anchors).
-2. Runs `cargo test loom --release` with `RUSTFLAGS='--cfg loom'`.
+2. Runs split `cargo test --test loom_model` core (`--skip daemon_`) and daemon (`daemon_`) suites with `RUSTFLAGS='--cfg loom'`.
 
 `tests/loom_model.rs` expands the soft cancel/capacity smoke with loom-native
 permutations for `race_model`'s bounded `try_send` (`bounded_try_send_respects_capacity`),
 SSE broadcast epoch fan-out (`broadcast_epoch_fans_out_to_subscribers`,
 `broadcast_epoch_monotonic_under_multi_bump`), the watcher bounded-queue → broadcast
 pipeline (`watcher_pipeline_bounded_enqueue_under_cancel`,
-`watcher_drain_bumps_sse_epoch_per_item`), and cancel-guarded daemon-graph
-conservation (`daemon_graph_pipeline_conserves_under_cancel`). These are
-conservation / capacity models — not a full port of
+`watcher_drain_bumps_sse_epoch_per_item`), cancel-guarded daemon-graph
+conservation (`daemon_graph_pipeline_conserves_under_cancel`), and tokio-shaped
+mpsc/broadcast/SSE graph ports (`daemon_mpsc_watcher_to_consumer_conserve`,
+`daemon_mpsc_drain_triggers_broadcast_publish`, `daemon_broadcast_sse_triple_fanout`,
+`daemon_graph_mpsc_broadcast_sse_pipeline`, `daemon_graph_shutdown_stops_mpsc_enqueue`).
+These are conservation / capacity models — not a full port of
 `crates/sl-daemon` tokio `broadcast` / `mpsc` graph.
 
 | Gate | Status | Evidence |
@@ -123,6 +126,7 @@ conservation / capacity models — not a full port of
 | Loom permutation SelfCheck | **done** | `scripts/loom-permutation-check.ps1 -SelfCheck` (+ `tests/loom_permutation.rs`) |
 | Loom permutation suite CI | **done** | `.github/workflows/loom-permutation.yml` (blocking on PR) |
 | Loom daemon-graph broadcast/SSE epoch permutations | **done** | `broadcast_epoch_*`, `watcher_drain_bumps_sse_epoch_per_item`, `daemon_graph_pipeline_conserves_under_cancel` in `tests/loom_model.rs` |
+| Loom tokio-shaped mpsc/broadcast/SSE daemon graph permutations | **done** | `daemon_mpsc_*`, `daemon_broadcast_sse_triple_fanout`, `daemon_graph_mpsc_broadcast_sse_pipeline`, `daemon_graph_shutdown_stops_mpsc_enqueue` in `tests/loom_model.rs` |
 | Full tokio broadcast / daemon graph under loom | **unpaid** | Real `sl-daemon` watcher/SSE graph still outside loom permutation suite |
 | Full loom / shuttle permutation checkers | **unpaid** | Shuttle crate + live daemon ports still outside soft smoke |
 
@@ -243,12 +247,13 @@ Loom permutation SelfCheck (no loom download):
 pwsh ./scripts/loom-permutation-check.ps1 -SelfCheck
 ```
 
-Blocking loom permutation suite (all `loom*` integration tests + cfg-gated models):
+Blocking loom permutation suite (cfg-gated `loom_model`; CI splits core vs daemon graph):
 
 ```powershell
-$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w36-c00-loom"
+$env:CARGO_TARGET_DIR = Join-Path $PWD "target-w40-daemon-tokio"
 $env:RUSTFLAGS = "--cfg loom"
-cargo test loom --release --locked -- --test-threads=1
+cargo test --test loom_model --release --locked -- --test-threads=1 --skip daemon_
+cargo test --test loom_model daemon_ --release --locked -- --test-threads=1
 ```
 
 Soft shuttle SelfCheck (hermetic; no shuttle crate):

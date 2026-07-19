@@ -107,8 +107,20 @@ Test-DocContains -Doc $doc -Needle "watcher_drain_bumps_sse_epoch_per_item" `
     -Label "watcher-to-SSE epoch pipeline loom model reference"
 Test-DocContains -Doc $doc -Needle "daemon_graph_pipeline_conserves_under_cancel" `
     -Label "daemon-graph cancel conservation loom model reference"
+Test-DocContains -Doc $doc -Needle "daemon_mpsc_watcher_to_consumer_conserve" `
+    -Label "tokio mpsc watcher-to-consumer loom model reference"
+Test-DocContains -Doc $doc -Needle "daemon_mpsc_drain_triggers_broadcast_publish" `
+    -Label "mpsc drain to broadcast publish loom model reference"
+Test-DocContains -Doc $doc -Needle "daemon_broadcast_sse_triple_fanout" `
+    -Label "triple SSE subscriber broadcast loom model reference"
+Test-DocContains -Doc $doc -Needle "daemon_graph_mpsc_broadcast_sse_pipeline" `
+    -Label "full mpsc-to-broadcast SSE pipeline loom model reference"
+Test-DocContains -Doc $doc -Needle "daemon_graph_shutdown_stops_mpsc_enqueue" `
+    -Label "shutdown stops mpsc enqueue loom model reference"
 Test-DocContains -Doc $doc -Needle "Loom daemon-graph broadcast/SSE epoch permutations | **done**" `
     -Label "daemon-graph epoch permutations marked done"
+Test-DocContains -Doc $doc -Needle "Loom tokio-shaped mpsc/broadcast/SSE daemon graph permutations | **done**" `
+    -Label "tokio-shaped daemon graph permutations marked done"
 
 Write-Host "Workflow blocking-gate anchors:"
 if ($workflow -match 'continue-on-error:\s*true') {
@@ -121,10 +133,15 @@ if ($workflow -notmatch 'loom-permutation-check\.ps1') {
 }
 [void](Write-Check -Label "workflow references loom-permutation-check.ps1" -Ok $true)
 
-if ($workflow -notmatch 'cargo test loom') {
-    throw "loom-permutation.yml must run cargo test loom under --cfg loom."
+if ($workflow -notmatch 'cargo test (--test )?loom') {
+    throw "loom-permutation.yml must run cargo test loom_model under --cfg loom."
 }
-[void](Write-Check -Label "workflow runs cargo test loom" -Ok $true)
+[void](Write-Check -Label "workflow runs cargo test loom_model" -Ok $true)
+
+if ($workflow -notmatch 'loom-permutation-(core|daemon|suite):') {
+    throw "loom-permutation.yml must define blocking loom permutation suite job(s)."
+}
+[void](Write-Check -Label "workflow defines blocking loom permutation suite job(s)" -Ok $true)
 
 if ($workflow -notmatch '--cfg loom') {
     throw "loom-permutation.yml must pass RUSTFLAGS --cfg loom."
@@ -166,6 +183,31 @@ if ($loomModel -notmatch 'daemon_graph_pipeline_conserves_under_cancel') {
     throw "tests/loom_model.rs must include daemon-graph cancel conservation permutation."
 }
 [void](Write-Check -Label "loom_model daemon-graph cancel conservation test" -Ok $true)
+
+if ($loomModel -notmatch 'daemon_mpsc_watcher_to_consumer_conserve') {
+    throw "tests/loom_model.rs must include tokio mpsc watcher-to-consumer permutation."
+}
+[void](Write-Check -Label "loom_model mpsc watcher-to-consumer test" -Ok $true)
+
+if ($loomModel -notmatch 'daemon_mpsc_drain_triggers_broadcast_publish') {
+    throw "tests/loom_model.rs must include mpsc drain to broadcast publish permutation."
+}
+[void](Write-Check -Label "loom_model mpsc drain to broadcast publish test" -Ok $true)
+
+if ($loomModel -notmatch 'daemon_broadcast_sse_triple_fanout') {
+    throw "tests/loom_model.rs must include triple SSE subscriber broadcast permutation."
+}
+[void](Write-Check -Label "loom_model triple SSE subscriber broadcast test" -Ok $true)
+
+if ($loomModel -notmatch 'daemon_graph_mpsc_broadcast_sse_pipeline') {
+    throw "tests/loom_model.rs must include full mpsc-to-broadcast SSE pipeline permutation."
+}
+[void](Write-Check -Label "loom_model mpsc-to-broadcast SSE pipeline test" -Ok $true)
+
+if ($loomModel -notmatch 'daemon_graph_shutdown_stops_mpsc_enqueue') {
+    throw "tests/loom_model.rs must include shutdown stops mpsc enqueue permutation."
+}
+[void](Write-Check -Label "loom_model shutdown stops mpsc enqueue test" -Ok $true)
 
 Write-Host "Loom permutation SelfCheck passed"
 exit 0

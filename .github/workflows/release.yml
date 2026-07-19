@@ -176,7 +176,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VER="${{ steps.version.outputs.tag }}"
+          VER="${{ steps.version.outputs.version }}"
           TARGET="${{ matrix.target }}"
           mkdir -p dist-out
 
@@ -600,14 +600,14 @@ jobs:
 
             | Asset | Platform |
             | ----- | -------- |
-            | `sl-viewer-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz` | Linux viewer (x86_64) |
-            | `sl-daemon-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz` | Linux daemon (x86_64) |
-            | `sl-viewer-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz` | macOS viewer (Intel) |
-            | `sl-daemon-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz` | macOS daemon (Intel) |
-            | `sl-viewer-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz` | macOS viewer (Apple Silicon) |
-            | `sl-daemon-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz` | macOS daemon (Apple Silicon) |
-            | `sl-viewer-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip` | Windows viewer (x86_64) |
-            | `sl-daemon-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip` | Windows daemon (x86_64) |
+            | `sl-viewer-<ver>-x86_64-unknown-linux-gnu.tar.gz` | Linux viewer (x86_64) |
+            | `sl-daemon-<ver>-x86_64-unknown-linux-gnu.tar.gz` | Linux daemon (x86_64) |
+            | `sl-viewer-<ver>-x86_64-apple-darwin.tar.gz` | macOS viewer (Intel) |
+            | `sl-daemon-<ver>-x86_64-apple-darwin.tar.gz` | macOS daemon (Intel) |
+            | `sl-viewer-<ver>-aarch64-apple-darwin.tar.gz` | macOS viewer (Apple Silicon) |
+            | `sl-daemon-<ver>-aarch64-apple-darwin.tar.gz` | macOS daemon (Apple Silicon) |
+            | `sl-viewer-<ver>-x86_64-pc-windows-msvc.zip` | Windows viewer (x86_64) |
+            | `sl-daemon-<ver>-x86_64-pc-windows-msvc.zip` | Windows daemon (x86_64) |
 
             ### Installers (unsigned)
 

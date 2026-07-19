@@ -103,6 +103,8 @@ are not recomputed here.
 | WBS-8.57 | Wave-38 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 391/402 (97% A) |
 | WBS-8.58 | Wave-39 evidence packages (C00 jemalloc hard, C07 fuzz blocking, C02 envelope hard, C00 daemon-graph, C04 cargo-fetch no-net) | done | machine | `.github/workflows/jemalloc-hard.yml`; `.github/workflows/fuzz-blocking.yml`; `.github/workflows/envelope-crypto.yml`; `scripts/cargo-nonet-check.ps1`; `tests/loom_model.rs`; `WAVE39_SCOPE.md` | C00, C02, C04, C07; PRs #316-#320 |
 | WBS-8.59 | Wave-39 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 394/402 (98% A) |
+| WBS-8.60 | Wave-40 evidence packages (eval-repro, signing-hard, update-check, rootless-matrix, daemon-tokio) | done | machine | `docs/ops/eval-reproducibility.md`; `.github/workflows/signing-hard.yml`; `docs/ops/update-check.md`; `scripts/rootless-matrix-check.ps1`; `tests/loom_model.rs`; PRs #324-#328 | C00, C04, C08, C11; PRs #324-#328 |
+| WBS-8.61 | Wave-40 independent re-audit | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 396/402 (98% A) |
 
 ## Organization-level control plane
 

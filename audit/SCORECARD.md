@@ -3,8 +3,8 @@
 **Repo:** KooshaPari/SessionLedger
 **Date:** 2026-07-18
 **Repo-type profile:** CLI+daemon + desktop (sl-daemon + sl-viewer)
-**Auditor:** cursor-w39-reaudit
-**Commit audited:** 6283ce5 (origin/main / Wave-39 closure #316-#320)
+**Auditor:** cursor-w40-reaudit
+**Commit audited:** ec38d21 (origin/main / Wave-40 closure #324-#328)
 
 > Rubric SSOT: phenotype-org-audits/audit-v38
 
@@ -23,30 +23,28 @@
 | C08 | Eval Coverage | L71-L80 | 29/30 | 97% | A | see audit/.lane-c08 |
 | C09 | Accessibility + UX | L81-L95 | 45/45 | 100% | A | see audit/.lane-c09 |
 | C10 | Visual Identity | L96-L107 | 36/36 | 100% | A | see audit/.lane-c10 |
-| C11 | Packaging + Distribution | L108-L122 | 41/45 | 91% | A | see audit/.lane-c11 |
+| C11 | Packaging + Distribution | L108-L122 | 43/45 | 96% | A | see audit/.lane-c11 |
 
 ## Overall
 
 **Weighted overall score:** 98% · **Overall grade:** A
 
-(Raw rubric total across all 12 clusters. Sum 394 / 402.)
+(Raw rubric total across all 12 clusters. Sum 396 / 402.)
 
-## Wave-39 Delta
+## Wave-40 Delta
 
 | Cluster | Before | After | Raw delta | Evidence-backed movement |
 |---------|:------:|:-----:|:---------:|--------------------------|
-| C00 | 29/30 | 30/30 | +1 | Blocking jemalloc hard gate on Unix release profile (#319); L8 2→3 |
-| C02 | 29/30 | 30/30 | +1 | Envelope-crypto blocking SelfCheck + chacha20poly1305 roundtrip (#316); L22 2→3 |
-| C07 | 29/30 | 30/30 | +1 | Blocking sustained fuzz cadence beyond soft job (#317); L67 2→3 |
-| **Overall** | **391/402 (97% A)** | **394/402 (98% A)** | **+3** | Conservative; three pillars only |
+| C11 | 41/45 | 43/45 | +2 | L111 user-initiated update check blocking gate (#328) 2→3; L112 signing-readiness hard gate (#326) 2→3 |
+| **Overall** | **394/402 (98% A)** | **396/402 (98% A)** | **+2** | Conservative; two pillars only |
 
 ## Headline Findings
 
 - **Strongest:** C00/C01/C02/C03/C05/C06/C07/C09/C10 (100% A); C08 (97% A)
-- **Weakest:** C04 (90% A); C11 Packaging (91% A)
-- **Wave-38 → Wave-39:** 97% A (391/402) → 98% A (394/402), +3 raw points
-- **Held (no score):** #318 blocking cargo-fetch no-net for security jobs (C04 L40 already pillar max; live rootless-only runner matrix unpaid); #320 loom daemon-graph broadcast/SSE permutation ports (C00 L7 already pillar max; full tokio sl-daemon broadcast graph unpaid)
-- **Remaining unpaid:** human org 2FA attestation (C04 L36), live rootless-only runner matrix (C04 L40 residual), full protected-environment SLSA Build L3 attestation (C06 L53 residual), live branch-protection signed-commits attestation (C06 L59 residual), Authenticode/notarization (C11 L112), live brew/winget publish, live Alertmanager webhooks, production Pyroscope profiling push, full tokio sl-daemon broadcast/SSE graph permutation ports (C00 L7 residual), default-on jemalloc / Windows allocator parity (C00 L8 residual), in-tree KMS (C02 L22 residual), multi-tenant / auto-ETL PII redaction (C02 L24), viewer/CLI Fluent migration (C01 L16 residual)
+- **Weakest:** C04 (90% A); C11 Packaging (96% A)
+- **Wave-39 → Wave-40:** 98% A (394/402) → 98% A (396/402), +2 raw points
+- **Held (no score):** #324 eval-manifest hard sync (C08 L79 already pillar max); #325 rootless-only runner matrix scaffold (C04 L40 already pillar max; live runner matrix unpaid); #327 daemon tokio broadcast loom ports (C00 L7 already pillar max; full tokio sl-daemon broadcast graph unpaid)
+- **Remaining unpaid:** Authenticode/notarization live keys (C11 L112 residual), live brew/winget publish, human org 2FA attestation (C04 L36), live rootless-only runner matrix (C04 L40 residual), full protected-environment SLSA Build L3 attestation (C06 L53 residual), live branch-protection signed-commits attestation (C06 L59 residual), live Alertmanager webhooks, production Pyroscope profiling push, full tokio sl-daemon broadcast/SSE graph permutation ports (C00 L7 residual), default-on jemalloc / Windows allocator parity (C00 L8 residual), in-tree KMS (C02 L22 residual), multi-tenant / auto-ETL PII redaction (C02 L24), viewer/CLI Fluent migration (C01 L16 residual), auto-install/rollback updater (C11 L111 residual)
 
 ## N/A / soft goals
 

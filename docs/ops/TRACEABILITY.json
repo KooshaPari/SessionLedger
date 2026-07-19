@@ -9,11 +9,11 @@
     "na"
   ],
   "overall_audit": {
-    "score": "394/402",
+    "score": "396/402",
     "pct": 98,
     "grade": "A",
-    "commit": "6283ce5",
-    "wave": "Wave-39"
+    "commit": "ec38d21",
+    "wave": "Wave-40"
   },
   "fr": [
     {
@@ -953,6 +953,33 @@
         "audit/SCORECARD.md",
         "docs/ops/WBS.md"
       ]
+    },
+    {
+      "id": "WBS-8.60",
+      "status": "done",
+      "evidence": [
+        "docs/ops/eval-reproducibility.md",
+        "scripts/eval-repro-check.ps1",
+        "tests/eval_repro.rs",
+        ".github/workflows/signing-hard.yml",
+        "tests/signing_hard.rs",
+        "docs/ops/update-check.md",
+        "scripts/update-check-check.ps1",
+        "tests/update_check.rs",
+        ".github/workflows/update-check-hard.yml",
+        "scripts/rootless-matrix-check.ps1",
+        "tests/rootless_matrix.rs",
+        "tests/loom_model.rs",
+        "scripts/loom-permutation-check.ps1"
+      ]
+    },
+    {
+      "id": "WBS-8.61",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md",
+        "docs/ops/WBS.md"
+      ]
     }
   ],
   "clusters": [
@@ -1260,7 +1287,7 @@
     },
     {
       "id": "C11",
-      "score": "41/45",
+      "score": "43/45",
       "status": "partial",
       "evidence": [
         "docs/adr/0003-platform-code-signing.md",
@@ -1270,6 +1297,12 @@
         "scripts/edge-deploy-scope-check.ps1",
         "docs/ops/signing-readiness.md",
         "scripts/signing-readiness-check.ps1",
+        "docs/ops/update-check.md",
+        "scripts/update-check-check.ps1",
+        ".github/workflows/update-check-hard.yml",
+        ".github/workflows/signing-hard.yml",
+        "tests/signing_hard.rs",
+        "tests/update_check.rs",
         "Containerfile",
         "scripts/installer-lifecycle-smoke.ps1",
         "justfile",

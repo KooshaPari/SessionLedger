@@ -94,6 +94,34 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "version=${ver}" >> "$GITHUB_OUTPUT"
 
+      - name: inject webkit stub patches for non-Linux builds
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          manifest = Path("Cargo.toml")
+          raw_text = manifest.read_text(encoding="utf-8")
+          newline = "\r\n" if "\r\n" in raw_text else "\n"
+          text = raw_text.replace("\r\n", "\n").replace("\r", "\n")
+          if "[patch.crates-io]" in text:
+              raise SystemExit("non-Linux stub patch already present; refusing to mutate manifest")
+          anchor = "\n[lints.rust]\n"
+          insert = (
+              "\n[patch.crates-io]\n"
+              'webkit2gtk-sys = { path = "vendor/webkit2gtk-sys" }\n'
+              'webkit2gtk = { path = "vendor/webkit2gtk" }\n\n'
+          )
+          idx = text.find(anchor)
+          if idx == -1:
+              text = text.rstrip("\n") + insert
+          else:
+              text = text[:idx] + insert + text[idx:]
+          manifest.write_text(text.replace("\n", newline), encoding="utf-8")
+          PY
+
       - name: install Linux GUI system dependencies
         if: matrix.os == 'ubuntu-latest'
         shell: bash

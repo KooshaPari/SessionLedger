@@ -92,10 +92,50 @@ pub fn LiveFeed() -> Element {
 
             #[cfg(any(target_arch = "wasm32", not(feature = "desktop")))]
             {
-                // Web/no-native builds: use browser EventSource via gloo-net or
-                // web-sys once wired. For now, mark as disconnected.
-                let _ = entries;
-                status.set(FeedStatus::Disconnected);
+                #[cfg(target_arch = "wasm32")]
+                {
+                    use wasm_bindgen::{closure::Closure, JsCast};
+                    use web_sys::{EventSource, MessageEvent};
+
+                    let source = match EventSource::new(DAEMON_SSE_URL) {
+                        Ok(source) => source,
+                        Err(_) => {
+                            status.set(FeedStatus::Disconnected);
+                            return;
+                        }
+                    };
+                    let onopen = Closure::wrap(Box::new({
+                        let status = status;
+                        move || status.set(FeedStatus::Live)
+                    }) as Box<dyn FnMut()>);
+                    source.set_onopen(Some(onopen.as_ref().unchecked_ref()));
+                    let onmessage = Closure::wrap(Box::new({
+                        let entries = entries;
+                        move |event: MessageEvent| {
+                            let path = event.data().as_string().unwrap_or_default().trim().to_owned();
+                            if path.is_empty() { return; }
+                            let timestamp = js_sys::Date::new_0().toISOString()
+                                .get(..19).unwrap_or("--:--:--").replace('T', " ");
+                            entries.with_mut(|items| {
+                                if items.len() >= MAX_ENTRIES { items.remove(0); }
+                                items.push(FeedEntry { path, timestamp });
+                            });
+                        }
+                    }) as Box<dyn FnMut(MessageEvent)>);
+                    source.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+                    let onerror = Closure::wrap(Box::new({
+                        let status = status;
+                        move || status.set(FeedStatus::Disconnected)
+                    }) as Box<dyn FnMut()>);
+                    source.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+                    std::future::pending::<()>().await;
+                    drop((source, onopen, onmessage, onerror));
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let _ = entries;
+                    status.set(FeedStatus::Disconnected);
+                }
             }
         }
     });

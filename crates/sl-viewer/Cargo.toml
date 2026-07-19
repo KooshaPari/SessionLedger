@@ -19,7 +19,8 @@ chrono = { version = "0.4", features = ["clock"], default-features = false, opti
 rusqlite = { version = "0.40", optional = true }
 zstd = { version = "0.13", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
-web-sys = { version = "0.3", optional = true, features = ["Document", "Element", "HtmlElement", "KeyboardEvent", "Location", "UrlSearchParams", "Window"] }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true, features = ["Document", "Element", "Event", "EventSource", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "UrlSearchParams", "Window"] }
 
 [dev-dependencies]
 rusqlite = "0.40"
@@ -29,7 +30,7 @@ tempfile = "3"
 [features]
 default = ["desktop"]
 desktop = ["dioxus/desktop", "dep:reqwest", "dep:tokio", "dep:tokio-util", "dep:chrono"]
-web = ["dioxus/web", "dep:reqwest", "dep:wasm-bindgen", "dep:web-sys"]
+web = ["dioxus/web", "dep:reqwest", "dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
 # Enable loading real Forge SQLite sessions in the viewer.
 # Requires: ZSTD_SYS_USE_PKG_CONFIG=1 (links against system libzstd).
 sqlite = [

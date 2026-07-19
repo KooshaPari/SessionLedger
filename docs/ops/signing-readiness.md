@@ -26,6 +26,22 @@ Portable trust today (no platform certificates):
 4. For internal testing only, accept Gatekeeper / SmartScreen friction documented
    in [`distribution.md`](distribution.md#platform-code-signing--notarization--deferred).
 
+## Soft vs hard gates
+
+| Gate | Soft (docs-only / deferred) | Hard (PR + release blocking) |
+|------|----------------------------|------------------------------|
+| SelfCheck (`signing-readiness-check.ps1 -SelfCheck`) | local / contributor smoke | `signing-hard.yml` + `ci.yml` + `release.yml` |
+| Unsigned MSI/PKG build + Release smoke | **done** (`release.yml`) | **done** (blocking before Release publish) |
+| Checksum + cosign + GitHub attestation path | **done** | **done** |
+| Maintainer-held Apple Developer ID certificate | **unpaid** | **unpaid** |
+| Maintainer-held Windows Authenticode certificate | **unpaid** | **unpaid** |
+| Signed clean-host install → launch → uninstall smoke | **unpaid** | **unpaid** |
+| ADR 0001 auto-update requirements satisfied or out of scope | **unpaid** | **unpaid** |
+
+Hard CI asserts deferred unsigned posture and workflow anchors only — it does
+**not** claim platform-native signing or access live Authenticode / notarization
+credentials.
+
 ## Signing readiness checklist (future CI)
 
 Revisit platform-native signing only when **all** rows below are satisfied.
@@ -39,6 +55,7 @@ gap without credentials.
 | Unsigned portable clean-host smoke (PR CI) | **done** | [`ci.yml`](../../.github/workflows/ci.yml) `clean-host-smoke-windows` via `installer-lifecycle-smoke.ps1` |
 | Checksum + cosign + GitHub attestation path | **done** | [`distribution.md`](distribution.md#release-integrity-signing-cosign) |
 | Signing readiness SelfCheck | **done** | `scripts/signing-readiness-check.ps1 -SelfCheck` |
+| Blocking signing-hard CI workflow | **done** | [`.github/workflows/signing-hard.yml`](../../.github/workflows/signing-hard.yml) + `release.yml` `signing-readiness` job |
 | Maintainer-held Apple Developer ID certificate in approved secret store | **unpaid** | No `codesign` / `notarytool` steps in CI |
 | Maintainer-held Windows Authenticode certificate in approved secret store | **unpaid** | No `signtool` steps in CI |
 | Signed clean-host install → launch → uninstall smoke (macOS + Windows) | **unpaid** | Authenticode / notarized evidence deferred per ADR 0003 |
@@ -69,12 +86,32 @@ pwsh ./scripts/signing-readiness-check.ps1 -SelfCheck
 The script asserts:
 
 - ADR 0003 deferral + portable trust model + reconsider triggers
-- This checklist documents unsigned MSI/PKG state and unpaid credential gates
+- This checklist documents unsigned MSI/PKG state, soft/hard gate rows, and unpaid credential gates
 - `.github/workflows/release.yml` retains unsigned packaging step names and
   Release smoke job wiring
+- `.github/workflows/signing-hard.yml` is a blocking PR SelfCheck workflow
+- `tests/signing_hard.rs` wraps the hermetic SelfCheck for `cargo test`
 
-Soft CI may run the same SelfCheck with `continue-on-error: true` until a
-dedicated workflow job is added.
+Hermetic wiring test (no certificates):
+
+```powershell
+cargo test --test signing_hard --locked
+```
+
+## CI / scheduling
+
+| Job | Workflow | Blocking? | Notes |
+|-----|----------|-----------|-------|
+| `signing-readiness-policy` | [`ci.yml`](../../.github/workflows/ci.yml) | **blocking** | Fast anchor smoke on every PR |
+| `signing-hard-selfcheck` | [`signing-hard.yml`](../../.github/workflows/signing-hard.yml) | **blocking** | Dedicated PR SelfCheck workflow |
+| `signing-readiness` | [`release.yml`](../../.github/workflows/release.yml) | **blocking** | Release-path SelfCheck before publish |
+
+- **PR / push:** `cargo test --test signing_hard` exercises hermetic SelfCheck
+  anchors via the default `ci.yml` test suite.
+- **Blocking hard job:** [`signing-hard.yml`](../../.github/workflows/signing-hard.yml)
+  runs SelfCheck on every PR without `continue-on-error`.
+- **Release gate:** [`release.yml`](../../.github/workflows/release.yml) job
+  `signing-readiness` blocks Release publish until deferred unsigned anchors pass.
 
 ## Related
 

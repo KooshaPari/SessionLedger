@@ -369,6 +369,16 @@ jobs:
             echo "No AppImage attached (best-effort packaging skipped or failed)."
           fi
 
+  signing-readiness:
+    name: signing readiness · SelfCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: platform signing readiness hard SelfCheck (unsigned posture)
+        shell: pwsh
+        run: ./scripts/signing-readiness-check.ps1 -SelfCheck
+
   smoke-macos-pkg:
     name: smoke · macOS PKG expand
     needs: build
@@ -399,7 +409,7 @@ jobs:
 
   release:
     name: create Release · attach assets
-    needs: [build, smoke-windows, smoke-linux, smoke-macos-pkg, oci-image]
+    needs: [build, signing-readiness, smoke-windows, smoke-linux, smoke-macos-pkg, oci-image]
     runs-on: ubuntu-latest
     permissions:
       contents: write

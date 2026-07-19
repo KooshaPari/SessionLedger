@@ -133,7 +133,7 @@ fn initial_tab_for_viewer() -> Tab {
 
 /// Root application component.
 ///
-/// Three-tab layout:
+/// Multi-view layout:
 /// - **Bundles** — browse compiled continuation bundles (the original view)
 /// - **History** — session history timeline (renders real Forge sessions when
 ///   `FORGE_DB` env var points at a Forge SQLite database)
@@ -387,7 +387,7 @@ pub fn App() -> Element {
             "{TOKENS_CSS}{VIEWER_COLOR_SCHEME}
                 html, body {{ margin: 0; max-width: 100%; overflow-x: clip; }}
                 body {{ font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
-                .app {{ display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow-x: clip; }}
+                .app {{ display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow: hidden; }}
                 .app > .sidebar {{
                     width: 100%;
                     min-width: 0;
@@ -648,12 +648,16 @@ pub fn App() -> Element {
                     }}
                 }}
                 @media (min-width: 601px) {{
+                    .app {{ flex-direction: row; }}
                     .app > .sidebar {{
                         width: 340px;
                         min-width: 340px;
                         max-width: 340px;
+                        flex: 0 0 340px;
+                        height: 100%;
                         border-right: 1px solid var(--sl-border);
                     }}
+                    .main-content {{ min-width: 0; min-height: 0; }}
                 }}
                 .sl-loading-spinner {{
                     animation: sl-spin 0.8s linear infinite;

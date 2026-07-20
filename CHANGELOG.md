@@ -10,6 +10,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Source provenance traceability wrapper (C06 L59): `tests/source_provenance.rs` hermetic cargo test for `scripts/source-provenance-check.ps1 -SelfCheck`, closing TRACEABILITY.json gap at `09cc968`.
+
 - CI job timeouts (P0 stability): `timeout-minutes` on heavy `ci.yml` jobs (`build-test` 45m, `fuzz-smoke` 15m, `coverage` 30m), `scripts/ci-timeout-check.ps1 -SelfCheck`, and `ci-timeout-policy` anchor smoke in `ci.yml` (security.yml scan jobs remain lightweight).
 
 - Wave-41 scope (396/402): consolidated `WAVE41_SCOPE.md` + `docs/ops/WAVE41_PERT.md` — five parallel lanes (`w41-daemon-url-unify`, `w41-ci-timeout`, `w41-check-regex-bound`, `w41-source-provenance`, `w41-p95-baseline`) from stability, DX/UX, governance, and perf audits.

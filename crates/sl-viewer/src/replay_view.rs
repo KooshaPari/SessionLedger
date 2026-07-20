@@ -5,10 +5,8 @@
 use dioxus::prelude::*;
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
+use crate::daemon_url::daemon_base_url;
 use crate::fixture::query_fixture_active;
-
-/// Default daemon base URL (configurable via `SL_DAEMON_URL` env at runtime).
-const DEFAULT_DAEMON: &str = "http://127.0.0.1:8080";
 
 /// An entity event received from the SSE replay stream.
 #[derive(Debug, Clone, PartialEq)]
@@ -82,7 +80,7 @@ pub fn ReplayView() -> Element {
     let mut state: Signal<ReplayState> = use_signal(|| ReplayState::Idle);
     let mut progress: Signal<(usize, usize)> = use_signal(|| (0, 0));
 
-    let daemon_url = option_env!("SL_DAEMON_URL").unwrap_or(DEFAULT_DAEMON);
+    let daemon_url = daemon_base_url();
 
     if query_fixture_active("replay-error") {
         return rsx! {

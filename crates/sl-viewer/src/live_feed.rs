@@ -1,15 +1,13 @@
 //! Live SSE feed panel — streams OKF bundle paths from `sl-daemon`.
 //!
-//! Connects to `http://localhost:9001/api/stream` and displays the last 20
-//! incoming bundle paths with a connection-status indicator.
+//! Connects to `GET /api/stream` on the running `sl-daemon` and displays the last
+//! 20 incoming bundle paths with a connection-status indicator.
 
 use dioxus::prelude::*;
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
+use crate::daemon_url::{daemon_api_url, daemon_host_display};
 use crate::fixture::query_fixture_active;
-
-#[cfg_attr(any(target_arch = "wasm32", not(feature = "desktop")), allow(dead_code))]
-const DAEMON_SSE_URL: &str = "http://localhost:9001/api/stream";
 #[cfg_attr(any(target_arch = "wasm32", not(feature = "desktop")), allow(dead_code))]
 const MAX_ENTRIES: usize = 20;
 
@@ -54,7 +52,8 @@ pub fn LiveFeed() -> Element {
                 use tokio::io::{AsyncBufReadExt, BufReader};
 
                 let client = reqwest::Client::new();
-                let resp = match client.get(DAEMON_SSE_URL).send().await {
+                let stream_url = daemon_api_url("/api/stream");
+                let resp = match client.get(&stream_url).send().await {
                     Ok(r) => r,
                     Err(_) => {
                         status.set(FeedStatus::Disconnected);
@@ -146,7 +145,10 @@ pub fn LiveFeed() -> Element {
                     ContentSkeleton { layout: SkeletonLayout::StreamFeed, list_rows: 5 }
                 } else if status_val == FeedStatus::Disconnected && feed_entries.is_empty() {
                     ErrorState {
-                        message: "Live feed disconnected — daemon unreachable at localhost:9001.".to_string(),
+                        message: format!(
+                            "Live feed disconnected — daemon unreachable at {}.",
+                            daemon_host_display()
+                        ),
                         retryable: true,
                         on_retry: move |_| {
                             trigger_connect.with_mut(|v| *v += 1);

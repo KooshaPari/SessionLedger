@@ -69,6 +69,34 @@ function Test-DocContains {
     }
 }
 
+function Get-YamlJobBlock {
+    param(
+        [Parameter(Mandatory = $true)][string]$Document,
+        [Parameter(Mandatory = $true)][string]$JobName
+    )
+
+    $lines = $Document -split "\r?\n"
+    $start = -1
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -eq "  ${JobName}:") {
+            $start = $index
+            break
+        }
+    }
+    if ($start -lt 0) {
+        throw "Workflow missing '$JobName' job definition."
+    }
+
+    $end = $lines.Count
+    for ($index = $start + 1; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match '^  [A-Za-z0-9_-]+:\s*$') {
+            $end = $index
+            break
+        }
+    }
+    return ($lines[$start..($end - 1)] -join "`n")
+}
+
 Write-Host "Sandbox boundary checklist check (C04 L40)"
 if ($SelfCheck) {
     Write-Host "Mode: SelfCheck (docs + Containerfile + seccomp + workflow anchors; no build / no network)"
@@ -220,11 +248,7 @@ if ($securityWf -notmatch 'sandbox-boundary:') {
 [void](Write-Check -Label "security.yml sandbox-boundary job" -Ok $true)
 
 # Extract the sandbox-boundary job block and require it to be blocking.
-$sbMatch = [regex]::Match($securityWf, '(?ms)^  sandbox-boundary:.*?(?=^  [a-z0-9-]+:|\z)')
-if (-not $sbMatch.Success) {
-    throw "security.yml could not extract sandbox-boundary job block."
-}
-$sbBlock = $sbMatch.Value
+$sbBlock = Get-YamlJobBlock -Document $securityWf -JobName "sandbox-boundary"
 if ($sbBlock -match 'continue-on-error:\s*true') {
     throw "sandbox-boundary job must be blocking (remove continue-on-error: true)."
 }

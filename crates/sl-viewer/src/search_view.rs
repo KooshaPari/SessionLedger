@@ -1,13 +1,13 @@
 //! Search / filter view for the sl-viewer.
 //!
-//! Renders a form that calls `GET /api/search` on the sl-daemon HTTP API
-//! (`127.0.0.1:8080`) and displays results in the same card style used by the
-//! Bundles tab.
+//! Renders a form that calls `GET /api/search` on the sl-daemon HTTP API and
+//! displays results in the same card style used by the Bundles tab.
 
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
+use crate::daemon_url::daemon_api_url;
 use crate::fixture::query_fixture_active;
 
 /// Slim bundle metadata returned by `GET /api/search`.
@@ -28,9 +28,6 @@ pub struct SearchResult {
     #[serde(default)]
     pub tags: Vec<String>,
 }
-
-/// Daemon base URL used for all HTTP calls.
-const DAEMON_BASE: &str = "http://127.0.0.1:8080";
 
 /// Build the `/api/search` query string from form values.
 ///
@@ -183,7 +180,7 @@ pub fn SearchView() -> Element {
             return;
         }
         let qs = build_query(&since(), &until(), &model(), &min_tokens(), &tags(), &limit());
-        let url = format!("{DAEMON_BASE}/api/search?{qs}");
+        let url = format!("{}?{qs}", daemon_api_url("/api/search"));
         let mut results = results;
         let mut error = error;
         let mut loading = loading;

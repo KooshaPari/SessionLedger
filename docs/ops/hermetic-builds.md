@@ -107,12 +107,13 @@ unpaid L3 rows stay documented, `hermetic-builder.json` digests match
 `hermetic.yml`, the isolated container rebuild job remains wired, and
 `release.yml` keeps canonical-repo blocking `oci-image` plus the verify-on-deploy
 pointer. It does **not** claim SLSA Build Level 3. Optional soft CI runs the
-same SelfCheck from `hermetic.yml` (`continue-on-error: true`). The legacy
-`scripts/hermetic-isolation-check.ps1` wrapper delegates here.
+same SelfCheck from `hermetic.yml` (`continue-on-error: true`) for isolation only.
+The legacy `scripts/hermetic-isolation-check.ps1` wrapper delegates here.
 
 Protected GitHub Environments and publish-job `environment:` binding are tracked
 in the dedicated [`slsa-protected-environment.md`](slsa-protected-environment.md)
-checklist (honest unpaid rows — not full L3 attestation):
+checklist (honest unpaid rows — not full L3 attestation). Blocking CI runs the
+protected-environment SelfCheck from `security.yml`:
 
 ```powershell
 pwsh ./scripts/slsa-protected-env-check.ps1 -SelfCheck
@@ -132,7 +133,7 @@ pwsh ./scripts/slsa-protected-env-check.ps1 -SelfCheck
 | Vendored deps + two-builder rebuild | unpaid | Vendor or remote-cache proof; rebuild on a second independent builder |
 | System package / linker snapshot | unpaid | Lock OS packages inside the builder image beyond the Rust toolchain pin |
 | SLSA L3 isolation SelfCheck | **done** | `scripts/slsa-isolation-check.ps1 -SelfCheck` (+ soft CI job; `hermetic-isolation-check.ps1` delegates) |
-| SLSA protected-environment SelfCheck | **done** | [`slsa-protected-environment.md`](slsa-protected-environment.md) + `scripts/slsa-protected-env-check.ps1 -SelfCheck` (+ soft CI job) |
+| SLSA protected-environment SelfCheck | **done** | [`slsa-protected-environment.md`](slsa-protected-environment.md) + `scripts/slsa-protected-env-check.ps1 -SelfCheck` (+ blocking `security.yml` job) |
 
 **Policy:** On the canonical repository, `oci-image` is release-blocking when
 `packages:write` and OIDC are available. Forks skip OCI with an explicit reason

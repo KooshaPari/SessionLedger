@@ -146,7 +146,7 @@ function Invoke-SelfCheck {
     [void](Test-CycloneDxSbom -FilePath $validFixture)
     [void](Write-Check -Label "valid minimal fixture passes schema anchors" -Ok $true)
 
-    $invalid = Join-Path $env:TEMP "sbom-invalid-selfcheck.cdx.json"
+    $invalid = Join-Path ([System.IO.Path]::GetTempPath()) "sbom-invalid-selfcheck.cdx.json"
     '{"version":1}' | Set-Content -LiteralPath $invalid -Encoding utf8
     $failed = $false
     try {

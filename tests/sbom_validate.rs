@@ -1,4 +1,4 @@
-//! Hermetic `SelfCheck` for SBOM policy + CycloneDX anchors (C04 L32).
+//! Hermetic `SelfCheck` for SBOM policy + `CycloneDX` anchors (C04 L32).
 //!
 //! Local: `pwsh ./scripts/sbom-validate-check.ps1 -SelfCheck`
 

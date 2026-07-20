@@ -464,7 +464,7 @@ try {
         $latencyBaselines = [ordered]@{}
         foreach ($entry in $current.GetEnumerator()) {
             $meanNs = [Math]::Round([double]$entry.Value, 3)
-            $budgetNs = [Math]::Round($meanNs * (1.0 + ($ThresholdPercent / 100.0)), 3)
+            $budgetNs = [Math]::Ceiling($meanNs * (1.0 + ($ThresholdPercent / 100.0)) * 1000.0) / 1000.0
             $benchmarkBaselines[$entry.Key] = [ordered]@{
                 mean_ns        = $meanNs
                 budget_mean_ns = $budgetNs
@@ -478,7 +478,7 @@ try {
                 $p95Source = "synthetic_mean_x1_15"
             }
             $p95Ns = [Math]::Round([double]$p95Raw, 3)
-            $budgetP95 = [Math]::Round($p95Ns * (1.0 + ($latencyThreshold / 100.0)), 3)
+            $budgetP95 = [Math]::Ceiling($p95Ns * (1.0 + ($latencyThreshold / 100.0)) * 1000.0) / 1000.0
             $latencyBaselines[$entry.Key] = [ordered]@{
                 p95_ns        = $p95Ns
                 budget_p95_ns = $budgetP95

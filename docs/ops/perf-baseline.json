@@ -45,7 +45,7 @@
       },
       "pipeline/okf_export_200_messages": {
         "p95_ns": 10423.05,
-        "budget_p95_ns": 13028.812,
+        "budget_p95_ns": 13028.813,
         "p95_source": "criterion_sample_json"
       },
       "pipeline/inject_render_200_messages": {
@@ -58,7 +58,7 @@
   "benchmarks": {
     "pipeline/distill_compile_200_messages": {
       "mean_ns": 1993408.738,
-      "budget_mean_ns": 2491760.922
+      "budget_mean_ns": 2491760.923
     },
     "pipeline/okf_export_200_messages": {
       "mean_ns": 8408.746,

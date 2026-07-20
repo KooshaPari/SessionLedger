@@ -56,11 +56,14 @@ jobs:
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
 
-      # Workspace-wide coverage → lcov so qgate's lcov parser can consume it.
+      # Core Rust coverage → lcov so qgate's lcov parser can consume it.
+      # The Dioxus viewer is validated by the blocking browser/axe contract
+      # job; keeping it out of llvm-cov avoids treating uninstrumented WASM UI
+      # glue as an untested core-library regression.
       - name: Generate coverage (lcov)
         run: |
           mkdir -p coverage
-          cargo llvm-cov --workspace --all-targets --lcov --output-path coverage/lcov.info
+          cargo llvm-cov --package session-ledger --all-targets --lcov --output-path coverage/lcov.info
           echo "lcov size: $(wc -l < coverage/lcov.info) lines"
 
       - name: Upload coverage artifact

@@ -10,6 +10,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- P95 baseline refresh (C00 L6 / C08 L74): `bench-gate.ps1 -UpdateBaseline` writes `p95_source` per benchmark; `perf-baseline.json` refreshed from Criterion `sample.json` (replaces provisional mean×1.15 values).
+
 - Source provenance traceability wrapper (C06 L59): `tests/source_provenance.rs` hermetic cargo test for `scripts/source-provenance-check.ps1 -SelfCheck`, closing TRACEABILITY.json gap at `09cc968`.
 
 - CI job timeouts (P0 stability): `timeout-minutes` on heavy `ci.yml` jobs (`build-test` 45m, `fuzz-smoke` 15m, `coverage` 30m), `scripts/ci-timeout-check.ps1 -SelfCheck`, and `ci-timeout-policy` anchor smoke in `ci.yml` (security.yml scan jobs remain lightweight).

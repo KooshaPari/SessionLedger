@@ -63,7 +63,7 @@ jobs:
       - name: Generate coverage (lcov)
         run: |
           mkdir -p coverage
-          cargo llvm-cov --package session-ledger --all-targets --lcov --output-path coverage/lcov.info
+          cargo llvm-cov --package session-ledger --features sqlite --all-targets --lcov --output-path coverage/lcov.info
           echo "lcov size: $(wc -l < coverage/lcov.info) lines"
 
       - name: Upload coverage artifact

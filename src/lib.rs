@@ -90,3 +90,32 @@ pub fn process_jsonl_file<P: AsRef<std::path::Path>>(
     let sessions = read_jsonl_sessions(path)?;
     Ok(sessions.iter().map(process_session).collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::Write;
+
+    use super::*;
+
+    #[test]
+    fn process_session_exports_core_document() {
+        let mut session = Session::new("lib-test", Corpus::Codex);
+        session.messages.push(Message::new(Role::User, "ship it"));
+        let document = process_session(&session);
+        assert!(!document.entities.is_empty());
+    }
+
+    #[test]
+    fn process_jsonl_file_processes_all_sessions() {
+        let mut file = tempfile::NamedTempFile::new().expect("temp jsonl");
+        let mut first = Session::new("first", Corpus::Codex);
+        first.messages.push(Message::new(Role::User, "one"));
+        let mut second = Session::new("second", Corpus::Cursor);
+        second.messages.push(Message::new(Role::Assistant, "two"));
+        writeln!(file, "{}", serde_json::to_string(&first).unwrap()).unwrap();
+        writeln!(file, "{}", serde_json::to_string(&second).unwrap()).unwrap();
+
+        let documents = process_jsonl_file(file.path()).expect("process jsonl");
+        assert_eq!(documents.len(), 2);
+    }
+}

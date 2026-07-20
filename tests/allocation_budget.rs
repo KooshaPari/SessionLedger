@@ -113,6 +113,18 @@ fn allocation_budget_script_self_check_parses_args_and_ceilings() {
     let script = repo_root().join("scripts/allocation-budget-check.ps1");
     assert!(script.is_file(), "missing {}", script.display());
 
+    let mut command = Command::new("pwsh");
+    // PowerShell is a CI dependency, but is not present on every developer
+    // workstation (notably stock macOS). Keep the Rust allocation assertions
+    // portable while running the script check whenever pwsh is available.
+    if let Err(error) = command.arg("-NoProfile").arg("-Command").arg("exit 0").output() {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            eprintln!("skipping PowerShell self-check: pwsh is not installed");
+            return;
+        }
+        panic!("failed to probe pwsh for self-check: {error}");
+    }
+
     let output = Command::new("pwsh")
         .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()

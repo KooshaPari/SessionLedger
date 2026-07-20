@@ -6,6 +6,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Fixed
 
+- Viewer first-run corpus CTA (C09): wire “Open corpus…” to a web Forge DB file picker (`corpus_cta.rs`) or open the quick-start runbook on desktop; `cargo test -p sl-viewer`.
+
 - Commit signing header scan (C04 L34): `commit-signing-check.ps1` reads bounded commit headers via line-scanner (no unbounded `git cat-file` buffers or `(?ms)` regex); `-SelfCheck` + `tests/commit_signing_check.rs`.
 
 - Loom permutation CI timeout (P0 stability): split blocking `loom-permutation.yml` into core + per-daemon `loom_model` jobs with `LOOM_MAX_PREEMPTIONS` on broadcast/pipeline/shutdown; mirror in soft `loom-smoke.yml` so Wave-40 tokio-shaped daemon graph tests no longer exceed single-job ceilings.

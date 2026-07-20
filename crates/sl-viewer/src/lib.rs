@@ -15,6 +15,7 @@ pub mod async_states;
 pub mod bundle_diff;
 pub mod bundle_list;
 pub mod command_palette;
+pub mod corpus_cta;
 pub mod corpus_loader;
 pub mod daemon_url;
 pub mod detail_pane;

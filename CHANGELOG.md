@@ -10,6 +10,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- CI job timeouts (P0 stability): `timeout-minutes` on heavy `ci.yml` jobs (`build-test` 45m, `fuzz-smoke` 15m, `coverage` 30m), `scripts/ci-timeout-check.ps1 -SelfCheck`, and `ci-timeout-policy` anchor smoke in `ci.yml` (security.yml scan jobs remain lightweight).
+
 - User-initiated update check (C11 L111): `sl-daemon check-update` (GitHub release tag compare; no download/install), `docs/ops/update-check.md`, `scripts/update-check-check.ps1 -SelfCheck`, `tests/update_check.rs`, `crates/sl-daemon/tests/check_update.rs`, blocking `.github/workflows/update-check-hard.yml` + soft `update-check-soft.yml` (SelfCheck + hermetic `--latest` smoke; auto-install remains unpaid).
 
 - Rootless-only OCI runner matrix scaffold (C04 L40): `scripts/rootless-matrix-check.ps1 -SelfCheck`, blocking `.github/workflows/rootless-matrix.yml`, `tests/rootless_matrix.rs`, `security.yml`/`ci.yml` anchors, `sandbox-boundary.md` matrix limits (live rootless runners + OCI build/smoke unpaid).

@@ -65,9 +65,27 @@ Wall-clock once dependencies are cached: typically **well under two minutes**
 
 ## CI / scheduling
 
+| Gate | Workflow | Mode | Evidence |
+|------|----------|------|----------|
+| Hermetic config + script SelfCheck | `ci.yml` (`cargo test --test alloc_profile`) | **blocking** | No `dhat` compile on default graph |
+| Soft scheduled dhat smoke | `ops-load.yml` (`alloc-profile`) | **soft** (`continue-on-error: true`) | Weekly / `workflow_dispatch` signal |
+| Blocking PR dhat smoke | `alloc-profile-hard.yml` | **blocking** | `alloc-profile-check.ps1 -SelfCheck` + `-RunTest` |
+
+### Soft vs hard gates
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| Soft alloc-profile SelfCheck | **done** | `ops-load.yml` `alloc-profile` job (`continue-on-error`) |
+| Blocking alloc-profile-hard CI workflow | **done** | `.github/workflows/alloc-profile-hard.yml` |
+| `tests/alloc_profile_hard.rs` cargo wrapper | **done** | Hermetic SelfCheck anchor smoke |
+| Continuous dhat profiling / production always-on jemalloc | **unpaid** | See [`jemalloc.md`](jemalloc.md) |
+
 - **PR / push:** `cargo test --test alloc_profile` in
   [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) exercises the
   hermetic config + script self-check (no `dhat` compile on the default graph).
+- **Blocking PR gate:** [`.github/workflows/alloc-profile-hard.yml`](../../.github/workflows/alloc-profile-hard.yml)
+  runs `alloc-profile-check.ps1 -SelfCheck` and `-RunTest` (dhat smoke) without
+  `continue-on-error`.
 - **Scheduled soft job:** [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml)
   (`alloc-profile`, `continue-on-error: true`) runs the script self-check +
   `cargo test --test alloc_profile_dhat --features alloc-profile` on the same

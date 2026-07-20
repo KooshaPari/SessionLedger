@@ -66,7 +66,7 @@
     },
     "pipeline/inject_render_200_messages": {
       "mean_ns": 15019.142,
-      "budget_mean_ns": 18773.927
+      "budget_mean_ns": 18773.928
     }
   }
 }

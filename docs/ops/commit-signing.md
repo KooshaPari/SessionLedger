@@ -68,6 +68,9 @@ Run locally or in CI:
 # Blocking tip check + recent-history report (default CI mode)
 pwsh -NoProfile -File scripts/commit-signing-check.ps1
 
+# Hermetic bounded header scanner + fixtures (no signed main required)
+pwsh -NoProfile -File scripts/commit-signing-check.ps1 -SelfCheck
+
 # Branch-protection checklist (soft-fail / docs-only without admin API)
 pwsh -NoProfile -File scripts/commit-signing-check.ps1 -BranchProtectionChecklist
 

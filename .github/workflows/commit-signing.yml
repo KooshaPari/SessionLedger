@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/commit-signing.yml"
       - "scripts/commit-signing-check.ps1"
+      - "tests/commit_signing_check.rs"
       - "docs/ops/commit-signing.md"
       - "docs/adr/0004-commit-signing-policy.md"
       - "SECURITY.md"
@@ -17,6 +18,7 @@ on:
     paths:
       - ".github/workflows/commit-signing.yml"
       - "scripts/commit-signing-check.ps1"
+      - "tests/commit_signing_check.rs"
       - "docs/ops/commit-signing.md"
       - "docs/adr/0004-commit-signing-policy.md"
       - "SECURITY.md"
@@ -45,6 +47,10 @@ jobs:
       - name: verify main tip and recent signed commits
         shell: pwsh
         run: ./scripts/commit-signing-check.ps1 -Ref main -Count 30
+
+      - name: commit signing bounded header SelfCheck
+        shell: pwsh
+        run: ./scripts/commit-signing-check.ps1 -SelfCheck
 
       - name: branch protection checklist (soft / docs-only)
         shell: pwsh

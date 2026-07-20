@@ -4,6 +4,10 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ## [Unreleased]
 
+### Fixed
+
+- Loom permutation CI timeout (P0 stability): split blocking `loom-permutation.yml` into core + daemon `loom_model` jobs (25m each) plus hermetic wrapper smoke; mirror split in soft `loom-smoke.yml` so Wave-40 tokio-shaped daemon graph tests no longer exceed the 45m single-job ceiling.
+
 ### Added
 
 - User-initiated update check (C11 L111): `sl-daemon check-update` (GitHub release tag compare; no download/install), `docs/ops/update-check.md`, `scripts/update-check-check.ps1 -SelfCheck`, `tests/update_check.rs`, `crates/sl-daemon/tests/check_update.rs`, blocking `.github/workflows/update-check-hard.yml` + soft `update-check-soft.yml` (SelfCheck + hermetic `--latest` smoke; auto-install remains unpaid).

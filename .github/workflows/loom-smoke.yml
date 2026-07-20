@@ -32,19 +32,42 @@ jobs:
         shell: pwsh
         run: ./scripts/loom-smoke-check.ps1 -SelfCheck
 
-  loom-model:
-    name: soft loom · loom_model
+  loom-model-core:
+    name: soft loom · loom_model core
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
-          key: loom-cfg
-      - name: loom_model (soft)
+          key: loom-smoke-core-cfg
+      - name: loom_model core (soft)
         env:
           # loom replaces std concurrency primitives; keep off default RUSTFLAGS.
           RUSTFLAGS: "--cfg loom"
-        run: cargo test --test loom_model --release --locked -- --test-threads=1
+        run: >-
+          cargo test --test loom_model --release --locked
+          cancel_and_capacity bounded_try_send broadcast_epoch watcher_
+          daemon_graph_pipeline_conserves
+          -- --test-threads=1
+
+  loom-model-daemon:
+    name: soft loom · loom_model daemon
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          key: loom-smoke-daemon-cfg
+      - name: loom_model daemon (soft)
+        env:
+          RUSTFLAGS: "--cfg loom"
+        run: >-
+          cargo test --test loom_model --release --locked
+          daemon_mpsc daemon_broadcast daemon_graph_mpsc daemon_graph_shutdown
+          -- --test-threads=1

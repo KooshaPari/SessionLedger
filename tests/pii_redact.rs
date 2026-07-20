@@ -17,12 +17,21 @@ fn pii_redact_self_check_validates_anchors() {
     let script = repo_root().join("scripts/pii-redact-check.ps1");
     assert!(script.is_file(), "expected PII redaction check script at {}", script.display());
 
-    let output = match Command::new("pwsh").arg("-NoProfile").arg("-Command").arg("exit 0").output() {
+    let output = match Command::new("pwsh").arg("-NoProfile").arg("-Command").arg("exit 0").output()
+    {
         Ok(_) => Command::new("pwsh")
-        .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
-        .output()
-        .expect("pwsh self-check failed to start"),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => { eprintln!("skipping PowerShell self-check: pwsh is not installed"); return; }
+            .args([
+                "-NoProfile",
+                "-File",
+                script.to_str().expect("utf-8 script path"),
+                "-SelfCheck",
+            ])
+            .output()
+            .expect("pwsh self-check failed to start"),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            eprintln!("skipping PowerShell self-check: pwsh is not installed");
+            return;
+        }
         Err(error) => panic!("failed to probe pwsh for SelfCheck: {error}"),
     };
 

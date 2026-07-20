@@ -147,7 +147,9 @@ pub fn ReplayView() -> Element {
                         }
                     }
                     if generation() == token {
-                        state.set(if saw_done { ReplayState::Done } else {
+                        state.set(if saw_done {
+                            ReplayState::Done
+                        } else {
                             ReplayState::Error("replay stream ended before completion".into())
                         });
                     }

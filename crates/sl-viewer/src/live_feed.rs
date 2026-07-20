@@ -105,26 +105,37 @@ pub fn LiveFeed() -> Element {
                         }
                     };
                     let onopen = Closure::wrap(Box::new({
-                        let status = status;
+                        let mut status = status;
                         move || status.set(FeedStatus::Live)
                     }) as Box<dyn FnMut()>);
                     source.set_onopen(Some(onopen.as_ref().unchecked_ref()));
                     let onmessage = Closure::wrap(Box::new({
-                        let entries = entries;
+                        let mut entries = entries;
                         move |event: MessageEvent| {
-                            let path = event.data().as_string().unwrap_or_default().trim().to_owned();
-                            if path.is_empty() { return; }
-                            let timestamp = js_sys::Date::new_0().to_string()
-                                .get(..24).unwrap_or("--:--:--").to_owned();
+                            let path =
+                                event.data().as_string().unwrap_or_default().trim().to_owned();
+                            if path.is_empty() {
+                                return;
+                            }
+                            let timestamp = js_sys::Date::new_0()
+                                .to_string()
+                                .as_string()
+                                .unwrap_or_default()
+                                .get(..24)
+                                .unwrap_or("--:--:--")
+                                .to_owned();
                             entries.with_mut(|items| {
-                                if items.len() >= MAX_ENTRIES { items.remove(0); }
+                                if items.len() >= MAX_ENTRIES {
+                                    items.remove(0);
+                                }
                                 items.push(FeedEntry { path, timestamp });
                             });
                         }
-                    }) as Box<dyn FnMut(MessageEvent)>);
+                    })
+                        as Box<dyn FnMut(MessageEvent)>);
                     source.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
                     let onerror = Closure::wrap(Box::new({
-                        let status = status;
+                        let mut status = status;
                         move || status.set(FeedStatus::Disconnected)
                     }) as Box<dyn FnMut()>);
                     source.set_onerror(Some(onerror.as_ref().unchecked_ref()));

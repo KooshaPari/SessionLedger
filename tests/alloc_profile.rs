@@ -59,12 +59,7 @@ fn alloc_profile_script_self_check_parses_args_and_ceilings() {
     // PowerShell is a CI dependency, but is not present on every developer
     // workstation (notably stock macOS). Keep the config assertion above
     // portable while running the script check whenever pwsh is available.
-    if let Err(error) = command
-        .arg("-NoProfile")
-        .arg("-Command")
-        .arg("exit 0")
-        .output()
-    {
+    if let Err(error) = command.arg("-NoProfile").arg("-Command").arg("exit 0").output() {
         if error.kind() == std::io::ErrorKind::NotFound {
             eprintln!("skipping PowerShell self-check: pwsh is not installed");
             return;

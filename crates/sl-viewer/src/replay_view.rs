@@ -128,9 +128,8 @@ pub fn ReplayView() -> Element {
                             continue;
                         }
                     };
-                    let stream = response
-                        .bytes_stream()
-                        .map(|result| result.map_err(std::io::Error::other));
+                    let stream =
+                        response.bytes_stream().map(|result| result.map_err(std::io::Error::other));
                     let mut lines = BufReader::new(StreamReader::new(stream)).lines();
                     let mut saw_done = false;
                     while let Ok(Some(line)) = lines.next_line().await {
@@ -143,14 +142,18 @@ pub fn ReplayView() -> Element {
                             entries.with_mut(|items| items.push(entry));
                         }
                     }
-                    state.set(if saw_done { ReplayState::Done } else {
+                    state.set(if saw_done {
+                        ReplayState::Done
+                    } else {
                         ReplayState::Error("replay stream ended before completion".into())
                     });
                 }
                 #[cfg(any(target_arch = "wasm32", not(feature = "desktop")))]
                 {
                     let _ = (id, spd, daemon_url);
-                    state.set(ReplayState::Error("replay streaming requires the desktop target".into()));
+                    state.set(ReplayState::Error(
+                        "replay streaming requires the desktop target".into(),
+                    ));
                 }
             }
         }

@@ -105,6 +105,7 @@ pub fn ReplayView() -> Element {
     let mut entries: Signal<Vec<ReplayEntry>> = use_signal(Vec::new);
     let mut state: Signal<ReplayState> = use_signal(|| ReplayState::Idle);
     let mut progress: Signal<(usize, usize)> = use_signal(|| (0, 0));
+    let mut generation: Signal<u64> = use_signal(|| 0);
 
     // A single owned coroutine gives Play a real, cancellable transport path.
     // Sending another request replaces the prior stream logically; stale
@@ -113,8 +114,8 @@ pub fn ReplayView() -> Element {
         let mut entries = entries;
         let mut state = state;
         let mut progress = progress;
-        move |mut rx: UnboundedReceiver<(String, f64, String)>| async move {
-            while let Some((id, spd, daemon_url)) = rx.next().await {
+        move |mut rx: UnboundedReceiver<(String, f64, String, u64)>| async move {
+            while let Some((id, spd, daemon_url, token)) = rx.next().await {
                 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
                 {
                     use tokio::io::{AsyncBufReadExt, BufReader};
@@ -133,6 +134,9 @@ pub fn ReplayView() -> Element {
                     let mut lines = BufReader::new(StreamReader::new(stream)).lines();
                     let mut saw_done = false;
                     while let Ok(Some(line)) = lines.next_line().await {
+                        if generation() != token {
+                            break;
+                        }
                         if line.starts_with("event: done") {
                             saw_done = true;
                             continue;
@@ -142,15 +146,15 @@ pub fn ReplayView() -> Element {
                             entries.with_mut(|items| items.push(entry));
                         }
                     }
-                    state.set(if saw_done {
-                        ReplayState::Done
-                    } else {
-                        ReplayState::Error("replay stream ended before completion".into())
-                    });
+                    if generation() == token {
+                        state.set(if saw_done { ReplayState::Done } else {
+                            ReplayState::Error("replay stream ended before completion".into())
+                        });
+                    }
                 }
                 #[cfg(any(target_arch = "wasm32", not(feature = "desktop")))]
                 {
-                    let _ = (id, spd, daemon_url);
+                    let _ = (id, spd, daemon_url, token);
                     state.set(ReplayState::Error(
                         "replay streaming requires the desktop target".into(),
                     ));
@@ -283,7 +287,8 @@ pub fn ReplayView() -> Element {
                                 entries.set(vec![]);
                                 progress.set((0, 0));
                                 state.set(ReplayState::Playing);
-                            replay_task.send((id.clone(), normalize_speed(spd), daemon_url.to_string()));
+                                generation.set(generation() + 1);
+                                replay_task.send((id.clone(), normalize_speed(spd), daemon_url.to_string(), generation()));
                             }
                         },
                         "Play"
@@ -293,7 +298,10 @@ pub fn ReplayView() -> Element {
                 if *state.read() == ReplayState::Playing {
                     button {
                         class: "btn btn-stop",
-                        onclick: move |_| state.set(ReplayState::Paused),
+                        onclick: move |_| {
+                            generation.set(generation() + 1);
+                            state.set(ReplayState::Paused)
+                        },
                         "Pause"
                     }
                 }
@@ -301,12 +309,22 @@ pub fn ReplayView() -> Element {
                 if *state.read() == ReplayState::Paused {
                     button {
                         class: "btn btn-play",
-                        onclick: move |_| state.set(ReplayState::Playing),
+                        onclick: move |_| {
+                            let id = bundle_id.read().clone();
+                            entries.set(vec![]);
+                            progress.set((0, 0));
+                            generation.set(generation() + 1);
+                            state.set(ReplayState::Playing);
+                            replay_task.send((id, normalize_speed(*speed.read()), daemon_url.to_string(), generation()));
+                        },
                         "Resume"
                     }
                     button {
                         class: "btn btn-stop",
-                        onclick: move |_| state.set(ReplayState::Idle),
+                        onclick: move |_| {
+                            generation.set(generation() + 1);
+                            state.set(ReplayState::Idle)
+                        },
                         "Stop"
                     }
                 }
@@ -314,6 +332,7 @@ pub fn ReplayView() -> Element {
                 button {
                     class: "btn btn-clear",
                     onclick: move |_| {
+                        generation.set(generation() + 1);
                         entries.set(vec![]);
                         progress.set((0, 0));
                         state.set(ReplayState::Idle);

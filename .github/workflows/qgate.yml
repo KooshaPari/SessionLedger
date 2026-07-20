@@ -142,6 +142,10 @@ jobs:
         with:
           name: coverage-lcov
           path: coverage
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sbom-cyclonedx
+          path: target
       - name: Checkout pinned qgate source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -158,6 +162,8 @@ jobs:
           sudo apt-get install -y pkg-config libglib2.0-dev libgtk-3-dev \
             libgdk-pixbuf-2.0-dev libjavascriptcoregtk-4.1-dev \
             libwebkit2gtk-4.1-dev libxdo-dev libsoup-3.0-dev
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
       - name: Build qgate
         run: cargo build --release --manifest-path _phenotype-tooling/crates/qgate/Cargo.toml
       - name: Run qgate

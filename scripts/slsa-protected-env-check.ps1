@@ -40,7 +40,7 @@ $docPath = Join-Path $repoRoot "docs/ops/slsa-protected-environment.md"
 $hermeticDocPath = Join-Path $repoRoot "docs/ops/hermetic-builds.md"
 $branchProtectionDocPath = Join-Path $repoRoot "docs/ops/branch-protection.md"
 $releaseWorkflow = Join-Path $repoRoot ".github/workflows/release.yml"
-$hermeticWorkflow = Join-Path $repoRoot ".github/workflows/hermetic.yml"
+$securityWorkflow = Join-Path $repoRoot ".github/workflows/security.yml"
 $selfPath = Join-Path $repoRoot "scripts/slsa-protected-env-check.ps1"
 
 function Assert-File {
@@ -83,14 +83,14 @@ Assert-File -Path $docPath -Label "protected environment policy doc"
 Assert-File -Path $hermeticDocPath -Label "hermetic builds doc"
 Assert-File -Path $branchProtectionDocPath -Label "branch protection doc"
 Assert-File -Path $releaseWorkflow -Label "release workflow"
-Assert-File -Path $hermeticWorkflow -Label "hermetic workflow"
+Assert-File -Path $securityWorkflow -Label "security workflow"
 Assert-File -Path $selfPath -Label "SLSA protected environment check script"
 
 $doc = Get-Content -LiteralPath $docPath -Raw
 $hermeticDoc = Get-Content -LiteralPath $hermeticDocPath -Raw
 $branchProtectionDoc = Get-Content -LiteralPath $branchProtectionDocPath -Raw
 $release = Get-Content -LiteralPath $releaseWorkflow -Raw
-$hermetic = Get-Content -LiteralPath $hermeticWorkflow -Raw
+$security = Get-Content -LiteralPath $securityWorkflow -Raw
 
 Write-Host "Protected-environment doc anchors:"
 Test-DocContains -Doc $doc -Needle "Protected environment policy (SLSA Build L3)" `
@@ -184,23 +184,33 @@ else {
     Write-Host "  [OPEN] release.yml has no environment: release binding (expected unpaid)."
 }
 
-Write-Host "Hermetic workflow wiring:"
-if ($hermetic -notmatch 'slsa-protected-env-check\.ps1') {
-    throw "hermetic.yml must run scripts/slsa-protected-env-check.ps1 -SelfCheck."
+Write-Host "Security workflow wiring:"
+if ($security -notmatch 'slsa-protected-env-check\.ps1') {
+    throw "security.yml must run scripts/slsa-protected-env-check.ps1 -SelfCheck."
 }
-[void](Write-Check -Label "hermetic.yml runs slsa-protected-env-check SelfCheck" -Ok $true)
+[void](Write-Check -Label "security.yml runs slsa-protected-env-check SelfCheck" -Ok $true)
+
+if ($security -match '(?ms)^  slsa-protected-env:(.*?)(?=^  [a-z][a-z0-9-]*:)') {
+    $slsaBlock = $Matches[1]
+    if ($slsaBlock -match 'continue-on-error:\s*true') {
+        throw "security.yml slsa-protected-env job must be blocking (no continue-on-error)."
+    }
+} else {
+    throw "security.yml must define a slsa-protected-env job block."
+}
+[void](Write-Check -Label "slsa-protected-env job is blocking" -Ok $true)
 
 $summary = @"
 ## SLSA protected-environment checklist (C06 L53)
 
 SelfCheck passed: ``docs/ops/slsa-protected-environment.md`` checklist anchors +
 done-gate evidence paths + hermetic-builds / branch-protection cross-links +
-release.yml blocking oci-image documentation.
+release.yml blocking oci-image documentation + blocking ``security.yml`` gate.
 
 Unpaid L3 rows still documented as open: $unpaidStillOpen
 (GitHub Environment ``release``, ``environment:`` YAML binding, deployment rules,
-full protected-environment attestation). Soft CI only — **not** a SLSA Build L3
-attestation; live Environment protection cannot be proven from checkout alone.
+full protected-environment attestation). Blocking SelfCheck only — **not** a SLSA
+Build L3 attestation; live Environment protection cannot be proven from checkout alone.
 "@
 
 if ($env:GITHUB_STEP_SUMMARY) {

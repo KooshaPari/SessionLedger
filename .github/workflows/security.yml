@@ -141,6 +141,17 @@ jobs:
         shell: pwsh
         run: ./scripts/sbom-validate-check.ps1 -SelfCheck
 
+  # Blocking C06 L53 protected-environment checklist — hermetic SelfCheck only.
+  # Does not claim live GitHub Environment wiring or full SLSA Build L3 attestation.
+  slsa-protected-env:
+    name: SLSA protected-environment SelfCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: SLSA protected-environment checklist SelfCheck
+        shell: pwsh
+        run: ./scripts/slsa-protected-env-check.ps1 -SelfCheck
+
   # Hard C02 L22 envelope-crypto CI evidence — blocking PR workflow in
   # .github/workflows/envelope-crypto.yml (envelope-crypto-check.ps1 -SelfCheck).
   # Does not claim in-tree KMS, sealed secrets, KEK wrap, or OKF/audit encryption.

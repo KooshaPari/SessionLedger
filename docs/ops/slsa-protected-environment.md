@@ -60,9 +60,9 @@ GitHub API access.
 | Live Environment protection via GitHub API | NOT_VERIFIABLE_IN_REPO | Admin-scope `gh api` or human attestation — not asserted in soft CI |
 | Full SLSA Build L3 protected-environment attestation | unpaid | Requires Environment wiring + hardened runners + independent rebuild proof |
 
-**Policy:** Soft CI runs the SelfCheck from `hermetic.yml` (`continue-on-error:
-true`). Passing SelfCheck means docs + evidence paths stay honest — **not** that
-GitHub Environments are configured or that SLSA Build Level 3 is achieved.
+**Policy:** Blocking CI runs the SelfCheck from `security.yml` (no
+`continue-on-error`). Passing SelfCheck means docs + evidence paths stay honest —
+**not** that GitHub Environments are configured or that SLSA Build Level 3 is achieved.
 
 ## SelfCheck (machine proof)
 

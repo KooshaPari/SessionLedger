@@ -128,10 +128,14 @@ fn bench_gate_self_check_validates_enforced_policy() {
     let script = repo_root().join("scripts/bench-gate.ps1");
     assert!(script.is_file(), "missing {}", script.display());
 
-    let output = Command::new("pwsh")
+    let output = match Command::new("pwsh").arg("-NoProfile").arg("-Command").arg("exit 0").output() {
+        Ok(_) => Command::new("pwsh")
         .args(["-NoProfile", "-File", script.to_str().expect("utf-8 script path"), "-SelfCheck"])
         .output()
-        .unwrap_or_else(|error| panic!("failed to spawn pwsh for SelfCheck: {error}"));
+        .expect("pwsh self-check failed to start"),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => { eprintln!("skipping PowerShell self-check: pwsh is not installed"); return; },
+        Err(error) => panic!("failed to probe pwsh for SelfCheck: {error}"),
+    };
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -152,7 +156,8 @@ fn bench_gate_soft_latency_check_validates_p95_baselines() {
     let script = repo_root().join("scripts/bench-gate.ps1");
     assert!(script.is_file(), "missing {}", script.display());
 
-    let output = Command::new("pwsh")
+    let output = match Command::new("pwsh").arg("-NoProfile").arg("-Command").arg("exit 0").output() {
+        Ok(_) => Command::new("pwsh")
         .args([
             "-NoProfile",
             "-File",
@@ -160,7 +165,10 @@ fn bench_gate_soft_latency_check_validates_p95_baselines() {
             "-SoftLatencyCheck",
         ])
         .output()
-        .unwrap_or_else(|error| panic!("failed to spawn pwsh for SoftLatencyCheck: {error}"));
+        .expect("pwsh self-check failed to start"),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => { eprintln!("skipping PowerShell self-check: pwsh is not installed"); return; },
+        Err(error) => panic!("failed to probe pwsh for SoftLatencyCheck: {error}"),
+    };
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);

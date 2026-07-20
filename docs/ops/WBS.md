@@ -105,6 +105,8 @@ are not recomputed here.
 | WBS-8.59 | Wave-39 independent re-audit and scorecard refresh | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 394/402 (98% A) |
 | WBS-8.60 | Wave-40 evidence packages (eval-repro, signing-hard, update-check, rootless-matrix, daemon-tokio) | done | machine | `docs/ops/eval-reproducibility.md`; `.github/workflows/signing-hard.yml`; `docs/ops/update-check.md`; `scripts/rootless-matrix-check.ps1`; `tests/loom_model.rs`; PRs #324-#328 | C00, C04, C08, C11; PRs #324-#328 |
 | WBS-8.61 | Wave-40 independent re-audit | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 396/402 (98% A) |
+| WBS-8.62 | Wave-41 evidence packages (loom CI split, ci-timeout, regex-bound, source-provenance, p95-baseline, daemon-url-unify, scope) | done | machine | `.github/workflows/loom-permutation.yml`; `.github/workflows/ci.yml`; `scripts/sandbox-boundary-check.ps1`; `scripts/oci-cosign-verify.ps1`; `tests/source_provenance.rs`; `docs/ops/perf-baseline.json`; `scripts/bench-gate.ps1`; `crates/sl-viewer/src/daemon_url.rs`; `WAVE41_SCOPE.md`; PRs #331-#337, #335 | C00, C01, C04, C06, C08, C09; PRs #331-#337, #335 |
+| WBS-8.63 | Wave-41 independent re-audit | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 396/402 (98% A) |
 
 ## Organization-level control plane
 

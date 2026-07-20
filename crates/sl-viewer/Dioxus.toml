@@ -2,5 +2,9 @@
 name = "sl-viewer"
 default_platform = "web"
 
+[bundle]
+identifier = "com.sessionledger.viewer"
+publisher = "SessionLedger"
+
 [web.app]
 title = "Session Ledger Viewer"

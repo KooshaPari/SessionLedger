@@ -88,8 +88,8 @@ Test-DocContains -Doc $doc -Needle "-SelfCheck" `
     -Label "SelfCheck invocation"
 Test-DocContains -Doc $doc -Needle "Test pyramid SelfCheck | **done**" `
     -Label "SelfCheck gate row"
-Test-DocContains -Doc $doc -Needle "not_applicable" `
-    -Label "qgate browser e2e exclusion"
+Test-DocContains -Doc $doc -Needle ".github/workflows/qgate.yml" `
+    -Label "qgate browser e2e contract"
 Test-DocContains -Doc $doc -Needle "tests/test_pyramid.rs" `
     -Label "rust wrapper reference"
 

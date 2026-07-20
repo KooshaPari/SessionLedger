@@ -55,7 +55,11 @@ pub fn LiveFeed() -> Element {
 
                 let client = reqwest::Client::new();
                 let resp = match client.get(DAEMON_SSE_URL).send().await {
-                    Ok(r) => r,
+                    Ok(r) if r.status().is_success() => r,
+                    Ok(_) => {
+                        status.set(FeedStatus::Disconnected);
+                        return;
+                    }
                     Err(_) => {
                         status.set(FeedStatus::Disconnected);
                         return;

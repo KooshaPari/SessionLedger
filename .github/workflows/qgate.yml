@@ -106,7 +106,12 @@ jobs:
           tool: dioxus-cli@0.7.9
       - name: Build sl-viewer web surface
         working-directory: crates/sl-viewer
-        run: dx build --platform web --release --no-default-features --features web
+        # Binaryen bundled by dx 0.7.9 aborts when rewriting LLVM DWARF
+        # compile-unit metadata emitted by the pinned Rust toolchain. Release
+        # browser artifacts do not need DWARF (source maps are not shipped),
+        # so omit debug symbols and keep wasm-opt's production optimization
+        # pass enabled instead of accepting a non-deterministic SIGABRT.
+        run: dx build --platform web --release --debug-symbols false --no-default-features --features web
       - name: Install harness dependencies
         run: npm ci
       - name: Install Chromium

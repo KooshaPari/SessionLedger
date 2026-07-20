@@ -22,7 +22,7 @@ Build the web viewer before local runs:
 
 ```powershell
 cd crates/sl-viewer
-dx build --platform web --release --no-default-features --features web
+dx build --platform web --release --debug-symbols false --no-default-features --features web
 cd ../../tests/visual/harness
 npm ci
 npx playwright test a11y.spec.js

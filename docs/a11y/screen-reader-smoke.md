@@ -29,7 +29,7 @@ the checklist below for announcement quality, verbosity, and OS chrome.
    ```powershell
    $env:CARGO_TARGET_DIR = "$PWD/target-w23-c09"
    cd crates/sl-viewer
-   dx build --platform web --release --no-default-features --features web
+   dx build --platform web --release --debug-symbols false --no-default-features --features web
    ```
 
 2. For web smoke: serve `tests/visual/harness` (`npm ci` then

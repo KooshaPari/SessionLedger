@@ -82,7 +82,7 @@ and Dioxus CLI 0.7.9, then run:
 rustup target add wasm32-unknown-unknown
 cargo install dioxus-cli --version 0.7.9 --locked
 cd crates/sl-viewer
-dx build --platform web --release --no-default-features --features web
+dx build --platform web --release --debug-symbols false --no-default-features --features web
 cd ../../tests/visual/harness
 npm ci
 npx playwright install chromium

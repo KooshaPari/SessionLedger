@@ -31,7 +31,9 @@ jobs:
           tool: dioxus-cli@0.7.9
       - name: Build sl-viewer web surface
         working-directory: crates/sl-viewer
-        run: dx build --platform web --release --no-default-features --features web
+        # Avoid Binaryen's DWARF compile-unit abort with the pinned Rust
+        # toolchain; release browser bundles do not ship debug symbols.
+        run: dx build --platform web --release --debug-symbols false --no-default-features --features web
       - name: Install harness dependencies
         run: npm ci
       - name: Install Chromium

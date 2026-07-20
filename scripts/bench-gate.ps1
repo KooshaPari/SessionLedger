@@ -172,6 +172,10 @@ function Assert-LatencyPolicy {
             throw "Baseline latency '$key'.p95_ns must be > 0."
         }
 
+        if ($entry.PSObject.Properties.Name -notcontains "p95_source") {
+            throw "Baseline latency '$key' must include p95_source (criterion_sample_json or synthetic_mean_x1_15)."
+        }
+
         if ($entry.PSObject.Properties.Name -contains "budget_p95_ns") {
             $budgetNs = [double]$entry.budget_p95_ns
         }
@@ -468,14 +472,17 @@ try {
 
             $benchName = $entry.Key -replace '^pipeline/', ''
             $p95Raw = Get-CriterionP95Ns -BenchmarkName $benchName
+            $p95Source = "criterion_sample_json"
             if ($null -eq $p95Raw) {
                 $p95Raw = $meanNs * 1.15
+                $p95Source = "synthetic_mean_x1_15"
             }
             $p95Ns = [Math]::Round([double]$p95Raw, 3)
             $budgetP95 = [Math]::Round($p95Ns * (1.0 + ($latencyThreshold / 100.0)), 3)
             $latencyBaselines[$entry.Key] = [ordered]@{
                 p95_ns        = $p95Ns
                 budget_p95_ns = $budgetP95
+                p95_source    = $p95Source
             }
         }
 
@@ -505,9 +512,13 @@ try {
                 notes               = @(
                     "C00 L6 latency budgets: checked-in p95 baselines with the same regression threshold as mean budgets.",
                     "When latency.enforced=true, p95 overruns fail the blocking pipeline perf gate.",
-                    "Refresh via ./scripts/bench-gate.ps1 -UpdateBaseline.",
+                    "Refresh via ./scripts/bench-gate.ps1 -UpdateBaseline (writes p95_source per benchmark).",
                     "HTTP load-smoke p95 SLO (ms) is recorded under http_load_smoke for ops alignment with scripts/load-smoke.ps1."
                 )
+                p95_refresh         = [ordered]@{
+                    source  = "criterion_sample_json"
+                    command = "./scripts/bench-gate.ps1 -UpdateBaseline"
+                }
                 http_load_smoke     = [ordered]@{
                     max_p95_ms                 = $httpMaxP95Ms
                     min_success_rate_percent   = $httpMinSuccess

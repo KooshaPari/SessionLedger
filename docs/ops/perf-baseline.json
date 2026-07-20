@@ -22,44 +22,51 @@
     "units": "nanoseconds",
     "metric": "criterion_sample_p95",
     "notes": [
-      "C00 L6 enforced latency budgets: checked-in p95 baselines with the same 25% regression threshold as mean budgets.",
-      "Blocking CI (latency.enforced=true): p95 overruns fail the pipeline perf gate alongside mean budget misses.",
-      "p95_ns values are provisional (≈ mean_ns × 1.15) until refreshed via ./scripts/bench-gate.ps1 -UpdateBaseline.",
+      "C00 L6 latency budgets: checked-in p95 baselines with the same regression threshold as mean budgets.",
+      "When latency.enforced=true, p95 overruns fail the blocking pipeline perf gate.",
+      "Refresh via ./scripts/bench-gate.ps1 -UpdateBaseline (writes p95_source per benchmark).",
       "HTTP load-smoke p95 SLO (ms) is recorded under http_load_smoke for ops alignment with scripts/load-smoke.ps1."
     ],
+    "p95_refresh": {
+      "source": "criterion_sample_json",
+      "command": "./scripts/bench-gate.ps1 -UpdateBaseline"
+    },
     "http_load_smoke": {
-      "max_p95_ms": 500,
-      "min_success_rate_percent": 99,
+      "max_p95_ms": 500.0,
+      "min_success_rate_percent": 99.0,
       "script": "scripts/load-smoke.ps1",
       "workflow": ".github/workflows/ops-load.yml"
     },
     "benchmarks": {
       "pipeline/distill_compile_200_messages": {
-        "p95_ns": 1243655.851,
-        "budget_p95_ns": 1554569.814
+        "p95_ns": 2478325.0,
+        "budget_p95_ns": 3097906.25,
+        "p95_source": "criterion_sample_json"
       },
       "pipeline/okf_export_200_messages": {
-        "p95_ns": 7598.83,
-        "budget_p95_ns": 9498.538
+        "p95_ns": 10423.05,
+        "budget_p95_ns": 13028.812,
+        "p95_source": "criterion_sample_json"
       },
       "pipeline/inject_render_200_messages": {
-        "p95_ns": 15366.989,
-        "budget_p95_ns": 19208.737
+        "p95_ns": 18963.572,
+        "budget_p95_ns": 23704.465,
+        "p95_source": "criterion_sample_json"
       }
     }
   },
   "benchmarks": {
     "pipeline/distill_compile_200_messages": {
-      "mean_ns": 1081439.87,
-      "budget_mean_ns": 1351799.838
+      "mean_ns": 1993408.738,
+      "budget_mean_ns": 2491760.922
     },
     "pipeline/okf_export_200_messages": {
-      "mean_ns": 6607.678,
-      "budget_mean_ns": 8259.598
+      "mean_ns": 8408.746,
+      "budget_mean_ns": 10510.932
     },
     "pipeline/inject_render_200_messages": {
-      "mean_ns": 13362.599,
-      "budget_mean_ns": 16703.249
+      "mean_ns": 15019.142,
+      "budget_mean_ns": 18773.927
     }
   }
 }

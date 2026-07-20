@@ -114,8 +114,8 @@ pub fn LiveFeed() -> Element {
                         move |event: MessageEvent| {
                             let path = event.data().as_string().unwrap_or_default().trim().to_owned();
                             if path.is_empty() { return; }
-                            let timestamp = js_sys::Date::new_0().toISOString()
-                                .get(..19).unwrap_or("--:--:--").replace('T', " ");
+                            let timestamp = js_sys::Date::new_0().to_string()
+                                .get(..24).unwrap_or("--:--:--").to_owned();
                             entries.with_mut(|items| {
                                 if items.len() >= MAX_ENTRIES { items.remove(0); }
                                 items.push(FeedEntry { path, timestamp });

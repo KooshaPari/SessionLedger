@@ -329,7 +329,7 @@ pub fn App() -> Element {
         let _ = document::eval(&format!("document.getElementById('{}')?.focus();", tab.id()));
     };
 
-    let mut run_palette_action = move |action: PaletteAction| {
+    let run_palette_action = move |action: PaletteAction| {
         palette_open.set(false);
         match action {
             PaletteAction::FocusSearch => {
@@ -837,7 +837,7 @@ pub fn App() -> Element {
             CommandPalette {
                 open: palette_open(),
                 on_close: move |_| close_palette(),
-                on_run: move |action| run_palette_action(action),
+                on_run: run_palette_action,
             }
         }
     }

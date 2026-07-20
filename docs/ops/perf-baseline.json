@@ -62,7 +62,7 @@
     },
     "pipeline/okf_export_200_messages": {
       "mean_ns": 8408.746,
-      "budget_mean_ns": 10510.932
+      "budget_mean_ns": 10510.933
     },
     "pipeline/inject_render_200_messages": {
       "mean_ns": 15019.142,

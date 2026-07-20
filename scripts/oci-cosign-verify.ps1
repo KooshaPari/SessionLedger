@@ -121,6 +121,66 @@ function Test-CommandAvailable {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+function Get-YamlJobBlock {
+    param(
+        [Parameter(Mandatory = $true)][string]$Document,
+        [Parameter(Mandatory = $true)][string]$JobName
+    )
+
+    $lines = $Document -split "\r?\n"
+    $start = -1
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -eq "  ${JobName}:") {
+            $start = $index
+            break
+        }
+    }
+    if ($start -lt 0) {
+        throw "Workflow missing '$JobName' job definition."
+    }
+
+    $end = $lines.Count
+    for ($index = $start + 1; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match '^  [A-Za-z0-9_-]+:\s*$') {
+            $end = $index
+            break
+        }
+    }
+    return ($lines[$start..($end - 1)] -join "`n")
+}
+
+function Get-YamlStepBlock {
+    param(
+        [Parameter(Mandatory = $true)][string]$Document,
+        [Parameter(Mandatory = $true)][string]$StepName,
+        [ValidateRange(1, 32)]
+        [int]$Indent = 6
+    )
+
+    $stepLine = (" " * $Indent) + "- name: $StepName"
+    $lines = $Document -split "\r?\n"
+    $start = -1
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -eq $stepLine) {
+            $start = $index
+            break
+        }
+    }
+    if ($start -lt 0) {
+        throw "Workflow missing step '$StepName'."
+    }
+
+    $nextStepPattern = '^ {' + $Indent + '}- name:'
+    $end = $lines.Count
+    for ($index = $start + 1; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match $nextStepPattern) {
+            $end = $index
+            break
+        }
+    }
+    return ($lines[$start..($end - 1)] -join "`n")
+}
+
 if ($SelfCheck) {
     Write-Host "OCI cosign verify policy check (C06 L56)"
     Write-Host "Mode: SelfCheck (docs + release.yml anchors; optional cosign dry-run)"
@@ -166,17 +226,12 @@ if ($SelfCheck) {
     }
     [void](Write-Check -Label "blocking oci-cosign-verify step" -Ok $true)
 
-    $verifyBlock = [regex]::Match(
-        $release,
-        '(?ms)name:\s*oci-cosign-verify \(blocking\).*?(?=^\s{6}- name:|\z)'
-    )
-    if (-not $verifyBlock.Success) {
-        throw "release.yml could not extract oci-cosign-verify step block."
-    }
-    if ($verifyBlock.Value -match 'continue-on-error:\s*true') {
+    $ociImageBlock = Get-YamlJobBlock -Document $release -JobName "oci-image"
+    $verifyBlock = Get-YamlStepBlock -Document $ociImageBlock -StepName "oci-cosign-verify (blocking)"
+    if ($verifyBlock -match 'continue-on-error:\s*true') {
         throw "oci-cosign-verify step must not set continue-on-error: true."
     }
-    if ($verifyBlock.Value -notmatch 'continue-on-error:\s*false') {
+    if ($verifyBlock -notmatch 'continue-on-error:\s*false') {
         throw "oci-cosign-verify step must document continue-on-error: false."
     }
     [void](Write-Check -Label "oci-cosign-verify continue-on-error: false" -Ok $true)

@@ -6,7 +6,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Fixed
 
-- Loom permutation CI timeout (P0 stability): split blocking `loom-permutation.yml` into core + daemon `loom_model` jobs (25m each) plus hermetic wrapper smoke; mirror split in soft `loom-smoke.yml` so Wave-40 tokio-shaped daemon graph tests no longer exceed the 45m single-job ceiling. Follow-up: run one `cargo test` filter per suite (cargo accepts a single TESTNAME).
+- Loom permutation CI timeout (P0 stability): split blocking `loom-permutation.yml` into core + per-daemon `loom_model` jobs with `LOOM_MAX_PREEMPTIONS` on broadcast/pipeline/shutdown; mirror in soft `loom-smoke.yml` so Wave-40 tokio-shaped daemon graph tests no longer exceed single-job ceilings.
 
 ### Added
 

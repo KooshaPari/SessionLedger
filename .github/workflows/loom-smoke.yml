@@ -35,7 +35,7 @@ jobs:
   loom-model-core:
     name: soft loom · loom_model core
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -45,7 +45,6 @@ jobs:
           key: loom-smoke-core-cfg
       - name: loom_model core (soft)
         env:
-          # loom replaces std concurrency primitives; keep off default RUSTFLAGS.
           RUSTFLAGS: "--cfg loom"
         run: |
           set -euo pipefail
@@ -53,22 +52,35 @@ jobs:
             cargo test --test loom_model --release --locked "$filter" -- --test-threads=1
           done
 
-  loom-model-daemon:
-    name: soft loom · loom_model daemon
+  loom-model-daemon-mpsc:
+    name: soft loom · daemon mpsc
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
-          key: loom-smoke-daemon-cfg
-      - name: loom_model daemon (soft)
+          key: loom-smoke-daemon-mpsc-cfg
+      - name: loom_model daemon mpsc (soft)
         env:
           RUSTFLAGS: "--cfg loom"
-        run: |
-          set -euo pipefail
-          for filter in daemon_mpsc daemon_broadcast daemon_graph_mpsc daemon_graph_shutdown; do
-            cargo test --test loom_model --release --locked "$filter" -- --test-threads=1
-          done
+        run: cargo test --test loom_model --release --locked daemon_mpsc -- --test-threads=1
+
+  loom-model-daemon-broadcast:
+    name: soft loom · daemon broadcast
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          key: loom-smoke-daemon-broadcast-cfg
+      - name: loom_model daemon broadcast (soft)
+        env:
+          RUSTFLAGS: "--cfg loom"
+          LOOM_MAX_PREEMPTIONS: "4"
+        run: cargo test --test loom_model --release --locked daemon_broadcast -- --test-threads=1

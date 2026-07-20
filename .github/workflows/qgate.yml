@@ -37,12 +37,12 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: dtolnay/rust-toolchain@4305c38b25d97ef04a54b3a52498a5f41e40895c # stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           toolchain: stable
           components: llvm-tools-preview, rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea00a3571f6e0 # v2.7.8
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: rust
 
@@ -141,7 +141,7 @@ jobs:
           repository: KooshaPari/phenotype-tooling
           ref: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad
           path: _phenotype-tooling
-      - uses: dtolnay/rust-toolchain@4305c38b25d97ef04a54b3a52498a5f41e40895c # stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           toolchain: stable
           components: clippy, rustfmt

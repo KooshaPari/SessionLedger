@@ -47,11 +47,11 @@ jobs:
         env:
           # loom replaces std concurrency primitives; keep off default RUSTFLAGS.
           RUSTFLAGS: "--cfg loom"
-        run: >-
-          cargo test --test loom_model --release --locked
-          cancel_and_capacity bounded_try_send broadcast_epoch watcher_
-          daemon_graph_pipeline_conserves
-          -- --test-threads=1
+        run: |
+          set -euo pipefail
+          for filter in cancel_and_capacity bounded_try_send broadcast_epoch watcher_ daemon_graph_pipeline_conserves; do
+            cargo test --test loom_model --release --locked "$filter" -- --test-threads=1
+          done
 
   loom-model-daemon:
     name: soft loom · loom_model daemon
@@ -67,7 +67,8 @@ jobs:
       - name: loom_model daemon (soft)
         env:
           RUSTFLAGS: "--cfg loom"
-        run: >-
-          cargo test --test loom_model --release --locked
-          daemon_mpsc daemon_broadcast daemon_graph_mpsc daemon_graph_shutdown
-          -- --test-threads=1
+        run: |
+          set -euo pipefail
+          for filter in daemon_mpsc daemon_broadcast daemon_graph_mpsc daemon_graph_shutdown; do
+            cargo test --test loom_model --release --locked "$filter" -- --test-threads=1
+          done

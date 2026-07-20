@@ -52,11 +52,11 @@ jobs:
       - name: loom permutation core suite (blocking)
         env:
           RUSTFLAGS: "--cfg loom"
-        run: >-
-          cargo test --test loom_model --release --locked
-          cancel_and_capacity bounded_try_send broadcast_epoch watcher_
-          daemon_graph_pipeline_conserves
-          -- --test-threads=1
+        run: |
+          set -euo pipefail
+          for filter in cancel_and_capacity bounded_try_send broadcast_epoch watcher_ daemon_graph_pipeline_conserves; do
+            cargo test --test loom_model --release --locked "$filter" -- --test-threads=1
+          done
 
   loom-permutation-daemon:
     name: loom permutation · daemon graph
@@ -71,7 +71,8 @@ jobs:
       - name: loom permutation daemon suite (blocking)
         env:
           RUSTFLAGS: "--cfg loom"
-        run: >-
-          cargo test --test loom_model --release --locked
-          daemon_mpsc daemon_broadcast daemon_graph_mpsc daemon_graph_shutdown
-          -- --test-threads=1
+        run: |
+          set -euo pipefail
+          for filter in daemon_mpsc daemon_broadcast daemon_graph_mpsc daemon_graph_shutdown; do
+            cargo test --test loom_model --release --locked "$filter" -- --test-threads=1
+          done

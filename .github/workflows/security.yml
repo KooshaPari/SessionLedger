@@ -131,6 +131,16 @@ jobs:
         shell: pwsh
         run: ./scripts/cargo-nonet-check.ps1 -SelfCheck
 
+  # Blocking C04 L32 SBOM policy evidence — hermetic SelfCheck only.
+  sbom-policy:
+    name: SBOM policy SelfCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: SBOM policy + CycloneDX anchor SelfCheck
+        shell: pwsh
+        run: ./scripts/sbom-validate-check.ps1 -SelfCheck
+
   # Hard C02 L22 envelope-crypto CI evidence — blocking PR workflow in
   # .github/workflows/envelope-crypto.yml (envelope-crypto-check.ps1 -SelfCheck).
   # Does not claim in-tree KMS, sealed secrets, KEK wrap, or OKF/audit encryption.

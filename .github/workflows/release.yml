@@ -436,7 +436,7 @@ jobs:
           cat SHA256SUMS
 
       - name: install cargo-cyclonedx
-        run: cargo install cargo-cyclonedx --locked
+        run: cargo install cargo-cyclonedx --version 0.5.9 --locked
 
       - name: create CycloneDX SBOM
         run: |
@@ -448,6 +448,10 @@ jobs:
             find . -maxdepth 1 -type f ! -name SHA256SUMS ! -name 'SHA256SUMS.*' \
               -printf '%P\n' | sort | xargs -r sha256sum > SHA256SUMS
           )
+
+      - name: validate release CycloneDX SBOM anchors
+        shell: pwsh
+        run: ./scripts/sbom-validate-check.ps1 -Path artifacts/session-ledger.cdx.json
 
       - name: attest Release assets
         id: provenance

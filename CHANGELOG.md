@@ -12,6 +12,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- SBOM schema validation + pinned cargo-cyclonedx (C04 L32): `docs/ops/sbom-policy.json`, `scripts/sbom-validate-check.ps1 -SelfCheck`, post-generation validation in `qgate.yml`/`release.yml`, blocking `security.yml` SBOM policy job, `tests/sbom_validate.rs`.
+
 - Wave-42 scope (396/402): consolidated `WAVE42_SCOPE.md` + `docs/ops/WAVE42_PERT.md` — five parallel carry-forward lanes (`w42-signing-check-bound`, `w42-sbom-validate`, `w42-slsa-promote`, `w42-alloc-gate-promote`, `w42-first-run-cta`) from Wave-41 deferred gaps.
 
 - P95 baseline refresh (C00 L6 / C08 L74): `bench-gate.ps1 -UpdateBaseline` writes `p95_source` per benchmark; `perf-baseline.json` refreshed from Criterion `sample.json` (replaces provisional mean×1.15 values).

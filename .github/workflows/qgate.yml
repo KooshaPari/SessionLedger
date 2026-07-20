@@ -62,7 +62,7 @@ jobs:
           retention-days: 14
 
       - name: Install cargo-cyclonedx
-        run: cargo install cargo-cyclonedx --locked
+        run: cargo install cargo-cyclonedx --version 0.5.9 --locked
 
       - name: Generate CycloneDX SBOM
         run: |
@@ -71,6 +71,10 @@ jobs:
           cp session-ledger.cdx.json target/sbom.cdx.json
           echo "SBOM files:"
           find . -name '*.cdx.json' -print
+
+      - name: Validate CycloneDX SBOM anchors
+        shell: pwsh
+        run: ./scripts/sbom-validate-check.ps1 -Path target/sbom.cdx.json
 
       - name: Upload CycloneDX SBOM
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

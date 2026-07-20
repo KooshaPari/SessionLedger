@@ -11,6 +11,16 @@ use futures_util::StreamExt;
 
 /// Default daemon base URL (configurable via `SL_DAEMON_URL` env at runtime).
 const DEFAULT_DAEMON: &str = "http://127.0.0.1:8080";
+const MIN_SPEED: f64 = 0.1;
+const MAX_SPEED: f64 = 10.0;
+
+fn normalize_speed(value: f64) -> f64 {
+    if value.is_finite() {
+        value.clamp(MIN_SPEED, MAX_SPEED)
+    } else {
+        1.0
+    }
+}
 
 /// An entity event received from the SSE replay stream.
 #[derive(Debug, Clone, PartialEq)]
@@ -250,8 +260,8 @@ pub fn ReplayView() -> Element {
                     step: "0.5",
                     value: "{speed}",
                     oninput: move |evt| {
-                        if let Ok(v) = evt.value().parse::<f64>() {
-                            speed.set(v);
+                            if let Ok(v) = evt.value().parse::<f64>() {
+                            speed.set(normalize_speed(v));
                         }
                     },
                 }
@@ -270,7 +280,7 @@ pub fn ReplayView() -> Element {
                                 entries.set(vec![]);
                                 progress.set((0, 0));
                                 state.set(ReplayState::Playing);
-                                replay_task.send((id.clone(), spd, daemon_url.to_string()));
+                            replay_task.send((id.clone(), normalize_speed(spd), daemon_url.to_string()));
                             }
                         },
                         "Play"
@@ -370,7 +380,15 @@ pub fn ReplayView() -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_replay_event, ReplayEntry};
+    use super::{normalize_speed, parse_replay_event, ReplayEntry};
+
+    #[test]
+    fn speed_is_finite_and_bounded() {
+        assert_eq!(normalize_speed(f64::NAN), 1.0);
+        assert_eq!(normalize_speed(0.0), 0.1);
+        assert_eq!(normalize_speed(99.0), 10.0);
+        assert_eq!(normalize_speed(2.0), 2.0);
+    }
 
     #[test]
     fn parses_entity_sse_payload() {

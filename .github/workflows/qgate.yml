@@ -119,21 +119,38 @@ jobs:
       - name: Run browser contract suite
         run: npm run test:a11y && npm run test:responsive && npm run test:visual
 
-  # Reusable workflow — job-level call, pinned to phenotype-tooling commit SHA.
-  # Pin: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad (phenotype-tooling main 2026-07-13)
+  # Run qgate directly instead of calling the external reusable workflow. The
+  # latter currently produces zero-job runs in GitHub Actions (including its
+  # other public callers), leaving no check to enforce on pull requests.
+  # Keep the tooling revision immutable while retaining a normal runner job.
   quality-gate:
-    # Reusable-workflow call jobs accept only the job-call keys below; notably,
-    # `continue-on-error` is not valid here. Keep this gate advisory through
-    # branch protection until the coverage target is reached, rather than
-    # making the workflow syntactically invalid before any jobs can start.
+    name: quality gate · qgate
     needs: [prepare, browser-e2e]
-    uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad # main 2026-07-13
-    with:
-      coverage-report: coverage/lcov.info
-      coverage-format: lcov
-      threshold: 85
-      not-applicable: 'dast'
-      sast-config: 'auto'
-      # Same SHA as the workflow pin — do not leave qgate-ref on floating main.
-      qgate-ref: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: coverage-lcov
+          path: coverage
+      - name: Checkout pinned qgate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: KooshaPari/phenotype-tooling
+          ref: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad
+          path: _phenotype-tooling
+      - uses: dtolnay/rust-toolchain@4305c38b25d97ef04a54b3a52498a5f41e40895c # stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - name: Build qgate
+        run: cargo build --release --manifest-path _phenotype-tooling/crates/qgate/Cargo.toml
+      - name: Run qgate
+        run: |
+          ./_phenotype-tooling/target/release/qgate \
+            run \
+            --coverage-report coverage/lcov.info \
+            --coverage-format lcov \
+            --threshold 85

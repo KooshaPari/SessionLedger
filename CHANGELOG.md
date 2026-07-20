@@ -12,6 +12,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Blocking alloc-profile / dhat PR gate (C00 L8): `.github/workflows/alloc-profile-hard.yml`, expanded `alloc-profile-check.ps1 -SelfCheck` anchors, `tests/alloc_profile_hard.rs` (soft `ops-load` job retained).
+
 - SLSA protected-environment gate promotion (C06 L53): `slsa-protected-env-check.ps1 -SelfCheck` moved to blocking `security.yml` job (removed soft `hermetic.yml` bypass).
 
 - SBOM schema validation + pinned cargo-cyclonedx (C04 L32): `docs/ops/sbom-policy.json`, `scripts/sbom-validate-check.ps1 -SelfCheck`, post-generation validation in `qgate.yml`/`release.yml`, blocking `security.yml` SBOM policy job, `tests/sbom_validate.rs`.

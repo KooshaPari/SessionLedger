@@ -107,6 +107,8 @@ are not recomputed here.
 | WBS-8.61 | Wave-40 independent re-audit | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 396/402 (98% A) |
 | WBS-8.62 | Wave-41 evidence packages (loom CI split, ci-timeout, regex-bound, source-provenance, p95-baseline, daemon-url-unify, scope) | done | machine | `.github/workflows/loom-permutation.yml`; `.github/workflows/ci.yml`; `scripts/sandbox-boundary-check.ps1`; `scripts/oci-cosign-verify.ps1`; `tests/source_provenance.rs`; `docs/ops/perf-baseline.json`; `scripts/bench-gate.ps1`; `crates/sl-viewer/src/daemon_url.rs`; `WAVE41_SCOPE.md`; PRs #331-#337, #335 | C00, C01, C04, C06, C08, C09; PRs #331-#337, #335 |
 | WBS-8.63 | Wave-41 independent re-audit | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 396/402 (98% A) |
+| WBS-8.64 | Wave-42 evidence packages (signing-check-bound, sbom-validate, slsa-promote, alloc-gate-promote, first-run-cta, scope) | done | machine | `scripts/commit-signing-check.ps1`; `tests/commit_signing_check.rs`; `scripts/sbom-validate-check.ps1`; `tests/sbom_validate.rs`; `scripts/slsa-protected-env-check.ps1`; `.github/workflows/alloc-profile-hard.yml`; `tests/alloc_profile_hard.rs`; `crates/sl-viewer/src/corpus_cta.rs`; `WAVE42_SCOPE.md`; PRs #339-#344 | C00, C04, C06, C09; PRs #339-#344 |
+| WBS-8.65 | Wave-42 independent re-audit | done | machine | `audit/SCORECARD.md`; phenotype-org-audits audit output | audit-v38; 396/402 (98% A) |
 
 ## Organization-level control plane
 

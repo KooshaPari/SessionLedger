@@ -1,6 +1,6 @@
 {
   "schema": "sessionledger.traceability/v1",
-  "updated": "2026-07-18",
+  "updated": "2026-07-21",
   "status_vocabulary": [
     "done",
     "partial",
@@ -12,8 +12,8 @@
     "score": "396/402",
     "pct": 98,
     "grade": "A",
-    "commit": "44b66f6",
-    "wave": "Wave-41"
+    "commit": "d5f999f",
+    "wave": "Wave-42"
   },
   "fr": [
     {
@@ -1003,6 +1003,30 @@
         "audit/SCORECARD.md",
         "docs/ops/WBS.md"
       ]
+    },
+    {
+      "id": "WBS-8.64",
+      "status": "done",
+      "evidence": [
+        "scripts/commit-signing-check.ps1",
+        "tests/commit_signing_check.rs",
+        "scripts/sbom-validate-check.ps1",
+        "tests/sbom_validate.rs",
+        "scripts/slsa-protected-env-check.ps1",
+        "tests/slsa_protected_env.rs",
+        ".github/workflows/alloc-profile-hard.yml",
+        "tests/alloc_profile_hard.rs",
+        "crates/sl-viewer/src/corpus_cta.rs",
+        "WAVE42_SCOPE.md"
+      ]
+    },
+    {
+      "id": "WBS-8.65",
+      "status": "done",
+      "evidence": [
+        "audit/SCORECARD.md",
+        "docs/ops/WBS.md"
+      ]
     }
   ],
   "clusters": [
@@ -1029,6 +1053,8 @@
         "docs/ops/alloc-profile.md",
         "scripts/alloc-profile-check.ps1",
         "tests/alloc_profile_dhat.rs",
+        ".github/workflows/alloc-profile-hard.yml",
+        "tests/alloc_profile_hard.rs",
         "docs/ops/perf-baseline.json",
         "scripts/bench-gate.ps1",
         "tests/race_model.rs",
@@ -1147,6 +1173,10 @@
         "scripts/rootless-nonet-check.ps1",
         ".github/workflows/rootless-nonet.yml",
         "tests/rootless_nonet.rs",
+        "scripts/commit-signing-check.ps1",
+        "tests/commit_signing_check.rs",
+        "scripts/sbom-validate-check.ps1",
+        "tests/sbom_validate.rs",
         "scripts/cargo-nonet-check.ps1",
         "tests/cargo_nonet.rs",
         "scripts/oci-cosign-verify.ps1"
@@ -1210,7 +1240,8 @@
         "scripts/reusable-provenance-check.ps1",
         "docs/ops/slsa-protected-environment.md",
         "scripts/slsa-protected-env-check.ps1",
-        "tests/slsa_protected_env.rs"
+        "tests/slsa_protected_env.rs",
+        ".github/workflows/security.yml"
       ],
       "remaining": "Full protected-environment SLSA Build L3 attestation; human branch-protection signed-commits attestation (L59 residual)"
     },
@@ -1288,6 +1319,7 @@
         "crates/sl-viewer/src/search_view.rs",
         "crates/sl-viewer/src/async_states.rs",
         "crates/sl-viewer/src/daemon_url.rs",
+        "crates/sl-viewer/src/corpus_cta.rs",
         "crates/sl-viewer/src/live_feed.rs",
         "crates/sl-viewer/src/replay_view.rs"
       ]

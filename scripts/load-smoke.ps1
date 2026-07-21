@@ -50,29 +50,67 @@ $endpoints = switch ($RouteTier) {
     "all" { $probeEndpoints + $macroEndpoints }
     default { throw "Unsupported RouteTier '$RouteTier'." }
 }
-$work = for ($i = 0; $i -lt $Requests; $i++) {
-    [pscustomobject]@{ Endpoint = $endpoints[$i % $endpoints.Count] }
+$streamEndpoints = @($endpoints | Where-Object { $_ -match "/api/stream$" })
+$parallelEndpoints = @($endpoints | Where-Object { $_ -notmatch "/api/stream$" })
+if ($parallelEndpoints.Count -eq 0) {
+    throw "No parallel-safe endpoints configured for RouteTier '$RouteTier'."
 }
 
-Write-Host "Sending $Requests requests to $normalizedBaseUrl (tier: $RouteTier, concurrency: $Concurrency)..."
+$results = [System.Collections.Generic.List[object]]::new()
+foreach ($streamEndpoint in $streamEndpoints) {
+    $url = "$normalizedBaseUrl$streamEndpoint"
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $statusCode = 0
+    $errorMessage = $null
+    try {
+        $response = Invoke-WebRequest `
+            -Uri $url `
+            -Method Get `
+            -TimeoutSec 2 `
+            -SkipHttpErrorCheck
+        $statusCode = [int]$response.StatusCode
+    }
+    catch {
+        $errorMessage = $_.Exception.Message
+    }
+    finally {
+        $stopwatch.Stop()
+    }
 
-$results = @($work | ForEach-Object -Parallel {
+    $results.Add([pscustomobject]@{
+        Endpoint = $streamEndpoint
+        StatusCode = $statusCode
+        Success = $statusCode -ge 200 -and $statusCode -lt 300
+        LatencyMs = $stopwatch.Elapsed.TotalMilliseconds
+        Error = $errorMessage
+    })
+}
+
+$work = for ($i = 0; $i -lt $Requests; $i++) {
+    [pscustomobject]@{ Endpoint = $parallelEndpoints[$i % $parallelEndpoints.Count] }
+}
+
+Write-Host "Sending $Requests parallel requests to $normalizedBaseUrl (tier: $RouteTier, concurrency: $Concurrency)..."
+if ($streamEndpoints.Count -gt 0) {
+    Write-Host "Probing $($streamEndpoints.Count) SSE route(s) serially with 2s connect timeout."
+}
+
+$parallelResults = @($work | ForEach-Object -Parallel {
     $endpoint = $_.Endpoint
     $url = "$using:normalizedBaseUrl$endpoint"
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $statusCode = 0
     $errorMessage = $null
 
-    $timeoutSec = $using:TimeoutSeconds
-    if ($endpoint -match "/api/stream") {
-        $timeoutSec = [Math]::Min($timeoutSec, 2)
-    }
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $statusCode = 0
+    $errorMessage = $null
 
     try {
         $response = Invoke-WebRequest `
             -Uri $url `
             -Method Get `
-            -TimeoutSec $timeoutSec `
+            -TimeoutSec $using:TimeoutSeconds `
             -SkipHttpErrorCheck
         $statusCode = [int]$response.StatusCode
     }
@@ -91,6 +129,12 @@ $results = @($work | ForEach-Object -Parallel {
         Error = $errorMessage
     }
 } -ThrottleLimit $Concurrency)
+
+foreach ($row in $parallelResults) {
+    $results.Add($row)
+}
+
+$results = @($results)
 
 $successful = @($results | Where-Object Success).Count
 $successRate = 100.0 * $successful / $results.Count

@@ -23,8 +23,8 @@ Related: [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1),
 | **all** | probe + macro | Manual / future expansion |
 
 Before the macro tier runs, the gate seeds one `POST /api/ingest` bundle so
-`/api/bundles` and `/api/search` have data. `/api/stream` is probed with a
-short read timeout (SSE connect + `200`).
+`/api/bundles` and `/api/search` have data. `/api/stream` is probed **once**
+with a 2s connect timeout (SSE is not fan-out in the parallel pool).
 
 ## SLO defaults (PR smoke)
 

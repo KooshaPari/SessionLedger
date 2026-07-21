@@ -619,15 +619,21 @@ pub fn App() -> Element {
                 .diff-field-label {{ color: var(--sl-text-muted); font-weight: 600; font-family: var(--font-ui); font-size: 11px; padding-top: 1px; }}
                 .diff-col-a {{ color: var(--sl-text); overflow-wrap: break-word; }}
                 .diff-col-b {{ color: var(--sl-text); overflow-wrap: break-word; }}
-                .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
-                .main-upper {{ flex: 1; overflow-y: auto; }}
-                .bundles-view {{ display: contents; }}
+                .main-content {{ flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }}
+                .main-upper {{ flex: 1; min-height: 0; overflow-y: auto; }}
+                .bundles-view {{ display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }}
+                .bundles-view > h2 {{ flex: 0 0 auto; margin: 0; padding: var(--sl-space-xl) var(--sl-space-xl) var(--sl-space-lg); }}
+                .bundles-workspace {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
+                .bundles-workspace > .session-list {{ flex: 0 0 360px; width: 360px; min-width: 280px; overflow-y: auto; border-right: 1px solid var(--sl-border); background: var(--sl-surface); }}
+                .bundles-workspace > .main-content {{ background: var(--sl-bg); }}
                 .viewer-main {{ flex: 1; min-width: 0; min-height: 0; width: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
                 .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
                 @media (max-width: 600px) {{
                     .app > .sidebar {{ flex: 0 0 auto; max-height: 46vh; }}
                     .viewer-main {{ min-height: 0; }}
+                    .bundles-workspace {{ flex-direction: column; overflow-y: auto; }}
+                    .bundles-workspace > .session-list {{ flex: 0 0 auto; width: 100%; min-width: 0; max-height: 42%; border-right: none; border-bottom: 1px solid var(--sl-border); }}
                     .tab {{
                         min-height: 44px;
                         min-width: 44px;
@@ -950,34 +956,36 @@ fn BundlesTab() -> Element {
                 }
             },
             h2 { "Compiled Bundles" }
-            SessionListWithCompare {
-                items: summaries,
-                selected_idx: selected_idx(),
-                compare_idx: compare_idx(),
-                on_select: move |idx| selected_idx.set(Some(idx)),
-                on_compare: move |idx| {
-                    // Toggle: clicking same row again clears compare slot.
-                    if compare_idx() == Some(idx) {
-                        compare_idx.set(None);
-                    } else {
-                        compare_idx.set(Some(idx));
-                    }
-                },
-            }
-            div { class: "main-content",
-                div { class: "main-upper",
-                    match detail {
-                        Some(d) => rsx! { DetailView { detail: d.clone() } },
-                        None => rsx! {
-                            div { class: "empty-state", "Select a bundle from the list to view details" }
-                        },
-                    }
+            div { class: "bundles-workspace",
+                SessionListWithCompare {
+                    items: summaries,
+                    selected_idx: selected_idx(),
+                    compare_idx: compare_idx(),
+                    on_select: move |idx| selected_idx.set(Some(idx)),
+                    on_compare: move |idx| {
+                        // Toggle: clicking same row again clears compare slot.
+                        if compare_idx() == Some(idx) {
+                            compare_idx.set(None);
+                        } else {
+                            compare_idx.set(Some(idx));
+                        }
+                    },
                 }
-                if let Some((a, b)) = diff_pair {
-                    BundleDiff {
-                        bundle_a: a,
-                        bundle_b: b,
-                        on_close: move |_| compare_idx.set(None),
+                div { class: "main-content",
+                    div { class: "main-upper",
+                        match detail {
+                            Some(d) => rsx! { DetailView { detail: d.clone() } },
+                            None => rsx! {
+                                div { class: "empty-state", "Select a bundle from the inbox to view its conversation" }
+                            },
+                        }
+                    }
+                    if let Some((a, b)) = diff_pair {
+                        BundleDiff {
+                            bundle_a: a,
+                            bundle_b: b,
+                            on_close: move |_| compare_idx.set(None),
+                        }
                     }
                 }
             }

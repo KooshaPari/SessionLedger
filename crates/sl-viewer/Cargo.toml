@@ -14,12 +14,13 @@ reqwest = { version = "0.12", features = ["stream", "rustls-tls", "json"], defau
 tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
 tokio-util = { version = "0.7", features = ["io"], optional = true }
 futures-util = { version = "0.3", optional = true }
+js-sys = { version = "0.3", optional = true }
 chrono = { version = "0.4", features = ["clock"], default-features = false, optional = true }
 # sqlite feature: wire real Forge corpus into the viewer
 rusqlite = { version = "0.40", optional = true }
 zstd = { version = "0.13", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
-web-sys = { version = "0.3", optional = true, features = ["Document", "Element", "HtmlElement", "KeyboardEvent", "Location", "UrlSearchParams", "Window"] }
+web-sys = { version = "0.3", optional = true, features = ["Document", "Element", "Event", "EventSource", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "UrlSearchParams", "Window"] }
 
 [dev-dependencies]
 rusqlite = "0.40"
@@ -29,7 +30,7 @@ tempfile = "3"
 [features]
 default = ["desktop"]
 desktop = ["dioxus/desktop", "dep:reqwest", "dep:tokio", "dep:tokio-util", "dep:futures-util", "dep:chrono"]
-web = ["dioxus/web", "dep:reqwest", "dep:wasm-bindgen", "dep:web-sys"]
+web = ["dioxus/web", "dep:reqwest", "dep:futures-util", "dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
 # Enable loading real Forge SQLite sessions in the viewer.
 # Requires: ZSTD_SYS_USE_PKG_CONFIG=1 (links against system libzstd).
 sqlite = [

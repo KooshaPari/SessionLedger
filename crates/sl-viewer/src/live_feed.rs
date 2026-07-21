@@ -100,7 +100,8 @@ pub fn LiveFeed() -> Element {
                     use wasm_bindgen::{closure::Closure, JsCast};
                     use web_sys::{EventSource, MessageEvent};
 
-                    let source = match EventSource::new(DAEMON_SSE_URL) {
+                    let stream_url = daemon_api_url("/api/stream");
+                    let source = match EventSource::new(&stream_url) {
                         Ok(source) => source,
                         Err(_) => {
                             status.set(FeedStatus::Disconnected);

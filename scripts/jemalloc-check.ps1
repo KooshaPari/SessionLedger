@@ -8,8 +8,8 @@
   workflow stay wired. Hermetic: no cargo jemalloc compile — suitable for default
   Windows cargo test.
 
-  Does not claim always-on production jemalloc, Windows jemalloc parity, or
-  continuous profiling.
+  Does not claim continuous production profiling push or verify default-on
+  platform allocator policy (see jemalloc-default-on-check.ps1).
 
 .PARAMETER SelfCheck
   Explicit docs/path smoke (CI unit proof). Same checks as the default path.
@@ -118,9 +118,11 @@ Test-DocContains -Doc $doc -Needle ".github/workflows/jemalloc-hard.yml" `
 Test-DocContains -Doc $doc -Needle "tests/jemalloc_hard.rs" `
     -Label "jemalloc_hard test wrapper documented"
 Test-DocContains -Doc $doc -Needle "Continuous jemalloc profiling / production always-on jemalloc | **unpaid**" `
-    -Label "always-on jemalloc unpaid gate"
-Test-DocContains -Doc $doc -Needle "Windows jemalloc parity | **unpaid**" `
-    -Label "Windows jemalloc parity unpaid gate"
+    -Label "continuous profiling unpaid gate"
+Test-DocContains -Doc $doc -Needle "Windows mimalloc parity | **done**" `
+    -Label "Windows mimalloc parity done gate"
+Test-DocContains -Doc $doc -Needle "jemalloc-default-on.md" `
+    -Label "default-on policy cross-link"
 
 Write-Host "sl-daemon Cargo / main anchors:"
 if ($cargoToml -notmatch '(?m)^jemalloc\s*=') {
@@ -128,18 +130,18 @@ if ($cargoToml -notmatch '(?m)^jemalloc\s*=') {
 }
 [void](Write-Check -Label "Cargo.toml jemalloc feature" -Ok $true)
 
+if ($cargoToml -notmatch '(?m)^platform-allocator\s*=') {
+    throw "crates/sl-daemon/Cargo.toml missing platform-allocator feature."
+}
+[void](Write-Check -Label "Cargo.toml platform-allocator feature" -Ok $true)
+
 if ($cargoToml -notmatch 'tikv-jemallocator') {
     throw "crates/sl-daemon/Cargo.toml missing tikv-jemallocator dependency."
 }
 [void](Write-Check -Label "Cargo.toml tikv-jemallocator dep" -Ok $true)
 
-if ($cargoToml -match '(?m)^default\s*=\s*\[[^\]]*jemalloc') {
-    throw "jemalloc must not be in default features (Windows-safe default builds)."
-}
-[void](Write-Check -Label "jemalloc not in default features" -Ok $true)
-
-if ($mainRs -notmatch 'cfg\(all\(feature = "jemalloc", unix\)\)') {
-    throw "main.rs must gate #[global_allocator] on cfg(all(feature = `"jemalloc`", unix))."
+if ($mainRs -notmatch 'cfg\(all\(unix, feature = "platform-allocator", not\(feature = "system-allocator"\)\)\)') {
+    throw "main.rs must gate #[global_allocator] on cfg(all(unix, feature = `"platform-allocator`", not(feature = `"system-allocator`")))."
 }
 [void](Write-Check -Label "main.rs jemalloc+unix cfg gate" -Ok $true)
 
@@ -223,15 +225,15 @@ $summary = @"
 
 SelfCheck passed: ``docs/ops/jemalloc.md`` soft/hard gate rows, blocking
 ``jemalloc-hard.yml`` workflow, and ``tests/jemalloc_hard.rs`` wrapper.
-Soft ``ops-load`` jemalloc job retained. Always-on production jemalloc and
-Windows jemalloc parity remain unpaid.
+Soft ``ops-load`` jemalloc job retained. Default-on platform allocator policy
+is ``jemalloc-default-on-check.ps1``. Continuous profiling push remains unpaid.
 "@
 
 if ($env:GITHUB_STEP_SUMMARY) {
     $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 }
 
-Write-Host "Jemalloc hard CI SelfCheck passed (C00 L8 blocking PR gate; soft ops-load retained; always-on jemalloc + Windows parity unpaid)."
+Write-Host "Jemalloc hard CI SelfCheck passed (C00 L8 blocking PR gate; soft ops-load retained; default-on policy in jemalloc-default-on-check.ps1; continuous profiling unpaid)."
 
 if ($Build) {
     if ($IsWindows -or $env:OS -match 'Windows') {

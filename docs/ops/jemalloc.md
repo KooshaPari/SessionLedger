@@ -2,12 +2,15 @@
 
 SessionLedger ships counting-allocator and optional `dhat` smokes for library
 pipelines ([`allocation-budget.md`](allocation-budget.md),
-[`alloc-profile.md`](alloc-profile.md)). This document covers the **soft
-optional jemalloc** path for `sl-daemon`: a Cargo feature that installs
-`tikv-jemallocator` as the process `#[global_allocator]` on Unix.
+[`alloc-profile.md`](alloc-profile.md)). This document covers the **explicit
+`jemalloc` feature** path for `sl-daemon` and the soft/hard CI gates that
+exercise `--features jemalloc` on Unix.
 
-Default builds are **unchanged** and **Windows-safe** — jemalloc is never on
-the default feature set and is not resolved on non-Unix targets.
+**Default production allocator policy** (Unix jemalloc + Windows mimalloc) lives
+in [`jemalloc-default-on.md`](jemalloc-default-on.md).
+
+Default explicit-feature builds remain **Windows-safe** for the `--features
+jemalloc` path — the feature does not resolve on non-Unix targets.
 
 ## Contract
 
@@ -27,8 +30,9 @@ the default feature set and is not resolved on non-Unix targets.
 | SelfCheck (`jemalloc-check.ps1 -SelfCheck`) | `ops-load` job `jemalloc` (`continue-on-error: true`) | `jemalloc-hard.yml` SelfCheck job |
 | `cargo build --features jemalloc` | `ops-load` job (`continue-on-error: true`) | `jemalloc-hard.yml` build job |
 | Default / Windows builds unchanged (system allocator) | **done** | **done** |
+| Default-on Unix jemalloc / Windows mimalloc parity | see [`jemalloc-default-on.md`](jemalloc-default-on.md) | see [`jemalloc-default-on.md`](jemalloc-default-on.md) |
 | Continuous jemalloc profiling / production always-on jemalloc | **unpaid** | **unpaid** |
-| Windows jemalloc parity | **unpaid** | **unpaid** |
+| Windows mimalloc parity | **done** | **done** |
 
 ## How to run
 
@@ -73,8 +77,9 @@ cargo test jemalloc --locked
 | Default / Windows builds unchanged (system allocator) | **done** |
 | Soft Ubuntu `--features jemalloc` CI (`continue-on-error`) | **done** |
 | Blocking jemalloc-hard CI workflow | **done** |
+| Default-on platform allocator policy | **done** — [`jemalloc-default-on.md`](jemalloc-default-on.md) |
 | Continuous jemalloc profiling / production always-on jemalloc | **unpaid** |
-| Windows jemalloc parity | **unpaid** |
+| Windows mimalloc parity | **done** — [`jemalloc-default-on.md`](jemalloc-default-on.md) |
 
 ## CI / scheduling
 
@@ -94,11 +99,11 @@ cargo test jemalloc --locked
 
 ## Limitations
 
-- Unix only — Windows (and other non-Unix) keeps the system allocator even if
-  the feature flag is passed (dep is `cfg(unix)`).
-- Soft + hard evidence only — does not force jemalloc into release artifacts or the
-  default feature set.
+- Unix only for explicit `--features jemalloc` — Windows keeps mimalloc via
+  [`jemalloc-default-on.md`](jemalloc-default-on.md) default policy.
+- Soft + hard evidence for explicit feature builds — default-on policy is
+  [`jemalloc-default-on.md`](jemalloc-default-on.md).
 - Does not replace RSS / allocation-budget / dhat smokes; those remain separate
   L8 companions.
-- Continuous profiling push backends, always-on production jemalloc, and Windows
-  jemalloc parity remain unpaid.
+- Continuous profiling push backends and always-on production telemetry remain
+  unpaid. Default-on allocator install is [`jemalloc-default-on.md`](jemalloc-default-on.md).

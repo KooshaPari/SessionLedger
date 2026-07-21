@@ -14,6 +14,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Default-on platform allocator policy (C00 L8): `docs/ops/jemalloc-default-on.md`, `jemalloc-default-on.json`, `scripts/jemalloc-default-on-check.ps1 -SelfCheck`, blocking `jemalloc-default-on-hard.yml`, `tests/jemalloc_default_on.rs` (Unix jemalloc + Windows mimalloc default features).
+
 - Load-macro PR gate (C08 L73): `docs/ops/load-macro-gate.md`, `load-macro-gate.json`, `load-smoke.ps1 -RouteTier macro`, `scripts/load-macro-gate-check.ps1 -SelfCheck`, blocking `load-macro-gate-hard.yml`, `tests/load_macro_gate.rs`.
 
 - Socket.dev supply-chain posture (C06 L33): `docs/ops/socket-posture.md`, `socket-posture.json`, `scripts/socket-posture-check.ps1 -SelfCheck`, blocking `security.yml` job, `tests/socket_posture.rs`.

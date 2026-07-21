@@ -39,10 +39,13 @@ clap_complete = "4.6.7"
 rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 
 # CPU sampling uses SIGPROF / setitimer; pprof-rs does not build on Windows.
-# jemalloc (tikv-jemallocator) is Unix-only — keep it off the default/Windows graph.
+# Platform allocators: jemalloc on Unix, mimalloc on Windows (see jemalloc-default-on.md).
 [target.'cfg(unix)'.dependencies]
 pprof = { version = "0.15.0", default-features = false, features = ["prost-codec"] }
-tikv-jemallocator = { version = "0.6", optional = true }
+tikv-jemallocator = "0.6"
+
+[target.'cfg(windows)'.dependencies]
+mimalloc = { version = "0.1", default-features = false }
 
 [dev-dependencies]
 tempfile = "3"
@@ -60,7 +63,7 @@ unsafe_code = "forbid"
 [workspace]
 
 [features]
-default = ["compress"]
+default = ["compress", "platform-allocator"]
 compress = ["session-ledger/compress", "dep:zstd"]
 sqlite = ["session-ledger/sqlite", "dep:rusqlite"]
 json-logs = ["tracing-subscriber/json"]
@@ -77,6 +80,10 @@ otel-metrics = [
     "dep:opentelemetry_sdk",
     "dep:opentelemetry-otlp",
 ]
-# Soft optional jemalloc global allocator (Unix). Default builds stay on the
-# system allocator — Windows-safe / unchanged. Enable: --features jemalloc
-jemalloc = ["dep:tikv-jemallocator"]
+# Platform default allocators (C00 L8). Unix → jemalloc; Windows → mimalloc.
+# Opt out: cargo build --no-default-features --features system-allocator
+platform-allocator = []
+system-allocator = []
+# Explicit jemalloc feature retained for CI / docs parity with jemalloc-hard.yml.
+jemalloc = ["platform-allocator"]
+mimalloc-alloc = ["platform-allocator"]

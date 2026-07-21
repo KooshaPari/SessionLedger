@@ -24,11 +24,16 @@
 //! * `1` — daemon not running, validation failed, or no search matches
 //! * `2` — general / unexpected error
 
-// Soft optional jemalloc (C00 L8). Feature-gated + Unix-only so default and
-// Windows builds keep the system allocator. See docs/ops/jemalloc.md.
-#[cfg(all(feature = "jemalloc", unix))]
+// Platform default allocators (C00 L8). Unix → jemalloc; Windows → mimalloc.
+// Opt out with `cargo build --no-default-features --features system-allocator`.
+// See docs/ops/jemalloc-default-on.md.
+#[cfg(all(unix, feature = "platform-allocator", not(feature = "system-allocator")))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
+#[cfg(all(windows, feature = "platform-allocator", not(feature = "system-allocator")))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod archive;
 mod audit;

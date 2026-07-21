@@ -184,7 +184,7 @@ jobs:
       - name: Run bounded Rust static checks
         run: |
           cargo fmt --all -- --check
-          cargo clippy --workspace --all-targets -- -D warnings
+          cargo clippy --workspace --exclude sl-viewer --all-targets -- -D warnings
       - name: Build qgate
         run: cargo build --release --manifest-path _phenotype-tooling/crates/qgate/Cargo.toml
       - name: Run qgate

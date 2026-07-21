@@ -65,13 +65,18 @@ foreach ($streamEndpoint in $streamEndpoints) {
     $streamJob = Start-Job -ScriptBlock {
         param($ProbeUrl)
         try {
-            $response = Invoke-WebRequest `
-                -Uri $ProbeUrl `
-                -Method Get `
-                -TimeoutSec 2 `
-                -SkipHttpErrorCheck
+            $handler = [System.Net.Http.SocketsHttpHandler]::new()
+            $client = [System.Net.Http.HttpClient]::new($handler)
+            $client.Timeout = [TimeSpan]::FromSeconds(5)
+            $response = $client.GetAsync(
+                $ProbeUrl,
+                [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead
+            ).GetAwaiter().GetResult()
+            $statusCode = [int]$response.StatusCode
+            $response.Dispose()
+            $client.Dispose()
             return [pscustomobject]@{
-                StatusCode = [int]$response.StatusCode
+                StatusCode = $statusCode
                 Error = $null
             }
         }

@@ -24,7 +24,7 @@ Related: [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1),
 
 Before the macro tier runs, the gate seeds one `POST /api/ingest` bundle so
 `/api/bundles` and `/api/search` have data. `/api/stream` is probed **once**
-with a 2s connect timeout (SSE is not fan-out in the parallel pool).
+with `HttpCompletionOption.ResponseHeadersRead` (SSE headers only; no body drain).
 
 ## SLO defaults (PR smoke)
 

@@ -109,8 +109,10 @@ pwsh ./scripts/load-smoke.ps1 `
   -MaxP95Ms 500
 ```
 
-The request count is distributed evenly across `/healthz`, `/readyz`,
-`/api/metrics`, and `/metrics`. The script prints per-endpoint results and an
+The request count is distributed evenly across probe routes by default
+(`/healthz`, `/readyz`, `/api/metrics`, `/metrics`). Use `-RouteTier macro` for
+product routes (`/api/bundles`, `/api/search`, `/api/stream`); see
+[`load-macro-gate.md`](load-macro-gate.md). The script prints per-endpoint results and an
 overall success rate and p95 latency. It exits non-zero if the success rate is
 below `MinSuccessRate` or p95 exceeds `MaxP95Ms`, so the same command can be
 used as a non-blocking nightly or pre-release smoke check. A `503` from

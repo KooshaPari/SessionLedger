@@ -111,8 +111,10 @@ SLOs.
 
 | Artifact | Role |
 |----------|------|
-| [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1) | Headless burst across `/healthz`, `/readyz`, `/api/metrics`, `/metrics` |
-| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch`; builds daemon, waits for `/readyz`, runs load smoke |
+| [`scripts/load-smoke.ps1`](../../scripts/load-smoke.ps1) | Headless burst across probe routes (`/healthz`, `/readyz`, `/api/metrics`, `/metrics`) or macro routes (`-RouteTier macro`) |
+| [`.github/workflows/load-macro-gate-hard.yml`](../../.github/workflows/load-macro-gate-hard.yml) | Blocking PR macro-tier load smoke (C08 L73) |
+| [`scripts/load-macro-gate-check.ps1`](../../scripts/load-macro-gate-check.ps1) | Hermetic SelfCheck for macro gate docs + workflow anchors |
+| [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) | Weekly + `workflow_dispatch`; builds daemon, waits for `/readyz`, runs probe-tier load smoke |
 | [`scripts/ops-chaos-smoke.ps1`](../../scripts/ops-chaos-smoke.ps1) | Readiness fault, metrics shape, mini load, process-kill recovery |
 | [`.github/workflows/ops-chaos-smoke.yml`](../../.github/workflows/ops-chaos-smoke.yml) | Weekday cron + dispatch ops/chaos smoke |
 

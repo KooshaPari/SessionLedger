@@ -184,22 +184,27 @@ pub fn ReplayView() -> Element {
                                     entries.with_mut(|items| items.push(entry));
                                 }
                             }
-                        }) as Box<dyn FnMut(MessageEvent)>);
+                        })
+                            as Box<dyn FnMut(MessageEvent)>);
                         source.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
                         let ondone = Closure::wrap(Box::new({
                             let mut state = state;
                             move |_event: Event| state.set(ReplayState::Done)
-                        }) as Box<dyn FnMut(Event)>);
+                        })
+                            as Box<dyn FnMut(Event)>);
                         let _ = source.add_event_listener_with_callback(
                             "done",
                             ondone.as_ref().unchecked_ref(),
                         );
                         let onerror = Closure::wrap(Box::new({
                             let mut state = state;
-                            move |_event: Event| state.set(ReplayState::Error(
-                                "replay stream disconnected before completion".into(),
-                            ))
-                        }) as Box<dyn FnMut(Event)>);
+                            move |_event: Event| {
+                                state.set(ReplayState::Error(
+                                    "replay stream disconnected before completion".into(),
+                                ))
+                            }
+                        })
+                            as Box<dyn FnMut(Event)>);
                         source.set_onerror(Some(onerror.as_ref().unchecked_ref()));
                         // Keep the EventSource and callbacks alive for the stream lifetime.
                         std::future::pending::<()>().await;
@@ -208,7 +213,9 @@ pub fn ReplayView() -> Element {
                     #[cfg(not(target_arch = "wasm32"))]
                     {
                         let _ = (id, spd, daemon_url, token);
-                        state.set(ReplayState::Error("replay streaming requires the desktop target".into()));
+                        state.set(ReplayState::Error(
+                            "replay streaming requires the desktop target".into(),
+                        ));
                     }
                 }
             }

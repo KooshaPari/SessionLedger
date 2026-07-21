@@ -127,7 +127,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run browser contract suite
-        run: npm run test:a11y && npm run test:responsive && npm run test:visual
+        run: timeout 15m npm run test:a11y && timeout 15m npm run test:responsive && timeout 15m npm run test:visual
 
   # Run qgate directly instead of calling the external reusable workflow. The
   # latter currently produces zero-job runs in GitHub Actions (including its

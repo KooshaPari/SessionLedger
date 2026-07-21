@@ -157,5 +157,9 @@ mod tests {
             !app_src.contains("--sl-bg: #"),
             "app.rs must not re-declare --sl-bg with ad-hoc hex; use tokens.css"
         );
+        assert!(
+            app_src.contains(".app {{ flex-direction: row; }}"),
+            "desktop viewer must place navigation and detail panes side by side"
+        );
     }
 }

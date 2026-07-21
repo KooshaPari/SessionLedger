@@ -91,3 +91,40 @@ pub fn process_jsonl_file<P: AsRef<std::path::Path>>(
     let sessions = read_jsonl_sessions(path)?;
     Ok(sessions.iter().map(process_session).collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    fn fixture_session() -> Session {
+        let mut session = Session::new("lib-test-session", Corpus::Codex);
+        session.messages = vec![
+            Message::new(Role::User, "Please compile this session."),
+            Message::new(Role::Assistant, "Compiled."),
+        ];
+        session
+    }
+
+    #[test]
+    fn process_session_exports_compiled_document() {
+        let document = process_session(&fixture_session());
+        assert!(!document.entities.is_empty());
+    }
+
+    #[test]
+    fn process_jsonl_file_reads_and_processes_sessions() {
+        let session = fixture_session();
+        let mut file = tempfile::NamedTempFile::new().expect("temp file");
+        writeln!(file, "{}", serde_json::to_string(&session).expect("serialize"))
+            .expect("write session");
+        let documents = process_jsonl_file(file.path()).expect("process jsonl");
+        assert_eq!(documents.len(), 1);
+    }
+
+    #[test]
+    fn process_jsonl_file_reports_missing_path() {
+        let result = process_jsonl_file("/tmp/session-ledger-missing-input.jsonl");
+        assert!(matches!(result, Err(IngestionError::Io(_))));
+    }
+}

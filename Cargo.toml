@@ -75,16 +75,6 @@ required-features = ["envelope-crypto"]
 name = "pipeline"
 harness = false
 
-# ---------------------------------------------------------------------------
-# webkit2gtk-sys 2.0.1 was yanked from crates.io after 2.0.2 was published,
-# but wry 0.45.0 (used by dioxus-desktop 0.6.x) pins exactly "=2.0.1".
-# These local stubs satisfy the version constraint so cargo can resolve the
-# dependency graph on macOS.  The stubs contain no symbols; both crates are
-# cfg(target_os = "linux") inside wry and are never compiled on macOS.
-[patch.crates-io]
-webkit2gtk-sys = { path = "vendor/webkit2gtk-sys" }
-webkit2gtk = { path = "vendor/webkit2gtk" }
-
 [lints.rust]
 unsafe_code = "forbid"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
@@ -92,5 +82,4 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 [lints.clippy]
 all = { level = "deny", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
-
 

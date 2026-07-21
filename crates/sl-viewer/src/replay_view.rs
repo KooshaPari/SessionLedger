@@ -8,6 +8,22 @@ use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
 use crate::daemon_url::daemon_base_url;
 use crate::fixture::query_fixture_active;
 
+use futures_util::StreamExt;
+
+/// Default daemon base URL (configurable via `SL_DAEMON_URL` env at runtime).
+#[allow(dead_code)]
+const DEFAULT_DAEMON: &str = "http://127.0.0.1:8080";
+const MIN_SPEED: f64 = 0.1;
+const MAX_SPEED: f64 = 10.0;
+
+fn normalize_speed(value: f64) -> f64 {
+    if value.is_finite() {
+        value.clamp(MIN_SPEED, MAX_SPEED)
+    } else {
+        1.0
+    }
+}
+
 /// An entity event received from the SSE replay stream.
 #[derive(Debug, Clone, PartialEq)]
 struct ReplayEntry {
@@ -52,6 +68,18 @@ impl ReplayEntry {
     }
 }
 
+/// Parse one SSE `data:` payload into a replay entry. Kept separate from the
+/// transport so malformed events are ignored without killing the stream.
+fn parse_replay_event(line: &str) -> Option<ReplayEntry> {
+    let payload = line.trim().strip_prefix("data:")?.trim();
+    if payload.is_empty() || payload == "{}" {
+        return None;
+    }
+    serde_json::from_str::<serde_json::Value>(payload)
+        .ok()
+        .and_then(|value| ReplayEntry::from_json(&value))
+}
+
 /// The replay state machine.
 #[derive(Debug, Clone, PartialEq)]
 enum ReplayState {
@@ -79,6 +107,122 @@ pub fn ReplayView() -> Element {
     let mut entries: Signal<Vec<ReplayEntry>> = use_signal(Vec::new);
     let mut state: Signal<ReplayState> = use_signal(|| ReplayState::Idle);
     let mut progress: Signal<(usize, usize)> = use_signal(|| (0, 0));
+    let mut generation: Signal<u64> = use_signal(|| 0);
+
+    // A single owned coroutine gives Play a real, cancellable transport path.
+    // Sending another request replaces the prior stream logically; stale
+    // events are harmless because the UI is reset before each request.
+    let replay_task = use_coroutine({
+        let mut entries = entries;
+        let mut state = state;
+        let mut progress = progress;
+        move |mut rx: UnboundedReceiver<(String, f64, String, u64)>| async move {
+            while let Some((id, spd, daemon_url, token)) = rx.next().await {
+                #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+                {
+                    use tokio::io::{AsyncBufReadExt, BufReader};
+                    use tokio_util::io::StreamReader;
+
+                    let url = format!("{daemon_url}/api/replay/{id}?speed={spd}");
+                    let response = match reqwest::Client::new().get(url).send().await {
+                        Ok(response) if response.status().is_success() => response,
+                        Ok(_) | Err(_) => {
+                            state.set(ReplayState::Error("replay stream unavailable".into()));
+                            continue;
+                        }
+                    };
+                    let stream =
+                        response.bytes_stream().map(|result| result.map_err(std::io::Error::other));
+                    let mut lines = BufReader::new(StreamReader::new(stream)).lines();
+                    let mut saw_done = false;
+                    while let Ok(Some(line)) = lines.next_line().await {
+                        if generation() != token {
+                            break;
+                        }
+                        if line.starts_with("event: done") {
+                            saw_done = true;
+                            continue;
+                        }
+                        if let Some(entry) = parse_replay_event(&line) {
+                            progress.set((entry.event_index + 1, entry.total_events));
+                            entries.with_mut(|items| items.push(entry));
+                        }
+                    }
+                    if generation() == token {
+                        state.set(if saw_done {
+                            ReplayState::Done
+                        } else {
+                            ReplayState::Error("replay stream ended before completion".into())
+                        });
+                    }
+                }
+                #[cfg(any(target_arch = "wasm32", not(feature = "desktop")))]
+                {
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        use wasm_bindgen::{closure::Closure, JsCast};
+                        use web_sys::{Event, EventSource, MessageEvent};
+
+                        let url = format!("{daemon_url}/api/replay/{id}?speed={spd}");
+                        let source = match EventSource::new(&url) {
+                            Ok(source) => source,
+                            Err(_) => {
+                                state.set(ReplayState::Error("replay stream unavailable".into()));
+                                continue;
+                            }
+                        };
+                        let onopen = Closure::wrap(Box::new({
+                            let mut state = state;
+                            move || state.set(ReplayState::Playing)
+                        }) as Box<dyn FnMut()>);
+                        source.set_onopen(Some(onopen.as_ref().unchecked_ref()));
+                        let onmessage = Closure::wrap(Box::new({
+                            let mut entries = entries;
+                            let mut progress = progress;
+                            move |event: MessageEvent| {
+                                let data = event.data().as_string().unwrap_or_default();
+                                if let Some(entry) = parse_replay_event(&format!("data: {data}")) {
+                                    progress.set((entry.event_index + 1, entry.total_events));
+                                    entries.with_mut(|items| items.push(entry));
+                                }
+                            }
+                        })
+                            as Box<dyn FnMut(MessageEvent)>);
+                        source.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+                        let ondone = Closure::wrap(Box::new({
+                            let mut state = state;
+                            move |_event: Event| state.set(ReplayState::Done)
+                        })
+                            as Box<dyn FnMut(Event)>);
+                        let _ = source.add_event_listener_with_callback(
+                            "done",
+                            ondone.as_ref().unchecked_ref(),
+                        );
+                        let onerror = Closure::wrap(Box::new({
+                            let mut state = state;
+                            move |_event: Event| {
+                                state.set(ReplayState::Error(
+                                    "replay stream disconnected before completion".into(),
+                                ))
+                            }
+                        })
+                            as Box<dyn FnMut(Event)>);
+                        source.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+                        // Keep the EventSource and callbacks alive for the stream lifetime.
+                        std::future::pending::<()>().await;
+                        drop((source, onopen, onmessage, ondone, onerror, token));
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        let _ = (id, spd, daemon_url, token);
+                        state.set(ReplayState::Error(
+                            "replay streaming requires the desktop target".into(),
+                        ));
+                    }
+                }
+            }
+        }
+    });
 
     let daemon_url = daemon_base_url();
 
@@ -184,8 +328,8 @@ pub fn ReplayView() -> Element {
                     step: "0.5",
                     value: "{speed}",
                     oninput: move |evt| {
-                        if let Ok(v) = evt.value().parse::<f64>() {
-                            speed.set(v);
+                            if let Ok(v) = evt.value().parse::<f64>() {
+                            speed.set(normalize_speed(v));
                         }
                     },
                 }
@@ -196,12 +340,6 @@ pub fn ReplayView() -> Element {
                         onclick: {
                             let id = bundle_id.read().clone();
                             let spd = *speed.read();
-                            let url = format!(
-                                "{daemon_url}/api/replay/{id}?speed={spd}",
-                                daemon_url = daemon_url,
-                                id = id,
-                                spd = spd,
-                            );
                             move |_| {
                                 if id.trim().is_empty() {
                                     state.set(ReplayState::Error("enter a bundle ID first".into()));
@@ -210,12 +348,8 @@ pub fn ReplayView() -> Element {
                                 entries.set(vec![]);
                                 progress.set((0, 0));
                                 state.set(ReplayState::Playing);
-                                // Note: in a full implementation we would use
-                                // use_future / spawn to drive the SSE stream.
-                                // Here we emit a placeholder to signal intent;
-                                // the actual HTTP streaming is wired in the
-                                // desktop build where reqwest is available.
-                                let _ = url.clone(); // captured for future wiring
+                                generation.set(generation() + 1);
+                                replay_task.send((id.clone(), normalize_speed(spd), daemon_url.to_string(), generation()));
                             }
                         },
                         "Play"
@@ -225,7 +359,10 @@ pub fn ReplayView() -> Element {
                 if *state.read() == ReplayState::Playing {
                     button {
                         class: "btn btn-stop",
-                        onclick: move |_| state.set(ReplayState::Paused),
+                        onclick: move |_| {
+                            generation.set(generation() + 1);
+                            state.set(ReplayState::Paused)
+                        },
                         "Pause"
                     }
                 }
@@ -233,12 +370,22 @@ pub fn ReplayView() -> Element {
                 if *state.read() == ReplayState::Paused {
                     button {
                         class: "btn btn-play",
-                        onclick: move |_| state.set(ReplayState::Playing),
+                        onclick: move |_| {
+                            let id = bundle_id.read().clone();
+                            entries.set(vec![]);
+                            progress.set((0, 0));
+                            generation.set(generation() + 1);
+                            state.set(ReplayState::Playing);
+                            replay_task.send((id, normalize_speed(*speed.read()), daemon_url.to_string(), generation()));
+                        },
                         "Resume"
                     }
                     button {
                         class: "btn btn-stop",
-                        onclick: move |_| state.set(ReplayState::Idle),
+                        onclick: move |_| {
+                            generation.set(generation() + 1);
+                            state.set(ReplayState::Idle)
+                        },
                         "Stop"
                     }
                 }
@@ -246,6 +393,7 @@ pub fn ReplayView() -> Element {
                 button {
                     class: "btn btn-clear",
                     onclick: move |_| {
+                        generation.set(generation() + 1);
                         entries.set(vec![]);
                         progress.set((0, 0));
                         state.set(ReplayState::Idle);
@@ -310,5 +458,50 @@ pub fn ReplayView() -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{normalize_speed, parse_replay_event, ReplayEntry};
+
+    #[test]
+    fn speed_is_finite_and_bounded() {
+        assert_eq!(normalize_speed(f64::NAN), 1.0);
+        assert_eq!(normalize_speed(0.0), 0.1);
+        assert_eq!(normalize_speed(99.0), 10.0);
+        assert_eq!(normalize_speed(2.0), 2.0);
+    }
+
+    #[test]
+    fn parses_entity_sse_payload() {
+        let entry = parse_replay_event(
+            r#"data: {"event_index":1,"total_events":3,"entity":{"type":"gate","id":"g-1","label":"Approved"}}"#,
+        )
+        .expect("entity event");
+        assert_eq!(entry.event_index, 1);
+        assert_eq!(entry.total_events, 3);
+        assert_eq!(entry.entity_type, "gate");
+        assert_eq!(entry.display_line(), "[00:00:01] gate/g-1: Approved");
+    }
+
+    #[test]
+    fn ignores_done_and_malformed_sse_lines() {
+        assert!(parse_replay_event("event: done").is_none());
+        assert!(parse_replay_event("data: {}").is_none());
+        assert!(parse_replay_event("data: not-json").is_none());
+    }
+
+    #[test]
+    fn truncates_long_labels_without_panicking() {
+        let entry = ReplayEntry {
+            event_index: 0,
+            total_events: 1,
+            entity_type: "intent".into(),
+            entity_id: "i-1".into(),
+            label: "x".repeat(100),
+        };
+        assert!(entry.display_line().ends_with('…'));
+        assert_eq!(entry.display_line().chars().count(), 103);
     }
 }

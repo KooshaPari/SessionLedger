@@ -141,6 +141,17 @@ jobs:
         shell: pwsh
         run: ./scripts/sbom-validate-check.ps1 -SelfCheck
 
+  # Blocking C06 L33 Socket.dev posture evidence — hermetic SelfCheck only.
+  # Does not call Socket API or claim live org GitHub App install.
+  socket-posture:
+    name: Socket posture SelfCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: Socket.dev posture + in-repo dependency scan anchors
+        shell: pwsh
+        run: ./scripts/socket-posture-check.ps1 -SelfCheck
+
   # Blocking C06 L53 protected-environment checklist — hermetic SelfCheck only.
   # Does not claim live GitHub Environment wiring or full SLSA Build L3 attestation.
   slsa-protected-env:

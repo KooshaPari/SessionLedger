@@ -19,6 +19,7 @@ use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
 use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
+use crate::session_transcript::SessionTranscript;
 use crate::theme::ThemeColors;
 use crate::timeline::TimelineView;
 use crate::tokens::{TOKENS_CSS, VIEWER_COLOR_SCHEME};
@@ -133,7 +134,7 @@ fn initial_tab_for_viewer() -> Tab {
 
 /// Root application component.
 ///
-/// Three-tab layout:
+/// Multi-view layout:
 /// - **Bundles** — browse compiled continuation bundles (the original view)
 /// - **History** — session history timeline (renders real Forge sessions when
 ///   `FORGE_DB` env var points at a Forge SQLite database)
@@ -329,7 +330,7 @@ pub fn App() -> Element {
         let _ = document::eval(&format!("document.getElementById('{}')?.focus();", tab.id()));
     };
 
-    let mut run_palette_action = move |action: PaletteAction| {
+    let run_palette_action = move |action: PaletteAction| {
         palette_open.set(false);
         match action {
             PaletteAction::FocusSearch => {
@@ -387,7 +388,7 @@ pub fn App() -> Element {
             "{TOKENS_CSS}{VIEWER_COLOR_SCHEME}
                 html, body {{ margin: 0; max-width: 100%; overflow-x: clip; }}
                 body {{ font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
-                .app {{ display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow-x: clip; }}
+                .app {{ position: relative; display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow: hidden; }}
                 .app > .sidebar {{
                     width: 100%;
                     min-width: 0;
@@ -424,6 +425,19 @@ pub fn App() -> Element {
                 .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: var(--sl-text); max-width: var(--sl-measure-max); }}
                 .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; max-width: var(--sl-measure-max); }}
                 .detail-section li {{ font-size: 13px; line-height: 1.7; color: var(--sl-text-muted); }}
+                .session-transcript {{ display: flex; flex-direction: column; gap: var(--sl-space-md); max-width: 760px; }}
+                .transcript-header {{ display: flex; align-items: baseline; justify-content: space-between; gap: var(--sl-space-md); border-bottom: 1px solid var(--sl-border); padding-bottom: var(--sl-space-sm); }}
+                .transcript-header h3 {{ margin: 0; font-family: var(--font-ui); font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sl-accent); }}
+                .transcript-count {{ color: var(--sl-text-muted); font-size: 12px; }}
+                .transcript-message {{ padding: var(--sl-space-md) var(--sl-space-lg); border: 1px solid var(--sl-border); border-left: 3px solid var(--sl-accent); border-radius: var(--sl-radius-md); background: var(--sl-surface-muted); }}
+                .transcript-message p {{ margin: var(--sl-space-xs) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; color: var(--sl-text); }}
+                .transcript-role {{ font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sl-accent); }}
+                .transcript-user {{ border-left-color: #6c8cff; }}
+                .transcript-assistant {{ border-left-color: #c084fc; }}
+                .transcript-subagent {{ border-left-color: #4ade80; }}
+                .transcript-tool {{ border-left-color: #fb923c; }}
+                .transcript-system {{ border-left-color: #8b8fa3; }}
+                .transcript-empty {{ padding: var(--sl-space-md); border: 1px dashed var(--sl-border); color: var(--sl-text-muted); font-size: 13px; }}
                 .caption {{ font-family: var(--sl-font-caption); font-size: var(--sl-font-size-caption); line-height: var(--sl-line-height-caption); color: var(--sl-text-muted); }}
                 .launch-splash {{
                     position: fixed;
@@ -500,6 +514,7 @@ pub fn App() -> Element {
                 .theme-toggle {{ width: calc(100% - 32px); margin: 10px 16px; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
                 .theme-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
                 .theme-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .viewer-utilities {{ position: absolute; z-index: 2; left: 0; bottom: 0; width: 340px; padding-bottom: var(--sl-space-sm); background: var(--sl-surface); }}
                 .help-toggle {{ width: calc(100% - 32px); margin: 10px 16px 0; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
                 .help-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
                 .help-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
@@ -605,13 +620,22 @@ pub fn App() -> Element {
                 .diff-field-label {{ color: var(--sl-text-muted); font-weight: 600; font-family: var(--font-ui); font-size: 11px; padding-top: 1px; }}
                 .diff-col-a {{ color: var(--sl-text); overflow-wrap: break-word; }}
                 .diff-col-b {{ color: var(--sl-text); overflow-wrap: break-word; }}
-                .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
-                .main-upper {{ flex: 1; overflow-y: auto; }}
-                .bundles-view {{ display: contents; }}
-                .viewer-main {{ flex: 1; min-width: 0; width: 100%; overflow: hidden; }}
+                .main-content {{ flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }}
+                .main-upper {{ flex: 1; min-height: 0; overflow-y: auto; }}
+                .bundles-view {{ display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }}
+                .bundles-view > h2 {{ flex: 0 0 auto; margin: 0; padding: var(--sl-space-xl) var(--sl-space-xl) var(--sl-space-lg); }}
+                .bundles-workspace {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
+                .bundles-workspace > .session-list {{ flex: 0 0 360px; width: 360px; min-width: 280px; overflow-y: auto; border-right: 1px solid var(--sl-border); background: var(--sl-surface); }}
+                .bundles-workspace > .main-content {{ background: var(--sl-bg); }}
+                .viewer-main {{ flex: 1; min-width: 0; min-height: 0; width: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
                 .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
                 @media (max-width: 600px) {{
+                    .app > .sidebar {{ flex: 0 0 auto; max-height: 46vh; }}
+                    .viewer-main {{ min-height: 0; }}
+                    .viewer-utilities {{ position: static; width: 100%; flex: 0 0 auto; }}
+                    .bundles-workspace {{ flex-direction: column; overflow-y: auto; }}
+                    .bundles-workspace > .session-list {{ flex: 0 0 auto; width: 100%; min-width: 0; max-height: 42%; border-right: none; border-bottom: 1px solid var(--sl-border); }}
                     .tab {{
                         min-height: 44px;
                         min-width: 44px;
@@ -648,12 +672,16 @@ pub fn App() -> Element {
                     }}
                 }}
                 @media (min-width: 601px) {{
+                    .app {{ flex-direction: row; }}
                     .app > .sidebar {{
                         width: 340px;
                         min-width: 340px;
                         max-width: 340px;
+                        flex: 0 0 340px;
+                        height: 100%;
                         border-right: 1px solid var(--sl-border);
                     }}
+                    .main-content {{ min-width: 0; min-height: 0; }}
                 }}
                 .sl-loading-spinner {{
                     animation: sl-spin 0.8s linear infinite;
@@ -776,16 +804,19 @@ pub fn App() -> Element {
                         }
                     }
                 }
-                main {
-                    class: "viewer-main",
-                    div {
-                        id: "{active_tab().panel_id()}",
-                        role: "tabpanel",
-                        "aria-labelledby": "{active_tab().id()}",
-                        {tab_body}
-                    }
+            }
+            main {
+                class: "viewer-main",
+                div {
+                    id: "{active_tab().panel_id()}",
+                    role: "tabpanel",
+                    "aria-labelledby": "{active_tab().id()}",
+                    {tab_body}
                 }
-                // After tabpanel so Tab from the active tab reaches panel controls first.
+            }
+            // Keep utility controls after the active panel so keyboard focus moves
+            // from the selected tab into the panel before reaching chrome actions.
+            div { class: "viewer-utilities",
                 button {
                     id: "viewer-help-button",
                     class: "help-toggle",
@@ -833,7 +864,7 @@ pub fn App() -> Element {
             CommandPalette {
                 open: palette_open(),
                 on_close: move |_| close_palette(),
-                on_run: move |action| run_palette_action(action),
+                on_run: run_palette_action,
             }
         }
     }
@@ -930,34 +961,36 @@ fn BundlesTab() -> Element {
                 }
             },
             h2 { "Compiled Bundles" }
-            SessionListWithCompare {
-                items: summaries,
-                selected_idx: selected_idx(),
-                compare_idx: compare_idx(),
-                on_select: move |idx| selected_idx.set(Some(idx)),
-                on_compare: move |idx| {
-                    // Toggle: clicking same row again clears compare slot.
-                    if compare_idx() == Some(idx) {
-                        compare_idx.set(None);
-                    } else {
-                        compare_idx.set(Some(idx));
-                    }
-                },
-            }
-            div { class: "main-content",
-                div { class: "main-upper",
-                    match detail {
-                        Some(d) => rsx! { DetailView { detail: d.clone() } },
-                        None => rsx! {
-                            div { class: "empty-state", "Select a bundle from the list to view details" }
-                        },
-                    }
+            div { class: "bundles-workspace",
+                SessionListWithCompare {
+                    items: summaries,
+                    selected_idx: selected_idx(),
+                    compare_idx: compare_idx(),
+                    on_select: move |idx| selected_idx.set(Some(idx)),
+                    on_compare: move |idx| {
+                        // Toggle: clicking same row again clears compare slot.
+                        if compare_idx() == Some(idx) {
+                            compare_idx.set(None);
+                        } else {
+                            compare_idx.set(Some(idx));
+                        }
+                    },
                 }
-                if let Some((a, b)) = diff_pair {
-                    BundleDiff {
-                        bundle_a: a,
-                        bundle_b: b,
-                        on_close: move |_| compare_idx.set(None),
+                div { class: "main-content",
+                    div { class: "main-upper", tabindex: "0",
+                        match detail {
+                            Some(d) => rsx! { DetailView { detail: d.clone() } },
+                            None => rsx! {
+                                div { class: "empty-state", "Select a bundle from the inbox to view its conversation" }
+                            },
+                        }
+                    }
+                    if let Some((a, b)) = diff_pair {
+                        BundleDiff {
+                            bundle_a: a,
+                            bundle_b: b,
+                            on_close: move |_| compare_idx.set(None),
+                        }
                     }
                 }
             }
@@ -1026,16 +1059,18 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
                                 "{s.source_id}"
                                 span {
                                     class: "{compare_cls}",
+                                    title: "Compare this bundle",
+                                    "aria-label": "Compare this bundle",
                                     onclick: move |evt| {
                                         evt.stop_propagation();
                                         props.on_compare.call(orig_idx);
                                     },
-                                    "⇄"
+                                    "Compare"
                                 }
                             }
                             div { class: "session-goal", "{s.intent_goal}" }
                             div { class: "session-meta",
-                                span { class: "meta-bundles", "󰆧 {s.bundle_count}" }
+                                span { class: "meta-bundles", "{s.bundle_count} slices" }
                                 if s.has_acceptance {
                                     span { class: "badge badge-ok", "✓ AC" }
                                 }
@@ -1066,6 +1101,10 @@ fn DetailView(detail: BundleDetail) -> Element {
                 } else {
                     p { "(no goal)" }
                 }
+            }
+
+            div { class: "detail-section transcript-section",
+                SessionTranscript { session_id: detail.source_id.clone() }
             }
 
             // --- Acceptance signals ---

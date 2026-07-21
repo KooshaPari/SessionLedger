@@ -1,8 +1,9 @@
 # qgate quality gate for SessionLedger.
 #
 # Calls the reusable quality-gate workflow from KooshaPari/phenotype-tooling on a
-# Linux standard runner. Non-blocking until per-module coverage reaches
-# the .qgate.toml threshold (per the "1 via 2" protocol).
+# Linux standard runner and runs the browser contract suite as a required
+# sibling job. Coverage remains advisory until the per-module floor is reached,
+# but browser accessibility/responsive/visual regressions are blocking.
 #
 # Pin policy: both the workflow ref and qgate-ref must be full commit SHAs
 # (never @main / floating tags). See docs/ops/qgate-pin.md.
@@ -17,7 +18,8 @@ name: qgate
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: ['**']
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -34,24 +36,36 @@ jobs:
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@4305c38b25d97ef04a54b3a52498a5f41e40895c # stable
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libglib2.0-dev libgtk-3-dev \
+            libgdk-pixbuf-2.0-dev libjavascriptcoregtk-4.1-dev \
+            libwebkit2gtk-4.1-dev libxdo-dev libsoup-3.0-dev
+
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           toolchain: stable
           components: llvm-tools-preview, rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea00a3571f6e0 # v2.7.8
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: rust
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
 
-      # Workspace-wide coverage → lcov so qgate's lcov parser can consume it.
+      # Core Rust coverage → lcov so qgate's lcov parser can consume it.
+      # The Dioxus viewer is validated by the blocking browser/axe contract
+      # job; keeping it out of llvm-cov avoids treating uninstrumented WASM UI
+      # glue as an untested core-library regression.
       - name: Generate coverage (lcov)
         run: |
           mkdir -p coverage
-          cargo llvm-cov --workspace --all-targets --lcov --output-path coverage/lcov.info
+          cargo llvm-cov --package session-ledger --features sqlite --all-targets --lcov --output-path coverage/lcov.info
           echo "lcov size: $(wc -l < coverage/lcov.info) lines"
 
       - name: Upload coverage artifact
@@ -86,21 +100,97 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  # Reusable workflow — job-level call, pinned to phenotype-tooling commit SHA.
-  # Pin: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad (phenotype-tooling main 2026-07-13)
+  # Browser quality is part of qgate, not an unrelated advisory workflow.
+  browser-e2e:
+    name: browser e2e · axe · responsive · visual
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/visual/harness
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/visual/harness/package-lock.json
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # v2
+        with:
+          tool: dioxus-cli@0.7.9
+      - name: Build sl-viewer web surface
+        working-directory: crates/sl-viewer
+        # Binaryen bundled by dx 0.7.9 aborts when rewriting LLVM DWARF
+        # compile-unit metadata emitted by the pinned Rust toolchain. Release
+        # browser artifacts do not need DWARF (source maps are not shipped),
+        # so omit debug symbols and keep wasm-opt's production optimization
+        # pass enabled instead of accepting a non-deterministic SIGABRT.
+        run: dx build --platform web --release --debug-symbols false --no-default-features --features web
+      - name: Install harness dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser contract suite
+        run: timeout 15m npm run test:a11y && timeout 15m npm run test:responsive && timeout 15m npm run test:visual
+
+  # Run qgate directly instead of calling the external reusable workflow. The
+  # latter currently produces zero-job runs in GitHub Actions (including its
+  # other public callers), leaving no check to enforce on pull requests.
+  # Keep the tooling revision immutable while retaining a normal runner job.
   quality-gate:
-    # Reusable-workflow call jobs accept only the job-call keys below; notably,
-    # `continue-on-error` is not valid here. Keep this gate advisory through
-    # branch protection until the coverage target is reached, rather than
-    # making the workflow syntactically invalid before any jobs can start.
-    needs: prepare
-    uses: KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml@c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad # main 2026-07-13
-    with:
-      coverage-report: coverage/lcov.info
-      coverage-format: lcov
-      threshold: 85
-      not-applicable: 'a11y,e2e,dast'
-      sast-config: 'auto'
-      # Same SHA as the workflow pin — do not leave qgate-ref on floating main.
-      qgate-ref: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad
-    secrets: inherit
+    name: quality gate · qgate
+    needs: [prepare, browser-e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: coverage-lcov
+          path: coverage
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sbom-cyclonedx
+          path: .
+      - name: Checkout pinned qgate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: KooshaPari/phenotype-tooling
+          ref: c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad
+          path: _phenotype-tooling
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - name: Install qgate build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libglib2.0-dev libgtk-3-dev \
+            libgdk-pixbuf-2.0-dev libjavascriptcoregtk-4.1-dev \
+            libwebkit2gtk-4.1-dev libxdo-dev libsoup-3.0-dev
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # v2
+        with:
+          tool: cargo-audit
+      - name: Run bounded Rust static checks
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+      - name: Build qgate
+        run: cargo build --release --manifest-path _phenotype-tooling/crates/qgate/Cargo.toml
+      - name: Run qgate
+        run: |
+          ./_phenotype-tooling/target/release/qgate \
+            run \
+            --coverage-report coverage/lcov.info \
+            --coverage-format lcov \
+            --threshold 85

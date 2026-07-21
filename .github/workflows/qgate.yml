@@ -169,6 +169,10 @@ jobs:
         uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # v2
         with:
           tool: cargo-audit
+      - name: Run bounded Rust static checks
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
       - name: Build qgate
         run: cargo build --release --manifest-path _phenotype-tooling/crates/qgate/Cargo.toml
       - name: Run qgate

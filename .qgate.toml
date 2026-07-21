@@ -19,4 +19,5 @@ not_applicable = [
     "integration",   # workspace integration coverage is generated in prepare; qgate's wildcard runner is not Cargo-valid
     "e2e",           # authoritative Playwright contract runs in the browser-e2e job
     "property",      # no proptest feature; browser and Rust contract suites cover current invariants
+    "static_analysis", # explicit workspace fmt/clippy gate runs immediately before qgate
 ]

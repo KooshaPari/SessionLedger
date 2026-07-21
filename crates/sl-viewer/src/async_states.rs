@@ -155,8 +155,11 @@ pub fn FirstRunEmpty() -> Element {
             }
             button {
                 class: "sl-first-run-cta",
+                r#type: "button",
                 "data-testid": "first-run-cta",
+                "aria-label": "Open a Forge corpus database or view the quick-start guide",
                 style: "padding:8px 18px;font-size:13px;font-weight:600;border-radius:var(--sl-radius-md);cursor:pointer;border:1px solid {c.focus};background:{c.focus};color:#111827;",
+                onclick: move |_| crate::corpus_cta::trigger_open_corpus(),
                 "Open corpus…"
             }
         }

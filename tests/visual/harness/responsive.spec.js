@@ -63,6 +63,27 @@ for (const viewport of viewports) {
       }
     });
 
+    if (viewport.width >= 768) {
+      test("bundles inbox and transcript use independent desktop panes", async ({ page }) => {
+        await page.goto("/");
+        await page.getByRole("tab", { name: "Bundles", exact: true }).click();
+        const inbox = page.locator(".bundles-workspace > .session-list");
+        const detail = page.locator(".bundles-workspace > .main-content");
+        await expect(inbox).toBeVisible();
+        await expect(detail).toBeVisible();
+
+        const [inboxBox, detailBox] = await Promise.all([inbox.boundingBox(), detail.boundingBox()]);
+        expect(inboxBox).not.toBeNull();
+        expect(detailBox).not.toBeNull();
+        expect(detailBox.x).toBeGreaterThan(inboxBox.x + inboxBox.width - 1);
+
+        await page.locator(".session-item").first().click();
+        await expect(page.getByRole("heading", { name: "Conversation" })).toBeVisible();
+        await expect(page.getByTestId("message-user")).toBeVisible();
+        await expect(page.locator(".main-upper")).toHaveCSS("overflow-y", "auto");
+      });
+    }
+
     if (viewport.width === 360) {
       test("primary controls meet 44px touch targets", async ({ page }) => {
         await page.goto("/");

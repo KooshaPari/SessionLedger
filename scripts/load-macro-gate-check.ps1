@@ -21,7 +21,9 @@
 [CmdletBinding()]
 param(
     [switch]$SelfCheck,
-    [switch]$RunSmoke
+    [switch]$RunSmoke,
+    [string]$DaemonPath = "",
+    [switch]$SkipBuild
 )
 
 Set-StrictMode -Version Latest
@@ -226,6 +228,10 @@ if ($SelfCheck) {
         throw "load-macro-gate-hard.yml must run load-macro-gate-check.ps1 -RunSmoke."
     }
     [void](Write-Check -Label "hard workflow runs RunSmoke" -Ok $true)
+    if ($hardYaml -notmatch 'cargo build --locked') {
+        throw "load-macro-gate-hard.yml must run cargo build --locked before RunSmoke."
+    }
+    [void](Write-Check -Label "hard workflow pre-builds sl-daemon" -Ok $true)
     if ($wrapperRs -notmatch 'load-macro-gate-check\.ps1') {
         throw "tests/load_macro_gate.rs must invoke load-macro-gate-check.ps1."
     }
@@ -237,6 +243,56 @@ if ($SelfCheck) {
     }
 }
 
+function Resolve-DaemonPath {
+    param([string]$ExplicitPath)
+
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitPath)) {
+        if (-not (Test-Path -LiteralPath $ExplicitPath -PathType Leaf)) {
+            throw "Daemon binary not found at '$ExplicitPath'."
+        }
+        return (Resolve-Path -LiteralPath $ExplicitPath).Path
+    }
+
+    $manifest = Join-Path $repoRoot "crates/sl-daemon/Cargo.toml"
+    if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) {
+        throw "sl-daemon manifest not found at '$manifest'."
+    }
+
+    if (-not $SkipBuild) {
+        Write-Host "Building sl-daemon (locked)..."
+        Push-Location (Join-Path $repoRoot "crates/sl-daemon")
+        try {
+            & cargo build --locked
+            if ($LASTEXITCODE -ne 0) {
+                throw "cargo build --locked failed with exit code $LASTEXITCODE."
+            }
+        }
+        finally {
+            Pop-Location
+        }
+    }
+
+    $metadataJson = & cargo metadata `
+        --format-version 1 `
+        --no-deps `
+        --manifest-path $manifest
+    if ($LASTEXITCODE -ne 0) {
+        throw "cargo metadata failed with exit code $LASTEXITCODE."
+    }
+
+    $metadata = $metadataJson | ConvertFrom-Json
+    $candidate = Join-Path $metadata.target_directory "debug/sl-daemon"
+    if ($IsWindows -or $env:OS -eq "Windows_NT") {
+        $candidate = "$candidate.exe"
+    }
+
+    if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+        throw "Built daemon not found at '$candidate'. Pass -DaemonPath or build first."
+    }
+
+    return (Resolve-Path -LiteralPath $candidate).Path
+}
+
 if ($RunSmoke) {
     $policy = Get-LoadMacroPolicy
     $baseUrl = "http://127.0.0.1:8080"
@@ -244,24 +300,7 @@ if ($RunSmoke) {
     $outDir = Join-Path ([System.IO.Path]::GetTempPath()) "sl-out-load-macro"
     New-Item -ItemType Directory -Force -Path $watchDir, $outDir | Out-Null
 
-    $metadata = cargo metadata `
-        --format-version 1 `
-        --no-deps `
-        --manifest-path (Join-Path $repoRoot "crates/sl-daemon/Cargo.toml") |
-        ConvertFrom-Json
-    $daemon = Join-Path $metadata.target_directory "debug/sl-daemon"
-    if (-not (Test-Path -LiteralPath $daemon)) {
-        Push-Location (Join-Path $repoRoot "crates/sl-daemon")
-        try {
-            & cargo build --locked
-            if ($LASTEXITCODE -ne 0) {
-                throw "cargo build sl-daemon failed with exit code $LASTEXITCODE."
-            }
-        }
-        finally {
-            Pop-Location
-        }
-    }
+    $daemon = Resolve-DaemonPath -ExplicitPath $DaemonPath
 
     $proc = Start-Process -FilePath $daemon -ArgumentList @(
         "serve", "--watch", $watchDir, "--out", $outDir, "--http-bind", "127.0.0.1:8080"

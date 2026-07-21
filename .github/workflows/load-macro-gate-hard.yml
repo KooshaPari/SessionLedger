@@ -31,7 +31,7 @@ jobs:
   load-macro-gate-smoke:
     name: load macro gate · macro routes smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
@@ -39,8 +39,11 @@ jobs:
         with:
           workspaces: crates/sl-daemon
           key: load-macro-gate-smoke
+      - name: build sl-daemon workspace
+        working-directory: crates/sl-daemon
+        run: cargo build --locked
       - name: run macro-tier load smoke (blocking)
         shell: pwsh
         env:
           RUST_LOG: sl_daemon=info,tower_http=warn
-        run: ./scripts/load-macro-gate-check.ps1 -RunSmoke
+        run: ./scripts/load-macro-gate-check.ps1 -RunSmoke -SkipBuild

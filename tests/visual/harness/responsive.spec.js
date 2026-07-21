@@ -79,7 +79,7 @@ for (const viewport of viewports) {
 
         await page.locator(".session-item").first().click();
         await expect(page.getByRole("heading", { name: "Conversation" })).toBeVisible();
-        await expect(page.getByTestId("message-user")).toBeVisible();
+        await expect(page.getByTestId("message-user").first()).toBeVisible();
         await expect(page.locator(".main-upper")).toHaveCSS("overflow-y", "auto");
       });
     }

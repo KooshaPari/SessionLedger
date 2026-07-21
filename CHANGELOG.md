@@ -14,6 +14,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Wave-43 scope (396/402): consolidated `WAVE43_SCOPE.md` + `docs/ops/WAVE43_PERT.md` — five parallel carry-forward lanes (`w43-daemon-graph-hard`, `w43-jemalloc-default-on`, `w43-load-macro-gate`, `w43-sl-viewer-help`, `w43-socket-posture`) from Wave-42 deferred gaps.
+
 - Blocking alloc-profile / dhat PR gate (C00 L8): `.github/workflows/alloc-profile-hard.yml`, expanded `alloc-profile-check.ps1 -SelfCheck` anchors, `tests/alloc_profile_hard.rs` (soft `ops-load` job retained).
 
 - SLSA protected-environment gate promotion (C06 L53): `slsa-protected-env-check.ps1 -SelfCheck` moved to blocking `security.yml` job (removed soft `hermetic.yml` bypass).

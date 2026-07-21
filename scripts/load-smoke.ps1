@@ -3,12 +3,20 @@
 Runs a concurrent, headless load smoke test against sl-daemon.
 
 .DESCRIPTION
-Distributes requests across /healthz, /readyz, /api/metrics, and /metrics,
-then fails when the requested success-rate or p95 latency SLO is missed.
+Distributes requests across probe and/or macro HTTP routes on sl-daemon, then
+fails when the requested success-rate or p95 latency SLO is missed.
+
+Route tiers (see docs/ops/load-macro-gate.md):
+  probe — /healthz, /readyz, /api/metrics, /metrics (default)
+  macro — /api/bundles, /api/search?limit=1, /api/stream
+  all   — probe + macro
 #>
 [CmdletBinding()]
 param(
     [string]$BaseUrl = "http://127.0.0.1:8080",
+
+    [ValidateSet("probe", "macro", "all")]
+    [string]$RouteTier = "probe",
 
     [ValidateRange(4, 1000000)]
     [int]$Requests = 400,
@@ -34,12 +42,19 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 }
 
 $normalizedBaseUrl = $BaseUrl.TrimEnd("/")
-$endpoints = @("/healthz", "/readyz", "/api/metrics", "/metrics")
+$probeEndpoints = @("/healthz", "/readyz", "/api/metrics", "/metrics")
+$macroEndpoints = @("/api/bundles", "/api/search?limit=1", "/api/stream")
+$endpoints = switch ($RouteTier) {
+    "probe" { $probeEndpoints }
+    "macro" { $macroEndpoints }
+    "all" { $probeEndpoints + $macroEndpoints }
+    default { throw "Unsupported RouteTier '$RouteTier'." }
+}
 $work = for ($i = 0; $i -lt $Requests; $i++) {
     [pscustomobject]@{ Endpoint = $endpoints[$i % $endpoints.Count] }
 }
 
-Write-Host "Sending $Requests requests to $normalizedBaseUrl (concurrency: $Concurrency)..."
+Write-Host "Sending $Requests requests to $normalizedBaseUrl (tier: $RouteTier, concurrency: $Concurrency)..."
 
 $results = @($work | ForEach-Object -Parallel {
     $endpoint = $_.Endpoint
@@ -48,11 +63,16 @@ $results = @($work | ForEach-Object -Parallel {
     $statusCode = 0
     $errorMessage = $null
 
+    $timeoutSec = $using:TimeoutSeconds
+    if ($endpoint -match "/api/stream") {
+        $timeoutSec = [Math]::Min($timeoutSec, 2)
+    }
+
     try {
         $response = Invoke-WebRequest `
             -Uri $url `
             -Method Get `
-            -TimeoutSec $using:TimeoutSeconds `
+            -TimeoutSec $timeoutSec `
             -SkipHttpErrorCheck
         $statusCode = [int]$response.StatusCode
     }

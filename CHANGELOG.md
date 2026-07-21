@@ -14,6 +14,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Load-macro PR gate (C08 L73): `docs/ops/load-macro-gate.md`, `load-macro-gate.json`, `load-smoke.ps1 -RouteTier macro`, `scripts/load-macro-gate-check.ps1 -SelfCheck`, blocking `load-macro-gate-hard.yml`, `tests/load_macro_gate.rs`.
+
 - Socket.dev supply-chain posture (C06 L33): `docs/ops/socket-posture.md`, `socket-posture.json`, `scripts/socket-posture-check.ps1 -SelfCheck`, blocking `security.yml` job, `tests/socket_posture.rs`.
 
 - Wave-43 scope (396/402): consolidated `WAVE43_SCOPE.md` + `docs/ops/WAVE43_PERT.md` — five parallel carry-forward lanes (`w43-daemon-graph-hard`, `w43-jemalloc-default-on`, `w43-load-macro-gate`, `w43-sl-viewer-help`, `w43-socket-posture`) from Wave-42 deferred gaps.

@@ -71,6 +71,7 @@ Critical supply-chain or remote-code issues may be accelerated at maintainer dis
 - Advisory scanning: `cargo audit` job in .github/workflows/security.yml.
 - SBOM upload: qgate uploads `sbom-cyclonedx` artifact from `target/sbom.cdx.json`.
 - CVE feed subscription (GHSA + OSV + NVD): maintainer process and evidence links in [`docs/ops/cve-feed-subscription.md`](docs/ops/cve-feed-subscription.md). Hermetic proof: `pwsh ./scripts/cve-feed-check.ps1 -SelfCheck`.
+- Socket.dev supply-chain posture (optional org GitHub App complement): policy SSOT in [`docs/ops/socket-posture.md`](docs/ops/socket-posture.md). Hermetic proof: `pwsh ./scripts/socket-posture-check.ps1 -SelfCheck`. Live org install is **not** attestable from this repository.
 
 ## Cryptography inventory
 

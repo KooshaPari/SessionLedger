@@ -62,20 +62,39 @@ foreach ($streamEndpoint in $streamEndpoints) {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $statusCode = 0
     $errorMessage = $null
-    try {
-        $response = Invoke-WebRequest `
-            -Uri $url `
-            -Method Get `
-            -TimeoutSec 2 `
-            -SkipHttpErrorCheck
-        $statusCode = [int]$response.StatusCode
+    $streamJob = Start-Job -ScriptBlock {
+        param($ProbeUrl)
+        try {
+            $response = Invoke-WebRequest `
+                -Uri $ProbeUrl `
+                -Method Get `
+                -TimeoutSec 2 `
+                -SkipHttpErrorCheck
+            return [pscustomobject]@{
+                StatusCode = [int]$response.StatusCode
+                Error = $null
+            }
+        }
+        catch {
+            return [pscustomobject]@{
+                StatusCode = 0
+                Error = $_.Exception.Message
+            }
+        }
+    } -ArgumentList $url
+
+    $completed = Wait-Job -Job $streamJob -Timeout 5
+    if (-not $completed) {
+        Stop-Job -Job $streamJob -ErrorAction SilentlyContinue
+        $errorMessage = "stream probe timed out after 5s"
     }
-    catch {
-        $errorMessage = $_.Exception.Message
+    else {
+        $probe = Receive-Job -Job $streamJob
+        $statusCode = [int]$probe.StatusCode
+        $errorMessage = $probe.Error
     }
-    finally {
-        $stopwatch.Stop()
-    }
+    Remove-Job -Job $streamJob -Force -ErrorAction SilentlyContinue
+    $stopwatch.Stop()
 
     $results.Add([pscustomobject]@{
         Endpoint = $streamEndpoint

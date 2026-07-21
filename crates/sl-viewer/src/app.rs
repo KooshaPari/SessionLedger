@@ -388,7 +388,7 @@ pub fn App() -> Element {
             "{TOKENS_CSS}{VIEWER_COLOR_SCHEME}
                 html, body {{ margin: 0; max-width: 100%; overflow-x: clip; }}
                 body {{ font-family: var(--font-body); background: var(--sl-bg); color: var(--sl-text); }}
-                .app {{ display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow: hidden; }}
+                .app {{ position: relative; display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 100vw; overflow: hidden; }}
                 .app > .sidebar {{
                     width: 100%;
                     min-width: 0;
@@ -514,6 +514,7 @@ pub fn App() -> Element {
                 .theme-toggle {{ width: calc(100% - 32px); margin: 10px 16px; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
                 .theme-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
                 .theme-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
+                .viewer-utilities {{ position: absolute; z-index: 2; left: 0; bottom: 0; width: 340px; padding-bottom: var(--sl-space-sm); background: var(--sl-surface); }}
                 .help-toggle {{ width: calc(100% - 32px); margin: 10px 16px 0; padding: 7px 12px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-muted); color: var(--sl-text); cursor: pointer; font-family: var(--font-ui); font-size: 12px; font-weight: 600; }}
                 .help-toggle:hover {{ border-color: var(--sl-accent); color: var(--sl-accent); }}
                 .help-toggle:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
@@ -632,6 +633,7 @@ pub fn App() -> Element {
                 @media (max-width: 600px) {{
                     .app > .sidebar {{ flex: 0 0 auto; max-height: 46vh; }}
                     .viewer-main {{ min-height: 0; }}
+                    .viewer-utilities {{ position: static; width: 100%; flex: 0 0 auto; }}
                     .bundles-workspace {{ flex-direction: column; overflow-y: auto; }}
                     .bundles-workspace > .session-list {{ flex: 0 0 auto; width: 100%; min-width: 0; max-height: 42%; border-right: none; border-bottom: 1px solid var(--sl-border); }}
                     .tab {{
@@ -802,7 +804,19 @@ pub fn App() -> Element {
                         }
                     }
                 }
-                // After tabpanel so Tab from the active tab reaches panel controls first.
+            }
+            main {
+                class: "viewer-main",
+                div {
+                    id: "{active_tab().panel_id()}",
+                    role: "tabpanel",
+                    "aria-labelledby": "{active_tab().id()}",
+                    {tab_body}
+                }
+            }
+            // Keep utility controls after the active panel so keyboard focus moves
+            // from the selected tab into the panel before reaching chrome actions.
+            div { class: "viewer-utilities",
                 button {
                     id: "viewer-help-button",
                     class: "help-toggle",
@@ -841,15 +855,6 @@ pub fn App() -> Element {
                         );
                     },
                     "Toggle Theme"
-                }
-            }
-            main {
-                class: "viewer-main",
-                div {
-                    id: "{active_tab().panel_id()}",
-                    role: "tabpanel",
-                    "aria-labelledby": "{active_tab().id()}",
-                    {tab_body}
                 }
             }
             HelpOverlay {
@@ -972,7 +977,7 @@ fn BundlesTab() -> Element {
                     },
                 }
                 div { class: "main-content",
-                    div { class: "main-upper",
+                    div { class: "main-upper", tabindex: "0",
                         match detail {
                             Some(d) => rsx! { DetailView { detail: d.clone() } },
                             None => rsx! {

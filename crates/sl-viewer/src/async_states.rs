@@ -202,6 +202,9 @@ pub fn ErrorColorFixture() -> Element {
 pub fn ErrorState(
     /// Error message shown to the user.
     message: String,
+    /// Short, user-facing heading for the recovery state.
+    #[props(default = "Something went wrong".to_string())]
+    title: String,
     /// When true, render a Retry control wired to [`Self::on_retry`].
     #[props(default)]
     retryable: bool,
@@ -233,7 +236,7 @@ pub fn ErrorState(
                 }
                 p {
                     style: "margin:0;color:{c.danger};font-weight:600;",
-                    "Something went wrong"
+                    "{title}"
                 }
             }
             p {

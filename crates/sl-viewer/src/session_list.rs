@@ -82,7 +82,7 @@ fn SessionItem(props: SessionItemProps) -> Element {
             div { class: "session-source", "{s.source_id}" }
             div { class: "session-goal", "{s.intent_goal}" }
             div { class: "session-meta",
-                span { class: "meta-bundles", "󰆧 {s.bundle_count}" }
+                span { class: "meta-bundles", "{s.bundle_count} slices" }
                 if s.has_acceptance {
                     span { class: "badge badge-ok", "✓ AC" }
                 }

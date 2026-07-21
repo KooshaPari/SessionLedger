@@ -19,6 +19,7 @@ use crate::memory_tab::MemoryWiki;
 use crate::mock_data::sample_bundles;
 use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
+use crate::session_transcript::SessionTranscript;
 use crate::theme::ThemeColors;
 use crate::timeline::TimelineView;
 use crate::tokens::{TOKENS_CSS, VIEWER_COLOR_SCHEME};
@@ -424,6 +425,19 @@ pub fn App() -> Element {
                 .detail-section p {{ font-size: 14px; line-height: 1.6; margin: 0; color: var(--sl-text); max-width: var(--sl-measure-max); }}
                 .detail-section ul {{ margin: 4px 0 0 0; padding-left: 20px; max-width: var(--sl-measure-max); }}
                 .detail-section li {{ font-size: 13px; line-height: 1.7; color: var(--sl-text-muted); }}
+                .session-transcript {{ display: flex; flex-direction: column; gap: var(--sl-space-md); max-width: 760px; }}
+                .transcript-header {{ display: flex; align-items: baseline; justify-content: space-between; gap: var(--sl-space-md); border-bottom: 1px solid var(--sl-border); padding-bottom: var(--sl-space-sm); }}
+                .transcript-header h3 {{ margin: 0; font-family: var(--font-ui); font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sl-accent); }}
+                .transcript-count {{ color: var(--sl-text-muted); font-size: 12px; }}
+                .transcript-message {{ padding: var(--sl-space-md) var(--sl-space-lg); border: 1px solid var(--sl-border); border-left: 3px solid var(--sl-accent); border-radius: var(--sl-radius-md); background: var(--sl-surface-muted); }}
+                .transcript-message p {{ margin: var(--sl-space-xs) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; color: var(--sl-text); }}
+                .transcript-role {{ font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sl-accent); }}
+                .transcript-user {{ border-left-color: #6c8cff; }}
+                .transcript-assistant {{ border-left-color: #c084fc; }}
+                .transcript-subagent {{ border-left-color: #4ade80; }}
+                .transcript-tool {{ border-left-color: #fb923c; }}
+                .transcript-system {{ border-left-color: #8b8fa3; }}
+                .transcript-empty {{ padding: var(--sl-space-md); border: 1px dashed var(--sl-border); color: var(--sl-text-muted); font-size: 13px; }}
                 .caption {{ font-family: var(--sl-font-caption); font-size: var(--sl-font-size-caption); line-height: var(--sl-line-height-caption); color: var(--sl-text-muted); }}
                 .launch-splash {{
                     position: fixed;
@@ -608,10 +622,12 @@ pub fn App() -> Element {
                 .main-content {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
                 .main-upper {{ flex: 1; overflow-y: auto; }}
                 .bundles-view {{ display: contents; }}
-                .viewer-main {{ flex: 1; min-width: 0; width: 100%; overflow: hidden; }}
+                .viewer-main {{ flex: 1; min-width: 0; min-height: 0; width: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
                 .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
                 @media (max-width: 600px) {{
+                    .app > .sidebar {{ flex: 0 0 auto; max-height: 46vh; }}
+                    .viewer-main {{ min-height: 0; }}
                     .tab {{
                         min-height: 44px;
                         min-width: 44px;
@@ -780,15 +796,6 @@ pub fn App() -> Element {
                         }
                     }
                 }
-                main {
-                    class: "viewer-main",
-                    div {
-                        id: "{active_tab().panel_id()}",
-                        role: "tabpanel",
-                        "aria-labelledby": "{active_tab().id()}",
-                        {tab_body}
-                    }
-                }
                 // After tabpanel so Tab from the active tab reaches panel controls first.
                 button {
                     id: "viewer-help-button",
@@ -828,6 +835,15 @@ pub fn App() -> Element {
                         );
                     },
                     "Toggle Theme"
+                }
+            }
+            main {
+                class: "viewer-main",
+                div {
+                    id: "{active_tab().panel_id()}",
+                    role: "tabpanel",
+                    "aria-labelledby": "{active_tab().id()}",
+                    {tab_body}
                 }
             }
             HelpOverlay {
@@ -1030,16 +1046,18 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
                                 "{s.source_id}"
                                 span {
                                     class: "{compare_cls}",
+                                    title: "Compare this bundle",
+                                    "aria-label": "Compare this bundle",
                                     onclick: move |evt| {
                                         evt.stop_propagation();
                                         props.on_compare.call(orig_idx);
                                     },
-                                    "⇄"
+                                    "Compare"
                                 }
                             }
                             div { class: "session-goal", "{s.intent_goal}" }
                             div { class: "session-meta",
-                                span { class: "meta-bundles", "󰆧 {s.bundle_count}" }
+                                span { class: "meta-bundles", "{s.bundle_count} slices" }
                                 if s.has_acceptance {
                                     span { class: "badge badge-ok", "✓ AC" }
                                 }
@@ -1070,6 +1088,10 @@ fn DetailView(detail: BundleDetail) -> Element {
                 } else {
                     p { "(no goal)" }
                 }
+            }
+
+            div { class: "detail-section transcript-section",
+                SessionTranscript { session_id: detail.source_id.clone() }
             }
 
             // --- Acceptance signals ---

@@ -201,6 +201,7 @@ pub fn LiveFeed() -> Element {
                     ContentSkeleton { layout: SkeletonLayout::StreamFeed, list_rows: 5 }
                 } else if status_val == FeedStatus::Disconnected && feed_entries.is_empty() {
                     ErrorState {
+                        title: "Daemon unavailable".to_string(),
                         message: "Live feed disconnected — daemon unreachable at localhost:9001.".to_string(),
                         retryable: true,
                         on_retry: move |_| {

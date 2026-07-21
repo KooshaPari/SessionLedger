@@ -26,6 +26,7 @@ pub mod mock_data;
 pub mod replay_view;
 pub mod search_view;
 pub mod session_list;
+pub mod session_transcript;
 pub mod theme;
 pub mod timeline;
 pub mod tokens;

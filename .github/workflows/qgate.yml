@@ -141,6 +141,7 @@ jobs:
     name: quality gate · qgate
     needs: [prepare, browser-e2e]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:

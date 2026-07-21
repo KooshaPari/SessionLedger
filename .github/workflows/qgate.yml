@@ -166,7 +166,9 @@ jobs:
             libgdk-pixbuf-2.0-dev libjavascriptcoregtk-4.1-dev \
             libwebkit2gtk-4.1-dev libxdo-dev libsoup-3.0-dev
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+        uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # v2
+        with:
+          tool: cargo-audit
       - name: Build qgate
         run: cargo build --release --manifest-path _phenotype-tooling/crates/qgate/Cargo.toml
       - name: Run qgate

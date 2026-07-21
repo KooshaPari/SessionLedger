@@ -156,10 +156,60 @@ pub fn ReplayView() -> Element {
                 }
                 #[cfg(any(target_arch = "wasm32", not(feature = "desktop")))]
                 {
-                    let _ = (id, spd, daemon_url, token);
-                    state.set(ReplayState::Error(
-                        "replay streaming requires the desktop target".into(),
-                    ));
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        use wasm_bindgen::{closure::Closure, JsCast};
+                        use web_sys::{Event, EventSource, MessageEvent};
+
+                        let url = format!("{daemon_url}/api/replay/{id}?speed={spd}");
+                        let source = match EventSource::new(&url) {
+                            Ok(source) => source,
+                            Err(_) => {
+                                state.set(ReplayState::Error("replay stream unavailable".into()));
+                                continue;
+                            }
+                        };
+                        let onopen = Closure::wrap(Box::new({
+                            let mut state = state;
+                            move || state.set(ReplayState::Playing)
+                        }) as Box<dyn FnMut()>);
+                        source.set_onopen(Some(onopen.as_ref().unchecked_ref()));
+                        let onmessage = Closure::wrap(Box::new({
+                            let mut entries = entries;
+                            let mut progress = progress;
+                            move |event: MessageEvent| {
+                                let data = event.data().as_string().unwrap_or_default();
+                                if let Some(entry) = parse_replay_event(&format!("data: {data}")) {
+                                    progress.set((entry.event_index + 1, entry.total_events));
+                                    entries.with_mut(|items| items.push(entry));
+                                }
+                            }
+                        }) as Box<dyn FnMut(MessageEvent)>);
+                        source.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+                        let ondone = Closure::wrap(Box::new({
+                            let mut state = state;
+                            move |_event: Event| state.set(ReplayState::Done)
+                        }) as Box<dyn FnMut(Event)>);
+                        let _ = source.add_event_listener_with_callback(
+                            "done",
+                            ondone.as_ref().unchecked_ref(),
+                        );
+                        let onerror = Closure::wrap(Box::new({
+                            let mut state = state;
+                            move |_event: Event| state.set(ReplayState::Error(
+                                "replay stream disconnected before completion".into(),
+                            ))
+                        }) as Box<dyn FnMut(Event)>);
+                        source.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+                        // Keep the EventSource and callbacks alive for the stream lifetime.
+                        std::future::pending::<()>().await;
+                        drop((source, onopen, onmessage, ondone, onerror, token));
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        let _ = (id, spd, daemon_url, token);
+                        state.set(ReplayState::Error("replay streaming requires the desktop target".into()));
+                    }
                 }
             }
         }

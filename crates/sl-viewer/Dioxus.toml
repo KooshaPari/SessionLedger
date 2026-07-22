@@ -7,3 +7,4 @@ title = "Session Ledger Viewer"
 
 [bundle]
 identifier = "ai.kooshapari.sessionledger"
+publisher = "KooshaPari"

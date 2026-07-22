@@ -111,7 +111,7 @@ pub struct SessionContext(pub Vec<Session>);
 /// 2. `FORGE_DB` loads a Forge SQLite corpus when the sqlite feature is enabled.
 /// 3. Default: discover native local session stores.
 fn resolve_data_source() -> DataSource {
-    if std::env::var("SL_VIEWER_DEMO").as_deref() == Ok("1") {
+    if std::env::var("SL_VIEWER_DEMO").as_deref() == Ok("1") || visual_fixture_active() {
         return DataSource::Mock;
     }
     #[cfg(feature = "sqlite")]

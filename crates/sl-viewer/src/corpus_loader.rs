@@ -8,6 +8,7 @@
 //! without a UI runtime.
 
 use session_ledger::domain::session::Session;
+use session_ledger::ports::CorpusSource;
 
 use crate::mock_data::sample_sessions;
 

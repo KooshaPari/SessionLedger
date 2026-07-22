@@ -123,8 +123,7 @@ fn is_transcript(path: &Path) -> bool {
 
 #[cfg(test)]
 mod transcript_tests {
-    use super::{is_transcript, parse_file};
-    use crate::domain::session::Corpus;
+    use super::is_transcript;
 
     #[test]
     fn accepts_plain_and_compressed_jsonl() {
@@ -136,6 +135,9 @@ mod transcript_tests {
     #[cfg(feature = "compress")]
     #[test]
     fn parses_compressed_jsonl_transcript() {
+        use super::parse_file;
+        use crate::domain::session::Corpus;
+
         let dir = tempfile::tempdir().expect("temp dir");
         let path = dir.path().join("session.jsonl.zst");
         let content = format!(

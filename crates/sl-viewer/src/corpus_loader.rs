@@ -64,12 +64,7 @@ fn load_discovered_sessions() -> Result<Vec<Session>, String> {
         }
     }
     sessions.sort_by_key(|session| {
-        session
-            .messages
-            .iter()
-            .filter_map(|message| message.ts_ms)
-            .max()
-            .unwrap_or_default()
+        session.messages.iter().filter_map(|message| message.ts_ms).max().unwrap_or_default()
     });
     sessions.reverse();
     Ok(sessions)

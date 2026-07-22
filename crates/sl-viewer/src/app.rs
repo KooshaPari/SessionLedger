@@ -9,7 +9,6 @@ use crate::bundle_list::{summarize, BundleSummary};
 use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
-#[cfg(feature = "web")]
 use crate::fixture::visual_fixture_active;
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
 use crate::help_overlay::HelpOverlay;

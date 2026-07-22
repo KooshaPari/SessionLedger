@@ -135,4 +135,27 @@ mod tests {
     fn disabled_by_default() {
         assert_eq!(LangfuseConfig::from_values(false, None, None, None).unwrap(), None);
     }
+
+    #[test]
+    fn config_normalizes_endpoint_and_builds_basic_auth() {
+        let config = LangfuseConfig::from_values(
+            true,
+            Some("https://example.test/v1/traces///".into()),
+            Some("public".into()),
+            Some("secret".into()),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(config.endpoint, "https://example.test/v1/traces");
+        assert_eq!(config.authorization, "Basic cHVibGljOnNlY3JldA==");
+    }
+
+    #[test]
+    fn enabled_config_requires_all_credentials() {
+        let error =
+            LangfuseConfig::from_values(true, Some("https://example.test".into()), None, None)
+                .unwrap_err()
+                .to_string();
+        assert!(error.contains(ENV_LANGFUSE_PUBLIC_KEY));
+    }
 }

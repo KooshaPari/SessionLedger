@@ -10,9 +10,6 @@ use crate::fixture::query_fixture_active;
 
 use futures_util::StreamExt;
 
-/// Default daemon base URL (configurable via `SL_DAEMON_URL` env at runtime).
-#[allow(dead_code)]
-const DEFAULT_DAEMON: &str = "http://127.0.0.1:8080";
 const MIN_SPEED: f64 = 0.1;
 const MAX_SPEED: f64 = 10.0;
 

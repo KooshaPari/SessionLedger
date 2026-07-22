@@ -50,7 +50,7 @@ See [`docs/ops/jemalloc.md`](../../docs/ops/jemalloc.md) and
 ### 1. Native process-compose (preferred for local dev — no container)
 
 ```bash
-SL_WATCH_DIR=~/.forge/sessions SL_OUT_DIR=./okf-out \
+SL_WATCH_DIR=~/.forge/sessions SL_OUT_DIR=./okf-out SL_HTTP_BIND=127.0.0.1:8080 \
   process-compose -f crates/sl-daemon/process-compose.yaml up
 ```
 

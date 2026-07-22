@@ -13,6 +13,33 @@ permissions:
   contents: read
 
 jobs:
+  sl-viewer-macos-app:
+    name: sl-viewer macOS app · artifact
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: install Dioxus CLI
+        run: cargo install dioxus-cli --locked
+      - name: bundle sl-viewer
+        run: dx bundle --platform macos --release --debug-symbols false
+      - name: verify app bundle
+        run: |
+          set -euo pipefail
+          app='target/dx/sl-viewer/release/macos/SlViewer.app'
+          test -x "$app/Contents/MacOS/sl-viewer"
+          codesign --verify --deep --strict --verbose=2 "$app" || codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          shasum -a 256 "$app/Contents/MacOS/sl-viewer" | tee sl-viewer-macos.sha256
+      - name: upload macOS app artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sessionledger-sl-viewer-macos-${{ github.sha }}
+          path: |
+            target/dx/sl-viewer/release/macos/SlViewer.app
+            sl-viewer-macos.sha256
+          if-no-files-found: error
+
   sl-daemon-build:
     name: sl-daemon build · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

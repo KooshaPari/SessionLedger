@@ -801,11 +801,13 @@ pub fn App() -> Element {
                         }
                     }
                 }
-                if let Some(ref err) = corpus_error {
+                if active_tab() == Tab::Bundles {
+                    if let Some(ref err) = corpus_error {
                     div { class: "corpus-error-banner",
                         ErrorState {
-                            message: format!("Corpus load failed ({err}); showing mock sessions."),
+                            message: format!("Corpus load failed ({err}); no sessions are available."),
                         }
+                    }
                     }
                 }
             }

@@ -107,15 +107,19 @@ pub struct SessionContext(pub Vec<Session>);
 /// Resolve the active [`DataSource`].
 ///
 /// Resolution order:
-/// 1. `FORGE_DB` environment variable (path to a Forge SQLite file)
-/// 2. Default: in-memory mock data
+/// 1. `SL_VIEWER_DEMO=1` enables explicit in-memory demo data.
+/// 2. `FORGE_DB` loads a Forge SQLite corpus when the sqlite feature is enabled.
+/// 3. Default: discover native local session stores.
 fn resolve_data_source() -> DataSource {
+    if std::env::var("SL_VIEWER_DEMO").as_deref() == Ok("1") {
+        return DataSource::Mock;
+    }
     #[cfg(feature = "sqlite")]
     if let Ok(path) = std::env::var("FORGE_DB") {
         let p = std::path::PathBuf::from(path);
         return DataSource::ForgeDb(p);
     }
-    DataSource::Mock
+    DataSource::Auto
 }
 
 fn initial_tab_for_viewer() -> Tab {
@@ -181,8 +185,8 @@ pub fn App() -> Element {
     let (sessions, corpus_error) = match load_sessions(&source) {
         Ok(s) => (s, None),
         Err(e) => {
-            eprintln!("[sl-viewer] failed to load corpus ({e}); falling back to mock data");
-            (crate::mock_data::sample_sessions(), Some(e))
+            eprintln!("[sl-viewer] failed to load corpus: {e}");
+            (Vec::new(), Some(e))
         }
     };
     use_context_provider(|| SessionContext(sessions));

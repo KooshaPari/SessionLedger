@@ -14,8 +14,10 @@ use crate::mock_data::sample_sessions;
 /// Source configuration for the viewer's session list.
 #[derive(Debug, Clone, Default)]
 pub enum DataSource {
-    /// In-memory mock data (default, no SQLite required).
+    /// Discover native session stores on the local device.
     #[default]
+    Auto,
+    /// In-memory mock data (explicit demo mode only).
     Mock,
     /// Load from a Forge SQLite database at the given path.
     #[cfg(feature = "sqlite")]
@@ -37,9 +39,39 @@ pub enum DataSource {
 pub fn load_sessions(source: &DataSource) -> Result<Vec<Session>, String> {
     match source {
         DataSource::Mock => Ok(sample_sessions()),
+        DataSource::Auto => load_discovered_sessions(),
         #[cfg(feature = "sqlite")]
         DataSource::ForgeDb(path) => load_from_sqlite(path),
     }
+}
+
+fn load_discovered_sessions() -> Result<Vec<Session>, String> {
+    let home = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .ok_or_else(|| "HOME is not set; cannot discover local sessions".to_owned())?;
+    let root = home.join(".codex").join("sessions");
+    if !root.exists() {
+        return Err(format!("Codex session store not found at {}", root.display()));
+    }
+    let source = session_ledger::CodexDir::new(&root);
+    let mut sessions = Vec::new();
+    for id in source.list().map_err(|e| format!("discover Codex sessions: {e}"))? {
+        match source.load(&id) {
+            Ok(session) if !session.messages.is_empty() => sessions.push(session),
+            Ok(_) => {}
+            Err(error) => eprintln!("[sl-viewer] skipping {id}: {error}"),
+        }
+    }
+    sessions.sort_by_key(|session| {
+        session
+            .messages
+            .iter()
+            .filter_map(|message| message.ts_ms)
+            .max()
+            .unwrap_or_default()
+    });
+    sessions.reverse();
+    Ok(sessions)
 }
 
 /// Open a Forge SQLite DB at `path` and ingest all conversations.
@@ -79,6 +111,14 @@ mod tests {
     fn mock_source_returns_non_empty_sessions() {
         let sessions = load_sessions(&DataSource::Mock).expect("mock load");
         assert!(!sessions.is_empty(), "mock data must contain at least one session");
+    }
+
+    #[test]
+    fn auto_source_missing_store_is_an_explicit_error() {
+        let root = std::env::var_os("HOME").map(std::path::PathBuf::from).unwrap_or_default();
+        if !root.join(".codex/sessions").exists() {
+            assert!(load_sessions(&DataSource::Auto).is_err());
+        }
     }
 
     #[test]

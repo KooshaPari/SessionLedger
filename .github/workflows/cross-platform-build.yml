@@ -22,6 +22,7 @@ jobs:
       - name: install Dioxus CLI
         run: cargo install dioxus-cli --locked
       - name: bundle sl-viewer
+        working-directory: crates/sl-viewer
         run: dx bundle --platform macos --release --debug-symbols false
       - name: verify app bundle
         run: |

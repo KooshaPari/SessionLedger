@@ -29,7 +29,8 @@ tempfile = "3"
 
 [features]
 default = ["desktop"]
-desktop = ["dioxus/desktop", "dep:reqwest", "dep:tokio", "dep:tokio-util", "dep:futures-util", "dep:chrono"]
+desktop = ["dioxus/desktop", "dep:reqwest", "dep:tokio", "dep:tokio-util", "dep:futures-util", "dep:chrono", "compressed-sessions"]
+compressed-sessions = ["dep:zstd", "session-ledger/compress"]
 web = ["dioxus/web", "dep:reqwest", "dep:futures-util", "dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
 # Enable loading real Forge SQLite sessions in the viewer.
 # Requires: ZSTD_SYS_USE_PKG_CONFIG=1 (links against system libzstd).

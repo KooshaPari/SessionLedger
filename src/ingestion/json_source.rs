@@ -103,14 +103,53 @@ fn collect_transcripts(directory: &Path, paths: &mut Vec<PathBuf>) -> Result<(),
         let path = entry.path();
         if path.is_dir() {
             collect_transcripts(&path, paths)?;
-        } else if matches!(
-            path.extension().and_then(|extension| extension.to_str()),
-            Some("json" | "jsonl")
-        ) {
+        } else if is_transcript(&path) {
             paths.push(path);
         }
     }
     Ok(())
+}
+
+fn is_transcript(path: &Path) -> bool {
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some("json" | "jsonl") => true,
+        Some("zst") => path
+            .file_stem()
+            .and_then(|stem| Path::new(stem).extension())
+            .is_some_and(|extension| extension == "jsonl"),
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod transcript_tests {
+    use super::{is_transcript, parse_file};
+    use crate::domain::session::Corpus;
+
+    #[test]
+    fn accepts_plain_and_compressed_jsonl() {
+        assert!(is_transcript(std::path::Path::new("session.jsonl")));
+        assert!(is_transcript(std::path::Path::new("session.jsonl.zst")));
+        assert!(!is_transcript(std::path::Path::new("session.txt.zst")));
+    }
+
+    #[cfg(feature = "compress")]
+    #[test]
+    fn parses_compressed_jsonl_transcript() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("session.jsonl.zst");
+        let content = format!(
+            "{}\n{}\n",
+            serde_json::json!({"type":"session_meta","payload":{"id":"compressed-1"}}),
+            serde_json::json!({"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"hello compressed"}]}})
+        );
+        let compressed = zstd::stream::encode_all(content.as_bytes(), 3).expect("compress");
+        std::fs::write(&path, compressed).expect("write transcript");
+        let (session, report) = parse_file(&path, "fallback", Corpus::Codex).expect("parse");
+        assert_eq!(session.id, "compressed-1");
+        assert_eq!(session.messages[0].content, "hello compressed");
+        assert_eq!(report.ingested, 1);
+    }
 }
 
 fn parse_file(
@@ -128,7 +167,18 @@ fn parse_file(
             .map_err(|error| PortError::Backend(format!("parse {}: {error}", path.display())))?;
         apply_value(&value, &mut session, &mut report);
     } else {
-        for (index, line) in BufReader::new(file).lines().enumerate() {
+        #[cfg(feature = "compress")]
+        let lines: Box<dyn BufRead> =
+            if path.extension().and_then(|extension| extension.to_str()) == Some("zst") {
+                Box::new(BufReader::new(zstd::stream::read::Decoder::new(file).map_err(
+                    |error| PortError::Backend(format!("decompress {}: {error}", path.display())),
+                )?))
+            } else {
+                Box::new(BufReader::new(file))
+            };
+        #[cfg(not(feature = "compress"))]
+        let lines: Box<dyn BufRead> = Box::new(BufReader::new(file));
+        for (index, line) in lines.lines().enumerate() {
             let line_number = index + 1;
             let line = line.map_err(|error| {
                 PortError::Backend(format!("read {} line {line_number}: {error}", path.display()))

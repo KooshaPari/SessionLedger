@@ -512,6 +512,22 @@ fn init_tracing() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
 
     let filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("sl_daemon=info"));
+    match otel::LangfuseConfig::from_env() {
+        Ok(Some(config)) => {
+            #[cfg(feature = "json-logs")]
+            let json_logs = json_logs_requested();
+            #[cfg(not(feature = "json-logs"))]
+            let json_logs = false;
+            match otel::init_langfuse(filter.clone(), &config, json_logs) {
+                Ok(provider) => return Some(provider),
+                Err(error) => eprintln!("warning: failed to initialize Langfuse OTLP export: {error}; continuing with local logs"),
+            }
+        }
+        Ok(None) => {}
+        Err(error) => eprintln!(
+            "warning: invalid Langfuse configuration: {error}; continuing with local logs"
+        ),
+    }
     let endpoint = std::env::var("SL_OTLP_ENDPOINT")
         .ok()
         .filter(|value| !value.trim().is_empty())

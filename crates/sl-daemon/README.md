@@ -52,6 +52,25 @@ See [`docs/ops/jemalloc.md`](../../docs/ops/jemalloc.md) and
 ```bash
 SL_WATCH_DIR=~/.forge/sessions SL_OUT_DIR=./okf-out SL_HTTP_BIND=127.0.0.1:8080 \
   process-compose -f crates/sl-daemon/process-compose.yaml up
+
+### Optional Langfuse-compatible tracing
+
+SessionLedger remains local-first. To opt into exporting operational OpenTelemetry
+spans over OTLP/HTTP, set the following environment variables before starting the
+daemon:
+
+```sh
+export SL_LANGFUSE_ENABLED=1
+export SL_LANGFUSE_OTLP_ENDPOINT=https://cloud.langfuse.com/api/public/otel/v1/traces
+export SL_LANGFUSE_PUBLIC_KEY=pk-lf-...
+export SL_LANGFUSE_SECRET_KEY=sk-lf-...
+```
+
+Only route, operation, outcome, duration, and correlation metadata are exported.
+Session prompts, responses, file contents, paths, and credentials are excluded.
+The exporter is fail-open: invalid configuration or a remote outage leaves local
+ingestion and replay running and emits a warning. Keep keys in the environment or
+your secret manager; they are never logged.
 ```
 
 ### 2. Apple `container` (default OCI runtime — OSS, per-container VM)

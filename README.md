@@ -60,6 +60,10 @@ cargo run -p sl-viewer
 | Endpoint | Description |
 |----------|-------------|
 | GET /healthz | Liveness |
+
+Optional Langfuse-compatible OTLP tracing is disabled by default. See
+`crates/sl-daemon/README.md` for the opt-in environment contract and privacy
+boundaries.
 | GET /api/bundles | List bundles |
 | GET /api/search | Filter bundles |
 | GET /api/metrics | Session statistics |

@@ -13,6 +13,7 @@ notify = { version = "8", default-features = false, features = ["macos_fsevent"]
 clap = { version = "4", features = ["derive"] }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
+base64 = "0.22"
 thiserror = "2"
 flate2 = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
@@ -32,7 +33,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 opentelemetry = { version = "0.32.0", default-features = false, features = ["trace", "metrics"], optional = true }
 opentelemetry_sdk = { version = "0.32.1", default-features = false, features = ["trace", "metrics"], optional = true }
 tracing-opentelemetry = { version = "0.33.0", default-features = false, optional = true }
-opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["trace", "metrics", "grpc-tonic"], optional = true }
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["trace", "metrics", "grpc-tonic", "http-proto", "reqwest-rustls"], optional = true }
 clap_complete = "4.6.7"
 rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 
@@ -77,4 +78,3 @@ otel-metrics = [
 # Soft optional jemalloc global allocator (Unix). Default builds stay on the
 # system allocator — Windows-safe / unchanged. Enable: --features jemalloc
 jemalloc = ["dep:tikv-jemallocator"]
-

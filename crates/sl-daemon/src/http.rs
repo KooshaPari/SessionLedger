@@ -1398,7 +1398,11 @@ mod tests {
         let body = response.text().await.expect("read replay SSE");
         assert!(body.contains("event: entity"), "replay must emit entity events: {body}");
         assert!(body.contains("event: done"), "replay must emit done sentinel: {body}");
-        assert!(body.contains("e2e-local-session"), "replay should identify source session");
+        assert_eq!(
+            body.matches("event: entity").count(),
+            document.entities.len(),
+            "replay must emit every exported graph entity"
+        );
         server.abort();
     }
 

@@ -54,6 +54,8 @@ proptest = "1.11.0"
 stats_alloc = "0.1.10"
 # Optional dhat heap profiler for the L8 alloc-profile smoke (tests/alloc_profile_dhat.rs).
 dhat = "0.3.3"
+# Live tokio mpsc/broadcast/SSE daemon-graph ports (tests/daemon_graph_tokio.rs; C00 L7).
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros", "sync", "time"] }
 
 # Loom permutation checker — only resolved when RUSTFLAGS='--cfg loom'
 # (soft nightly / PR job in .github/workflows/loom-smoke.yml). Keeps default

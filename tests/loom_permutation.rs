@@ -2,7 +2,7 @@
 //!
 //! Local: `pwsh ./scripts/loom-permutation-check.ps1 -SelfCheck`
 //! Does not build or run the loom crate — safe under default Windows `cargo test`.
-//! Full tokio broadcast / daemon graph ports remain unpaid.
+//! Live tokio ports: `docs/ops/daemon-graph-hard.md`.
 
 use std::path::PathBuf;
 use std::process::Command;

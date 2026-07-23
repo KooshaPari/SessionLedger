@@ -91,8 +91,12 @@ Test-DocContains -Doc $doc -Needle "Loom permutation suite CI | **done**" `
     -Label "permutation suite CI gate marked done"
 Test-DocContains -Doc $doc -Needle "loom-permutation.yml" `
     -Label "loom-permutation workflow reference"
+Test-DocContains -Doc $doc -Needle "Live tokio mpsc/broadcast/SSE daemon graph ports | **done**" `
+    -Label "live tokio daemon graph ports marked done"
 Test-DocContains -Doc $doc -Needle "Full tokio broadcast / daemon graph under loom | **unpaid**" `
     -Label "full daemon graph unpaid gate"
+Test-DocContains -Doc $doc -Needle "daemon-graph-hard.md" `
+    -Label "daemon-graph-hard cross-link"
 Test-DocContains -Doc $doc -Needle "Full loom / shuttle permutation checkers | **unpaid**" `
     -Label "shared loom/shuttle unpaid gate retained"
 Test-DocContains -Doc $doc -Needle "bounded_try_send_respects_capacity" `

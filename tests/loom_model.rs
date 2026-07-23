@@ -9,8 +9,9 @@
 //! epoch fan-out (single and multi-bump), tokio-shaped mpsc watcher→consumer,
 //! mpsc drain → broadcast publish, triple SSE subscriber fan-out, full
 //! watcher→mpsc→broadcast→SSE pipeline permutations, and cancel-guarded epoch
-//! publication. Full live `sl-daemon` tokio broadcast / daemon graph ports remain
-//! unpaid.
+//! publication. Live tokio ports live in `tests/daemon_graph_tokio.rs`
+//! ([`docs/ops/daemon-graph-hard.md`]); process-level HTTP SSE soak under loom
+//! remains unpaid.
 
 #[cfg(not(loom))]
 #[test]

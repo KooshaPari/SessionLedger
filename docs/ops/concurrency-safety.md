@@ -118,8 +118,9 @@ conservation (`daemon_graph_pipeline_conserves_under_cancel`), and tokio-shaped
 mpsc/broadcast/SSE graph ports (`daemon_mpsc_watcher_to_consumer_conserve`,
 `daemon_mpsc_drain_triggers_broadcast_publish`, `daemon_broadcast_sse_triple_fanout`,
 `daemon_graph_mpsc_broadcast_sse_pipeline`, `daemon_graph_shutdown_stops_mpsc_enqueue`).
-These are conservation / capacity models — not a full port of
-`crates/sl-daemon` tokio `broadcast` / `mpsc` graph.
+These are conservation / capacity models — loom-shaped ports of the
+`crates/sl-daemon` tokio `broadcast` / `mpsc` graph. Live tokio ports (real
+`tokio::sync`) live in [`daemon-graph-hard.md`](daemon-graph-hard.md).
 
 | Gate | Status | Evidence |
 |------|--------|----------|
@@ -127,8 +128,9 @@ These are conservation / capacity models — not a full port of
 | Loom permutation suite CI | **done** | `.github/workflows/loom-permutation.yml` (blocking on PR) |
 | Loom daemon-graph broadcast/SSE epoch permutations | **done** | `broadcast_epoch_*`, `watcher_drain_bumps_sse_epoch_per_item`, `daemon_graph_pipeline_conserves_under_cancel` in `tests/loom_model.rs` |
 | Loom tokio-shaped mpsc/broadcast/SSE daemon graph permutations | **done** | `daemon_mpsc_*`, `daemon_broadcast_sse_triple_fanout`, `daemon_graph_mpsc_broadcast_sse_pipeline`, `daemon_graph_shutdown_stops_mpsc_enqueue` in `tests/loom_model.rs` |
-| Full tokio broadcast / daemon graph under loom | **unpaid** | Real `sl-daemon` watcher/SSE graph still outside loom permutation suite |
-| Full loom / shuttle permutation checkers | **unpaid** | Shuttle crate + live daemon ports still outside soft smoke |
+| Live tokio mpsc/broadcast/SSE daemon graph ports | **done** | [`daemon-graph-hard.md`](daemon-graph-hard.md); `tests/daemon_graph_tokio.rs`; blocking `.github/workflows/daemon-graph-hard.yml` |
+| Full tokio broadcast / daemon graph under loom | **unpaid** | Process-level HTTP SSE soak under loom still outside loom permutation suite |
+| Full loom / shuttle permutation checkers | **unpaid** | Shuttle crate still outside soft smoke |
 
 Soft `loom-smoke.yml` remains `continue-on-error` for nightly signal; blocking
 permutation evidence lives in `loom-permutation.yml`.

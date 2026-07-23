@@ -14,6 +14,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Daemon-graph hard live tokio ports (C00 L7): `docs/ops/daemon-graph-hard.md`, `daemon-graph-hard.json`, `tests/daemon_graph_tokio.rs` (mpsc→broadcast→SSE conservation, Lagged recovery, shutdown stops enqueue), `scripts/daemon-graph-hard-check.ps1 -SelfCheck`, blocking `daemon-graph-hard.yml`, `tests/daemon_graph_hard.rs`.
+
 - sl-viewer CLI help (C01/C09): expanded `--help` / `--version` in `cli_help.rs`, `docs/ops/sl-viewer-help.md`, `sl-viewer-help.json`, `scripts/sl-viewer-help-check.ps1 -SelfCheck`, blocking `sl-viewer-help-hard.yml`, `tests/sl_viewer_help.rs`.
 
 - Default-on platform allocator policy (C00 L8): `docs/ops/jemalloc-default-on.md`, `jemalloc-default-on.json`, `scripts/jemalloc-default-on-check.ps1 -SelfCheck`, blocking `jemalloc-default-on-hard.yml`, `tests/jemalloc_default_on.rs` (Unix jemalloc + Windows mimalloc default features).

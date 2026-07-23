@@ -232,8 +232,10 @@ mod tests {
         std::fs::write(&native, b"fixture").expect("native db");
 
         let explicit = std::ffi::OsString::from("/custom/forge.db");
-        assert_eq!(resolve_forge_db_path(home.path(), Some(explicit)),
-            Some(std::path::PathBuf::from("/custom/forge.db")));
+        assert_eq!(
+            resolve_forge_db_path(home.path(), Some(explicit)),
+            Some(std::path::PathBuf::from("/custom/forge.db"))
+        );
     }
 
     #[cfg(feature = "sqlite")]

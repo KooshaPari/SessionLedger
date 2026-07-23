@@ -12,6 +12,7 @@ pub mod codex;
 pub mod cursor;
 pub mod forge;
 mod json_source;
+pub mod web;
 
 pub use json_source::JsonIngestionReport;
 

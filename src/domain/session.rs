@@ -11,6 +11,9 @@ pub enum Corpus {
     ClaudeCode,
     Cursor,
     FactoryDroid,
+    ChatGptWeb,
+    ClaudeWeb,
+    GeminiWeb,
 }
 
 /// Who authored a message. Distinguishing user vs subagent is load-bearing for
@@ -62,6 +65,9 @@ impl Corpus {
             Self::ClaudeCode => "claude-code",
             Self::Cursor => "cursor",
             Self::FactoryDroid => "factory-droid",
+            Self::ChatGptWeb => "chatgpt-web",
+            Self::ClaudeWeb => "claude-web",
+            Self::GeminiWeb => "gemini-web",
         }
     }
 }

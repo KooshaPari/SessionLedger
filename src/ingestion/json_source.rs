@@ -259,6 +259,13 @@ fn extract_object(
     let timestamp = timestamp(object).or(inherited_ts);
     let role = string_field(object, &["role"])
         .and_then(map_role)
+        .or_else(|| {
+            object
+                .get("author")
+                .and_then(Value::as_object)
+                .and_then(|author| string_field(author, &["role"]))
+                .and_then(map_role)
+        })
         .or_else(|| record_type.and_then(map_event_type))
         .or(inherited_role);
 
@@ -297,9 +304,19 @@ fn extract_object(
         return;
     }
 
-    for key in ["messages", "conversation", "transcript", "items"] {
+    for key in
+        ["messages", "conversation", "transcript", "items", "mapping", "nodes", "chat_messages"]
+    {
         if let Some(nested) = object.get(key) {
             extract_messages(nested, role, timestamp, messages);
+        }
+    }
+    // ChatGPT exports use opaque mapping IDs rather than a JSON array.
+    for key in ["mapping", "nodes"] {
+        if let Some(Value::Object(records)) = object.get(key) {
+            for record in records.values() {
+                extract_messages(record, role, timestamp, messages);
+            }
         }
     }
 }
@@ -314,6 +331,7 @@ fn text_content(value: &Value) -> Option<String> {
         Value::Object(object) => object
             .get("text")
             .or_else(|| object.get("content"))
+            .or_else(|| object.get("parts"))
             .or_else(|| object.get("value"))
             .and_then(text_content),
         _ => None,

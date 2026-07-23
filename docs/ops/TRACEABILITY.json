@@ -1,6 +1,6 @@
 {
   "schema": "sessionledger.traceability/v1",
-  "updated": "2026-07-21",
+  "updated": "2026-07-23",
   "status_vocabulary": [
     "done",
     "partial",
@@ -12,8 +12,9 @@
     "score": "396/402",
     "pct": 98,
     "grade": "A",
-    "commit": "d5f999f",
-    "wave": "Wave-42"
+    "commit": "41829e8",
+    "wave": "Wave-43",
+    "delta_vs_w42": "0 (conservative hold; 5 WAVE43 impl lanes deepened residual evidence)"
   },
   "fr": [
     {

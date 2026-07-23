@@ -24,7 +24,7 @@ pub const DEFAULT_BASE_URL: &str = "http://127.0.0.1:8080";
 pub fn daemon_down_message(base_url: &str) -> String {
     format!(
         "daemon not running at {base_url} — start with: \
-         sl-daemon serve --watch <sessions-dir> --out <okf-out-dir>"
+         sl-daemon serve --out <okf-out-dir> (auto-discovers local session roots)"
     )
 }
 

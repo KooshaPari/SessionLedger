@@ -36,15 +36,27 @@ folder without elevating privileges:
 
 The script validates the bundle executable, preserves an existing install as
 `SessionLedger.app.previous`, and never creates a background service with an
-implicit watch root. To install a locally-built daemon as well, opt in:
+implicit service. To install a locally-built daemon as well, opt in:
 
 ```sh
 INSTALL_DAEMON=1 ./packaging/macos/install-local.sh
 ```
 
-Start the daemon explicitly with the session root you intend to ingest; see
-the command printed by the installer. This keeps local session data and HTTP
-exposure operator-controlled.
+For unattended local ingestion, explicitly opt in to a per-user LaunchAgent.
+It uses the daemon's native auto-discovery (no `--watch` path is stored),
+writes bundles/logs below `~/.local/share/sessionledger`, and rejects
+non-loopback HTTP binds:
+
+```sh
+START=1 ./packaging/macos/install-launch-agent.sh
+sl-daemon status
+launchctl print "gui/$UID/com.sessionledger.daemon"
+```
+
+Stop/remove it with `launchctl bootout "gui/$UID/com.sessionledger.daemon"`
+and remove `~/Library/LaunchAgents/com.sessionledger.daemon.plist`. This is a
+separate explicit action so installing the app never starts a process or
+begins reading local transcripts unexpectedly.
 
 Release CI builds at least the `aarch64-apple-darwin` PKG (and `x86_64` when
 the matrix target runs) and attaches them as Release assets.

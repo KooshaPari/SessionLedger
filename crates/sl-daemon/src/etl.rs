@@ -11,7 +11,8 @@ use std::path::{Path, PathBuf};
 
 use session_ledger::export::okf::export_to_okf;
 use session_ledger::ports::MemoryStore;
-use session_ledger::{compile_and_store, process_session, read_jsonl_sessions};
+use session_ledger::{compile_and_store, process_session, read_jsonl_sessions, CodexDir};
+use session_ledger::ports::CorpusSource;
 
 /// Errors surfaced while transforming one JSONL file into OKF documents.
 #[derive(Debug, thiserror::Error)]
@@ -51,7 +52,7 @@ pub fn transform_file(
     out_dir: &Path,
     memory_store: Option<&dyn MemoryStore>,
 ) -> Result<Vec<PathBuf>, EtlError> {
-    let sessions = read_jsonl_sessions(jsonl_path)
+    let sessions = read_sessions(jsonl_path)
         .map_err(|source| EtlError::Ingest { path: jsonl_path.to_path_buf(), source })?;
 
     std::fs::create_dir_all(out_dir)
@@ -73,6 +74,18 @@ pub fn transform_file(
         written.push(out_path);
     }
     Ok(written)
+}
+
+fn read_sessions(path: &Path) -> Result<Vec<session_ledger::Session>, session_ledger::IngestionError> {
+    let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+    if !name.ends_with(".jsonl.zst") {
+        return read_jsonl_sessions(path);
+    }
+    let source = CodexDir::new(path);
+    let id = source.list().map_err(|error| std::io::Error::other(error.to_string()))?.into_iter().next()
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "compressed transcript is empty"))?;
+    let session = source.load(&id).map_err(|error| std::io::Error::other(error.to_string()))?;
+    Ok(vec![session])
 }
 
 /// Make a session id safe to use as a filename (path separators → `_`).
@@ -134,6 +147,19 @@ mod tests {
         let written = transform_file(&jsonl, &out, None).expect("transform");
         assert_eq!(written.len(), 1);
         assert!(out.is_dir(), "out dir auto-created");
+    }
+
+    #[test]
+    fn transform_file_reads_compressed_codex_transcript() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("codex.jsonl.zst");
+        let input = format!("{}\n{}\n", serde_json::json!({"type":"session_meta","payload":{"id":"zst-session"}}), serde_json::json!({"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"ship compressed"}]}}));
+        let compressed = zstd::stream::encode_all(input.as_bytes(), 3).expect("compress");
+        std::fs::write(&path, compressed).expect("write compressed transcript");
+        let written = transform_file(&path, &tmp.path().join("out"), None).expect("transform");
+        assert_eq!(written.len(), 1);
+        let doc: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&written[0]).unwrap()).unwrap();
+        assert_eq!(doc["source_id"], "zst-session");
     }
 
     #[test]

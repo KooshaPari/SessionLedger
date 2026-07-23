@@ -56,21 +56,57 @@ mod tests {
     use super::*;
     use crate::domain::session::Role;
 
+    fn export_fixture() -> tempfile::NamedTempFile {
+        let file = tempfile::Builder::new().suffix(".json").tempfile().unwrap();
+        std::fs::write(
+            file.path(),
+            serde_json::json!({
+                "conversation_id": "web-1",
+                "title": "Export",
+                "mapping": {
+                    "a": {"message": {"author": {"role": "user"}, "content": {"parts": ["hello"]}}},
+                    "b": {"message": {"author": {"role": "assistant"}, "content": {"parts": ["hi"]}}}
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+        file
+    }
+
     #[test]
     fn chatgpt_export_mapping_is_normalized() {
-        let file = tempfile::Builder::new().suffix(".json").tempfile().unwrap();
-        std::fs::write(file.path(), serde_json::json!({
-            "conversation_id": "web-1", "title": "Export",
-            "mapping": {
-                "a": {"message": {"author": {"role": "user"}, "content": {"parts": ["hello"]}}},
-                "b": {"message": {"author": {"role": "assistant"}, "content": {"parts": ["hi"]}}}
-            }
-        }).to_string()).unwrap();
+        let file = export_fixture();
         let source = ChatGptExport::new(file.path());
         let id = source.list().unwrap().remove(0);
         let session = source.load(&id).unwrap();
         assert_eq!(session.corpus, Corpus::ChatGptWeb);
         assert_eq!(session.messages.len(), 2);
         assert_eq!(session.messages[0].role, Role::User);
+    }
+
+    #[test]
+    fn claude_export_loads_report_and_corpus() {
+        let file = export_fixture();
+        let source = ClaudeExport::new(file.path());
+        let id = source.list().unwrap().remove(0);
+        let (session, report) = source.load_with_report(&id).unwrap();
+        assert_eq!(session.corpus, Corpus::ClaudeWeb);
+        assert_eq!(session.messages.len(), 2);
+        assert_eq!(report.ingested, 1);
+        assert!(report.is_clean());
+    }
+
+    #[test]
+    fn gemini_export_loads_and_rejects_unknown_id() {
+        let file = export_fixture();
+        let source = GeminiExport::new(file.path());
+        let id = source.list().unwrap().remove(0);
+        let session = source.load(&id).unwrap();
+        assert_eq!(session.corpus, Corpus::GeminiWeb);
+        assert!(matches!(
+            source.load("missing.json"),
+            Err(PortError::NotFound(id)) if id == "missing.json"
+        ));
     }
 }

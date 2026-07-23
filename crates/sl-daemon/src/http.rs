@@ -1347,6 +1347,7 @@ mod tests {
     #[tokio::test]
     async fn local_jsonl_distill_okf_replay_sse_round_trip() {
         use session_ledger::domain::session::Corpus;
+        use session_ledger::ports::MemoryStore;
         use session_ledger::{compile_and_store, export_to_okf, Message, Role, Session};
 
         let tmp = tempfile::tempdir().expect("tempdir");

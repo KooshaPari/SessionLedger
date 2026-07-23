@@ -17,7 +17,7 @@ use notify::{Event, EventKind, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-/// Return every `*.jsonl` file directly under `dir`, sorted for determinism.
+/// Return every `*.jsonl` or compressed `*.jsonl.zst` file directly under `dir`.
 ///
 /// Non-recursive by design: session corpora are flat directories of transcript
 /// files. Sorting makes the emitted order stable so tests can assert on it.
@@ -25,12 +25,17 @@ pub fn list_jsonl(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
-        if path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+        if is_transcript(&path) {
             out.push(path);
         }
     }
     out.sort();
     Ok(out)
+}
+
+fn is_transcript(path: &Path) -> bool {
+    let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+    name.ends_with(".jsonl") || name.ends_with(".jsonl.zst")
 }
 
 /// Perform one deterministic sweep, sending each discovered path downstream.
@@ -80,7 +85,7 @@ pub fn spawn_fs_watcher(
             return;
         }
         for path in event.paths {
-            if path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+            if is_transcript(&path) {
                 // `blocking_send` is correct here: the notify callback runs on
                 // its own OS thread, not inside the tokio runtime.
                 if tx.blocking_send(path).is_err() {

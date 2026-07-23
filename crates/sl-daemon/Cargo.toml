@@ -16,6 +16,7 @@ serde = { version = "1", features = ["derive"] }
 base64 = "0.22"
 thiserror = "2"
 flate2 = "1"
+zstd = { version = "0.13", optional = true }
 chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
 # HTTP server (axum-based SSE bridge)
 axum = { version = "0.8", features = ["macros"] }
@@ -59,7 +60,8 @@ unsafe_code = "forbid"
 [workspace]
 
 [features]
-default = []
+default = ["compress"]
+compress = ["session-ledger/compress", "dep:zstd"]
 sqlite = ["session-ledger/sqlite", "dep:rusqlite"]
 json-logs = ["tracing-subscriber/json"]
 otel = [

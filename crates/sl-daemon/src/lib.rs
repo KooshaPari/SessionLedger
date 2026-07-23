@@ -78,7 +78,9 @@ pub enum DaemonError {
 
 /// Determine whether a path has a `.jsonl` extension.
 pub(crate) fn is_jsonl(path: &Path) -> bool {
-    path.extension().is_some_and(|e| e == "jsonl")
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.ends_with(".jsonl") || name.ends_with(".jsonl.zst"))
 }
 
 #[cfg(test)]
@@ -88,6 +90,7 @@ mod tests {
     #[test]
     fn is_jsonl_accepts_jsonl_extension() {
         assert!(is_jsonl(Path::new("session.jsonl")));
+        assert!(is_jsonl(Path::new("session.jsonl.zst")));
     }
 
     #[test]

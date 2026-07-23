@@ -3,7 +3,7 @@
 //! Desktop  : `cargo run -p sl-viewer`             (default feature)
 //! Web WASM : `dx serve --platform web -p sl-viewer`  (requires `web` feature)
 
-use sl_viewer::App;
+use sl_viewer::{cli_help, App};
 
 /// Human-readable window title — surfaced via the OS window chrome on
 /// desktop and the browser tab label on web (via the `[web.title]` field
@@ -17,11 +17,11 @@ fn main() {
     if let Some(argument) = std::env::args().nth(1) {
         match argument.as_str() {
             "--version" | "-V" => {
-                println!("sl-viewer {}", env!("CARGO_PKG_VERSION"));
+                println!("{}", cli_help::version_text());
                 return;
             }
             "--help" | "-h" => {
-                println!("SessionLedger desktop viewer\n\nUsage: sl-viewer [--help] [--version]");
+                print!("{}", cli_help::help_text());
                 return;
             }
             _ => {}

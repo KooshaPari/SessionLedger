@@ -19,10 +19,16 @@ macro_rules! export_source {
             source: JsonCorpusSource,
         }
         impl $name {
+            /// Create an export adapter rooted at a file or directory.
             #[must_use]
             pub fn new(path: impl Into<PathBuf>) -> Self {
                 Self { source: JsonCorpusSource::new(path, $corpus) }
             }
+            /// Load one normalized session and its ingestion report.
+            ///
+            /// # Errors
+            ///
+            /// Returns a [`PortError`] when the source cannot be opened or parsed.
             pub fn load_with_report(
                 &self,
                 id: &str,
@@ -41,7 +47,7 @@ macro_rules! export_source {
     };
 }
 
-export_source!(ChatGptExport, Corpus::ChatGptWeb, "ChatGPT data-export JSON files.");
+export_source!(ChatGptExport, Corpus::ChatGptWeb, "`ChatGPT` data-export JSON files.");
 export_source!(ClaudeExport, Corpus::ClaudeWeb, "Claude data-export JSON files.");
 export_source!(GeminiExport, Corpus::GeminiWeb, "Gemini data-export JSON files.");
 

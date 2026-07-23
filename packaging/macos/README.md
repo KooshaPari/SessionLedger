@@ -42,6 +42,10 @@ implicit service. To install a locally-built daemon as well, opt in:
 INSTALL_DAEMON=1 ./packaging/macos/install-local.sh
 ```
 
+The installer prints `sl-daemon serve --out ...`, which enables native
+discovery of supported local session stores. Add `--watch <path>` only when a
+custom transcript root is required.
+
 For unattended local ingestion, explicitly opt in to a per-user LaunchAgent.
 It uses the daemon's native auto-discovery (no `--watch` path is stored),
 writes bundles/logs below `~/.local/share/sessionledger`, and rejects

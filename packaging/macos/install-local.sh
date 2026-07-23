@@ -48,6 +48,7 @@ if [[ "$INSTALL_DAEMON" == "1" ]]; then
   echo "Installed sl-daemon to $DAEMON_DEST"
 fi
 echo
-echo "Start the daemon explicitly with a chosen watch root:"
-echo "  sl-daemon serve --watch \"\$HOME/.codex/sessions\" --out \"\$HOME/.local/share/sessionledger/out\" --http-bind 127.0.0.1:8080"
+echo "Start the daemon with native local-session auto-discovery:"
+echo "  sl-daemon serve --out \"\$HOME/.local/share/sessionledger/out\" --http-bind 127.0.0.1:8080"
+echo "For a custom transcript root, add: --watch \"\$HOME/path/to/sessions\""
 echo "Then open: $APP_DEST"

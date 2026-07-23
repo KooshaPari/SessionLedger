@@ -95,6 +95,9 @@ fn corpus_label(corpus: Corpus) -> &'static str {
         Corpus::ClaudeCode => "claude",
         Corpus::Cursor => "cursor",
         Corpus::FactoryDroid => "droid",
+        Corpus::ChatGptWeb => "chatgpt",
+        Corpus::ClaudeWeb => "claude web",
+        Corpus::GeminiWeb => "gemini",
     }
 }
 

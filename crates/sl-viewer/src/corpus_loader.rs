@@ -8,7 +8,6 @@
 //! without a UI runtime.
 
 use session_ledger::domain::session::Session;
-use session_ledger::ports::CorpusSource;
 
 use crate::mock_data::sample_sessions;
 
@@ -50,24 +49,60 @@ fn load_discovered_sessions() -> Result<Vec<Session>, String> {
     let home = std::env::var_os("HOME")
         .map(std::path::PathBuf::from)
         .ok_or_else(|| "HOME is not set; cannot discover local sessions".to_owned())?;
-    let root = home.join(".codex").join("sessions");
-    if !root.exists() {
-        return Err(format!("Codex session store not found at {}", root.display()));
-    }
-    let source = session_ledger::CodexDir::new(&root);
     let mut sessions = Vec::new();
-    for id in source.list().map_err(|e| format!("discover Codex sessions: {e}"))? {
-        match source.load(&id) {
-            Ok(session) if !session.messages.is_empty() => sessions.push(session),
-            Ok(_) => {}
-            Err(error) => eprintln!("[sl-viewer] skipping {id}: {error}"),
-        }
+    let mut discovered_roots = 0;
+    discovered_roots += load_json_corpus(
+        &home.join(".codex").join("sessions"),
+        |path| session_ledger::CodexDir::new(path.to_path_buf()),
+        &mut sessions,
+    )?;
+    discovered_roots += load_json_corpus(
+        &home.join(".claude").join("projects"),
+        |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
+        &mut sessions,
+    )?;
+    // Cursor stores exported conversation JSON/JSONL under its global data
+    // directory on macOS. Only existing roots are scanned; caches and plans
+    // that do not contain transcript-shaped files are ignored by the adapter.
+    discovered_roots += load_json_corpus(
+        &home.join(".cursor").join("projects"),
+        |path| session_ledger::CursorDir::new(path.to_path_buf()),
+        &mut sessions,
+    )?;
+    if discovered_roots == 0 {
+        return Err(
+            "no supported local session stores found (Codex, Claude Code, or Cursor)".into()
+        );
     }
     sessions.sort_by_key(|session| {
         session.messages.iter().filter_map(|message| message.ts_ms).max().unwrap_or_default()
     });
     sessions.reverse();
     Ok(sessions)
+}
+
+fn load_json_corpus<F, S>(
+    root: &std::path::Path,
+    make_source: F,
+    sessions: &mut Vec<Session>,
+) -> Result<usize, String>
+where
+    F: FnOnce(&std::path::Path) -> S,
+    S: session_ledger::ports::CorpusSource,
+{
+    if !root.is_dir() {
+        return Ok(0);
+    }
+    let source = make_source(root);
+    let ids = source.list().map_err(|e| format!("discover {}: {e}", root.display()))?;
+    for id in ids {
+        match source.load(&id) {
+            Ok(session) if !session.messages.is_empty() => sessions.push(session),
+            Ok(_) => {}
+            Err(error) => eprintln!("[sl-viewer] skipping {}:{}: {error}", root.display(), id),
+        }
+    }
+    Ok(1)
 }
 
 /// Open a Forge SQLite DB at `path` and ingest all conversations.
@@ -112,7 +147,10 @@ mod tests {
     #[test]
     fn auto_source_missing_store_is_an_explicit_error() {
         let root = std::env::var_os("HOME").map(std::path::PathBuf::from).unwrap_or_default();
-        if !root.join(".codex/sessions").exists() {
+        if !root.join(".codex/sessions").exists()
+            && !root.join(".claude/projects").exists()
+            && !root.join(".cursor/projects").exists()
+        {
             assert!(load_sessions(&DataSource::Auto).is_err());
         }
     }
@@ -131,6 +169,35 @@ mod tests {
         for s in &sessions {
             assert!(!s.messages.is_empty(), "mock session {} has no messages", s.id);
         }
+    }
+
+    #[test]
+    fn auto_loader_accepts_claude_projects_root() {
+        let root = tempfile::tempdir().expect("temp root");
+        let project = root.path().join("-Users-demo-repo");
+        std::fs::create_dir_all(&project).expect("project root");
+        std::fs::write(
+            project.join("session.jsonl"),
+            serde_json::json!({
+                "type": "user",
+                "sessionId": "claude-local-1",
+                "message": {"role": "user", "content": "hello"}
+            })
+            .to_string(),
+        )
+        .expect("write transcript");
+
+        let mut sessions = Vec::new();
+        let roots = load_json_corpus(
+            root.path(),
+            |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
+            &mut sessions,
+        )
+        .expect("discover Claude transcripts");
+
+        assert_eq!(roots, 1);
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, "claude-local-1");
     }
 
     // ── SQLite source ─────────────────────────────────────────────────────────

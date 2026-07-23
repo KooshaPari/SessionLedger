@@ -25,5 +25,26 @@ Outputs land under `packaging/dist/`:
 - `SessionLedger.app`
 - `SessionLedger-<version>-<arch>.pkg` when `ARCH_LABEL` is set
 
+## Local install
+
+After building an app bundle, install it into the current Mac's Applications
+folder without elevating privileges:
+
+```sh
+./packaging/macos/install-local.sh
+```
+
+The script validates the bundle executable, preserves an existing install as
+`SessionLedger.app.previous`, and never creates a background service with an
+implicit watch root. To install a locally-built daemon as well, opt in:
+
+```sh
+INSTALL_DAEMON=1 ./packaging/macos/install-local.sh
+```
+
+Start the daemon explicitly with the session root you intend to ingest; see
+the command printed by the installer. This keeps local session data and HTTP
+exposure operator-controlled.
+
 Release CI builds at least the `aarch64-apple-darwin` PKG (and `x86_64` when
 the matrix target runs) and attaches them as Release assets.

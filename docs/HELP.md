@@ -33,6 +33,7 @@ apply. See [`a11y/progressive-disclosure.md`](a11y/progressive-disclosure.md).
 
 ## Related references
 
+- [`docs/ops/sl-viewer-help.md`](ops/sl-viewer-help.md) — `sl-viewer --help` / `--version` and `SL_DAEMON_URL`, `FORGE_DB` env SSOT.
 - [`viewer-hotkeys.md`](viewer-hotkeys.md) — canonical shortcut table and test evidence.
 - [`a11y/progressive-disclosure.md`](a11y/progressive-disclosure.md) — Search advanced-filter disclosure.
 - [`guides/quick-start/QUICKSTART.md`](guides/quick-start/QUICKSTART.md) — first-run stack setup.

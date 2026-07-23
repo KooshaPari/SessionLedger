@@ -490,9 +490,31 @@ pub async fn serve(
     state: AppState,
     shutdown: impl std::future::Future<Output = ()> + Send + 'static,
 ) -> std::io::Result<()> {
+    let listener = bind(addr).await?;
+    serve_listener(listener, state, shutdown).await
+}
+
+/// Bind the daemon listener before spawning the serving task.
+///
+/// Keeping binding separate lets the CLI fail fast on an occupied/unusable
+/// port instead of logging a misleading "listening" message while the
+/// background HTTP task has already exited.
+pub async fn bind(addr: SocketAddr) -> std::io::Result<tokio::net::TcpListener> {
+    tokio::net::TcpListener::bind(addr).await
+}
+
+/// Serve an already-bound listener until shutdown resolves.
+pub async fn serve_listener(
+    listener: tokio::net::TcpListener,
+    state: AppState,
+    shutdown: impl std::future::Future<Output = ()> + Send + 'static,
+) -> std::io::Result<()> {
     let app = router(state);
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    info!(%addr, "HTTP server bound");
+    if let Ok(addr) = listener.local_addr() {
+        info!(%addr, "HTTP server bound");
+    } else {
+        info!("HTTP server bound");
+    }
     axum::serve(listener, app).with_graceful_shutdown(shutdown).await.map_err(std::io::Error::other)
 }
 

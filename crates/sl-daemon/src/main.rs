@@ -774,9 +774,15 @@ async fn run_serve(
             #[cfg(feature = "sqlite")]
             memory_store: memory_store.clone(),
         };
+        // Bind before spawning so an occupied port is a startup error rather
+        // than a silently dead background task (which otherwise looks like a
+        // viewer-side "daemon unreachable" condition).
+        let listener = http::bind(addr).await.map_err(|error| {
+            format!("failed to bind HTTP server at {addr}: {error}")
+        })?;
         let shutdown_for_http = shutdown.clone();
         let handle = tokio::spawn(async move {
-            if let Err(e) = http::serve(addr, state, async move {
+            if let Err(e) = http::serve_listener(listener, state, async move {
                 shutdown_for_http.cancelled().await;
             })
             .await

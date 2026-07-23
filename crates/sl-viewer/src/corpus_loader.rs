@@ -69,9 +69,14 @@ fn load_discovered_sessions() -> Result<Vec<Session>, String> {
         |path| session_ledger::CursorDir::new(path.to_path_buf()),
         &mut sessions,
     )?;
+    #[cfg(feature = "sqlite")]
+    if let Some(path) = resolve_forge_db_path(&home, std::env::var_os("FORGE_DB")) {
+        sessions.extend(load_from_sqlite(&path)?);
+        discovered_roots += 1;
+    }
     if discovered_roots == 0 {
         return Err(
-            "no supported local session stores found (Codex, Claude Code, or Cursor)".into()
+            "no supported local session stores found (Codex, Claude Code, Cursor, or Forge)".into(),
         );
     }
     sessions.sort_by_key(|session| {
@@ -79,6 +84,24 @@ fn load_discovered_sessions() -> Result<Vec<Session>, String> {
     });
     sessions.reverse();
     Ok(sessions)
+}
+
+/// Resolve the Forge database used by automatic discovery.
+///
+/// An explicit `FORGE_DB` value always wins, including when it points at a
+/// missing file (the subsequent open produces a useful error).  Without the
+/// override, the native Forge location is used when present.
+#[cfg(feature = "sqlite")]
+fn resolve_forge_db_path(
+    home: &std::path::Path,
+    explicit: Option<std::ffi::OsString>,
+) -> Option<std::path::PathBuf> {
+    if let Some(path) = explicit {
+        let path = std::path::PathBuf::from(path);
+        return (!path.as_os_str().is_empty()).then_some(path);
+    }
+    let native = home.join(".forge").join(".forge.db");
+    native.is_file().then_some(native)
 }
 
 fn load_json_corpus<F, S>(
@@ -198,6 +221,37 @@ mod tests {
         assert_eq!(roots, 1);
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].id, "claude-local-1");
+    }
+
+    #[cfg(feature = "sqlite")]
+    #[test]
+    fn forge_auto_resolution_prefers_explicit_override() {
+        let home = tempfile::tempdir().expect("home");
+        let native = home.path().join(".forge/.forge.db");
+        std::fs::create_dir_all(native.parent().expect("parent")).expect("mkdir");
+        std::fs::write(&native, b"fixture").expect("native db");
+
+        let explicit = std::ffi::OsString::from("/custom/forge.db");
+        assert_eq!(resolve_forge_db_path(home.path(), Some(explicit)),
+            Some(std::path::PathBuf::from("/custom/forge.db")));
+    }
+
+    #[cfg(feature = "sqlite")]
+    #[test]
+    fn forge_auto_resolution_discovers_native_database() {
+        let home = tempfile::tempdir().expect("home");
+        let native = home.path().join(".forge/.forge.db");
+        std::fs::create_dir_all(native.parent().expect("parent")).expect("mkdir");
+        std::fs::write(&native, b"fixture").expect("native db");
+
+        assert_eq!(resolve_forge_db_path(home.path(), None), Some(native));
+    }
+
+    #[cfg(feature = "sqlite")]
+    #[test]
+    fn forge_auto_resolution_ignores_absent_native_database() {
+        let home = tempfile::tempdir().expect("home");
+        assert_eq!(resolve_forge_db_path(home.path(), None), None);
     }
 
     // ── SQLite source ─────────────────────────────────────────────────────────

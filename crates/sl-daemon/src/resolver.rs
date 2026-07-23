@@ -5,7 +5,9 @@
 //! facts (PID, tty, argv, cwd) without giving the daemon authority to inspect or
 //! control processes.
 
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
+use std::{fs::OpenOptions, io::{BufRead, BufReader, Write}};
 
 use serde::{Deserialize, Serialize};
 
@@ -64,16 +66,39 @@ pub struct ResolveResponse {
     pub candidates: Vec<SessionCandidate>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Resolver {
     sessions: Arc<RwLock<Vec<AgentSession>>>,
+    persistence: Option<Arc<PathBuf>>,
 }
 
 impl Resolver {
+    pub fn open(path: impl AsRef<Path>) -> std::io::Result<Self> {
+        let path = path.as_ref().to_owned();
+        let mut sessions: Vec<AgentSession> = Vec::new();
+        if let Ok(file) = std::fs::File::open(&path) {
+            for line in BufReader::new(file).lines().map_while(Result::ok) {
+                if let Ok(session) = serde_json::from_str::<AgentSession>(&line) {
+                    sessions.retain(|existing| existing.session_id != session.session_id);
+                    sessions.push(session);
+                }
+            }
+        }
+        Ok(Self { sessions: Arc::new(RwLock::new(sessions)), persistence: Some(Arc::new(path)) })
+    }
+
     pub fn register(&self, session: AgentSession) {
         let mut sessions = self.sessions.write().expect("resolver lock poisoned");
         sessions.retain(|existing| existing.session_id != session.session_id);
         sessions.push(session);
+        if let Some(path) = &self.persistence {
+            if let Some(parent) = path.parent() { let _ = std::fs::create_dir_all(parent); }
+            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path.as_ref()) {
+                if let Some(session) = sessions.last() {
+                    let _ = writeln!(file, "{}", serde_json::to_string(session).expect("serializable"));
+                }
+            }
+        }
     }
 
     pub fn resolve(&self, evidence: &ProcessEvidence) -> ResolveResponse {
@@ -82,6 +107,10 @@ impl Resolver {
         candidates.sort_by(|a, b| confidence_rank(&b.confidence).cmp(&confidence_rank(&a.confidence)));
         ResolveResponse { candidates }
     }
+}
+
+impl Default for Resolver {
+    fn default() -> Self { Self { sessions: Arc::new(RwLock::new(Vec::new())), persistence: None } }
 }
 
 fn score(session: &AgentSession, evidence: &ProcessEvidence) -> Option<SessionCandidate> {
@@ -132,5 +161,16 @@ mod tests {
         resolver.register(session());
         let response = resolver.resolve(&ProcessEvidence { pid: Some(7), cwd: Some("/other".into()), ..Default::default() });
         assert!(response.candidates.is_empty());
+    }
+
+    #[test]
+    fn file_registry_survives_reopen() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("native-sessions.jsonl");
+        let resolver = Resolver::open(&path).unwrap();
+        resolver.register(session());
+        drop(resolver);
+        let reopened = Resolver::open(&path).unwrap();
+        assert_eq!(reopened.resolve(&ProcessEvidence { pid: Some(42), tty: Some("ttys001".into()), ..Default::default() }).candidates.len(), 1);
     }
 }

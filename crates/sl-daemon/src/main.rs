@@ -763,7 +763,12 @@ async fn run_serve(
             );
         }
         let state = http::AppState {
-            resolver: resolver::Resolver::default(),
+            resolver: resolver::Resolver::open(
+                std::env::var_os("SL_NATIVE_SESSION_REGISTRY")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| out.join("native-sessions.jsonl")),
+            )
+            .unwrap_or_default(),
             out_dir: Arc::new(out.clone()),
             broadcast_tx: bcast_tx.clone(),
             http_metrics: Arc::new(metrics::HttpMetrics::default()),

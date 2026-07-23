@@ -228,6 +228,23 @@ paths:
                 $ref: "#/components/schemas/ValidationResult"
         "429":
           $ref: "#/components/responses/ApiError"
+  /api/native-sessions/resolve:
+    post:
+      tags: [sessions]
+      summary: Resolve native process evidence to known agent sessions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveRequest"
+      responses:
+        "200":
+          description: Candidate sessions ordered by confidence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolveResponse"
   /api/metrics:
     get:
       tags: [metrics]

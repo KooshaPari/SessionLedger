@@ -45,6 +45,7 @@ use crate::filter::{apply_filters, FilterSpec};
 use crate::metrics::{compute_metrics, normalize_http_route, HttpMetrics};
 use crate::resilience::ApiCircuitBreaker;
 use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
+use crate::resolver::{ResolveRequest, ResolveResponse, Resolver};
 #[cfg(feature = "otel")]
 use opentelemetry::trace::{
     SpanContext, SpanId, TraceContextExt as _, TraceFlags, TraceId, TraceState,
@@ -78,6 +79,7 @@ const OPENAPI_ROUTE_SURFACE: &[(&str, &str)] = &[
     ("GET", "/api/stream"),
     ("GET", "/api/replay/{bundle_id}"),
     ("POST", "/api/ingest"),
+    ("POST", "/api/native-sessions/resolve"),
     ("GET", "/api/metrics"),
     ("GET", "/metrics"),
 ];
@@ -321,6 +323,7 @@ fn parse_positive_limit(name: &str, value: Option<&str>, default: usize) -> Resu
 /// Shared state threaded into every handler.
 #[derive(Clone)]
 pub(crate) struct AppState {
+    pub resolver: Resolver,
     /// Directory that the ETL consumer writes `*.okf.json` files into.
     pub out_dir: Arc<PathBuf>,
     /// Broadcast receiver factory: each SSE connection subscribes to a fresh
@@ -369,6 +372,7 @@ fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
         .route("/api/stream", get(sse_stream))
         .route("/api/replay/{bundle_id}", get(replay_bundle))
         .route("/api/ingest", post(ingest_bundle))
+        .route("/api/native-sessions/resolve", post(resolve_native_session))
         .route("/api/metrics", get(metrics_handler))
         .route("/metrics", get(prometheus_metrics));
 
@@ -388,6 +392,13 @@ fn router_with_pprof(state: AppState, pprof_enabled: bool) -> Router {
         .layer(middleware::from_fn_with_state(api_circuit_state, enforce_api_circuit_breaker))
         .layer(middleware::from_fn_with_state(http_metrics, observe_request))
         .layer(cors)
+}
+
+async fn resolve_native_session(
+    State(state): State<AppState>,
+    Json(request): Json<ResolveRequest>,
+) -> Json<ResolveResponse> {
+    Json(state.resolver.resolve(&request.evidence))
 }
 
 /// When non-loopback protection is enabled, require a valid API key on `/api/*`.
@@ -1312,6 +1323,7 @@ mod tests {
     fn test_state(out_dir: &Path) -> AppState {
         let (broadcast_tx, _) = broadcast::channel(1);
         AppState {
+            resolver: Resolver::default(),
             out_dir: Arc::new(out_dir.to_owned()),
             broadcast_tx,
             http_metrics: Arc::new(HttpMetrics::default()),

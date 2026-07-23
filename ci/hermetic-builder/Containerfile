@@ -14,7 +14,8 @@ LABEL org.opencontainers.image.title="SessionLedger hermetic builder" \
 # explicitly so both Git and Cargo can validate TLS if the pre-offline fetch is
 # intentionally run by a gate.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates git \
+    && apt-get install -y --no-install-recommends ca-certificates git make \
     && rm -rf /var/lib/apt/lists/* \
     && git --version \
+    && make --version \
     && test -f /etc/ssl/certs/ca-certificates.crt

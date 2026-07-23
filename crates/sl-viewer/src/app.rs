@@ -1113,7 +1113,14 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
 #[component]
 fn DetailView(detail: BundleDetail) -> Element {
     rsx! {
-        div { class: "detail",
+        // The pane owns vertical scrolling at narrow widths.  Make that
+        // region keyboard-focusable so keyboard and assistive-tech users can
+        // reach its content without relying on pointer-wheel scrolling.
+        div {
+            class: "detail",
+            tabindex: "0",
+            role: "region",
+            aria_label: "Session bundle details",
             h1 { "Bundle: {detail.source_id}" }
 
             // --- Intent section ---

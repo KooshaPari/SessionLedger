@@ -104,7 +104,9 @@ impl Resolver {
     pub fn resolve(&self, evidence: &ProcessEvidence) -> ResolveResponse {
         let sessions = self.sessions.read().expect("resolver lock poisoned");
         let mut candidates = sessions.iter().filter_map(|session| score(session, evidence)).collect::<Vec<_>>();
-        candidates.sort_by(|a, b| confidence_rank(&b.confidence).cmp(&confidence_rank(&a.confidence)));
+        candidates.sort_by_key(|candidate| {
+            std::cmp::Reverse(confidence_rank(&candidate.confidence))
+        });
         ResolveResponse { candidates }
     }
 }

@@ -59,12 +59,13 @@ class Sessionledger < Formula
 
         cargo install --git https://github.com/KooshaPari/SessionLedger --locked --path crates/sl-daemon
 
-      Then start it with explicit watch/out paths:
+      Then start it with native local-session auto-discovery:
 
         sl-daemon serve \\
-          --watch "$HOME/.forge/sessions" \\
           --out "$HOME/.local/share/sessionledger/out" \\
           --http-bind 127.0.0.1:8080
+
+      Add --watch <path> only when overriding discovery for a custom transcript root.
 
       Before publishing this formula to a tap, replace each sha256 placeholder
       with the matching digest from the Release SHA256SUMS file.

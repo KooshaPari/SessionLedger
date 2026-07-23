@@ -4,7 +4,7 @@
   "msrv": "1.85",
   "rust_channel": "stable",
   "builder_image": "ghcr.io/kooshapari/sessionledger-hermetic-builder",
-  "builder_image_digest": "sha256:fe71c757a13cb864e5f15f4a1384f63129b15bcd037bc44b46a056c814ca4cb7",
+  "builder_image_digest": "sha256:16381cf25d89fd5dc8a904ff4a7b8d4660a856ed9738b8a7e879d816439ce2a5",
   "builder_definition": "ci/hermetic-builder/Containerfile",
   "builder_publish_workflow": ".github/workflows/hermetic-builder.yml",
   "upstream_rust_image": "docker.io/library/rust:1.87-slim",

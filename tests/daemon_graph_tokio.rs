@@ -2,7 +2,7 @@
 //!
 //! Models the production watcher → mpsc → broadcast → SSE subscriber shape from
 //! `crates/sl-daemon/src/main.rs` with real `tokio::sync::{mpsc, broadcast}`
-//! (not loom). Capacitites mirror daemon constants at reduced scale for fast CI.
+//! (not loom). Capacities mirror daemon constants at reduced scale for fast CI.
 //!
 //! SSOT: `docs/ops/daemon-graph-hard.md`. Blocking gate:
 //! `.github/workflows/daemon-graph-hard.yml`.
@@ -25,7 +25,7 @@ const BROADCAST_CAP: usize = 8;
 async fn daemon_tokio_mpsc_broadcast_sse_pipeline_conserves() {
     let (tx, mut rx) = mpsc::channel::<PathBuf>(MPSC_CAP);
     let (bcast_tx, _) = broadcast::channel::<PathBuf>(BROADCAST_CAP);
-    let published = Arc::new(AtomicUsize::new(0));
+    let publish_count = Arc::new(AtomicUsize::new(0));
 
     let mut subs = Vec::new();
     for _ in 0..3 {
@@ -39,20 +39,20 @@ async fn daemon_tokio_mpsc_broadcast_sse_pipeline_conserves() {
                         seen_task.fetch_add(1, Ordering::AcqRel);
                     }
                     Err(broadcast::error::RecvError::Closed) => break,
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Lagged(_)) => {}
                 }
             }
         });
         subs.push(seen);
     }
 
-    let publisher = {
+    let drain_task = {
         let bcast_tx = bcast_tx.clone();
-        let published = Arc::clone(&published);
+        let publish_count = Arc::clone(&publish_count);
         tokio::spawn(async move {
             while let Some(path) = rx.recv().await {
                 let _ = bcast_tx.send(path);
-                published.fetch_add(1, Ordering::AcqRel);
+                publish_count.fetch_add(1, Ordering::AcqRel);
             }
         })
     };
@@ -63,21 +63,21 @@ async fn daemon_tokio_mpsc_broadcast_sse_pipeline_conserves() {
     }
     drop(tx);
 
-    timeout(Duration::from_secs(5), publisher)
+    timeout(Duration::from_secs(5), drain_task)
         .await
-        .expect("publisher join timed out")
-        .expect("publisher panicked");
+        .expect("drain task join timed out")
+        .expect("drain task panicked");
     drop(bcast_tx);
 
     // Allow subscriber tasks to observe Closed.
     tokio::time::sleep(Duration::from_millis(50)).await;
 
-    let published_count = published.load(Ordering::Acquire);
-    assert_eq!(published_count, paths.len());
+    let final_count = publish_count.load(Ordering::Acquire);
+    assert_eq!(final_count, paths.len());
     for seen in &subs {
         assert_eq!(
             seen.load(Ordering::Acquire),
-            published_count,
+            final_count,
             "each SSE subscriber must observe every published path"
         );
     }
@@ -88,13 +88,13 @@ async fn daemon_tokio_mpsc_broadcast_sse_pipeline_conserves() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn daemon_tokio_broadcast_lagged_subscriber_recovers() {
     let (bcast_tx, _) = broadcast::channel::<u64>(2);
-    let mut slow = bcast_tx.subscribe();
-    let mut fast = bcast_tx.subscribe();
+    let mut lagging = bcast_tx.subscribe();
+    let mut keeping_up = bcast_tx.subscribe();
 
     for bump in 1..=6u64 {
         let _ = bcast_tx.send(bump);
-        // Fast subscriber keeps draining so it never lags permanently.
-        while let Ok(v) = fast.try_recv() {
+        // Keeping-up subscriber drains so it never lags permanently.
+        while let Ok(v) = keeping_up.try_recv() {
             assert!(v >= 1);
         }
     }
@@ -102,13 +102,14 @@ async fn daemon_tokio_broadcast_lagged_subscriber_recovers() {
     let mut recovered = 0u64;
     let mut lagged = false;
     loop {
-        match slow.try_recv() {
+        match lagging.try_recv() {
             Ok(_) => recovered += 1,
             Err(broadcast::error::TryRecvError::Lagged(_)) => {
                 lagged = true;
             }
-            Err(broadcast::error::TryRecvError::Empty) => break,
-            Err(broadcast::error::TryRecvError::Closed) => break,
+            Err(broadcast::error::TryRecvError::Empty | broadcast::error::TryRecvError::Closed) => {
+                break
+            }
         }
     }
 
@@ -124,7 +125,7 @@ async fn daemon_tokio_shutdown_stops_mpsc_enqueue() {
     let cancel = Arc::new(AtomicBool::new(false));
     let (tx, mut rx) = mpsc::channel::<u32>(MPSC_CAP);
     let (bcast_tx, _) = broadcast::channel::<u32>(BROADCAST_CAP);
-    let published = Arc::new(AtomicUsize::new(0));
+    let publish_count = Arc::new(AtomicUsize::new(0));
 
     let watcher = {
         let cancel = Arc::clone(&cancel);
@@ -142,13 +143,13 @@ async fn daemon_tokio_shutdown_stops_mpsc_enqueue() {
         })
     };
 
-    let publisher = {
+    let drain_task = {
         let bcast_tx = bcast_tx.clone();
-        let published = Arc::clone(&published);
+        let publish_count = Arc::clone(&publish_count);
         tokio::spawn(async move {
             while let Some(id) = rx.recv().await {
                 let _ = bcast_tx.send(id);
-                published.fetch_add(1, Ordering::AcqRel);
+                publish_count.fetch_add(1, Ordering::AcqRel);
             }
         })
     };
@@ -161,13 +162,13 @@ async fn daemon_tokio_shutdown_stops_mpsc_enqueue() {
         .await
         .expect("watcher join timed out")
         .expect("watcher panicked");
-    timeout(Duration::from_secs(5), publisher)
+    timeout(Duration::from_secs(5), drain_task)
         .await
-        .expect("publisher join timed out")
-        .expect("publisher panicked");
+        .expect("drain task join timed out")
+        .expect("drain task panicked");
 
-    let published_count = published.load(Ordering::Acquire);
-    assert!(published_count > 0, "at least one item should drain before cancel");
+    let final_count = publish_count.load(Ordering::Acquire);
+    assert!(final_count > 0, "at least one item should drain before cancel");
 
     // Post-cancel enqueue must be refused by the cancel bit.
     let post = {

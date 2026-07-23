@@ -1341,6 +1341,66 @@ mod tests {
         (addr, server)
     }
 
+    /// Prove the complete local-session path at the HTTP boundary:
+    /// JSONL ingestion -> durable distillation -> OKF export -> replay SSE.
+    #[cfg(feature = "sqlite")]
+    #[tokio::test]
+    async fn local_jsonl_distill_okf_replay_sse_round_trip() {
+        use session_ledger::domain::session::Corpus;
+        use session_ledger::{compile_and_store, export_to_okf, Message, Role, Session};
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let input = tmp.path().join("local-session.jsonl");
+        let output = tmp.path().join("okf");
+        std::fs::create_dir_all(&output).expect("create output");
+
+        let mut session = Session::new("e2e-local-session", Corpus::Codex);
+        session.cwd = Some("/Users/test/SessionLedger".into());
+        session.title = Some("prove durable replay".into());
+        session.messages = vec![
+            Message::new(Role::User, "Implement durable replay for this session"),
+            Message::new(Role::Assistant, "Distilling the session into the memory ledger"),
+            Message::new(Role::User, "Looks good, replay it"),
+        ];
+        std::fs::write(&input, format!("{}\n", serde_json::to_string(&session).unwrap()))
+            .expect("write JSONL fixture");
+
+        // Ingest the same on-disk JSONL shape used by the daemon worker.
+        let sessions = session_ledger::read_jsonl_sessions(&input).expect("ingest JSONL");
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, "e2e-local-session");
+
+        // Distill into a durable SQLite memory ledger before exporting OKF.
+        let memory = session_ledger::SqliteMemoryStore::open(tmp.path().join("memory.db"))
+            .expect("open durable memory store");
+        let distilled = compile_and_store(&sessions[0], &memory).expect("distill and store");
+        assert!(distilled.bundle.is_injectable());
+        assert_eq!(distilled.memories.len(), 3);
+        assert!(!memory.recall("durable replay", 10).expect("recall memory").is_empty());
+
+        let document = export_to_okf(&distilled.bundle, sessions[0].corpus.as_str());
+        assert!(!document.entities.is_empty(), "OKF export must contain entities");
+        let bundle_id = document.source_id.clone();
+        std::fs::write(
+            output.join(format!("{bundle_id}.okf.json")),
+            serde_json::to_vec_pretty(&document).expect("serialize OKF"),
+        )
+        .expect("write OKF export");
+
+        let mut state = test_state(&output);
+        state.memory_store = Some(std::sync::Arc::new(memory));
+        let (addr, server) = start_test_server(state).await;
+        let response = reqwest::get(format!("http://{addr}/api/replay/{bundle_id}?speed=1000"))
+            .await
+            .expect("replay request");
+        assert!(response.status().is_success());
+        let body = response.text().await.expect("read replay SSE");
+        assert!(body.contains("event: entity"), "replay must emit entity events: {body}");
+        assert!(body.contains("event: done"), "replay must emit done sentinel: {body}");
+        assert!(body.contains("e2e-local-session"), "replay should identify source session");
+        server.abort();
+    }
+
     fn openapi_path_from_manifest() -> std::path::PathBuf {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/api/openapi.yaml")
     }

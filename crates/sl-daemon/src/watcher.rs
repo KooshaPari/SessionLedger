@@ -17,20 +17,27 @@ use notify::{Event, EventKind, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-/// Return every `*.jsonl` or compressed `*.jsonl.zst` file directly under `dir`.
+/// Return every `*.jsonl` or compressed `*.jsonl.zst` file under `dir`.
 ///
 /// Non-recursive by design: session corpora are flat directories of transcript
 /// files. Sorting makes the emitted order stable so tests can assert on it.
 pub fn list_jsonl(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
     let mut out = Vec::new();
+    collect_transcripts(dir, &mut out)?;
+    out.sort();
+    Ok(out)
+}
+
+fn collect_transcripts(dir: &Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
         if is_transcript(&path) {
             out.push(path);
+        } else if path.is_dir() {
+            collect_transcripts(&path, out)?;
         }
     }
-    out.sort();
-    Ok(out)
+    Ok(())
 }
 
 fn is_transcript(path: &Path) -> bool {
@@ -94,7 +101,7 @@ pub fn spawn_fs_watcher(
             }
         }
     })?;
-    watcher.watch(dir, RecursiveMode::NonRecursive)?;
+    watcher.watch(dir, RecursiveMode::Recursive)?;
     Ok(watcher)
 }
 

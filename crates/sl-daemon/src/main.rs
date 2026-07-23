@@ -34,6 +34,7 @@ mod archive;
 mod audit;
 mod banner;
 mod cli;
+mod discovery;
 mod etl;
 mod export;
 mod filter;
@@ -89,6 +90,7 @@ Does not download or install updates — see docs/ops/update-check.md and ADR 00
 "#;
 
 const SERVE_AFTER_HELP: &str = r#"Examples:
+  sl-daemon serve --out ./okf-out  # auto-discovers native session roots
   sl-daemon serve --watch ~/.cursor/agent-transcripts --out ./okf-out
   sl-daemon serve --watch ./sessions --out ./okf-out --once
   sl-daemon serve --watch ./sessions --out ./okf-out --http-bind off
@@ -166,9 +168,10 @@ enum Command {
     /// Start the file-watcher daemon.
     #[command(after_help = SERVE_AFTER_HELP)]
     Serve {
-        /// Directory to watch for `*.jsonl` session transcripts.
+        /// Directory to watch for `*.jsonl` session transcripts. When omitted,
+        /// native Codex, Claude Code, and Cursor roots are discovered automatically.
         #[arg(long)]
-        watch: PathBuf,
+        watch: Option<PathBuf>,
 
         /// Directory to write `<session-id>.okf.json` files into.
         #[arg(long)]
@@ -620,12 +623,22 @@ fn audit_event(
 // ---------------------------------------------------------------------------
 
 async fn run_serve(
-    watch: PathBuf,
+    watch: Option<PathBuf>,
     out: PathBuf,
     once: bool,
     http_bind: String,
     memory_db: Option<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let watch_roots = match watch {
+        Some(path) => vec![path],
+        None => discovery::local_watch_roots(None),
+    };
+    if watch_roots.is_empty() {
+        return Err(
+            "no supported local session stores found; pass --watch to use a custom root".into()
+        );
+    }
+    info!(roots = ?watch_roots, "session roots selected");
     let version = env!("CARGO_PKG_VERSION");
     banner::emit_interactive_banner(version);
     info!(banner = %banner::plain_banner(version), "startup");
@@ -777,9 +790,9 @@ async fn run_serve(
         // Bind before spawning so an occupied port is a startup error rather
         // than a silently dead background task (which otherwise looks like a
         // viewer-side "daemon unreachable" condition).
-        let listener = http::bind(addr).await.map_err(|error| {
-            format!("failed to bind HTTP server at {addr}: {error}")
-        })?;
+        let listener = http::bind(addr)
+            .await
+            .map_err(|error| format!("failed to bind HTTP server at {addr}: {error}"))?;
         let shutdown_for_http = shutdown.clone();
         let handle = tokio::spawn(async move {
             if let Err(e) = http::serve_listener(listener, state, async move {
@@ -795,7 +808,10 @@ async fn run_serve(
     };
 
     if once {
-        let sent = watcher::scan_once(&watch, &tx, shutdown.token()).await?;
+        let mut sent = 0;
+        for root in &watch_roots {
+            sent += watcher::scan_once(root, &tx, shutdown.token()).await?;
+        }
         info!(enqueued = sent, "once: scan complete");
         drop(tx);
         let total = consumer.await?;
@@ -808,15 +824,18 @@ async fn run_serve(
     }
 
     // Long-running mode.
-    watcher::scan_once(&watch, &tx, shutdown.token()).await?;
-    let _watcher = watcher::spawn_fs_watcher(&watch, tx.clone())?;
-    info!(watch = %watch.display(), out = %out.display(), "watching for sessions");
+    let mut watchers = Vec::with_capacity(watch_roots.len());
+    for root in &watch_roots {
+        watcher::scan_once(root, &tx, shutdown.token()).await?;
+        watchers.push(watcher::spawn_fs_watcher(root, tx.clone())?);
+    }
+    info!(roots = ?watch_roots, out = %out.display(), "watching for sessions");
 
     drop(tx);
 
     shutdown.cancelled().await;
     info!("shutting down");
-    drop(_watcher);
+    drop(watchers);
 
     if let Some(handle) = http_handle {
         let _ = handle.await;

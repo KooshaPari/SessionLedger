@@ -15,7 +15,7 @@ Companion PERT: [`docs/ops/WAVE44_PERT.md`](docs/ops/WAVE44_PERT.md)
 
 ## Top unpaid gaps (396/402 → 402/402 closure targets)
 
-**6 raw points** remain across C00, C01, C02, C08, C11 from Wave-43. Wave-44
+**6 raw points** remain across C00, C02, C08, C11 (C01 L16 was closed in Wave-38 #312, not unpaid) from Wave-43. Wave-44
 selects **6 lanes**, three machine-actionable and three human-gated.
 
 | Rank | ID | Class | Gap | Pillar / cluster | Selected lane |
@@ -24,32 +24,29 @@ selects **6 lanes**, three machine-actionable and three human-gated.
 | **2** | GAP-W43-STAB-02 | **Allocator policy** | Windows allocator parity + prod canary rollout | C00 L8 | **w44-windows-allocator-prod** |
 | **3** | GAP-W43-PKG-01 | **Packaging signing** | brew/winget publish + Authenticode/notarization live keys | C11 L111/L112 | **w44-brew-winget-signing** |
 | **4** | GAP-W43-API-01 | **API governance** | In-tree KMS (L22) OR multi-tenant PII redaction (L24) | C02 L22/L24 | **w44-pii-or-kms** |
-| **5** | GAP-W43-DX-02 | **i18n** | Viewer/CLI Fluent `.ftl` migration complete | C01 L16 | **w44-fluent-migration** |
+| **5** | (closed) | — | C01 L16 Fluent migration closed in Wave-38 #312 (pillar max since) | C01 L16 | (no lane needed) |
 | **6** | GAP-W43-EVAL-01 | **Eval coverage** | Production-scale corpus breadth | C08 L73 | **w44-corpus-breadth** |
 
 ### Lane ownership breakdown
 
 | Owner | Lanes | Why human-gated |
 |-------|-------|-----------------|
-| `machine` | w44-loom-sse-soak, w44-fluent-migration (tooling), w44-corpus-breadth | n/a |
-| `machine + human` | w44-windows-allocator-prod, w44-fluent-migration (viewer portion) | rollout window + loc sign-off |
+| `machine` (shipped 2026-07-24) | w44-loom-sse-soak (#372), w44-corpus-breadth (#368) | n/a |
+| `machine + human` | w44-windows-allocator-prod | rollout window |
+| (withdrawn 2026-07-24) | ~~w44-fluent-migration~~ | C01 L16 closed Wave-38 #312; no lane needed |
 | `human (keys)` | w44-brew-winget-signing | Authenticode + notarization secrets |
 | `human (policy)` | w44-pii-or-kms | picks L22 KMS vs L24 PII redaction |
 
 ### Decision points (human-owned)
 
-- **D-W44-1:** Pick R-4 branch (L22 KMS vs L24 PII redaction). Recommend L22
-  (smaller blast radius; L24 requires multi-tenant threat model).
-- **D-W44-2:** R-3 keys availability window. If not received within 7d of W44-B3
-  start, downgrade R-3 to partial close and defer to W45.
-- **D-W44-3:** Accept partial W44-B5 close (machine-tooling only; viewer
-  localization deferred to W45 if loc sign-off slips).
+- **D-W44-1:** Pick R-4 branch (L22 KMS vs L24 PII redaction). Recommend L22.
+- **D-W44-2:** R-3 keys availability window. If not received within 7d of W44-B3 start, downgrade R-3 to partial close and defer to W45.
 
 ### Secondary gaps (deferred or alternate lanes)
 
 | ID | Gap | Notes | Alternate lane |
 |----|-----|-------|----------------|
-| GAP-W43-C04-01 | C04 SBOM pillar residual (3 raw pts) | Schema gate incomplete; close in W45 | w45-sbom-pillar-close |
+| GAP-W43-C04-01 | C04 SBOM pillar residual (3 raw pts at cluster 27/30 = 90%) | L36 = 0 (HUMAN 2FA attestation); L31-L40 all score 3 except L36; cluster 27/30 reflects L36 only | (close only via D-W45-1 human attestation) |
 | GAP-W43-C09-01 | Viewer accessibility audit (C09 residual) | Pre-existing; covered by W43-B4 | (covered) |
 
 ## Wave-44 acceptance
@@ -67,4 +64,4 @@ selects **6 lanes**, three machine-actionable and three human-gated.
 - Wave-41: 372/402 → 375/402 (#163/#164)
 - Wave-42: 375/402 → 396/402 (#165, #169, #170)
 - Wave-43: 396/402 → 396/402 (conservative hold; 5 impl lanes, #170–#362)
-- Wave-44: **target** 396/402 → 402/402 (close-out)
+- Wave-44: **target** 396/402 → 402/402 (close-out; **2 of 6 machine lanes shipped**: B6 corpus #368, B1 loom #372; remaining 4 are human-gated or already-closed)

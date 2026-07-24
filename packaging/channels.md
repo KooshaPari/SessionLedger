@@ -54,15 +54,17 @@ cargo install --git https://github.com/KooshaPari/SessionLedger --locked --path 
 ```
 
 This installs the `sl-daemon` binary into Cargo's configured bin directory
-(`~/.cargo/bin` by default). Start the long-running daemon with explicit input
-and output paths:
+(`~/.cargo/bin` by default). Start the long-running daemon with native local
+session auto-discovery:
 
 ```bash
 sl-daemon serve \
-  --watch "$HOME/.forge/sessions" \
   --out "$HOME/.local/share/sessionledger/out" \
   --http-bind 127.0.0.1:8080
 ```
+
+Add `--watch <path>` only when overriding discovery for a custom transcript
+root.
 
 `cargo install` is a developer/source channel. It does not provide automatic
 updates, package-manager metadata, desktop integration, or platform signing.

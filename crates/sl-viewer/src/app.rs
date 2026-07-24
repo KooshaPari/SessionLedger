@@ -627,7 +627,7 @@ pub fn App() -> Element {
                 .diff-col-a {{ color: var(--sl-text); overflow-wrap: break-word; }}
                 .diff-col-b {{ color: var(--sl-text); overflow-wrap: break-word; }}
                 .main-content {{ flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }}
-                .main-upper {{ flex: 1; min-height: 0; overflow-y: auto; }}
+                .main-upper {{ flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }}
                 .bundles-view {{ display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }}
                 .bundles-view > h2 {{ flex: 0 0 auto; margin: 0; padding: var(--sl-space-xl) var(--sl-space-xl) var(--sl-space-lg); }}
                 .bundles-workspace {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
@@ -889,7 +889,9 @@ fn BundlesTab() -> Element {
     let mut loading = use_signal(|| true);
     let mut load_error: Signal<Option<String>> = use_signal(|| None);
     let mut load_gen: Signal<u32> = use_signal(|| 0u32);
-    let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
+    // Show useful content immediately; an empty detail pane on first render
+    // made the inbox look broken and hid the chat transcript behind a click.
+    let mut selected_idx: Signal<Option<usize>> = use_signal(|| Some(0));
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
 
     // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
@@ -1062,7 +1064,20 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
                     rsx! {
                         div {
                             class: "{cls}",
+                            role: "button",
+                            tabindex: "0",
                             onclick: move |_| props.on_select.call(orig_idx),
+                            onkeydown: move |evt: Event<KeyboardData>| {
+                                let activate = match evt.key() {
+                                    Key::Enter => true,
+                                    Key::Character(ref ch) => ch == " ",
+                                    _ => false,
+                                };
+                                if activate {
+                                    evt.prevent_default();
+                                    props.on_select.call(orig_idx);
+                                }
+                            },
                             div { class: "session-source",
                                 "{s.source_id}"
                                 span {
@@ -1098,7 +1113,14 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
 #[component]
 fn DetailView(detail: BundleDetail) -> Element {
     rsx! {
-        div { class: "detail",
+        // The pane owns vertical scrolling at narrow widths.  Make that
+        // region keyboard-focusable so keyboard and assistive-tech users can
+        // reach its content without relying on pointer-wheel scrolling.
+        div {
+            class: "detail",
+            tabindex: "0",
+            role: "region",
+            aria_label: "Session bundle details",
             h1 { "Bundle: {detail.source_id}" }
 
             // --- Intent section ---

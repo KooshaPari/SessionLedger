@@ -4,6 +4,10 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ## [Unreleased]
 
+### Changed
+
+- Wave-43 reaudit (Wave-43-D): `audit/SCORECARD.md` refresh at commit `41829e8` (machine-w43-reaudit); `docs/ops/TRACEABILITY.json` overall_audit wave=Wave-43 commit=41829e8 (conservative hold at 396/402); `docs/ops/GAP_QA_MATRIX.md` C00 + PLAN-W8-B rows reflect Wave-43 closure (#344/#348/#349/#361/#362).
+
 ### Fixed
 
 - Viewer first-run corpus CTA (C09): wire “Open corpus…” to a web Forge DB file picker (`corpus_cta.rs`) or open the quick-start runbook on desktop; `cargo test -p sl-viewer`.

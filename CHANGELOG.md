@@ -8,6 +8,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Wave-43 reaudit (Wave-43-D): `audit/SCORECARD.md` refresh at commit `41829e8` (machine-w43-reaudit); `docs/ops/TRACEABILITY.json` overall_audit wave=Wave-43 commit=41829e8 (conservative hold at 396/402); `docs/ops/GAP_QA_MATRIX.md` C00 + PLAN-W8-B rows reflect Wave-43 closure (#344/#348/#349/#361/#362).
 
+- Wave-44 plan landed: `WAVE44_SCOPE.md` + `docs/ops/WAVE44_PERT.md` enumerate 6 close-out lanes (3 machine, 3 human-gated) for the 6 unpaid residuals from Wave-43 (396/402 → 402/402 target). Theme: stack-stability closure + i18n migration + eval coverage + supply-chain signing.
+
 ### Fixed
 
 - Viewer first-run corpus CTA (C09): wire “Open corpus…” to a web Forge DB file picker (`corpus_cta.rs`) or open the quick-start runbook on desktop; `cargo test -p sl-viewer`.

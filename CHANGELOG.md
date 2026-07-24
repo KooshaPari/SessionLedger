@@ -10,6 +10,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Wave-44 plan landed: `WAVE44_SCOPE.md` + `docs/ops/WAVE44_PERT.md` enumerate 6 close-out lanes (3 machine, 3 human-gated) for the 6 unpaid residuals from Wave-43 (396/402 → 402/402 target). Theme: stack-stability closure + i18n migration + eval coverage + supply-chain signing.
 
+
 ### Fixed
 
 - Viewer first-run corpus CTA (C09): wire “Open corpus…” to a web Forge DB file picker (`corpus_cta.rs`) or open the quick-start runbook on desktop; `cargo test -p sl-viewer`.
@@ -20,6 +21,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 ### Added
 
+- Loom HTTP SSE soak (C00 L7 W44-B1): `tests/loom_http_sse_soak.rs` (3 loom tests: process-level multi-client fanout, Lagged recovery no-panic, shutdown propagation), `docs/ops/loom-http-sse-soak.md`, `scripts/loom-http-sse-soak-check.ps1 -SelfCheck`, soft `.github/workflows/loom-http-sse-soak-soft.yml`. Closes the *process-level HTTP SSE soak under loom* residual carried from Wave-43.
 - Daemon-graph hard live tokio ports (C00 L7): `docs/ops/daemon-graph-hard.md`, `daemon-graph-hard.json`, `tests/daemon_graph_tokio.rs` (mpsc→broadcast→SSE conservation, Lagged recovery, shutdown stops enqueue), `scripts/daemon-graph-hard-check.ps1 -SelfCheck`, blocking `daemon-graph-hard.yml`, `tests/daemon_graph_hard.rs`.
 
 - sl-viewer CLI help (C01/C09): expanded `--help` / `--version` in `cli_help.rs`, `docs/ops/sl-viewer-help.md`, `sl-viewer-help.json`, `scripts/sl-viewer-help-check.ps1 -SelfCheck`, blocking `sl-viewer-help-hard.yml`, `tests/sl_viewer_help.rs`.

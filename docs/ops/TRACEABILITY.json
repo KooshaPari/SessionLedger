@@ -1,6 +1,6 @@
 {
   "schema": "sessionledger.traceability/v1",
-  "updated": "2026-07-23",
+  "updated": "2026-07-24",
   "status_vocabulary": [
     "done",
     "partial",
@@ -12,9 +12,9 @@
     "score": "396/402",
     "pct": 98,
     "grade": "A",
-    "commit": "41829e8",
-    "wave": "Wave-43",
-    "delta_vs_w42": "0 (conservative hold; 5 WAVE43 impl lanes deepened residual evidence)"
+    "commit": "13c974f7",
+    "wave": "Wave-44",
+    "delta_vs_w43": "0 (conservative hold; 2 of 3 machine lanes shipped 2026-07-24 -- W44-B1 loom HTTP SSE soak, W44-B6 OKF conformance 33 fixtures, PERT correction; remaining 6 raw pts across C04 L36 / C08 L76 / C11 L110)"
   },
   "fr": [
     {

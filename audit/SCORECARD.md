@@ -1,10 +1,10 @@
 # audit-v38 Scorecard — SessionLedger
 
 **Repo:** KooshaPari/SessionLedger
-**Date:** 2026-07-23
+**Date:** 2026-07-24
 **Repo-type profile:** CLI+daemon + desktop (sl-daemon + sl-viewer)
-**Auditor:** machine-w43-reaudit (Wave-43-D)
-**Commit audited:** 41829e8 (origin/main / Wave-43 closure #344, #348, #349, #361, #362)
+**Auditor:** machine-w44-reaudit (Wave-44-D)
+**Commit audited:** 13c974f7 (origin/main / Wave-44 closure #368 W44-B6 corpus, #372 W44-B1 loom, #373 W44 PERT correction)
 
 > Rubric SSOT: phenotype-org-audits/audit-v38
 
@@ -49,14 +49,27 @@
 | C06 L33 | partial | partial (deepened) | 0 | Socket.dev supply-chain posture (#344): `socket-posture.md`, blocking `security.yml` job; full SLSA Build L3 attestation remains unpaid |
 | **Overall** | **396/402 (98% A)** | **396/402 (98% A)** | **0** | Conservative hold; 5 WAVE43 impl lanes deepened residual evidence without fresh independent re-audit pillar lift |
 
+
+## Wave-44 Delta
+
+| Cluster | Before | After | Raw delta | Evidence-backed movement |
+|---------|:------:|:-----:|:---------:|--------------------------|
+| C00 L7 | residual partial (deepened) | residual partial (deepened) | 0 | Loom HTTP SSE soak (#372): `tests/loom_http_sse_soak.rs` (3 loom tests: process-level multi-client fanout, Lagged recovery, shutdown propagation) + SelfCheck + soft-nightly. L7 was already pillar max; deeper evidence only. |
+| C08 L73 | partial (deepened) | partial (deepened) | 0 | Production-scale corpus breadth (#368): `scripts/corpus-generate.py` (deterministic generator; OKF_VERSION-keyed), 13 new accepted fixtures (5 new sources + 2 new languages + 3 stress shapes + 3 edge cases), `docs/ops/corpus-breadth.md`, `tests/replay_breadth.rs` (5 hermetic pinning tests). L73 was already pillar max; corpus grew 20 -> 33 (65% increase). |
+| (PERT correction) | (R-5 factual error) | R-5 withdrawn | 0 | (#373): corrected WAVE44_SCOPE.md + WAVE44_PERT.md; original R-5 (C01 L16 Fluent migration) was factually wrong (L16 closed in Wave-38 #312, pillar max since). |
+| **Overall** | **396/402 (98% A)** | **396/402 (98% A)** | **0** | Conservative hold; 2 of 3 machine lanes shipped (W44-B1 #372, W44-B6 #368); PERT correction (#373). W44-B2/B3/B4 deferred to W45 or remain human-gated. No fresh independent re-audit pillar lift. |
+
+- **Wave-43 → Wave-44:** 98% A (396/402) → 98% A (396/402), held (2 of 3 machine lanes shipped; deep-evidence only)
+
+
 ## Headline Findings
 
 - **Strongest:** C00/C01/C02/C03/C05/C06/C07/C09/C10 (100% A); C08 (97% A)
 - **Weakest:** C04 (90% A); C11 Packaging (96% A)
 - **Wave-41 → Wave-42:** 98% A (396/402) → 98% A (396/402), held
 - **Wave-42 → Wave-43:** 98% A (396/402) → 98% A (396/402), held
-- **Held (no score):** #340 bounded commit-signing header scan (C04 L34 already pillar max); #341 pinned CycloneDX + SBOM schema validation (C04 L32 residual unpaid); #342 SLSA protected-env blocking on PRs (C06 L53 residual attestation unpaid); #343 blocking alloc-profile / dhat hard gate (C00 L8 already pillar max); #344 first-run corpus CTA (C09 UX polish); #348 load-macro PR gate (C08 L73 production breadth residual); #349 default-on platform allocators (C00 L8 Windows parity residual); #361 sl-viewer CLI help expand (C01 L16 Fluent migration residual); #362 live tokio daemon-graph hard gate (C00 L7 HTTP SSE soak residual)
-- **Remaining unpaid (post-WAVE43):** Authenticode/notarization live keys (C11 L112 residual), live brew/winget publish, human org 2FA attestation (C04 L36), live rootless-only runner matrix (C04 L40 residual), full protected-environment SLSA Build L3 attestation (C06 L53 residual), live branch-protection signed-commits attestation (C06 L59 residual), live Alertmanager webhooks, production Pyroscope profiling push, process-level HTTP SSE soak under loom (C00 L7 residual), Windows allocator parity + always-on production rollout (C00 L8 residual), in-tree KMS (C02 L22 residual), multi-tenant / auto-ETL PII redaction (C02 L24), viewer/CLI Fluent migration (C01 L16 residual), auto-install/rollback updater (C11 L111 residual), production-scale load corpus breadth (C08 L73 residual), phenotype-org-audits org mirror (403/403)
+- **Held (no score):** #340 bounded commit-signing header scan (C04 L34 already pillar max); #341 pinned CycloneDX + SBOM schema validation (C04 L32 residual unpaid); #342 SLSA protected-env blocking on PRs (C06 L53 residual attestation unpaid); #343 blocking alloc-profile / dhat hard gate (C00 L8 already pillar max); #344 first-run corpus CTA (C09 UX polish); #348 load-macro PR gate (C08 L73 production breadth residual); #349 default-on platform allocators (C00 L8 Windows parity residual); #361 sl-viewer CLI help expand (C01 L16 Fluent migration residual); #362 live tokio daemon-graph hard gate (C00 L7 HTTP SSE soak residual); #372 loom HTTP SSE soak (W44-B1) — deepened C00 L7 (already pillar max); #368 OKF conformance 33 fixtures (W44-B6) — deepened C08 L73 (already pillar max); #373 WAVE44 PERT correction — R-5 withdrawn (C01 L16 closed Wave-38)
+- **Remaining unpaid (post-WAVE44):** **6 raw points across 3 pillars**: C04 L36 = 0 (HUMAN 2FA attestation; 3 raw pts), C08 L76 = 2 (Agent-Eval Pipeline; 1 raw pt), C11 L110 = 1 (Tray/Menubar Client; 2 raw pts). Also remains human-gated: live brew/winget publish (C11 L112), full protected-environment SLSA Build L3 attestation (C06 L53), live branch-protection signed-commits attestation (C06 L59), production Pyroscope profiling push, Windows allocator prod rollout (C00 L8), in-tree KMS (C02 L22), multi-tenant PII redaction (C02 L24), auto-install/rollback updater (C11 L111), phenotype-org-audits org mirror (403/403). 2 of 3 machine lanes shipped 2026-07-24 (W44-B1 #372, W44-B6 #368); the 6 raw points can only be closed via: (a) human attestation (L36), (b) C08 L76 Agent-Eval Pipeline (machine, future wave), (c) C11 L110 Tray/Menubar Client (machine, macOS dev).
 
 ## N/A / soft goals
 

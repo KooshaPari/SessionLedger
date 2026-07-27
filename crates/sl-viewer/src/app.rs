@@ -7,7 +7,7 @@ use crate::async_states::{
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::command_palette::{CommandPalette, PaletteAction};
-use crate::corpus_loader::{DataSource, load_sessions, CorpusSource};
+use crate::corpus_loader::{DataSource, load_sessions};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::visual_fixture_active;
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
@@ -816,7 +816,7 @@ pub fn App() -> Element {
                     }
                 }
                 if active_tab() == Tab::Bundles {
-                    if let Some(ref err) = *error_signal.read() {
+                    if let Some(ref err) = *corpus_error_signal.read() {
                     div { class: "corpus-error-banner",
                         ErrorState {
                             message: format!("Corpus load failed ({err}); no sessions are available."),

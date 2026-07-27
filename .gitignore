@@ -11,3 +11,8 @@ target-w34-*/
 
 # All nested cargo build dirs (sub-crates' target/)
 **/target/
+
+# Cache + worktrees + build output
+.cache/
+.claude/worktrees/
+packaging/dist/

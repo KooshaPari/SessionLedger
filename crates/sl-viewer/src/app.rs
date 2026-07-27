@@ -7,7 +7,7 @@ use crate::async_states::{
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::command_palette::{CommandPalette, PaletteAction};
-use crate::corpus_loader::{load_sessions, DataSource};
+use crate::corpus_loader::{DataSource, load_sessions, CorpusSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::visual_fixture_active;
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
@@ -101,7 +101,7 @@ impl Tab {
 ///
 /// Consumers call `use_context::<SessionContext>()` to access the loaded sessions.
 #[derive(Clone, Debug, PartialEq)]
-pub struct SessionContext(pub Vec<Session>);
+pub struct SessionContext(pub Signal<Vec<Session>>);
 
 /// Resolve the active [`DataSource`].
 ///
@@ -184,14 +184,26 @@ pub fn App() -> Element {
 
     // Load sessions once at the root; propagate via context.
     let source = resolve_data_source();
-    let (sessions, corpus_error) = match load_sessions(&source) {
-        Ok(s) => (s, None),
-        Err(e) => {
-            eprintln!("[sl-viewer] failed to load corpus: {e}");
-            (Vec::new(), Some(e))
-        }
-    };
-    use_context_provider(|| SessionContext(sessions));
+    let mut sessions_signal = use_signal(Vec::<Session>::new);
+    let mut corpus_error_signal: Signal<Option<String>> = use_signal(|| None);
+    use_effect(move || {
+        let source = resolve_data_source();
+        spawn(async move {
+            let result = tokio::task::spawn_blocking(move || load_sessions(&source)).await;
+            match result {
+                Ok(Ok(sessions)) => {
+                    sessions_signal.set(sessions);
+                }
+                Ok(Err(e)) => {
+                    corpus_error_signal.set(Some(e));
+                }
+                Err(e) => {
+                    corpus_error_signal.set(Some(format!("Internal error: {e}")));
+                }
+            }
+        });
+    });
+    use_context_provider(|| SessionContext(sessions_signal));
 
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let mut help_open: Signal<bool> = use_signal(|| false);
@@ -804,7 +816,7 @@ pub fn App() -> Element {
                     }
                 }
                 if active_tab() == Tab::Bundles {
-                    if let Some(ref err) = corpus_error {
+                    if let Some(ref err) = *error_signal.read() {
                     div { class: "corpus-error-banner",
                         ErrorState {
                             message: format!("Corpus load failed ({err}); no sessions are available."),

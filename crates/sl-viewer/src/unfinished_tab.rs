@@ -50,7 +50,7 @@ const fn corpus_label(corpus: Corpus) -> &'static str {
 #[component]
 pub fn UnfinishedWork() -> Element {
     let sessions = use_context::<SessionContext>();
-    let items = unfinished_items(&sessions.0);
+    let items = unfinished_items(&sessions.0.read());
     let count = items.len();
     let noun = if count == 1 { "item" } else { "items" };
 

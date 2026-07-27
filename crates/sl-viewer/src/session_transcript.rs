@@ -7,7 +7,7 @@ use crate::app::SessionContext;
 #[component]
 pub fn SessionTranscript(session_id: String) -> Element {
     let context = use_context::<SessionContext>();
-    let session = context.0.iter().find(|s| s.id == session_id).cloned();
+    let session = context.0.read().iter().find(|s| s.id == session_id).cloned();
 
     let Some(session) = session else {
         return rsx! {

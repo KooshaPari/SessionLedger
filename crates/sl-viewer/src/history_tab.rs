@@ -108,7 +108,7 @@ fn corpus_label(corpus: Corpus) -> &'static str {
 #[component]
 pub fn HistoryTimeline() -> Element {
     let ctx = use_context::<SessionContext>();
-    let entries = use_signal(move || all_timeline_entries(&ctx.0));
+    let entries = use_signal(move || all_timeline_entries(&(*ctx.0.read())));
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
 
     let selected = selected_idx().and_then(|idx| entries.get(idx)).map(|r| (*r).clone());
@@ -254,7 +254,7 @@ fn TimelineRow(entry: TimelineEntry, is_selected: bool, on_click: EventHandler<(
 fn TimelineDetail(entry: TimelineEntry) -> Element {
     // Look up the full session from the injected context (real or mock data).
     let ctx = use_context::<SessionContext>();
-    let session = ctx.0.iter().find(|s| s.id == entry.summary.id).cloned();
+    let session = ctx.0.read().iter().find(|s| s.id == entry.summary.id).cloned();
     let title_text = entry.summary.title.clone().unwrap_or_else(|| "Session Details".into());
     let status_text = if entry.summary.unfinished { "In Progress" } else { "Completed" };
 

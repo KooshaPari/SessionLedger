@@ -8,3 +8,6 @@
 
 target-w34-*/
 
+
+# All nested cargo build dirs (sub-crates' target/)
+**/target/

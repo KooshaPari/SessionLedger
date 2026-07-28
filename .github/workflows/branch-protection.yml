@@ -35,7 +35,7 @@ jobs:
     # Fork PRs often lack admin API scope; do not fail the contributor check suite.
     continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: machine-verify branch protection (best-effort)
         shell: pwsh

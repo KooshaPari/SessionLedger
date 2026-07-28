@@ -18,7 +18,7 @@ jobs:
     name: release · SOURCE_DATE_EPOCH policy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: verify SOURCE_DATE_EPOCH docs + release wiring
         shell: pwsh
         run: ./scripts/repro-check.ps1 -PolicyOnly
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: SelfCheck SLSA isolation checklist + builder pin
         shell: pwsh
         run: ./scripts/slsa-isolation-check.ps1 -SelfCheck
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: SelfCheck rust-toolchain.toml exact channel + CI uses pin
         shell: pwsh
         run: ./scripts/rustc-toolchain-check.ps1 -SelfCheck
@@ -50,7 +50,7 @@ jobs:
     name: sl-daemon · locked offline build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - name: cargo fetch then offline build
         shell: pwsh
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: SelfCheck reusable workflow caller pin
         shell: pwsh
         run: ./scripts/reusable-provenance-check.ps1 -SelfCheck

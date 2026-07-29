@@ -12,7 +12,7 @@ use session_ledger::domain::context::Context;
 use session_ledger::domain::contract::Contract;
 use session_ledger::domain::intent::Intent;
 
-use crate::mock_data::sample_sessions;
+use crate::app::SessionContext;
 use session_ledger::distill::acceptance_extractor::HeuristicAcceptanceExtractor;
 use session_ledger::distill::context_extractor::HeuristicContextExtractor;
 use session_ledger::distill::contract_extractor::HeuristicContractExtractor;
@@ -47,16 +47,19 @@ pub fn to_wiki_page(session: &session_ledger::domain::session::Session) -> Memor
     }
 }
 
-/// Build all wiki pages from mock sessions.
+/// Build wiki pages from real sessions via context.
 #[must_use]
-pub fn all_wiki_pages() -> Vec<MemoryWikiPage> {
-    sample_sessions().iter().map(to_wiki_page).collect()
+pub fn all_wiki_pages_from_sessions(
+    sessions: &[session_ledger::domain::session::Session],
+) -> Vec<MemoryWikiPage> {
+    sessions.iter().map(to_wiki_page).collect()
 }
 
 /// The main Memory Wiki component.
 #[component]
 pub fn MemoryWiki() -> Element {
-    let pages = use_signal(all_wiki_pages);
+    let ctx = use_context::<SessionContext>();
+    let pages = use_signal(move || all_wiki_pages_from_sessions(&ctx.0.read()));
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
 
     let selected = selected_idx().and_then(|idx| pages.get(idx)).map(|r| (*r).clone());

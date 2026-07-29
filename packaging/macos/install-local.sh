@@ -28,8 +28,12 @@ command -v ditto >/dev/null || { echo "error: ditto is required." >&2; exit 1; }
 mkdir -p "$(dirname "$APP_DEST")"
 if [[ -e "$APP_DEST" ]]; then
   backup="${APP_DEST}.previous"
-  rm -rf "$backup"
-  ditto "$APP_DEST" "$backup"
+  # Rotate the previous archive: only archive the currently-installed app when
+  # no prior .previous exists, so Spotlight sees at most one SessionLedger.app
+  # bundle and a single .previous (the previous-previous is dropped).
+  if [[ ! -e "$backup" ]]; then
+    ditto "$APP_DEST" "$backup"
+  fi
 fi
 rm -rf "$APP_DEST"
 ditto "$APP_SOURCE" "$APP_DEST"

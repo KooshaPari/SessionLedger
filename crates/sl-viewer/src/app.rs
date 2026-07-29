@@ -7,7 +7,7 @@ use crate::async_states::{
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::command_palette::{CommandPalette, PaletteAction};
-use crate::corpus_loader::{DataSource, load_sessions};
+use crate::corpus_loader::{load_sessions, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::visual_fixture_active;
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
@@ -183,13 +183,23 @@ pub fn App() -> Element {
     });
 
     // Load sessions once at the root; propagate via context.
-    let source = resolve_data_source();
     let mut sessions_signal = use_signal(Vec::<Session>::new);
     let mut corpus_error_signal: Signal<Option<String>> = use_signal(|| None);
     use_effect(move || {
         let source = resolve_data_source();
         spawn(async move {
-            let result = tokio::task::spawn_blocking(move || load_sessions(&source)).await;
+            let result: std::result::Result<Result<Vec<Session>, String>, String> = {
+                #[cfg(feature = "desktop")]
+                {
+                    tokio::task::spawn_blocking(move || load_sessions(&source))
+                        .await
+                        .map_err(|error| error.to_string())
+                }
+                #[cfg(not(feature = "desktop"))]
+                {
+                    Ok(load_sessions(&source))
+                }
+            };
             match result {
                 Ok(Ok(sessions)) => {
                     sessions_signal.set(sessions);
@@ -1107,7 +1117,7 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
                             div { class: "session-meta",
                                 span { class: "meta-bundles", "{s.bundle_count} slices" }
                                 if s.has_acceptance {
-                                    span { class: "badge badge-ok", "✓ AC" }
+                                    span { class: "badge badge-ok", "AC" }
                                 }
                                 if s.has_contract {
                                     span { class: "badge badge-contract", "◎ CT" }

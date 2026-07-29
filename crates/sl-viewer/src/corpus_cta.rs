@@ -60,16 +60,16 @@ pub fn trigger_open_corpus() {
 }
 
 /// Desktop builds open the quick-start runbook (no native picker in this lane).
-#[cfg(all(feature = "desktop", not(target_arch = "wasm32")))]
+#[cfg(all(not(feature = "web"), feature = "desktop", not(target_arch = "wasm32")))]
 pub fn trigger_open_corpus() {
     open_quickstart_desktop();
 }
 
 /// Headless / test builds: no-op so unit tests stay hermetic.
-#[cfg(not(any(feature = "web", all(feature = "desktop", not(target_arch = "wasm32")))))]
+#[cfg(not(any(feature = "web", feature = "desktop")))]
 pub fn trigger_open_corpus() {}
 
-#[cfg(all(feature = "desktop", not(target_arch = "wasm32")))]
+#[cfg(all(not(feature = "web"), feature = "desktop", not(target_arch = "wasm32")))]
 fn open_quickstart_desktop() {
     let url = QUICKSTART_URL;
     let result = if cfg!(target_os = "windows") {

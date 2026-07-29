@@ -46,6 +46,14 @@ cat >"$APP/Contents/Info.plist" <<EOF
   <string>11.0</string>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>NSPrincipalClass</key>
+  <string>NSApplication</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
+  <key>NSSupportsAutomaticGraphicsSwitching</key>
+  <true/>
 </dict>
 </plist>
 EOF
@@ -53,6 +61,17 @@ EOF
 # Stamp architecture into a sidecar for CI naming when ARCH_LABEL is set.
 if [[ -n "$ARCH_LABEL" ]]; then
   printf '%s\n' "$ARCH_LABEL" >"$APP/Contents/Resources/arch.txt"
+fi
+
+# Embed icon from the iconset if it exists.
+ICONSET="$ROOT/assets/icons/sessionledger.iconset"
+if [[ -d "$ICONSET" ]]; then
+  if command -v iconutil &>/dev/null; then
+    iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+    echo "Embedded AppIcon.icns from iconset"
+  else
+    echo "WARN: iconutil not found — skipping icon embed" >&2
+  fi
 fi
 
 echo "macOS app bundle (unsigned): $APP"

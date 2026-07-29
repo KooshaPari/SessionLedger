@@ -108,7 +108,7 @@ fn corpus_label(corpus: Corpus) -> &'static str {
 #[component]
 pub fn HistoryTimeline() -> Element {
     let ctx = use_context::<SessionContext>();
-    let entries = use_signal(move || all_timeline_entries(&(*ctx.0.read())));
+    let entries = use_signal(move || all_timeline_entries(&ctx.0.read()));
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
 
     let selected = selected_idx().and_then(|idx| entries.get(idx)).map(|r| (*r).clone());

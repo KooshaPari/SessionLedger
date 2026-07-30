@@ -45,14 +45,14 @@ From `.github/workflows/release.yml` (on `push` tags `v*`):
 Asset names (representative):
 
 ```text
-sl-viewer-<tag>-x86_64-unknown-linux-gnu.tar.gz
-sl-daemon-<tag>-x86_64-unknown-linux-gnu.tar.gz
-sl-viewer-<tag>-x86_64-apple-darwin.tar.gz
-sl-daemon-<tag>-x86_64-apple-darwin.tar.gz
-sl-viewer-<tag>-aarch64-apple-darwin.tar.gz
-sl-daemon-<tag>-aarch64-apple-darwin.tar.gz
-sl-viewer-<tag>-x86_64-pc-windows-msvc.zip
-sl-daemon-<tag>-x86_64-pc-windows-msvc.zip
+sl-viewer-<version>-x86_64-unknown-linux-gnu.tar.gz
+sl-daemon-<version>-x86_64-unknown-linux-gnu.tar.gz
+sl-viewer-<version>-x86_64-apple-darwin.tar.gz
+sl-daemon-<version>-x86_64-apple-darwin.tar.gz
+sl-viewer-<version>-aarch64-apple-darwin.tar.gz
+sl-daemon-<version>-aarch64-apple-darwin.tar.gz
+sl-viewer-<version>-x86_64-pc-windows-msvc.zip
+sl-daemon-<version>-x86_64-pc-windows-msvc.zip
 SessionLedger-<ver>-x64.msi
 SessionLedger-<ver>-aarch64.pkg
 SessionLedger-<ver>-x86_64.pkg
@@ -546,7 +546,7 @@ provenance issued by this repository:
 
 ```bash
 gh attestation verify \
-  sl-viewer-<tag>-x86_64-unknown-linux-gnu.tar.gz \
+  sl-viewer-<version>-x86_64-unknown-linux-gnu.tar.gz \
   --repo KooshaPari/SessionLedger
 ```
 
@@ -576,7 +576,7 @@ SessionLedger release and data-surface versioning follow distinct rules:
 | Surface | Policy | Source of truth |
 |---------|--------|-----------------|
 | **Git tags / desktop binaries** | [SemVer](https://semver.org/) on `v*` tags (`v0.1.0` → version `0.1.0`) | Root `Cargo.toml` `version` must match the tag body before tagging; [`CHANGELOG.md`](../../CHANGELOG.md) + [`versioning-policy.md`](versioning-policy.md) |
-| **Release asset names** | Tag-derived `VER` in CI (`sl-viewer-v<tag>-<target>`, `SessionLedger-<ver>-x64.msi`, `SessionLedger-<ver>-<arch>.pkg`) | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) `derive version` step |
+| **Release asset names** | Bare version derived from the `v*` tag in CI (`sl-viewer-<version>-<target>`, `SessionLedger-<ver>-x64.msi`, `SessionLedger-<ver>-<arch>.pkg`) | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) `derive version` step |
 | **OKF export documents** | `[major].[minor]` tuple with major-bump rejection rules | [`docs/reference/OKF-SPEC.md`](../reference/OKF-SPEC.md#13-versioning--compatibility) |
 | **SQLite schema** | Forward-only migrations; consumers on older schema revisions upgrade via `sl-daemon` migrate | [`docs/ops/schema-migrations.md`](schema-migrations.md) |
 

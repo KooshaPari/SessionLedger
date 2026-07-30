@@ -109,7 +109,11 @@ if [ -z "$version" ] || [ "$version" = "v" ] || [ "$version" = "latest" ]; then
     exit 1
 fi
 
-archive="sl-viewer-${version}-${os_target}.tar.gz"
+# Release URLs are tag-addressed, while portable artifact names use the bare
+# SemVer version. Keep those identities separate so `v1.2.3` resolves the
+# `sl-viewer-1.2.3-<target>.tar.gz` asset published by release.yml.
+asset_version="${version#v}"
+archive="sl-viewer-${asset_version}-${os_target}.tar.gz"
 base_url="https://github.com/${REPO}/releases/download/${version}"
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sessionledger-install.XXXXXX")"
 cleanup() { rm -rf "$tmp_dir"; }
@@ -157,7 +161,7 @@ tar -xzf "${tmp_dir}/${archive}" -C "$tmp_dir"
 
 bin_path=""
 for candidate in \
-    "${tmp_dir}/sl-viewer-${version}-${os_target}/sl-viewer" \
+    "${tmp_dir}/sl-viewer-${asset_version}-${os_target}/sl-viewer" \
     "${tmp_dir}/sl-viewer" \
     ; do
     if [ -f "$candidate" ]; then

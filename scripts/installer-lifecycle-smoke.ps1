@@ -284,6 +284,9 @@ $appImageScript = Join-RepoPath @("packaging", "linux", "package-appimage.sh")
 $distributionDoc = Join-RepoPath @("docs", "ops", "distribution.md")
 $packagingReadme = Join-RepoPath @("packaging", "README.md")
 $daemonContainerfile = Join-RepoPath @("crates", "sl-daemon", "Containerfile")
+$unixInstaller = Join-RepoPath @("scripts", "install.sh")
+$windowsInstaller = Join-RepoPath @("scripts", "install.ps1")
+$releaseWorkflow = Join-RepoPath @(".github", "workflows", "release.yml")
 
 Write-Output "Clean-host smoke: documentation assertions (unsigned; no Authenticode)."
 Write-Output "Optional -WindowsInstallLifecycle exercises unsigned portable install/uninstall on a clean Windows host."
@@ -298,6 +301,9 @@ try {
     Assert-Path (Join-RepoPath @("scripts", "package-msi.ps1")) "package-msi.ps1"
     Assert-Path (Join-RepoPath @("packaging", "macos", "package-app.sh")) "macOS package-app.sh"
     Assert-Path (Join-RepoPath @("packaging", "macos", "package-pkg.sh")) "macOS package-pkg.sh"
+    Assert-Path $unixInstaller "Unix release installer"
+    Assert-Path $windowsInstaller "Windows release installer"
+    Assert-Path $releaseWorkflow "Release workflow"
 
     Assert-Contains $productWxs 'Scope="perUser"' "WiX per-user install scope"
     Assert-Contains $productWxs 'sl-viewer\.exe' "WiX viewer executable payload"
@@ -325,6 +331,12 @@ try {
 
     Assert-Contains $daemonContainerfile 'HEALTHCHECK' "daemon Containerfile defines OCI HEALTHCHECK"
     Assert-Contains $daemonContainerfile '/healthz' "daemon Containerfile probes /healthz"
+
+    Assert-Contains $unixInstaller 'asset_version="\$\{version#v\}"' "Unix installer derives a bare asset version"
+    Assert-Contains $unixInstaller 'sl-viewer-\$\{asset_version\}-\$\{os_target\}\.tar\.gz' "Unix installer requests bare-version archive"
+    Assert-Contains $windowsInstaller '\$assetVersion = \$Version\.TrimStart\("v"\)' "Windows installer derives a bare asset version"
+    Assert-Contains $windowsInstaller 'sl-viewer-\$assetVersion-\$Target\.zip' "Windows installer requests bare-version archive"
+    Assert-Contains $releaseWorkflow 'VER="\$\{\{ steps\.version\.outputs\.version \}\}"' "Release workflow publishes bare-version archives"
 
     Add-EvidenceStep -Id "scaffold" -Description "Installer documentation assertions" -Status "pass" -Detail "repository static checks"
     Write-Output "ok: clean-host documentation smoke passed"

@@ -37,10 +37,10 @@ $WingetVersion = Join-Path $RepoRoot "packaging\winget\KooshaPari.SessionLedger.
 $WingetLocale = Join-Path $RepoRoot "packaging\winget\KooshaPari.SessionLedger.locale.en-US.yaml"
 
 $RequiredArtifacts = @(
-    "sl-viewer-$Version-aarch64-apple-darwin.tar.gz"
-    "sl-viewer-$Version-x86_64-apple-darwin.tar.gz"
-    "sl-viewer-$Version-x86_64-unknown-linux-gnu.tar.gz"
-    "sl-viewer-$Version-x86_64-pc-windows-msvc.zip"
+    "sl-viewer-$VersionBare-aarch64-apple-darwin.tar.gz"
+    "sl-viewer-$VersionBare-x86_64-apple-darwin.tar.gz"
+    "sl-viewer-$VersionBare-x86_64-unknown-linux-gnu.tar.gz"
+    "sl-viewer-$VersionBare-x86_64-pc-windows-msvc.zip"
 )
 
 function Get-Sha256Map {
@@ -129,15 +129,15 @@ if (-not $SkipVersionRewrite) {
     )
     $rb = [regex]::Replace(
         $rb,
-        'sl-viewer-v[0-9]+\.[0-9]+\.[0-9]+-',
-        "sl-viewer-$Version-"
+        'sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+[^/\"\s]*-',
+        "sl-viewer-$VersionBare-"
     )
 }
 
 foreach ($artifact in @(
-        "sl-viewer-$Version-aarch64-apple-darwin.tar.gz"
-        "sl-viewer-$Version-x86_64-apple-darwin.tar.gz"
-        "sl-viewer-$Version-x86_64-unknown-linux-gnu.tar.gz"
+        "sl-viewer-$VersionBare-aarch64-apple-darwin.tar.gz"
+        "sl-viewer-$VersionBare-x86_64-apple-darwin.tar.gz"
+        "sl-viewer-$VersionBare-x86_64-unknown-linux-gnu.tar.gz"
     )) {
     $hash = $digestMap[$artifact]
     # Replace the sha256 line that follows the URL (or Fill comment) for this archive.
@@ -158,7 +158,7 @@ Set-FileText -Path $HomebrewFormula -Content $rb -Label "fill Homebrew sha256 di
 
 # --- winget installer -------------------------------------------------------
 $installer = Get-Content -LiteralPath $WingetInstaller -Raw
-$winZip = "sl-viewer-$Version-x86_64-pc-windows-msvc.zip"
+$winZip = "sl-viewer-$VersionBare-x86_64-pc-windows-msvc.zip"
 $winHash = $digestMap[$winZip]
 
 if (-not $SkipVersionRewrite) {
@@ -170,13 +170,13 @@ if (-not $SkipVersionRewrite) {
     )
     $installer = [regex]::Replace(
         $installer,
-        'sl-viewer-v[0-9]+\.[0-9]+\.[0-9]+-',
-        "sl-viewer-$Version-"
+        'sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+[^/\"\s]*-',
+        "sl-viewer-$VersionBare-"
     )
     $installer = [regex]::Replace(
         $installer,
-        '(?m)(# Template: replace InstallerSha256 with the SHA256SUMS digest for\s*\r?\n# )sl-viewer-v[0-9]+\.[0-9]+\.[0-9]+-',
-        '${1}' + "sl-viewer-$Version-"
+        '(?m)(# Template: replace InstallerSha256 with the SHA256SUMS digest for\s*\r?\n# )sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+[^\r\n\s]*-',
+        '${1}' + "sl-viewer-$VersionBare-"
     )
 }
 

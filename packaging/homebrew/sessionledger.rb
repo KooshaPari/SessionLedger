@@ -25,27 +25,27 @@ class Sessionledger < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/KooshaPari/SessionLedger/releases/download/v0.1.0/sl-viewer-v0.1.0-aarch64-apple-darwin.tar.gz"
-      # Fill from SHA256SUMS for sl-viewer-v0.1.0-aarch64-apple-darwin.tar.gz
+      url "https://github.com/KooshaPari/SessionLedger/releases/download/v0.1.0/sl-viewer-0.1.0-aarch64-apple-darwin.tar.gz"
+      # Fill from SHA256SUMS for sl-viewer-0.1.0-aarch64-apple-darwin.tar.gz
       sha256 "0000000000000000000000000000000000000000000000000000000000000000"
     end
     on_intel do
-      url "https://github.com/KooshaPari/SessionLedger/releases/download/v0.1.0/sl-viewer-v0.1.0-x86_64-apple-darwin.tar.gz"
-      # Fill from SHA256SUMS for sl-viewer-v0.1.0-x86_64-apple-darwin.tar.gz
+      url "https://github.com/KooshaPari/SessionLedger/releases/download/v0.1.0/sl-viewer-0.1.0-x86_64-apple-darwin.tar.gz"
+      # Fill from SHA256SUMS for sl-viewer-0.1.0-x86_64-apple-darwin.tar.gz
       sha256 "0000000000000000000000000000000000000000000000000000000000000000"
     end
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/KooshaPari/SessionLedger/releases/download/v0.1.0/sl-viewer-v0.1.0-x86_64-unknown-linux-gnu.tar.gz"
-      # Fill from SHA256SUMS for sl-viewer-v0.1.0-x86_64-unknown-linux-gnu.tar.gz
+      url "https://github.com/KooshaPari/SessionLedger/releases/download/v0.1.0/sl-viewer-0.1.0-x86_64-unknown-linux-gnu.tar.gz"
+      # Fill from SHA256SUMS for sl-viewer-0.1.0-x86_64-unknown-linux-gnu.tar.gz
       sha256 "0000000000000000000000000000000000000000000000000000000000000000"
     end
   end
 
   def install
-    # Release archives contain: sl-viewer-vX.Y.Z-<triple>/sl-viewer
+    # Release archives contain: sl-viewer-X.Y.Z-<triple>/sl-viewer
     viewer = Dir["**/sl-viewer"].reject { |p| File.directory?(p) }.first
     odie "sl-viewer binary missing from release archive" if viewer.nil?
     bin.install viewer => "sl-viewer"

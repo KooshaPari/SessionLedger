@@ -23,11 +23,11 @@ Published release artifacts:
 
 | Artifact | Produced by |
 |----------|-------------|
-| `sl-viewer-<tag>-x86_64-unknown-linux-gnu.tar.gz` | Linux release build |
-| `sl-viewer-<tag>-x86_64-apple-darwin.tar.gz` | macOS Intel release build |
-| `sl-viewer-<tag>-aarch64-apple-darwin.tar.gz` | macOS Apple Silicon release build |
-| `sl-viewer-<tag>-x86_64-pc-windows-msvc.zip` | Windows release build |
-| `sl-viewer-<tag>-windows-msi-scaffold.zip` | Windows WiX source and build notes |
+| `sl-viewer-<version>-x86_64-unknown-linux-gnu.tar.gz` | Linux release build |
+| `sl-viewer-<version>-x86_64-apple-darwin.tar.gz` | macOS Intel release build |
+| `sl-viewer-<version>-aarch64-apple-darwin.tar.gz` | macOS Apple Silicon release build |
+| `sl-viewer-<version>-x86_64-pc-windows-msvc.zip` | Windows release build |
+| `sl-viewer-<version>-windows-msi-scaffold.zip` | Windows WiX source and build notes |
 | `SHA256SUMS` | Release checksum step |
 | `session-ledger.cdx.json` | CycloneDX SBOM step |
 | `SHA256SUMS.sigstore.json` | Best-effort keyless checksum signature |

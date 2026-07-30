@@ -78,7 +78,9 @@ if (-not $Version.StartsWith("v")) {
     $Version = "v$Version"
 }
 
-$archive = "sl-viewer-$Version-$Target.zip"
+# GitHub Release URLs use tags, while release.yml emits bare-version archives.
+$assetVersion = $Version.TrimStart("v")
+$archive = "sl-viewer-$assetVersion-$Target.zip"
 $baseUrl = "https://github.com/$Repo/releases/download/$Version"
 $tmpRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("sessionledger-install-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $tmpRoot | Out-Null

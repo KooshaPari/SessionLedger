@@ -15,10 +15,10 @@
 //! `cargo test` never builds it.
 //!
 //! Traceability:
-//!   - WAVE44_SCOPE.md (rank 1), docs/ops/WAVE44_PERT.md (lane B1)
+//!   - `WAVE44_SCOPE.md` (rank 1), `docs/ops/WAVE44_PERT.md` (lane B1)
 //!   - audit/.lane-c00/C00.md — L7 evidence
 //!   - docs/ops/daemon-graph-hard.md — live tokio port
-//!   - tests/loom_model.rs — channel primitives (Wave-43)
+//!   - `tests/loom_model.rs` — channel primitives (Wave-43)
 
 #[cfg(not(loom))]
 #[test]
@@ -165,7 +165,13 @@ mod loom_http_sse_soak {
                 publisher_published_final,
             );
             for (i, c) in client_counts.iter().enumerate() {
-                assert!(*c <= publisher_published_final, "client {} saw {} > published {}", i, c, publisher_published_final);
+                assert!(
+                    *c <= publisher_published_final,
+                    "client {} saw {} > published {}",
+                    i,
+                    c,
+                    publisher_published_final
+                );
             }
         });
     }
@@ -232,7 +238,11 @@ mod loom_http_sse_soak {
                 let _ = p.join();
             }
             let client_seen = client.join().expect("client thread panicked");
-            assert!(client_seen <= N_PUBLISHERS * PER_PUBLISHER, "client overcount: {}", client_seen);
+            assert!(
+                client_seen <= N_PUBLISHERS * PER_PUBLISHER,
+                "client overcount: {}",
+                client_seen
+            );
         });
     }
 
@@ -255,20 +265,18 @@ mod loom_http_sse_soak {
                 let client_cancel = Arc::clone(&cancel);
                 let client_observed = Arc::clone(&observed_cancel);
                 let rx = rx.clone();
-                joins.push(thread::spawn(move || {
-                    loop {
-                        if client_cancel.load(Ordering::Acquire) {
+                joins.push(thread::spawn(move || loop {
+                    if client_cancel.load(Ordering::Acquire) {
+                        client_observed.fetch_add(1, Ordering::AcqRel);
+                        return;
+                    }
+                    match rx.try_recv() {
+                        Ok(()) | Err(mpsc::TryRecvError::Empty) => {
+                            thread::yield_now();
+                        }
+                        Err(mpsc::TryRecvError::Disconnected) => {
                             client_observed.fetch_add(1, Ordering::AcqRel);
                             return;
-                        }
-                        match rx.try_recv() {
-                            Ok(()) | Err(mpsc::TryRecvError::Empty) => {
-                                thread::yield_now();
-                            }
-                            Err(mpsc::TryRecvError::Disconnected) => {
-                                client_observed.fetch_add(1, Ordering::AcqRel);
-                                return;
-                            }
                         }
                     }
                 }));

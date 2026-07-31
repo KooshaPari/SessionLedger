@@ -9,8 +9,8 @@
   remains explicitly unpaid. Does not run brew, winget, or network calls, and
   does not claim a live publish.
 
-  -SelfCheck: docs + formula/manifest + fill-script anchors only
-  (no cargo / no network / no package managers).
+  -SelfCheck: docs + formula/manifest + fill-script anchors and an isolated
+  artifact-version rewrite regression (no cargo / no network / no package managers).
 
 .PARAMETER SelfCheck
   Explicit docs/template smoke (CI unit proof). Same checks as the default path.
@@ -69,7 +69,7 @@ function Test-DocContains {
 
 Write-Host "Homebrew + winget publish readiness check (C11)"
 if ($SelfCheck) {
-    Write-Host "Mode: SelfCheck (checklist + formula/manifest anchors; no brew / no winget / no network)"
+    Write-Host "Mode: SelfCheck (anchors + artifact rewrite regression; no package managers / no network)"
 }
 
 Assert-File -Path $checklistPath -Label "brew/winget publish checklist"
@@ -178,6 +178,57 @@ Test-DocContains -Doc $distribution -Needle "brew-winget-publish.md" `
     -Label "distribution publish doc link"
 Test-DocContains -Doc $distribution -Needle "fill-packaging-checksums.ps1" `
     -Label "distribution fill script link"
+
+Write-Host "Checksum version rewrite regression:"
+$fixtureRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
+    "sl-packaging-check-" + [guid]::NewGuid().ToString("N")
+)
+try {
+    $fixtureHomebrew = Join-Path $fixtureRoot "packaging/homebrew"
+    $fixtureWinget = Join-Path $fixtureRoot "packaging/winget"
+    New-Item -ItemType Directory -Force -Path $fixtureHomebrew, $fixtureWinget | Out-Null
+    Copy-Item -LiteralPath $formulaPath -Destination $fixtureHomebrew
+    Copy-Item -LiteralPath $wingetInstallerPath -Destination $fixtureWinget
+    Copy-Item -LiteralPath $wingetVersionPath -Destination $fixtureWinget
+    Copy-Item -LiteralPath $wingetLocalePath -Destination $fixtureWinget
+
+    $fixtureSums = Join-Path $fixtureRoot "SHA256SUMS"
+    @(
+        ("{0}  sl-viewer-1.2.3-aarch64-apple-darwin.tar.gz" -f ("a" * 64))
+        ("{0}  sl-viewer-1.2.3-x86_64-apple-darwin.tar.gz" -f ("b" * 64))
+        ("{0}  sl-viewer-1.2.3-x86_64-unknown-linux-gnu.tar.gz" -f ("c" * 64))
+        ("{0}  sl-viewer-1.2.3-x86_64-pc-windows-msvc.zip" -f ("d" * 64))
+    ) | Set-Content -LiteralPath $fixtureSums -Encoding utf8
+
+    & $fillScriptPath -Sha256Sums $fixtureSums -Version v1.2.3 -RepoRoot $fixtureRoot
+
+    $rewrittenFormula = Get-Content -LiteralPath (
+        Join-Path $fixtureHomebrew "sessionledger.rb"
+    ) -Raw
+    $rewrittenInstaller = Get-Content -LiteralPath (
+        Join-Path $fixtureWinget "KooshaPari.SessionLedger.installer.yaml"
+    ) -Raw
+    foreach ($artifact in @(
+            "sl-viewer-1.2.3-aarch64-apple-darwin.tar.gz"
+            "sl-viewer-1.2.3-x86_64-apple-darwin.tar.gz"
+            "sl-viewer-1.2.3-x86_64-unknown-linux-gnu.tar.gz"
+        )) {
+        if (-not $rewrittenFormula.Contains($artifact)) {
+            throw "Version rewrite did not preserve Homebrew target suffix for $artifact."
+        }
+    }
+    if (-not $rewrittenInstaller.Contains(
+            "sl-viewer-1.2.3-x86_64-pc-windows-msvc.zip"
+        )) {
+        throw "Version rewrite did not preserve the winget target suffix."
+    }
+    [void](Write-Check -Label "version rewrite preserves artifact target suffixes" -Ok $true)
+}
+finally {
+    if (Test-Path -LiteralPath $fixtureRoot) {
+        Remove-Item -LiteralPath $fixtureRoot -Recurse -Force
+    }
+}
 
 $summary = @"
 ## Brew/winget publish readiness SelfCheck

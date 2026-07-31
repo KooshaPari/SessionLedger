@@ -129,7 +129,7 @@ if (-not $SkipVersionRewrite) {
     )
     $rb = [regex]::Replace(
         $rb,
-        'sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+[^/\"\s]*-',
+        'sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+-',
         "sl-viewer-$VersionBare-"
     )
 }
@@ -170,12 +170,12 @@ if (-not $SkipVersionRewrite) {
     )
     $installer = [regex]::Replace(
         $installer,
-        'sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+[^/\"\s]*-',
+        'sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+-',
         "sl-viewer-$VersionBare-"
     )
     $installer = [regex]::Replace(
         $installer,
-        '(?m)(# Template: replace InstallerSha256 with the SHA256SUMS digest for\s*\r?\n# )sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+[^\r\n\s]*-',
+        '(?m)(# Template: replace InstallerSha256 with the SHA256SUMS digest for\s*\r?\n# )sl-viewer-(?:v)?[0-9]+\.[0-9]+\.[0-9]+-',
         '${1}' + "sl-viewer-$VersionBare-"
     )
 }

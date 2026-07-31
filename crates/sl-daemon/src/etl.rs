@@ -7,6 +7,7 @@
 //! The heavy lifting lives in the root `session-ledger` crate; this module is a
 //! thin, well-tested adapter that turns a file path into on-disk OKF documents.
 
+use std::io::BufRead;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -95,9 +96,32 @@ fn read_sessions(
     path: &Path,
 ) -> Result<Vec<session_ledger::Session>, session_ledger::IngestionError> {
     let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
-    if !name.ends_with(".jsonl.zst") {
-        return read_jsonl_sessions(path);
+    if name.ends_with(".jsonl.zst") || has_codex_session_metadata(path)? {
+        return read_codex_session(path);
     }
+
+    read_jsonl_sessions(path)
+}
+
+fn has_codex_session_metadata(path: &Path) -> Result<bool, session_ledger::IngestionError> {
+    let file = std::fs::File::open(path)?;
+    for line in std::io::BufReader::new(file).lines() {
+        let line = line?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let Ok(record) = serde_json::from_str::<serde_json::Value>(trimmed) else {
+            return Ok(false);
+        };
+        return Ok(record.get("type").and_then(serde_json::Value::as_str) == Some("session_meta"));
+    }
+    Ok(false)
+}
+
+fn read_codex_session(
+    path: &Path,
+) -> Result<Vec<session_ledger::Session>, session_ledger::IngestionError> {
     let source = CodexDir::new(path);
     let id = source
         .list()
@@ -207,6 +231,26 @@ mod tests {
         let doc: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&written[0]).unwrap()).unwrap();
         assert_eq!(doc["source_id"], "zst-session");
+    }
+
+    #[test]
+    fn transform_file_reads_plain_codex_session_meta_transcript() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("codex.jsonl");
+        let input = format!(
+            "{}\n{}\n",
+            serde_json::json!({"type":"session_meta","payload":{"id":"plain-codex-session"}}),
+            serde_json::json!({"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"ship plain codex"}]}})
+        );
+        std::fs::write(&path, input).expect("write plain transcript");
+
+        let written = transform_file(&path, &tmp.path().join("out"), None)
+            .expect("transform plain Codex transcript");
+
+        assert_eq!(written.len(), 1);
+        let doc: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&written[0]).unwrap()).unwrap();
+        assert_eq!(doc["source_id"], "plain-codex-session");
     }
 
     #[test]

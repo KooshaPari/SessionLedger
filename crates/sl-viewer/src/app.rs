@@ -15,7 +15,7 @@ use crate::help_overlay::HelpOverlay;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
-use crate::mock_data::sample_bundles;
+use crate::mock_data::{long_content_fixture, sample_bundles};
 use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
 use crate::session_transcript::SessionTranscript;
@@ -185,6 +185,7 @@ pub fn App() -> Element {
     // Load sessions once at the root; propagate via context.
     let mut sessions_signal = use_signal(Vec::<Session>::new);
     let mut corpus_error_signal: Signal<Option<String>> = use_signal(|| None);
+    let long_content = query_fixture_active("long-content");
     use_effect(move || {
         let source = resolve_data_source();
         spawn(async move {
@@ -202,7 +203,11 @@ pub fn App() -> Element {
             };
             match result {
                 Ok(Ok(sessions)) => {
-                    sessions_signal.set(sessions);
+                    sessions_signal.set(if long_content {
+                        long_content_fixture().1
+                    } else {
+                        sessions
+                    });
                 }
                 Ok(Err(e)) => {
                     corpus_error_signal.set(Some(e));
@@ -656,6 +661,7 @@ pub fn App() -> Element {
                 .bundles-workspace > .session-list {{ flex: 0 0 360px; width: 360px; min-width: 280px; overflow-y: auto; border-right: 1px solid var(--sl-border); background: var(--sl-surface); }}
                 .bundles-workspace > .main-content {{ background: var(--sl-bg); }}
                 .viewer-main {{ flex: 1; min-width: 0; min-height: 0; width: 100%; overflow: hidden; }}
+                .viewer-main > [role="tabpanel"] {{ display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
                 .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
                 @media (max-width: 600px) {{
@@ -923,7 +929,11 @@ fn BundlesTab() -> Element {
         let _ = load_gen();
         loading.set(true);
         load_error.set(None);
-        let loaded = sample_bundles();
+        let loaded = if query_fixture_active("long-content") {
+            long_content_fixture().0
+        } else {
+            sample_bundles()
+        };
         if loaded.is_empty() {
             load_error.set(Some("No bundles available to display.".into()));
         } else {

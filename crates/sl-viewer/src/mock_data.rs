@@ -250,3 +250,36 @@ pub fn sample_sessions() -> Vec<Session> {
         },
     ]
 }
+
+/// Build enough matched bundle/session content to exercise pane-local scrolling.
+#[must_use]
+pub fn long_content_fixture() -> (Vec<ContinuationBundle>, Vec<Session>) {
+    let bundle_templates = sample_bundles();
+    let session_templates = sample_sessions();
+    let mut bundles = Vec::new();
+    let mut sessions = Vec::new();
+
+    for copy in 0..10 {
+        for (bundle_template, session_template) in
+            bundle_templates.iter().zip(session_templates.iter())
+        {
+            let mut bundle = bundle_template.clone();
+            let mut session = session_template.clone();
+            if copy > 0 {
+                let suffix = format!("-{copy:02}");
+                bundle.source_id.push_str(&suffix);
+                session.id.push_str(&suffix);
+            }
+
+            let message_seed = session.messages.clone();
+            while session.messages.len() < 36 {
+                session.messages.extend(message_seed.iter().cloned());
+            }
+
+            bundles.push(bundle);
+            sessions.push(session);
+        }
+    }
+
+    (bundles, sessions)
+}

@@ -223,6 +223,48 @@ pub fn ReplayView() -> Element {
 
     let daemon_url = daemon_base_url();
 
+    if query_fixture_active("replay-chat") {
+        return rsx! {
+            style {
+                r#"
+                .replay-chat-fixture {{ display: flex; flex-direction: column; height: 100%; padding: 16px 20px; box-sizing: border-box; }}
+                .replay-conversation {{ flex: 1; min-height: 240px; overflow-y: auto; padding: 16px; background: var(--sl-surface, #141722); border: 1px solid var(--sl-border, #2a2d35); }}
+                .replay-message {{ max-width: 78%; margin: 0 0 12px; padding: 12px 16px; border-radius: 10px; line-height: 1.55; }}
+                .replay-message-user {{ margin-left: auto; background: color-mix(in srgb, var(--sl-accent, #2563eb) 18%, var(--sl-surface, #141722)); }}
+                .replay-message-assistant {{ margin-right: auto; background: var(--sl-surface-muted, #1c1f2b); }}
+                .replay-message-role {{ margin-bottom: 4px; color: var(--sl-text-muted, #8b8fa3); font-size: 11px; font-weight: 600; text-transform: uppercase; }}
+                .replay-message p {{ margin: 0; white-space: pre-wrap; }}
+                "#
+            }
+            div { class: "replay-chat-fixture",
+                h2 { "Session replay" }
+                div {
+                    class: "replay-conversation",
+                    role: "log",
+                    aria_label: "Replay conversation",
+                    article {
+                        class: "replay-message replay-message-user",
+                        "data-testid": "replay-message-user",
+                        div { class: "replay-message-role", "You" }
+                        p { "Trace the authentication timeout and preserve MFA." }
+                    }
+                    article {
+                        class: "replay-message replay-message-assistant",
+                        "data-testid": "replay-message-assistant",
+                        div { class: "replay-message-role", "Assistant" }
+                        p { "The session TTL is hardcoded to five minutes. I will update the source and verify the auth suite." }
+                    }
+                    article {
+                        class: "replay-message replay-message-user",
+                        "data-testid": "replay-message-user",
+                        div { class: "replay-message-role", "You" }
+                        p { "Run the focused regression test before calling it complete." }
+                    }
+                }
+            }
+        };
+    }
+
     if query_fixture_active("replay-error") {
         return rsx! {
             style {

@@ -109,3 +109,48 @@ for (const viewport of viewports) {
     }
   });
 }
+
+test.describe("content pane contracts", () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  test("long bundle list and transcript scroll inside their panes", async ({ page }) => {
+    await page.goto("/?fixture=long-content");
+    await page.getByRole("tab", { name: "Bundles", exact: true }).click();
+    await page.locator(".session-item").first().click();
+    await expect(page.getByRole("heading", { name: "Conversation" })).toBeVisible();
+
+    for (const selector of [
+      ".bundles-workspace > .session-list",
+      ".bundles-workspace .main-upper",
+    ]) {
+      const pane = page.locator(selector);
+      await expect(pane).toBeVisible();
+      const metrics = await pane.evaluate((element) => ({
+        clientHeight: element.clientHeight,
+        overflowY: getComputedStyle(element).overflowY,
+        scrollHeight: element.scrollHeight,
+      }));
+      expect(metrics.overflowY, `${selector} should own vertical scrolling`).toBe("auto");
+      expect(
+        metrics.scrollHeight,
+        `${selector} should have scrollable long content: ${JSON.stringify(metrics)}`,
+      ).toBeGreaterThan(metrics.clientHeight);
+    }
+  });
+
+  test("replay fixture renders chat-like user and assistant messages", async ({ page }) => {
+    await page.goto("/?fixture=replay-chat");
+    await page.getByRole("tab", { name: "Replay", exact: true }).click();
+
+    const conversation = page.getByRole("log", { name: "Replay conversation" });
+    await expect(conversation).toBeVisible();
+    await expect(conversation.getByTestId("replay-message-user").first()).toBeVisible();
+    await expect(conversation.getByTestId("replay-message-assistant")).toBeVisible();
+    await expect(conversation.locator("article")).toHaveCount(3);
+
+    const box = await conversation.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.width).toBeGreaterThan(400);
+    expect(box.height).toBeGreaterThan(200);
+  });
+});

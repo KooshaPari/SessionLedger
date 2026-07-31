@@ -655,13 +655,13 @@ pub fn App() -> Element {
                 .diff-col-b {{ color: var(--sl-text); overflow-wrap: break-word; }}
                 .main-content {{ flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }}
                 .main-upper {{ flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }}
-                .bundles-view {{ display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }}
+                .bundles-view {{ display: flex; flex: 1 1 0; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }}
                 .bundles-view > h2 {{ flex: 0 0 auto; margin: 0; padding: var(--sl-space-xl) var(--sl-space-xl) var(--sl-space-lg); }}
-                .bundles-workspace {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
-                .bundles-workspace > .session-list {{ flex: 0 0 360px; width: 360px; min-width: 280px; overflow-y: auto; border-right: 1px solid var(--sl-border); background: var(--sl-surface); }}
+                .bundles-workspace {{ display: flex; flex: 1 1 0; height: 0; min-height: 0; overflow: hidden; }}
+                .bundles-workspace > .session-list {{ flex: 0 0 360px; width: 360px; min-width: 280px; min-height: 0; height: 100%; max-height: 100%; overflow-y: auto; border-right: 1px solid var(--sl-border); background: var(--sl-surface); }}
                 .bundles-workspace > .main-content {{ background: var(--sl-bg); }}
-                .viewer-main {{ flex: 1; min-width: 0; min-height: 0; width: 100%; overflow: hidden; }}
-                .viewer-main > [role="tabpanel"] {{ display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }}
+                .viewer-main {{ display: flex; flex: 1 1 0; flex-direction: column; min-width: 0; min-height: 0; height: 100%; max-height: 100vh; width: 100%; overflow: hidden; }}
+                .viewer-main > [role="tabpanel"] {{ display: flex; flex: 1 1 0; flex-direction: column; height: auto; min-height: 0; max-height: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
                 .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
                 @media (max-width: 600px) {{

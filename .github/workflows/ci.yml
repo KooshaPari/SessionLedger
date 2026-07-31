@@ -116,6 +116,31 @@ jobs:
             echo "No Cargo.lock — skipping tests"
           fi
 
+  # Keep PR fuzz coverage bounded and advisory; sustained blocking fuzz runs in
+  # fuzz-blocking.yml and the nightly fuzz-cadence workflow.
+  fuzz-smoke:
+    name: fuzz smoke (10 seconds)
+    needs: detect
+    if: needs.detect.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      RUSTFLAGS: ""
+      RUSTUP_TOOLCHAIN: nightly
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # nightly for fuzz
+        with:
+          toolchain: nightly
+          components: rust-src
+          targets: x86_64-unknown-linux-gnu
+      - name: install cargo-fuzz
+        uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # cargo-fuzz
+        with:
+          tool: cargo-fuzz
+      - name: fuzz OKF parse and roundtrip (10s)
+        run: cargo +nightly fuzz run okf_roundtrip --sanitizer address --target x86_64-unknown-linux-gnu -- -max_total_time=10
+
   python:
     name: Python
     needs: detect

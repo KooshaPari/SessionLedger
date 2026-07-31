@@ -8,6 +8,7 @@
 //! thin, well-tested adapter that turns a file path into on-disk OKF documents.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use session_ledger::export::okf::export_to_okf;
 use session_ledger::ports::CorpusSource;
@@ -69,11 +70,25 @@ pub fn transform_file(
         };
         let json = serde_json::to_string_pretty(&doc)?;
         let out_path = out_dir.join(format!("{}.okf.json", sanitize(&session.id)));
-        std::fs::write(&out_path, json)
+        write_okf_atomically(&out_path, &json)
             .map_err(|source| EtlError::Write { path: out_path.clone(), source })?;
         written.push(out_path);
     }
     Ok(written)
+}
+
+/// Publish an OKF document by renaming a fully-written sibling file into place.
+/// Readers of `/api/bundles` therefore observe either the previous complete
+/// bundle or the new complete bundle, never partially serialized JSON.
+fn write_okf_atomically(path: &Path, json: &str) -> std::io::Result<()> {
+    static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+    let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or("bundle.okf.json");
+    let temp = path.with_file_name(format!(".{file_name}.tmp-{}-{sequence}", std::process::id()));
+
+    std::fs::write(&temp, json)?;
+    std::fs::rename(&temp, path)
 }
 
 fn read_sessions(
@@ -155,6 +170,25 @@ mod tests {
         let written = transform_file(&jsonl, &out, None).expect("transform");
         assert_eq!(written.len(), 1);
         assert!(out.is_dir(), "out dir auto-created");
+    }
+
+    #[test]
+    fn atomic_okf_write_publishes_complete_document_without_temp_artifacts() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let out = tmp.path().join("out");
+        std::fs::create_dir_all(&out).expect("out dir");
+        let target = out.join("session.okf.json");
+
+        write_okf_atomically(&target, "{\"okf\":\"1.0\"}").expect("atomic write");
+
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "{\"okf\":\"1.0\"}");
+        assert!(
+            std::fs::read_dir(&out)
+                .unwrap()
+                .flatten()
+                .all(|entry| !entry.file_name().to_string_lossy().contains(".tmp-")),
+            "a bundle listing must never observe a temporary OKF artifact"
+        );
     }
 
     #[test]

@@ -93,6 +93,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: phen-ci-rust
+      - name: eval reproducibility manifest SelfCheck
+        shell: pwsh
+        run: ./scripts/eval-repro-check.ps1 -SelfCheck
       - name: fmt check
         run: |
           if cargo fmt --all -- --check 2>&1 | tee /tmp/fmt.log; then

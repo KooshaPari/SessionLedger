@@ -23,6 +23,7 @@ wasm-bindgen = { version = "0.2", optional = true }
 web-sys = { version = "0.3", optional = true, features = ["Document", "Element", "Event", "EventSource", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "UrlSearchParams", "Window"] }
 
 [dev-dependencies]
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 rusqlite = "0.40"
 zstd = "0.13"
 tempfile = "3"
@@ -42,6 +43,11 @@ sqlite = [
 
 [lints.rust]
 unsafe_code = "forbid"
+
+[[bench]]
+name = "discovery"
+harness = false
+required-features = ["sqlite"]
 
 [package.metadata.bundle]
 # Lab-Coat visual identity (proposed 2026-07-06 by vision-pillar).

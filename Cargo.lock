@@ -5287,6 +5287,7 @@ name = "sl-viewer"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "criterion",
  "dioxus",
  "futures-util",
  "js-sys",

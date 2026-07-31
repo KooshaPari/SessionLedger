@@ -661,7 +661,7 @@ pub fn App() -> Element {
                 .bundles-workspace > .session-list {{ flex: 0 0 360px; width: 360px; min-width: 280px; min-height: 0; height: 100%; max-height: 100%; overflow-y: auto; border-right: 1px solid var(--sl-border); background: var(--sl-surface); }}
                 .bundles-workspace > .main-content {{ min-height: 0; height: 100%; max-height: 100%; overflow: hidden; background: var(--sl-bg); }}
                 .viewer-main {{ display: flex; flex: 1 1 0; flex-direction: column; min-width: 0; min-height: 0; height: 100%; max-height: 100vh; width: 100%; overflow: hidden; }}
-                .viewer-main > [role="tabpanel"] {{ display: flex; flex: 1 1 0; flex-direction: column; height: auto; min-height: 0; max-height: 100%; overflow: hidden; }}
+                .viewer-main > div {{ display: flex; flex: 1 1 0; flex-direction: column; height: auto; min-height: 0; max-height: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
                 .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
                 @media (max-width: 600px) {{

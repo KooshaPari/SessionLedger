@@ -101,7 +101,7 @@ impl Tab {
 ///
 /// Consumers call `use_context::<SessionContext>()` to access the loaded sessions.
 #[derive(Clone, Debug, PartialEq)]
-pub struct SessionContext(pub Vec<Session>);
+pub struct SessionContext(pub Signal<Vec<Session>>);
 
 /// Resolve the active [`DataSource`].
 ///
@@ -182,35 +182,41 @@ pub fn App() -> Element {
         }
     });
 
-    // Load sessions async so the window renders immediately. The synchronous
-    // `load_sessions` call walks 20k+ files on disk (~10s) and blocks the UI
-    // thread; we therefore kick it off on a blocking-thread pool and let the
-    // window render with an empty Vec first, then re-render when data arrives.
-    let source = resolve_data_source();
-    let sessions_signal: Signal<Vec<Session>> = use_signal(Vec::new);
+    // Load sessions once at the root; propagate the live signal via context.
+    // Desktop corpus discovery runs on Tokio's blocking pool so the window
+    // renders immediately. The web build keeps its synchronous mock path and
+    // does not enable the optional Tokio dependency.
+    let mut sessions_signal = use_signal(Vec::<Session>::new);
     let mut error_signal: Signal<Option<String>> = use_signal(|| None);
-    {
-        let mut sig = sessions_signal;
-        let mut err = error_signal;
-        use_effect(move || {
-            let source = source.clone();
-            spawn(async move {
-                let join = tokio::task::spawn_blocking(move || load_sessions(&source));
-                match join.await {
-                    Ok(Ok(s)) => sig.set(s),
-                    Ok(Err(e)) => {
-                        eprintln!("[sl-viewer] failed to load corpus: {e}");
-                        err.set(Some(e));
-                    }
-                    Err(e) => {
-                        eprintln!("[sl-viewer] load task panicked: {e}");
-                        err.set(Some(format!("load task panicked: {e}")));
-                    }
+    use_effect(move || {
+        let source = resolve_data_source();
+        spawn(async move {
+            let result: std::result::Result<Result<Vec<Session>, String>, String> = {
+                #[cfg(feature = "desktop")]
+                {
+                    tokio::task::spawn_blocking(move || load_sessions(&source))
+                        .await
+                        .map_err(|error| error.to_string())
                 }
-            });
+                #[cfg(not(feature = "desktop"))]
+                {
+                    Ok(load_sessions(&source))
+                }
+            };
+            match result {
+                Ok(Ok(sessions)) => {
+                    sessions_signal.set(sessions);
+                }
+                Ok(Err(e)) => {
+                    error_signal.set(Some(e));
+                }
+                Err(e) => {
+                    error_signal.set(Some(format!("Internal error: {e}")));
+                }
+            }
         });
-    }
-    use_context_provider(move || SessionContext(sessions_signal.read().clone()));
+    });
+    use_context_provider(|| SessionContext(sessions_signal));
 
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let mut help_open: Signal<bool> = use_signal(|| false);

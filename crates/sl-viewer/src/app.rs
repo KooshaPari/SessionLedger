@@ -208,10 +208,12 @@ pub fn App() -> Element {
                     sessions_signal.set(sessions);
                 }
                 Ok(Err(e)) => {
+                    eprintln!("[sl-viewer] failed to load corpus: {e}");
                     error_signal.set(Some(e));
                 }
                 Err(e) => {
-                    error_signal.set(Some(format!("Internal error: {e}")));
+                    eprintln!("[sl-viewer] load task panicked: {e}");
+                    error_signal.set(Some(format!("load task panicked: {e}")));
                 }
             }
         });

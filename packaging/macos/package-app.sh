@@ -25,10 +25,16 @@ install -m 0755 "$BINARY" "$APP/Contents/MacOS/$APP_NAME"
 
 # Embed the application icon (CFBundleIconFile) when the canonical iconset is present.
 ICONSET_DIR="$ROOT/assets/icons/sessionledger.iconset"
+ICON_PLIST_ENTRY=""
 if [[ -d "$ICONSET_DIR" ]]; then
   ICONUTIL_BIN="$(command -v iconutil || true)"
   if [[ -n "$ICONUTIL_BIN" ]]; then
-    "$ICONUTIL_BIN" -c icns "$ICONSET_DIR" -o "$APP/Contents/Resources/AppIcon.icns" 2>/dev/null || true
+    if "$ICONUTIL_BIN" -c icns "$ICONSET_DIR" -o "$APP/Contents/Resources/AppIcon.icns" \
+      && [[ -f "$APP/Contents/Resources/AppIcon.icns" ]]; then
+      ICON_PLIST_ENTRY=$'  <key>CFBundleIconFile</key>\n  <string>AppIcon</string>'
+    else
+      echo "iconutil did not produce AppIcon.icns; continuing without bundle icon metadata." >&2
+    fi
   fi
 fi
 
@@ -49,10 +55,7 @@ cat >"$APP/Contents/Info.plist" <<EOF
   <string>${VERSION}</string>
   <key>CFBundleShortVersionString</key>
   <string>${VERSION}</string>
-  <key>CFBundleIconFile</key>
-  <string>AppIcon</string>
-  <key>CFBundleIconName</key>
-  <string>AppIcon</string>
+${ICON_PLIST_ENTRY}
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>LSMinimumSystemVersion</key>

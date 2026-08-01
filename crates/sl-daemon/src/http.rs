@@ -4,10 +4,11 @@
 //!
 //! * `GET /healthz` — liveness probe; returns `200 ok`.
 //! * `GET /readyz` — readiness probe; returns `200` when `out_dir` is usable.
-//! * `GET /api/bundles` — reads all `*.okf.json` files currently in the output
-//!   directory and returns them as a JSON array. Each element is the parsed
-//!   document as a [`serde_json::Value`] so the response is decoupled from any
-//!   viewer-side type definitions.
+//! * `GET /api/bundles` — reads a bounded page of `*.okf.json` files currently
+//!   in the output directory and returns them as a JSON array. Each element is
+//!   the parsed document as a [`serde_json::Value`] so the response is decoupled
+//!   from any viewer-side type definitions. Pages are deterministic newest-first
+//!   and accept `limit`/`offset` query parameters.
 //! * `GET /api/stream` — SSE endpoint (`text/event-stream`) that emits a
 //!   `data: <path>\n\n` event whenever a new `*.okf.json` is written. Driven by
 //!   a [`tokio::sync::broadcast`] channel whose sender is populated by the ETL
@@ -23,7 +24,7 @@ use std::hash::{Hash, Hasher};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use axum::body::to_bytes;
 use axum::extract::Request;
@@ -44,8 +45,8 @@ use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
 use crate::metrics::{compute_metrics, normalize_http_route, HttpMetrics};
 use crate::resilience::ApiCircuitBreaker;
-use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 use crate::resolver::{ResolveRequest, ResolveResponse, Resolver};
+use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 #[cfg(feature = "otel")]
 use opentelemetry::trace::{
     SpanContext, SpanId, TraceContextExt as _, TraceFlags, TraceId, TraceState,
@@ -59,6 +60,11 @@ use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 const DEFAULT_INGEST_MAX_BODY_BYTES: usize = 1_048_576;
 const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
+/// Default and maximum number of full OKF documents returned by one listing
+/// request. The hard cap prevents a large local corpus from becoming a single
+/// unbounded response and keeps the existing JSON-array contract intact.
+const DEFAULT_BUNDLE_PAGE_SIZE: usize = 512;
+const MAX_BUNDLE_PAGE_SIZE: usize = 512;
 /// Default `/api/*` throttle when the shared-key / non-loopback path is active.
 const DEFAULT_API_RATE_LIMIT: u64 = 60;
 /// Default throttle window (tower-style: N requests per period).
@@ -569,10 +575,16 @@ async fn readyz(headers: HeaderMap, State(state): State<AppState>) -> Response {
     "ready".into_response()
 }
 
-/// `GET /api/bundles` — return all `*.okf.json` documents as a JSON array.
-#[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
-async fn list_bundles(headers: HeaderMap, State(state): State<AppState>) -> Response {
-    match read_all_bundles(&state.out_dir) {
+/// `GET /api/bundles` — return one bounded, newest-first page of `*.okf.json`
+/// documents as a JSON array. `limit` is clamped to [`MAX_BUNDLE_PAGE_SIZE`]
+/// and `offset` is applied after deterministic ordering by `created_at`.
+#[tracing::instrument(skip(state, params), fields(out_dir = %state.out_dir.display(), limit = params.limit, offset = params.offset))]
+async fn list_bundles(
+    headers: HeaderMap,
+    State(state): State<AppState>,
+    Query(params): Query<BundleListParams>,
+) -> Response {
+    match read_bundle_page(&state.out_dir, &params) {
         Ok(values) => {
             info!(count = values.len(), "list_bundles");
             Json(values).into_response()
@@ -924,7 +936,7 @@ async fn search_bundles(
     State(state): State<AppState>,
     Query(params): Query<SearchParams>,
 ) -> Response {
-    let raw = match read_all_bundles(&state.out_dir) {
+    let candidates = match read_bundle_candidates(&state.out_dir) {
         Ok(v) => v,
         Err(e) => {
             error!(error = %e, "failed to read bundles for search");
@@ -937,10 +949,27 @@ async fn search_bundles(
         }
     };
 
-    let metas: Vec<BundleMeta> = raw.iter().map(BundleMeta::from_value).collect();
     let spec = params_to_spec(&params);
-    let matched: Vec<BundleMeta> = apply_filters(&metas, &spec).into_iter().cloned().collect();
-    info!(matched = matched.len(), scanned = metas.len(), "search_bundles");
+    let search_limit = spec.limit.min(MAX_BUNDLE_PAGE_SIZE);
+    let mut matched = Vec::with_capacity(search_limit);
+    let mut scanned = 0usize;
+    for candidate in candidates {
+        if matched.len() >= search_limit {
+            break;
+        }
+        scanned += 1;
+        let Ok(value) = std::fs::read_to_string(&candidate.path)
+            .map_err(|_| ())
+            .and_then(|contents| serde_json::from_str::<Value>(&contents).map_err(|_| ()))
+        else {
+            continue;
+        };
+        let meta = BundleMeta::from_value(&value);
+        if !apply_filters(std::slice::from_ref(&meta), &spec).is_empty() {
+            matched.push(meta);
+        }
+    }
+    info!(matched = matched.len(), scanned, "search_bundles");
 
     Json(matched).into_response()
 }
@@ -1061,12 +1090,36 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Read every `*.okf.json` file in `out_dir` and parse each as
-/// [`serde_json::Value`].  Files that fail to parse are silently skipped so
-/// a single corrupt file does not poison the entire listing.
-fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
-    let mut results = Vec::new();
+/// Query parameters for `GET /api/bundles`.
+#[derive(Debug, Deserialize)]
+struct BundleListParams {
+    /// Maximum number of full OKF documents to return. Values above the hard
+    /// cap are clamped rather than rejected so existing clients remain usable.
+    #[serde(default = "default_bundle_page_size")]
+    limit: usize,
+    /// Number of newest candidates to skip before reading the response page.
+    #[serde(default)]
+    offset: usize,
+}
 
+fn default_bundle_page_size() -> usize {
+    DEFAULT_BUNDLE_PAGE_SIZE
+}
+
+#[derive(Debug)]
+struct BundleCandidate {
+    path: PathBuf,
+    created_at: String,
+    modified_at: Option<SystemTime>,
+}
+
+/// Discover valid bundle paths and their lightweight ordering metadata.
+///
+/// Only one parsed JSON value is live at a time. Full documents are loaded
+/// later, after sorting and paging, so a large corpus cannot be retained in
+/// memory by the HTTP handler.
+fn read_bundle_candidates(out_dir: &Path) -> std::io::Result<Vec<BundleCandidate>> {
+    let mut candidates = Vec::new();
     let rd = match std::fs::read_dir(out_dir) {
         Ok(rd) => rd,
         // If the directory doesn't exist yet, return an empty list.
@@ -1083,6 +1136,41 @@ fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
             continue;
         }
         if let Ok(contents) = std::fs::read_to_string(&path) {
+            if let Ok(value) = serde_json::from_str::<Value>(&contents) {
+                let created_at = value
+                    .get("created_at")
+                    .or_else(|| value.pointer("/metadata/created_at"))
+                    .or_else(|| value.pointer("/header/created_at"))
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
+                let modified_at =
+                    std::fs::metadata(&path).and_then(|metadata| metadata.modified()).ok();
+                candidates.push(BundleCandidate { path, created_at, modified_at });
+            }
+        }
+    }
+
+    candidates.sort_by(|left, right| {
+        let created_order = match (left.created_at.is_empty(), right.created_at.is_empty()) {
+            (false, false) => right.created_at.cmp(&left.created_at),
+            (false, true) => std::cmp::Ordering::Less,
+            (true, false) => std::cmp::Ordering::Greater,
+            (true, true) => right.modified_at.cmp(&left.modified_at),
+        };
+        created_order.then_with(|| left.path.cmp(&right.path))
+    });
+    Ok(candidates)
+}
+
+/// Read one bounded page of full bundle documents.
+fn read_bundle_page(out_dir: &Path, params: &BundleListParams) -> std::io::Result<Vec<Value>> {
+    let candidates = read_bundle_candidates(out_dir)?;
+    let limit = params.limit.min(MAX_BUNDLE_PAGE_SIZE);
+    let mut results = Vec::with_capacity(limit.min(candidates.len().saturating_sub(params.offset)));
+
+    for candidate in candidates.into_iter().skip(params.offset).take(limit) {
+        if let Ok(contents) = std::fs::read_to_string(candidate.path) {
             if let Ok(value) = serde_json::from_str::<Value>(&contents) {
                 results.push(value);
             }
@@ -1577,6 +1665,45 @@ mod tests {
         assert!(spec.min_tokens.is_none());
         assert!(spec.tags.is_empty());
         assert_eq!(spec.limit, 50);
+    }
+
+    #[test]
+    fn bundle_page_reads_newest_first_and_never_exceeds_hard_cap() {
+        let tmp = tempfile::tempdir().unwrap();
+        for (id, created_at) in [
+            ("old", "2024-01-01T00:00:00Z"),
+            ("new", "2025-01-01T00:00:00Z"),
+            ("mid", "2024-06-01T00:00:00Z"),
+        ] {
+            let value = serde_json::json!({"source_id": id, "created_at": created_at});
+            std::fs::write(tmp.path().join(format!("{id}.okf.json")), value.to_string()).unwrap();
+        }
+
+        let values =
+            read_bundle_page(tmp.path(), &BundleListParams { limit: usize::MAX, offset: 0 })
+                .unwrap();
+        assert_eq!(values.len(), MAX_BUNDLE_PAGE_SIZE.min(3));
+        assert_eq!(values[0]["source_id"], "new");
+        assert_eq!(values[1]["source_id"], "mid");
+        assert_eq!(values[2]["source_id"], "old");
+    }
+
+    #[test]
+    fn bundle_page_applies_offset_without_retaining_unpaged_values() {
+        let tmp = tempfile::tempdir().unwrap();
+        for (id, created_at) in [
+            ("a", "2024-01-01T00:00:00Z"),
+            ("b", "2024-02-01T00:00:00Z"),
+            ("c", "2024-03-01T00:00:00Z"),
+        ] {
+            let value = serde_json::json!({"source_id": id, "created_at": created_at});
+            std::fs::write(tmp.path().join(format!("{id}.okf.json")), value.to_string()).unwrap();
+        }
+
+        let values =
+            read_bundle_page(tmp.path(), &BundleListParams { limit: 1, offset: 1 }).unwrap();
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0]["source_id"], "b");
     }
 
     #[test]

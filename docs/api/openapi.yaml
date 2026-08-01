@@ -48,10 +48,26 @@ paths:
   /api/bundles:
     get:
       tags: [bundles]
-      summary: List all parsed OKF bundle documents from the output directory.
+      summary: List a bounded newest-first page of parsed OKF bundle documents.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 512
+            default: 512
+          description: Maximum documents to return; values above 512 are clamped.
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of newest bundle candidates to skip before this page.
       responses:
         "200":
-          description: Raw OKF JSON documents.
+          description: Raw OKF JSON documents, ordered newest-first by created_at.
           content:
             application/json:
               schema:

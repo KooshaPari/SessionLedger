@@ -1,113 +1,121 @@
 # =============================================================================
-# Trunk.io — Plugin versions for linting/formatting tools
+# Trunk.io - Plugin versions for linting/formatting tools
 # =============================================================================
 # This file is auto-generated. Run `trunk upgrade` to update.
 # https://docs.trunk.io/check/reference
 # =============================================================================
 
+version: 0.1
+
+cli:
+  version: 1.25.0
+
 plugins:
   sources:
     - id: trunk
-      ref: v1.2.2
-    - id: community
-      ref: main
+      ref: v1.9.0
+      uri: https://github.com/trunk-io/plugins
+    - id: configs
+      ref: v1.2.1
+      uri: https://github.com/trunk-io/configs
 
-# Linters (auto-detected by file type)
-linters:
-  actionlint:
-    enabled: true
-    commands:
-      - name: actionlint
-        run: actionlint ${target}
-        direct_configs:
-          - .github/workflows/*.yml
-  black:
-    enabled: true
-    commands:
-      - name: black
-        run: black --check --line-length 100 ${target}
-        direct_configs:
-          - pyproject.toml
-          - ruff.toml
-  clippy:
-    enabled: true
-    commands:
-      - name: clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-  eslint:
-    enabled: true
-    direct_configs:
-      - .eslintrc.*
-      - eslint.config.*
-  golangci-lint:
-    enabled: true
-    direct_configs:
-      - .golangci.yml
-      - .golangci.yaml
-  mypy:
-    enabled: true
-    commands:
-      - name: mypy
-        run: mypy --ignore-missing-imports ${target}
-  ruff:
-    enabled: true
-    commands:
-      - name: ruff
-        run: ruff check --output-format=github ${target}
-        direct_configs:
-          - ruff.toml
-          - pyproject.toml
-  shellcheck:
-    enabled: true
-  taplo:
-    enabled: true
-  yamllint:
-    enabled: true
+# Linters and formatters (auto-detected by file type). Custom formatter
+# commands use `formatter: true` under the v0.1 lint definition schema.
+lint:
+  enabled:
+    - actionlint
+    - black
+    - clippy
+    - eslint
+    - golangci-lint
+    - mypy
+    - ruff
+    - shellcheck
+    - taplo
+    - yamllint
+    - black-format
+    - prettier-format
+    - rustfmt-format
+  definitions:
+    - name: actionlint
+      direct_configs:
+        - .github/workflows/*.yml
+      commands:
+        - name: lint
+          run: actionlint ${target}
+          output: pass_fail
+          success_codes: [0]
+    - name: black
+      direct_configs:
+        - pyproject.toml
+        - ruff.toml
+      commands:
+        - name: lint
+          run: black --check --line-length 100 ${target}
+          output: pass_fail
+          success_codes: [0]
+    - name: clippy
+      commands:
+        - name: lint
+          run: cargo clippy --all-targets --all-features -- -D warnings
+          output: pass_fail
+          success_codes: [0]
+    - name: eslint
+      direct_configs:
+        - .eslintrc.*
+        - eslint.config.*
+    - name: golangci-lint
+      direct_configs:
+        - .golangci.yml
+        - .golangci.yaml
+    - name: mypy
+      commands:
+        - name: lint
+          run: mypy --ignore-missing-imports ${target}
+          output: pass_fail
+          success_codes: [0]
+    - name: ruff
+      direct_configs:
+        - ruff.toml
+        - pyproject.toml
+      commands:
+        - name: lint
+          run: ruff check --output-format=github ${target}
+          output: pass_fail
+          success_codes: [0]
+    - name: shellcheck
+    - name: taplo
+    - name: yamllint
+    - name: black-format
+      direct_configs:
+        - pyproject.toml
+      commands:
+        - name: format
+          formatter: true
+          run: black --line-length 100 ${target}
+          output: pass_fail
+          success_codes: [0]
+    - name: prettier-format
+      direct_configs:
+        - .prettierrc
+        - prettier.config.*
+      commands:
+        - name: format
+          formatter: true
+          run: prettier --write ${target}
+          output: pass_fail
+          success_codes: [0]
+    - name: rustfmt-format
+      commands:
+        - name: format
+          formatter: true
+          run: rustfmt ${target}
+          output: pass_fail
+          success_codes: [0]
 
-# Formatters
-formatters:
-  black:
-    enabled: true
-    commands:
-      - name: black
-        run: black --line-length 100 ${target}
-        direct_configs:
-          - pyproject.toml
-  prettier:
-    enabled: true
-    direct_configs:
-      - .prettierrc
-      - prettier.config.*
-  rustfmt:
-    enabled: true
-    commands:
-      - name: rustfmt
-        run: rustfmt ${target}
-
-# Actions (CI optimization)
 actions:
-  trunk-check:
-    enabled: true
-    size: 5GB
-    memory: 16GB
-    disk: 10GB
-  trunk-merge:
-    enabled: true
-    size: 5GB
-  trunk-push:
-    enabled: true
-    size: 5GB
-
-# Caching
-cache:
-  enabled: true
-  storage: local
-
-# CLI
-cli:
-  version: 1.22.2
-
-# Environment
-env:
-  variables:
-    EDITOR: vim
+  enabled:
+    - trunk-announce
+    - trunk-check-pre-push
+    - trunk-fmt-pre-commit
+    - trunk-upgrade-available

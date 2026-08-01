@@ -35,8 +35,7 @@ const W44_B6_GENERATED_COUNT: usize = 13;
 const W44_B6_TARGET_TOTAL: usize = W43_HAND_VETTED_COUNT + W44_B6_GENERATED_COUNT;
 
 fn fixture_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("docs/reference/conformance/fixtures")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs/reference/conformance/fixtures")
 }
 
 fn list_okf_fixtures(root: &Path) -> Vec<PathBuf> {
@@ -120,10 +119,7 @@ fn w44_b6_each_generated_fixture_is_well_formed_okf_v1() {
             Err(e) => bad.push((slug.to_string(), format!("json parse: {e}"))),
         }
     }
-    assert!(
-        bad.is_empty(),
-        "W44-B6 fixtures failed shape check: {bad:#?}",
-    );
+    assert!(bad.is_empty(), "W44-B6 fixtures failed shape check: {bad:#?}",);
     assert_eq!(parsed, W44_B6_SLUGS.len(), "parsed count mismatch");
 }
 
@@ -131,38 +127,19 @@ fn w44_b6_each_generated_fixture_is_well_formed_okf_v1() {
 fn w44_b6_generator_script_present_and_importable() {
     // The generator is a Python script, not part of the Rust crate, but its
     // presence on disk is part of the W44-B6 deliverable.
-    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("scripts/corpus-generate.py");
-    assert!(
-        script.is_file(),
-        "expected corpus generator at {}",
-        script.display(),
-    );
+    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scripts/corpus-generate.py");
+    assert!(script.is_file(), "expected corpus generator at {}", script.display(),);
     let raw = std::fs::read_to_string(&script).expect("read corpus-generate.py");
     assert!(raw.contains("OKF_VERSION"), "generator must define OKF_VERSION");
-    assert!(
-        raw.contains("FIXTURE_SPECS"),
-        "generator must declare FIXTURE_SPECS",
-    );
-    assert!(
-        raw.contains("FAILURE_FIXTURES"),
-        "generator must isolate failure-mode fixtures",
-    );
+    assert!(raw.contains("FIXTURE_SPECS"), "generator must declare FIXTURE_SPECS",);
+    assert!(raw.contains("FAILURE_FIXTURES"), "generator must isolate failure-mode fixtures",);
 }
 
 #[test]
 fn w44_b6_corpus_breadth_doc_present() {
-    let doc = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("docs/ops/corpus-breadth.md");
-    assert!(
-        doc.is_file(),
-        "expected docs/ops/corpus-breadth.md at {}",
-        doc.display(),
-    );
+    let doc = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs/ops/corpus-breadth.md");
+    assert!(doc.is_file(), "expected docs/ops/corpus-breadth.md at {}", doc.display(),);
     let raw = std::fs::read_to_string(&doc).expect("read corpus-breadth.md");
     assert!(raw.contains("C08 L73"), "doc must reference C08 L73 pillar");
-    assert!(
-        raw.contains("Wave-44"),
-        "doc must reference Wave-44 (W44-B6) close-out",
-    );
+    assert!(raw.contains("Wave-44"), "doc must reference Wave-44 (W44-B6) close-out",);
 }

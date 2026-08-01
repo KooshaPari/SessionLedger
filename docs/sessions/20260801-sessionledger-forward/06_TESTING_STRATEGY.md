@@ -12,6 +12,8 @@
 | Atomic persistence | No-temp-artifact atomic OKF test | PASS |
 | Live feed | `/readyz`, `/api/bundles`, and SSE event proof | PASS |
 | CI policy | eval, package, fuzz, rootless matrix/no-net SelfChecks | PASS |
+| Native discovery probe (2026-08-01) | 6,124 Codex inputs; 6,323 bundles; `/readyz` 200; `/api/bundles` >5s timeout; ~41% CPU/~919 MB RSS; launch agent stopped | BLOCKED |
+| Discovery rescan regression | Commit `73e92c12`; `cargo test --lib ingestion::json_source --no-default-features` (4 passed) and `--locked` (4 passed) | PASS |
 
 ## Required next matrix
 
@@ -27,6 +29,9 @@
 4. **Performance:** record cold/warm launch RSS and CPU, discovery latency,
    ETL throughput, SSE delivery latency, and 30-minute idle stability. Repeat
    after restart and compare against explicit budgets.
+   The native probe above is a failure baseline, not an acceptance result;
+   repeat it after `73e92c12` with bounded roots and capture `/readyz`,
+   `/api/bundles`, CPU, RSS, and timeout logs.
 5. **Release:** verify checksum manifest, signature, artifact download, clean
    install health, and documented rollback before changing release status.
 

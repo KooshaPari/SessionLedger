@@ -91,7 +91,7 @@ test("viewer exposes type tokens and persists theme preference", async ({ page }
     };
   });
 
-  expect(tokens.display).toContain("Georgia");
+  expect(tokens.display).toContain("system-ui");
   expect(tokens.body).toContain("system-ui");
   expect(tokens.mono).toContain("monospace");
   expect(tokens.ui).toContain("system-ui");

@@ -306,6 +306,19 @@ jobs:
       - uses: trunk-io/trunk-action@v1
         if: hashFiles('trunk.yaml', '.trunk/trunk.yaml') != ''
 
+  # Blocking C04 L40 hard rootless/no-net CI evidence -- full PR gate in
+  # .github/workflows/rootless-nonet.yml; this is a fast ci.yml anchor smoke.
+  # Keep this policy job after advisory jobs so its SelfCheck's textual guard
+  # cannot accidentally span into another job's continue-on-error setting.
+  rootless-nonet-policy:
+    name: rootless/no-net policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: assert hard rootless/no-net CI evidence anchors
+        shell: pwsh
+        run: ./scripts/rootless-nonet-check.ps1 -SelfCheck
+
   # Blocking C04 L40 rootless-only OCI runner matrix scaffold -- full PR gate
   # in .github/workflows/rootless-matrix.yml; this is a fast ci.yml anchor smoke.
   # Keep this policy job after advisory jobs so its SelfCheck's textual guard

@@ -75,7 +75,7 @@ jobs:
             crates/sl-daemon/sl-daemon-macos-arm64.sha256
           if-no-files-found: error
 
-
+  session-ledger-build:
     name: session-ledger build · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:

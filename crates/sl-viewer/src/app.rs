@@ -7,7 +7,7 @@ use crate::async_states::{
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::command_palette::{CommandPalette, PaletteAction};
-use crate::corpus_loader::{load_sessions, DataSource};
+use crate::corpus_loader::{load_sessions_report, DataSource};
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::visual_fixture_active;
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
@@ -185,28 +185,38 @@ pub fn App() -> Element {
     // Load sessions once at the root; propagate via context.
     let mut sessions_signal = use_signal(Vec::<Session>::new);
     let mut corpus_error_signal: Signal<Option<String>> = use_signal(|| None);
+    let mut corpus_notice_signal: Signal<Option<String>> = use_signal(|| None);
     let long_content = query_fixture_active("long-content");
     use_effect(move || {
         let source = resolve_data_source();
         spawn(async move {
-            let result: std::result::Result<Result<Vec<Session>, String>, String> = {
+            let result: std::result::Result<
+                Result<crate::corpus_loader::SessionLoadReport, String>,
+                String,
+            > = {
                 #[cfg(feature = "desktop")]
                 {
-                    tokio::task::spawn_blocking(move || load_sessions(&source))
+                    tokio::task::spawn_blocking(move || load_sessions_report(&source))
                         .await
                         .map_err(|error| error.to_string())
                 }
                 #[cfg(not(feature = "desktop"))]
                 {
-                    Ok(load_sessions(&source))
+                    Ok(load_sessions_report(&source))
                 }
             };
             match result {
-                Ok(Ok(sessions)) => {
+                Ok(Ok(report)) => {
+                    if report.is_truncated() {
+                        corpus_notice_signal.set(Some(format!(
+                            "Showing the newest {} of {} discovered sessions to keep memory bounded. Older sessions remain on disk and will be available through the daemon export.",
+                            report.retained_count, report.discovered_count
+                        )));
+                    }
                     sessions_signal.set(if long_content {
                         long_content_fixture().1
                     } else {
-                        sessions
+                        report.sessions
                     });
                 }
                 Ok(Err(e)) => {
@@ -664,6 +674,7 @@ pub fn App() -> Element {
                 .viewer-main > div {{ display: flex; flex: 1 1 0; flex-direction: column; height: auto; min-height: 0; max-height: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
                 .corpus-error-banner .caption {{ display: block; margin-top: var(--sl-space-xs); }}
+                .discovery-limit-banner {{ margin: var(--sl-space-sm) var(--sl-space-md); padding: var(--sl-space-sm) var(--sl-space-md); border: 1px solid var(--sl-accent-warning); border-radius: var(--sl-radius-sm); color: var(--sl-text-muted); font-size: 11px; line-height: 1.45; }}
                 @media (max-width: 600px) {{
                     .app > .sidebar {{ flex: 0 0 auto; max-height: 46vh; }}
                     .viewer-main {{ min-height: 0; }}
@@ -838,6 +849,14 @@ pub fn App() -> Element {
                             message: format!("Corpus load failed ({err}); no sessions are available."),
                         }
                     }
+                    }
+                    if let Some(ref notice) = *corpus_notice_signal.read() {
+                        div {
+                            class: "discovery-limit-banner",
+                            role: "status",
+                            "data-testid": "discovery-limit-notice",
+                            "{notice}"
+                        }
                     }
                 }
             }

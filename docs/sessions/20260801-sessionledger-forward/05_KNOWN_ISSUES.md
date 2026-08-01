@@ -16,8 +16,10 @@
    6,124 Codex inputs and produced 6,323 bundles. `/readyz` returned HTTP 200,
    but `/api/bundles` exceeded a five-second probe timeout while the launch
    agent reached approximately 41% CPU and 919 MB RSS. The launch agent was
-   stopped to restore host stability; this is a release blocker until bounded
-   discovery and ingestion are re-probed.
+   stopped to restore host stability. The viewer now bounds retained startup
+   sessions to 512 newest records while still counting all discovered inputs;
+   this is a release blocker until the updated artifact is re-probed on the
+   same corpus.
 
 ## Important gaps
 
@@ -28,8 +30,12 @@
 - Launch/discovery/ingestion RSS, CPU, latency, and restart budgets lack a fresh
   measurement after the viewer and CI changes.
 - Commit `73e92c12` removes the O(N^2) transcript-index rescan in
-  `JsonCorpusSource::load_with_report`; it is a forward fix, but the live
-  6,124-input workload still needs a post-fix daemon/viewer measurement.
+   `JsonCorpusSource::load_with_report`; it is a forward fix, but the live
+   6,124-input workload still needs a post-fix daemon/viewer measurement.
+- The viewer bound is implemented in `crates/sl-viewer/src/corpus_loader.rs`
+  by retaining only the newest 512 sessions during iteration and surfacing a
+  visible count notice. It is not release evidence until a fresh installed
+  app measurement confirms the host memory budget.
 - Hosted qgate run `30679369252` is green, but it is a web/CI gate and cannot
   close the local release holds above.
 

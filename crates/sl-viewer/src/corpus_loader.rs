@@ -24,6 +24,26 @@ pub enum DataSource {
     ForgeDb(std::path::PathBuf),
 }
 
+/// Hard ceiling for full session payloads retained by the viewer at startup.
+/// Discovery remains newest-first; the UI reports when older sessions are
+/// outside the bounded in-memory view instead of silently dropping them.
+pub const DEFAULT_MAX_DISCOVERED_SESSIONS: usize = 512;
+
+/// Result of loading a viewer corpus, including bounded-retention accounting.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionLoadReport {
+    pub sessions: Vec<Session>,
+    pub discovered_count: usize,
+    pub retained_count: usize,
+}
+
+impl SessionLoadReport {
+    #[must_use]
+    pub fn is_truncated(&self) -> bool {
+        self.retained_count < self.discovered_count
+    }
+}
+
 /// Load sessions from the configured source.
 ///
 /// On `Mock`: returns the hard-coded sample sessions.
@@ -37,29 +57,44 @@ pub enum DataSource {
 /// queried (e.g. file not found, not a SQLite database).  Per-row failures are
 /// surfaced on stderr as warnings and do not cause an error return.
 pub fn load_sessions(source: &DataSource) -> Result<Vec<Session>, String> {
+    Ok(load_sessions_report(source)?.sessions)
+}
+
+/// Load sessions and retain a bounded, newest-first in-memory view.
+pub fn load_sessions_report(source: &DataSource) -> Result<SessionLoadReport, String> {
     match source {
-        DataSource::Mock => Ok(sample_sessions()),
+        DataSource::Mock => report(sample_sessions()),
         DataSource::Auto => load_discovered_sessions(),
         #[cfg(feature = "sqlite")]
-        DataSource::ForgeDb(path) => load_from_sqlite(path),
+        DataSource::ForgeDb(path) => load_from_sqlite(path).map(report),
     }
 }
 
-fn load_discovered_sessions() -> Result<Vec<Session>, String> {
+fn report(mut sessions: Vec<Session>) -> Result<SessionLoadReport, String> {
+    let discovered_count = sessions.len();
+    let retained_count = discovered_count.min(DEFAULT_MAX_DISCOVERED_SESSIONS);
+    sessions.truncate(retained_count);
+    Ok(SessionLoadReport { sessions, discovered_count, retained_count })
+}
+
+fn load_discovered_sessions() -> Result<SessionLoadReport, String> {
     let home = std::env::var_os("HOME")
         .map(std::path::PathBuf::from)
         .ok_or_else(|| "HOME is not set; cannot discover local sessions".to_owned())?;
     let mut sessions = Vec::new();
+    let mut discovered_count = 0;
     let mut discovered_roots = 0;
     discovered_roots += load_json_corpus(
         &home.join(".codex").join("sessions"),
         |path| session_ledger::CodexDir::new(path.to_path_buf()),
         &mut sessions,
+        &mut discovered_count,
     )?;
     discovered_roots += load_json_corpus(
         &home.join(".claude").join("projects"),
         |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
         &mut sessions,
+        &mut discovered_count,
     )?;
     // Cursor stores exported conversation JSON/JSONL under its global data
     // directory on macOS. Only existing roots are scanned; caches and plans
@@ -68,10 +103,16 @@ fn load_discovered_sessions() -> Result<Vec<Session>, String> {
         &home.join(".cursor").join("projects"),
         |path| session_ledger::CursorDir::new(path.to_path_buf()),
         &mut sessions,
+        &mut discovered_count,
     )?;
     #[cfg(feature = "sqlite")]
     if let Some(path) = resolve_forge_db_path(&home, std::env::var_os("FORGE_DB")) {
-        sessions.extend(load_from_sqlite(&path)?);
+        for session in load_from_sqlite(&path)? {
+            if !session.messages.is_empty() {
+                discovered_count += 1;
+                retain_session(&mut sessions, session);
+            }
+        }
         discovered_roots += 1;
     }
     if discovered_roots == 0 {
@@ -79,11 +120,24 @@ fn load_discovered_sessions() -> Result<Vec<Session>, String> {
             "no supported local session stores found (Codex, Claude Code, Cursor, or Forge)".into(),
         );
     }
-    sessions.sort_by_key(|session| {
-        session.messages.iter().filter_map(|message| message.ts_ms).max().unwrap_or_default()
-    });
+    sessions.sort_by_key(session_timestamp);
     sessions.reverse();
-    Ok(sessions)
+    Ok(SessionLoadReport { retained_count: sessions.len(), sessions, discovered_count })
+}
+
+fn session_timestamp(session: &Session) -> i64 {
+    session.messages.iter().filter_map(|message| message.ts_ms).max().unwrap_or_default()
+}
+
+fn retain_session(sessions: &mut Vec<Session>, session: Session) {
+    sessions.push(session);
+    if sessions.len() > DEFAULT_MAX_DISCOVERED_SESSIONS {
+        if let Some((oldest, _)) =
+            sessions.iter().enumerate().min_by_key(|(_, item)| session_timestamp(item))
+        {
+            sessions.swap_remove(oldest);
+        }
+    }
 }
 
 /// Resolve the Forge database used by automatic discovery.
@@ -108,6 +162,7 @@ fn load_json_corpus<F, S>(
     root: &std::path::Path,
     make_source: F,
     sessions: &mut Vec<Session>,
+    discovered_count: &mut usize,
 ) -> Result<usize, String>
 where
     F: FnOnce(&std::path::Path) -> S,
@@ -120,7 +175,10 @@ where
     let ids = source.list().map_err(|e| format!("discover {}: {e}", root.display()))?;
     for id in ids {
         match source.load(&id) {
-            Ok(session) if !session.messages.is_empty() => sessions.push(session),
+            Ok(session) if !session.messages.is_empty() => {
+                *discovered_count += 1;
+                retain_session(sessions, session);
+            }
             Ok(_) => {}
             Err(error) => eprintln!("[sl-viewer] skipping {}:{}: {error}", root.display(), id),
         }
@@ -168,6 +226,51 @@ mod tests {
     }
 
     #[test]
+    fn session_report_caps_retained_payload_and_exposes_count() {
+        let sessions = (0..(DEFAULT_MAX_DISCOVERED_SESSIONS + 8))
+            .map(|index| {
+                let mut session = Session::new(
+                    format!("session-{index}"),
+                    session_ledger::domain::session::Corpus::Codex,
+                );
+                session.messages.push(session_ledger::domain::session::Message::new(
+                    session_ledger::domain::session::Role::User,
+                    "payload",
+                ));
+                session
+            })
+            .collect();
+
+        let report = report(sessions).expect("bounded report");
+        assert_eq!(report.discovered_count, DEFAULT_MAX_DISCOVERED_SESSIONS + 8);
+        assert_eq!(report.retained_count, DEFAULT_MAX_DISCOVERED_SESSIONS);
+        assert!(report.is_truncated());
+        assert_eq!(report.sessions.len(), DEFAULT_MAX_DISCOVERED_SESSIONS);
+        assert_eq!(report.sessions[0].id, "session-0");
+    }
+
+    #[test]
+    fn bounded_discovery_retains_newest_sessions_while_iterating() {
+        let mut retained = Vec::new();
+        for index in 0..(DEFAULT_MAX_DISCOVERED_SESSIONS + 8) {
+            let mut session = Session::new(
+                format!("session-{index}"),
+                session_ledger::domain::session::Corpus::Codex,
+            );
+            let mut message = session_ledger::domain::session::Message::new(
+                session_ledger::domain::session::Role::User,
+                "payload",
+            );
+            message.ts_ms = Some(index as i64);
+            session.messages.push(message);
+            retain_session(&mut retained, session);
+        }
+
+        assert_eq!(retained.len(), DEFAULT_MAX_DISCOVERED_SESSIONS);
+        assert!(retained.iter().all(|session| session_timestamp(session) >= 8));
+    }
+
+    #[test]
     fn auto_source_missing_store_is_an_explicit_error() {
         let root = std::env::var_os("HOME").map(std::path::PathBuf::from).unwrap_or_default();
         if !root.join(".codex/sessions").exists()
@@ -211,14 +314,17 @@ mod tests {
         .expect("write transcript");
 
         let mut sessions = Vec::new();
+        let mut discovered_count = 0;
         let roots = load_json_corpus(
             root.path(),
             |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
             &mut sessions,
+            &mut discovered_count,
         )
         .expect("discover Claude transcripts");
 
         assert_eq!(roots, 1);
+        assert_eq!(discovered_count, 1);
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].id, "claude-local-1");
     }

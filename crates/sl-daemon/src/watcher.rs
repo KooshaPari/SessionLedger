@@ -4,7 +4,7 @@
 //!
 //! * [`spawn_fs_watcher`] — event-driven via the `notify` crate (FSEvents on
 //!   macOS). Best for a long-running daemon: near-zero idle cost, sub-second
-//!   latency on new/modified `*.jsonl` files.
+//!   latency on new/modified transcript files.
 //! * [`scan_once`] — a single deterministic sweep of the directory. Used by
 //!   `--once` mode and by tests, where event timing must not be relied on.
 //!
@@ -17,7 +17,7 @@ use notify::{Event, EventKind, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-/// Return every `*.jsonl` or compressed `*.jsonl.zst` file under `dir`.
+/// Return every supported native transcript file under `dir`.
 ///
 /// Non-recursive by design: session corpora are flat directories of transcript
 /// files. Sorting makes the emitted order stable so tests can assert on it.
@@ -42,7 +42,9 @@ fn collect_transcripts(dir: &Path, out: &mut Vec<PathBuf>) -> std::io::Result<()
 
 fn is_transcript(path: &Path) -> bool {
     let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
-    name.ends_with(".jsonl") || name.ends_with(".jsonl.zst")
+    // Cursor's native project store uses JSON session objects, while Codex,
+    // Claude Code, and Cursor agent transcripts use JSONL (optionally zstd).
+    name.ends_with(".json") || name.ends_with(".jsonl") || name.ends_with(".jsonl.zst")
 }
 
 /// Perform one deterministic sweep, sending each discovered path downstream.
@@ -157,5 +159,16 @@ mod tests {
             .expect("join")
             .expect("io");
         assert!(sent <= 1);
+    }
+
+    #[test]
+    fn list_jsonl_includes_cursor_json_sessions_and_excludes_other_json() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        std::fs::write(tmp.path().join("conversation.json"), "{}").expect("json");
+        std::fs::write(tmp.path().join("settings.yaml"), "{}").expect("yaml");
+
+        let paths = list_jsonl(tmp.path()).expect("list transcripts");
+
+        assert_eq!(paths, vec![tmp.path().join("conversation.json")]);
     }
 }

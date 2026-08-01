@@ -12,9 +12,10 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use session_ledger::export::okf::export_to_okf;
-use session_ledger::ports::CorpusSource;
-use session_ledger::ports::MemoryStore;
-use session_ledger::{compile_and_store, process_session, read_jsonl_sessions, CodexDir};
+use session_ledger::ports::{CorpusSource, MemoryStore};
+use session_ledger::{
+    compile_and_store, process_session, read_jsonl_sessions, ClaudeDir, CodexDir, CursorDir,
+};
 
 /// Errors surfaced while transforming one JSONL file into OKF documents.
 #[derive(Debug, thiserror::Error)]
@@ -95,12 +96,86 @@ fn write_okf_atomically(path: &Path, json: &str) -> std::io::Result<()> {
 fn read_sessions(
     path: &Path,
 ) -> Result<Vec<session_ledger::Session>, session_ledger::IngestionError> {
+    // Auto-discovered Claude/Cursor roots contain native event records rather
+    // than normalized `Session` JSONL. Route those paths through the existing
+    // corpus adapters so automatic ingestion preserves corpus provenance.
+    if let Some(source) = native_source(path) {
+        return read_native_session(path, source);
+    }
+
     let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
     if name.ends_with(".jsonl.zst") || has_codex_session_metadata(path)? {
         return read_codex_session(path);
     }
 
     read_jsonl_sessions(path)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NativeSource {
+    Claude,
+    Cursor,
+}
+
+/// Identify native transcript roots without changing the explicit `--watch`
+/// contract. Files outside these roots continue through strict normalized
+/// JSONL parsing, while the native adapters own their tool-specific records.
+fn native_source(path: &Path) -> Option<NativeSource> {
+    if has_path_pair(path, ".claude", "projects") {
+        return Some(NativeSource::Claude);
+    }
+    if has_path_pair(path, ".cursor", "projects")
+        || has_path_pair(path, ".cursor", "agent-transcripts")
+    {
+        return Some(NativeSource::Cursor);
+    }
+    None
+}
+
+fn has_path_pair(path: &Path, first: &str, second: &str) -> bool {
+    let mut previous = None;
+    for component in path.components() {
+        let current = component.as_os_str().to_str();
+        if previous == Some(first) && current == Some(second) {
+            return true;
+        }
+        previous = current;
+    }
+    false
+}
+
+fn read_native_session(
+    path: &Path,
+    source_kind: NativeSource,
+) -> Result<Vec<session_ledger::Session>, session_ledger::IngestionError> {
+    let source: Box<dyn CorpusSource> = match source_kind {
+        NativeSource::Claude => Box::new(ClaudeDir::new(path)),
+        NativeSource::Cursor => Box::new(CursorDir::new(path)),
+    };
+    let id = source
+        .list()
+        .map_err(|error| native_ingestion_error(path, error.to_string()))?
+        .into_iter()
+        .next()
+        .ok_or_else(|| native_ingestion_error(path, "native transcript is empty"))?;
+    let session =
+        source.load(&id).map_err(|error| native_ingestion_error(path, error.to_string()))?;
+    // Native roots may contain JSON metadata/configuration files alongside
+    // conversations. Never emit an empty synthetic bundle for those files.
+    if session.messages.is_empty() {
+        return Ok(Vec::new());
+    }
+    Ok(vec![session])
+}
+
+fn native_ingestion_error(
+    path: &Path,
+    message: impl Into<String>,
+) -> session_ledger::IngestionError {
+    session_ledger::IngestionError::Io(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        format!("native transcript {}: {}", path.display(), message.into()),
+    ))
 }
 
 fn has_codex_session_metadata(path: &Path) -> Result<bool, session_ledger::IngestionError> {
@@ -251,6 +326,83 @@ mod tests {
         let doc: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&written[0]).unwrap()).unwrap();
         assert_eq!(doc["source_id"], "plain-codex-session");
+    }
+
+    #[test]
+    fn transform_file_routes_claude_projects_to_claude_adapter() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join(".claude/projects/demo/session.jsonl");
+        std::fs::create_dir_all(path.parent().expect("project directory")).expect("mkdir");
+        let input = serde_json::json!({
+            "type": "assistant",
+            "sessionId": "claude-etl-session",
+            "message": {"role": "assistant", "content": [{"type": "text", "text": "done"}]}
+        });
+        std::fs::write(&path, format!("{input}\n")).expect("write Claude transcript");
+
+        let written = transform_file(&path, &tmp.path().join("out"), None).expect("transform");
+        assert_eq!(written.len(), 1);
+        let doc: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&written[0]).unwrap()).unwrap();
+        assert_eq!(doc["source_id"], "claude-etl-session");
+        assert_eq!(doc["provenance"]["corpus"], "claude-code");
+    }
+
+    #[test]
+    fn transform_file_routes_cursor_agent_jsonl_to_cursor_adapter() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join(".cursor/agent-transcripts/session.jsonl");
+        std::fs::create_dir_all(path.parent().expect("Cursor directory")).expect("mkdir");
+        let input = serde_json::json!({
+            "conversationId": "cursor-etl-session",
+            "messages": [{"role": "user", "content": "hello"}]
+        });
+        std::fs::write(&path, format!("{{not json}}\n{input}\n"))
+            .expect("write Cursor transcript");
+
+        let written = transform_file(&path, &tmp.path().join("out"), None).expect("transform");
+        assert_eq!(written.len(), 1);
+        let doc: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&written[0]).unwrap()).unwrap();
+        assert_eq!(doc["source_id"], "cursor-etl-session");
+        assert_eq!(doc["provenance"]["corpus"], "cursor");
+    }
+
+    #[test]
+    fn transform_file_routes_cursor_project_json_to_cursor_adapter() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join(".cursor/projects/demo/conversation.json");
+        std::fs::create_dir_all(path.parent().expect("Cursor directory")).expect("mkdir");
+        let input = serde_json::json!({
+            "conversationId": "cursor-json-etl-session",
+            "title": "Cursor JSON",
+            "messages": [{"role": "user", "content": "hello from Cursor JSON"}]
+        });
+        std::fs::write(&path, input.to_string()).expect("write Cursor JSON transcript");
+
+        let written = transform_file(&path, &tmp.path().join("out"), None)
+            .expect("transform Cursor JSON transcript");
+        assert_eq!(written.len(), 1);
+        let doc: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&written[0]).unwrap()).unwrap();
+        assert_eq!(doc["source_id"], "cursor-json-etl-session");
+        assert_eq!(doc["provenance"]["corpus"], "cursor");
+    }
+
+    #[test]
+    fn native_source_requires_a_supported_root_pair() {
+        assert_eq!(
+            native_source(Path::new("/tmp/.claude/projects/demo/session.jsonl")),
+            Some(NativeSource::Claude)
+        );
+        assert_eq!(
+            native_source(Path::new("/tmp/.cursor/agent-transcripts/session.jsonl")),
+            Some(NativeSource::Cursor)
+        );
+        assert_eq!(
+            native_source(Path::new("/tmp/projects/.cursorish/session.jsonl")),
+            None
+        );
     }
 
     #[test]

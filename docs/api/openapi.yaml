@@ -67,7 +67,7 @@ paths:
           description: Number of newest bundle candidates to skip before this page.
       responses:
         "200":
-          description: Raw OKF JSON documents, ordered newest-first by created_at.
+          description: Raw OKF JSON documents, ordered newest-first by filesystem modification time; path is the deterministic tie-breaker. The payload's created_at field is preserved but is not used to scan or order the candidate index.
           content:
             application/json:
               schema:

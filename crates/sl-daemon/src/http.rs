@@ -8,7 +8,8 @@
 //!   in the output directory and returns them as a JSON array. Each element is
 //!   the parsed document as a [`serde_json::Value`] so the response is decoupled
 //!   from any viewer-side type definitions. Pages are deterministic newest-first
-//!   and accept `limit`/`offset` query parameters.
+//!   by filesystem modification time (path is the tie-breaker) and accept
+//!   `limit`/`offset` query parameters.
 //! * `GET /api/stream` — SSE endpoint (`text/event-stream`) that emits a
 //!   `data: <path>\n\n` event whenever a new `*.okf.json` is written. Driven by
 //!   a [`tokio::sync::broadcast`] channel whose sender is populated by the ETL
@@ -577,7 +578,9 @@ async fn readyz(headers: HeaderMap, State(state): State<AppState>) -> Response {
 
 /// `GET /api/bundles` — return one bounded, newest-first page of `*.okf.json`
 /// documents as a JSON array. `limit` is clamped to [`MAX_BUNDLE_PAGE_SIZE`]
-/// and `offset` is applied after deterministic ordering by `created_at`.
+/// and `offset` is applied after deterministic ordering by filesystem
+/// modification time (newest first, then path). The bundle's `created_at`
+/// remains payload metadata and is not parsed while indexing candidates.
 #[tracing::instrument(skip(state, params), fields(out_dir = %state.out_dir.display(), limit = params.limit, offset = params.offset))]
 async fn list_bundles(
     headers: HeaderMap,
@@ -1109,15 +1112,14 @@ fn default_bundle_page_size() -> usize {
 #[derive(Debug)]
 struct BundleCandidate {
     path: PathBuf,
-    created_at: String,
     modified_at: Option<SystemTime>,
 }
 
-/// Discover valid bundle paths and their lightweight ordering metadata.
+/// Discover bundle paths and their lightweight filesystem ordering metadata.
 ///
-/// Only one parsed JSON value is live at a time. Full documents are loaded
-/// later, after sorting and paging, so a large corpus cannot be retained in
-/// memory by the HTTP handler.
+/// JSON documents are intentionally not opened or parsed here. Full documents
+/// are loaded later, after sorting and paging, so a large corpus does not pay a
+/// read/parse cost for candidates outside the requested page.
 fn read_bundle_candidates(out_dir: &Path) -> std::io::Result<Vec<BundleCandidate>> {
     let mut candidates = Vec::new();
     let rd = match std::fs::read_dir(out_dir) {
@@ -1135,30 +1137,18 @@ fn read_bundle_candidates(out_dir: &Path) -> std::io::Result<Vec<BundleCandidate
         if !is_okf {
             continue;
         }
-        if let Ok(contents) = std::fs::read_to_string(&path) {
-            if let Ok(value) = serde_json::from_str::<Value>(&contents) {
-                let created_at = value
-                    .get("created_at")
-                    .or_else(|| value.pointer("/metadata/created_at"))
-                    .or_else(|| value.pointer("/header/created_at"))
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .to_owned();
-                let modified_at =
-                    std::fs::metadata(&path).and_then(|metadata| metadata.modified()).ok();
-                candidates.push(BundleCandidate { path, created_at, modified_at });
-            }
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        if !metadata.is_file() {
+            continue;
         }
+        let modified_at = metadata.modified().ok();
+        candidates.push(BundleCandidate { path, modified_at });
     }
 
     candidates.sort_by(|left, right| {
-        let created_order = match (left.created_at.is_empty(), right.created_at.is_empty()) {
-            (false, false) => right.created_at.cmp(&left.created_at),
-            (false, true) => std::cmp::Ordering::Less,
-            (true, false) => std::cmp::Ordering::Greater,
-            (true, true) => right.modified_at.cmp(&left.modified_at),
-        };
-        created_order.then_with(|| left.path.cmp(&right.path))
+        right.modified_at.cmp(&left.modified_at).then_with(|| left.path.cmp(&right.path))
     });
     Ok(candidates)
 }
@@ -1665,6 +1655,43 @@ mod tests {
         assert!(spec.min_tokens.is_none());
         assert!(spec.tags.is_empty());
         assert_eq!(spec.limit, 50);
+    }
+
+    #[test]
+    fn bundle_candidates_index_paths_without_parsing_documents() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("valid.okf.json"), r#"{"source_id":"valid"}"#).unwrap();
+        std::fs::write(tmp.path().join("invalid.okf.json"), b"not json").unwrap();
+        std::fs::write(tmp.path().join("ignored.txt"), b"not a bundle").unwrap();
+
+        let candidates = read_bundle_candidates(tmp.path()).unwrap();
+        let names: Vec<_> = candidates
+            .iter()
+            .map(|candidate| candidate.path.file_name().unwrap().to_str().unwrap())
+            .collect();
+        assert_eq!(names.len(), 2);
+        assert!(names.contains(&"valid.okf.json"));
+        assert!(names.contains(&"invalid.okf.json"));
+    }
+
+    #[test]
+    fn bundle_candidates_sort_newest_first_by_mtime_then_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        for name in ["z.okf.json", "a.okf.json", "m.okf.json"] {
+            std::fs::write(tmp.path().join(name), r#"{"created_at":"same"}"#).unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+
+        let candidates = read_bundle_candidates(tmp.path()).unwrap();
+        for pair in candidates.windows(2) {
+            assert!(
+                pair[0].modified_at > pair[1].modified_at
+                    || (pair[0].modified_at == pair[1].modified_at
+                        && pair[0].path <= pair[1].path),
+                "candidates are not ordered newest-first: {:?}",
+                candidates
+            );
+        }
     }
 
     #[test]

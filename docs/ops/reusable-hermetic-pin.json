@@ -5,7 +5,7 @@
   "workflow_path": ".github/workflows/reusable-hermetic-build.yml",
   "caller_workflow": ".github/workflows/hermetic.yml",
   "caller_job": "sl-daemon-offline-container",
-  "workflow_commit_sha": "ec8916547e5678f72fe6894509249f9b23367b80",
+  "workflow_commit_sha": "098e57bb2cfb590234e0e26e9fc5740c76de8ad8",
   "builder_image_digest": "sha256:16381cf25d89fd5dc8a904ff4a7b8d4660a856ed9738b8a7e879d816439ce2a5",
   "offline_target_default": "crates/sl-daemon",
   "selfcheck_script": "scripts/reusable-provenance-check.ps1",

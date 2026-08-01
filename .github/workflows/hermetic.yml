@@ -69,7 +69,7 @@ jobs:
         run: ./scripts/reusable-provenance-check.ps1 -SelfCheck
 
   # Reusable workflow — job-level call, pinned to SessionLedger commit SHA.
-  # Pin: ec8916547e5678f72fe6894509249f9b23367b80 (see docs/ops/reusable-hermetic-pin.md)
+  # Pin: 098e57bb2cfb590234e0e26e9fc5740c76de8ad8 (see docs/ops/reusable-hermetic-pin.md)
   sl-daemon-offline-container:
     name: sl-daemon · repository builder image offline build
     uses: KooshaPari/SessionLedger/.github/workflows/reusable-hermetic-build.yml@098e57bb2cfb590234e0e26e9fc5740c76de8ad8

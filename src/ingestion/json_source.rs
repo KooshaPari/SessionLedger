@@ -49,7 +49,7 @@ impl JsonCorpusSource {
 
     /// Resolve a listed id directly instead of rebuilding the recursive file
     /// index for every load. `list` returns relative transcript paths, so this
-    /// preserves the CorpusSource contract while keeping discovery linear in
+    /// preserves the `CorpusSource` contract while keeping discovery linear in
     /// the number of files. Parent components are rejected to keep ids scoped
     /// to the configured corpus root.
     fn path_for_id(&self, id: &str) -> Result<PathBuf, PortError> {

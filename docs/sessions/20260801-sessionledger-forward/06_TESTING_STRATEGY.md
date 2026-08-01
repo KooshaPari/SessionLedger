@@ -15,6 +15,7 @@
 | Native discovery probe (2026-08-01) | 6,124 Codex inputs; 6,323 bundles; `/readyz` 200; `/api/bundles` >5s timeout; ~41% CPU/~919 MB RSS; launch agent stopped | BLOCKED |
 | Discovery rescan regression | Commit `73e92c12`; `cargo test --lib ingestion::json_source --no-default-features` (4 passed) and `--locked` (4 passed) | PASS |
 | Viewer bounded discovery | `cargo test -p sl-viewer --lib corpus_loader -- --nocapture` (7 passed); retain newest 512 during iteration | PASS (local; installed-app rerun required) |
+| Cursor live transcript root | `cargo test --manifest-path crates/sl-daemon/Cargo.toml --bin sl-daemon discovery` (focused discovery tests; includes `~/.cursor/agent-transcripts`) | PASS (source-level; viewer parity pending) |
 
 ## Required next matrix
 
@@ -24,6 +25,9 @@
 2. **Discovery:** seed representative Codex and normalized JSONL roots plus
    malformed/rotated files; verify auto-discovery, dedupe, provenance,
    consent, bounded errors, and restart recovery.
+   Include both Cursor roots (`projects` and `agent-transcripts`) and explicit
+   user-provided ChatGPT/Claude/Gemini export fixtures. Do not treat a generic
+   JSON fixture as proof of a hosted product's native export schema.
 3. **End-to-end UI:** with real discovered data, verify inbox selection,
    detail tabs, transcript/replay chat, keyboard navigation, scrolling, and
    responsive widths in the installed app.

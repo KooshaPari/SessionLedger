@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::{BufRead, BufReader},
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use serde_json::{Map, Value};
@@ -43,12 +43,47 @@ impl JsonCorpusSource {
         &self,
         id: &str,
     ) -> Result<(Session, JsonIngestionReport), PortError> {
-        let path = self
-            .files()?
-            .into_iter()
-            .find_map(|(candidate, path)| (candidate == id).then_some(path))
-            .ok_or_else(|| PortError::NotFound(id.to_owned()))?;
+        let path = self.path_for_id(id)?;
         parse_file(&path, id, self.corpus)
+    }
+
+    /// Resolve a listed id directly instead of rebuilding the recursive file
+    /// index for every load. `list` returns relative transcript paths, so this
+    /// preserves the CorpusSource contract while keeping discovery linear in
+    /// the number of files. Parent components are rejected to keep ids scoped
+    /// to the configured corpus root.
+    fn path_for_id(&self, id: &str) -> Result<PathBuf, PortError> {
+        if id.is_empty()
+            || Path::new(id).is_absolute()
+            || Path::new(id).components().any(|component| component == Component::ParentDir)
+        {
+            return Err(PortError::NotFound(id.to_owned()));
+        }
+
+        if self.root.is_file() {
+            let filename = self
+                .root
+                .file_name()
+                .and_then(|name| name.to_str())
+                .ok_or_else(|| PortError::Backend("transcript filename is not UTF-8".into()))?;
+            return (id == filename)
+                .then_some(self.root.clone())
+                .ok_or_else(|| PortError::NotFound(id.to_owned()));
+        }
+
+        if !self.root.is_dir() {
+            return Err(PortError::Backend(format!(
+                "corpus path is not a file or directory: {}",
+                self.root.display()
+            )));
+        }
+
+        let path = self.root.join(id);
+        if path.is_file() && is_transcript(&path) {
+            Ok(path)
+        } else {
+            Err(PortError::NotFound(id.to_owned()))
+        }
     }
 
     fn files(&self) -> Result<Vec<(String, PathBuf)>, PortError> {
@@ -123,13 +158,85 @@ fn is_transcript(path: &Path) -> bool {
 
 #[cfg(test)]
 mod transcript_tests {
-    use super::is_transcript;
+    use std::time::{Duration, Instant};
+
+    use super::{is_transcript, JsonCorpusSource};
+    use crate::{domain::session::Corpus, ports::CorpusSource};
 
     #[test]
     fn accepts_plain_and_compressed_jsonl() {
         assert!(is_transcript(std::path::Path::new("session.jsonl")));
         assert!(is_transcript(std::path::Path::new("session.jsonl.zst")));
         assert!(!is_transcript(std::path::Path::new("session.txt.zst")));
+    }
+
+    #[test]
+    fn loads_nested_transcript_id_without_rescanning_or_path_escape() {
+        let root = tempfile::tempdir().expect("temp dir");
+        let nested = root.path().join("project");
+        std::fs::create_dir(&nested).expect("project dir");
+        std::fs::write(
+            nested.join("session.jsonl"),
+            format!(
+                "{}\n{}\n",
+                serde_json::json!({
+                    "type": "session_meta",
+                    "payload": {"id": "direct-load-1"}
+                }),
+                serde_json::json!({
+                    "type": "response_item",
+                    "payload": {
+                        "type": "message",
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": "hello"}]
+                    }
+                })
+            ),
+        )
+        .expect("transcript");
+
+        let source = JsonCorpusSource::new(root.path(), Corpus::Codex);
+        let ids = source.list().expect("list");
+        assert_eq!(ids, vec!["project/session.jsonl"]);
+        let session = source.load(&ids[0]).expect("load listed id");
+        assert_eq!(session.id, "direct-load-1");
+        assert!(matches!(
+            source.load("../session.jsonl"),
+            Err(crate::ports::PortError::NotFound(_))
+        ));
+    }
+
+    #[test]
+    fn loads_a_large_corpus_with_a_single_recursive_discovery_pass() {
+        let root = tempfile::tempdir().expect("temp dir");
+        let record = serde_json::json!({
+            "type": "response_item",
+            "payload": {
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "input_text", "text": "hello"}]
+            }
+        });
+        for index in 0..512 {
+            std::fs::write(
+                root.path().join(format!("session-{index}.jsonl")),
+                format!("{record}\n"),
+            )
+            .expect("transcript");
+        }
+
+        let source = JsonCorpusSource::new(root.path(), Corpus::Codex);
+        let ids = source.list().expect("list");
+        let started = Instant::now();
+        for id in &ids {
+            source.load(id).expect("load transcript");
+        }
+        assert_eq!(ids.len(), 512);
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "loading 512 transcripts took {:?}; recursive index scans regressed",
+            started.elapsed()
+        );
     }
 
     #[cfg(feature = "compress")]

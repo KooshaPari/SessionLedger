@@ -17,9 +17,9 @@
    but `/api/bundles` exceeded a five-second probe timeout while the launch
    agent reached approximately 41% CPU and 919 MB RSS. The launch agent was
    stopped to restore host stability. The viewer now bounds retained startup
-   sessions to 512 newest records while still counting all discovered inputs;
-   this is a release blocker until the updated artifact is re-probed on the
-   same corpus.
+   sessions to 128 newest records by default (256 hard maximum for an explicit
+   override) while still counting all discovered inputs; this is a release
+   blocker until the updated artifact is re-probed on the same corpus.
 
 ## Important gaps
 
@@ -33,9 +33,10 @@
    `JsonCorpusSource::load_with_report`; it is a forward fix, but the live
    6,124-input workload still needs a post-fix daemon/viewer measurement.
 - The viewer bound is implemented in `crates/sl-viewer/src/corpus_loader.rs`
-  by retaining only the newest 512 sessions during iteration and surfacing a
-  visible count notice. It is not release evidence until a fresh installed
-  app measurement confirms the host memory budget.
+  by retaining only the newest 128 sessions during iteration and surfacing a
+  visible count notice. `SESSION_LEDGER_VIEWER_MAX_SESSIONS` accepts an
+  explicit positive override but clamps at 256. It is not release evidence
+  until a fresh installed app measurement confirms the host memory budget.
 - Hosted qgate run `30679369252` is green, but it is a web/CI gate and cannot
   close the local release holds above.
 

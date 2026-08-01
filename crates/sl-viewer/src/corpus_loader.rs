@@ -24,10 +24,19 @@ pub enum DataSource {
     ForgeDb(std::path::PathBuf),
 }
 
-/// Hard ceiling for full session payloads retained by the viewer at startup.
+/// Default number of full session payloads retained by the viewer at startup.
 /// Discovery remains newest-first; the UI reports when older sessions are
 /// outside the bounded in-memory view instead of silently dropping them.
-pub const DEFAULT_MAX_DISCOVERED_SESSIONS: usize = 512;
+pub const DEFAULT_MAX_DISCOVERED_SESSIONS: usize = 128;
+
+/// Upper bound for the opt-in `SESSION_LEDGER_VIEWER_MAX_SESSIONS` override.
+///
+/// Keeping an absolute ceiling protects the desktop app from accidentally
+/// loading an unbounded transcript corpus when a shell profile exports a bad
+/// value. Larger histories remain available through the daemon export.
+pub const MAX_CONFIGURED_DISCOVERED_SESSIONS: usize = 256;
+
+const MAX_DISCOVERED_SESSIONS_ENV: &str = "SESSION_LEDGER_VIEWER_MAX_SESSIONS";
 
 /// Result of loading a viewer corpus, including bounded-retention accounting.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,22 +71,36 @@ pub fn load_sessions(source: &DataSource) -> Result<Vec<Session>, String> {
 
 /// Load sessions and retain a bounded, newest-first in-memory view.
 pub fn load_sessions_report(source: &DataSource) -> Result<SessionLoadReport, String> {
+    let max_sessions = configured_max_discovered_sessions();
     match source {
-        DataSource::Mock => report(sample_sessions()),
-        DataSource::Auto => load_discovered_sessions(),
+        DataSource::Mock => report(sample_sessions(), max_sessions),
+        DataSource::Auto => load_discovered_sessions(max_sessions),
         #[cfg(feature = "sqlite")]
-        DataSource::ForgeDb(path) => load_from_sqlite(path).map(report),
+        DataSource::ForgeDb(path) => {
+            load_from_sqlite(path).map(|sessions| report(sessions, max_sessions))
+        }
     }
 }
 
-fn report(mut sessions: Vec<Session>) -> Result<SessionLoadReport, String> {
+fn configured_max_discovered_sessions() -> usize {
+    parse_max_discovered_sessions(std::env::var(MAX_DISCOVERED_SESSIONS_ENV).ok().as_deref())
+}
+
+fn parse_max_discovered_sessions(raw: Option<&str>) -> usize {
+    raw.and_then(|value| value.trim().parse::<usize>().ok())
+        .filter(|value| *value > 0)
+        .map(|value| value.min(MAX_CONFIGURED_DISCOVERED_SESSIONS))
+        .unwrap_or(DEFAULT_MAX_DISCOVERED_SESSIONS)
+}
+
+fn report(mut sessions: Vec<Session>, max_sessions: usize) -> Result<SessionLoadReport, String> {
     let discovered_count = sessions.len();
-    let retained_count = discovered_count.min(DEFAULT_MAX_DISCOVERED_SESSIONS);
+    let retained_count = discovered_count.min(max_sessions);
     sessions.truncate(retained_count);
     Ok(SessionLoadReport { sessions, discovered_count, retained_count })
 }
 
-fn load_discovered_sessions() -> Result<SessionLoadReport, String> {
+fn load_discovered_sessions(max_sessions: usize) -> Result<SessionLoadReport, String> {
     let home = std::env::var_os("HOME")
         .map(std::path::PathBuf::from)
         .ok_or_else(|| "HOME is not set; cannot discover local sessions".to_owned())?;
@@ -89,12 +112,14 @@ fn load_discovered_sessions() -> Result<SessionLoadReport, String> {
         |path| session_ledger::CodexDir::new(path.to_path_buf()),
         &mut sessions,
         &mut discovered_count,
+        max_sessions,
     )?;
     discovered_roots += load_json_corpus(
         &home.join(".claude").join("projects"),
         |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
         &mut sessions,
         &mut discovered_count,
+        max_sessions,
     )?;
     // Cursor stores exported conversation JSON/JSONL under its global data
     // directory on macOS. Only existing roots are scanned; caches and plans
@@ -104,13 +129,24 @@ fn load_discovered_sessions() -> Result<SessionLoadReport, String> {
         |path| session_ledger::CursorDir::new(path.to_path_buf()),
         &mut sessions,
         &mut discovered_count,
+        max_sessions,
+    )?;
+    // Cursor's native agent runner keeps transcripts outside the projects
+    // tree. Discover this sibling root so automatic viewer discovery matches
+    // the daemon's device-level Cursor coverage without traversing caches.
+    discovered_roots += load_json_corpus(
+        &home.join(".cursor").join("agent-transcripts"),
+        |path| session_ledger::CursorDir::new(path.to_path_buf()),
+        &mut sessions,
+        &mut discovered_count,
+        max_sessions,
     )?;
     #[cfg(feature = "sqlite")]
     if let Some(path) = resolve_forge_db_path(&home, std::env::var_os("FORGE_DB")) {
         for session in load_from_sqlite(&path)? {
             if !session.messages.is_empty() {
                 discovered_count += 1;
-                retain_session(&mut sessions, session);
+                retain_session(&mut sessions, session, max_sessions);
             }
         }
         discovered_roots += 1;
@@ -129,9 +165,9 @@ fn session_timestamp(session: &Session) -> i64 {
     session.messages.iter().filter_map(|message| message.ts_ms).max().unwrap_or_default()
 }
 
-fn retain_session(sessions: &mut Vec<Session>, session: Session) {
+fn retain_session(sessions: &mut Vec<Session>, session: Session, max_sessions: usize) {
     sessions.push(session);
-    if sessions.len() > DEFAULT_MAX_DISCOVERED_SESSIONS {
+    if sessions.len() > max_sessions {
         if let Some((oldest, _)) =
             sessions.iter().enumerate().min_by_key(|(_, item)| session_timestamp(item))
         {
@@ -163,6 +199,7 @@ fn load_json_corpus<F, S>(
     make_source: F,
     sessions: &mut Vec<Session>,
     discovered_count: &mut usize,
+    max_sessions: usize,
 ) -> Result<usize, String>
 where
     F: FnOnce(&std::path::Path) -> S,
@@ -177,7 +214,7 @@ where
         match source.load(&id) {
             Ok(session) if !session.messages.is_empty() => {
                 *discovered_count += 1;
-                retain_session(sessions, session);
+                retain_session(sessions, session, max_sessions);
             }
             Ok(_) => {}
             Err(error) => eprintln!("[sl-viewer] skipping {}:{}: {error}", root.display(), id),
@@ -226,6 +263,19 @@ mod tests {
     }
 
     #[test]
+    fn configured_session_limit_defaults_to_safe_memory_budget() {
+        assert_eq!(parse_max_discovered_sessions(None), 128);
+    }
+
+    #[test]
+    fn configured_session_limit_rejects_invalid_values_and_clamps_unsafe_values() {
+        assert_eq!(parse_max_discovered_sessions(Some("0")), 128);
+        assert_eq!(parse_max_discovered_sessions(Some("not-a-number")), 128);
+        assert_eq!(parse_max_discovered_sessions(Some(" 32 ")), 32);
+        assert_eq!(parse_max_discovered_sessions(Some("999999")), 256);
+    }
+
+    #[test]
     fn session_report_caps_retained_payload_and_exposes_count() {
         let sessions = (0..(DEFAULT_MAX_DISCOVERED_SESSIONS + 8))
             .map(|index| {
@@ -241,7 +291,7 @@ mod tests {
             })
             .collect();
 
-        let report = report(sessions).expect("bounded report");
+        let report = report(sessions, DEFAULT_MAX_DISCOVERED_SESSIONS).expect("bounded report");
         assert_eq!(report.discovered_count, DEFAULT_MAX_DISCOVERED_SESSIONS + 8);
         assert_eq!(report.retained_count, DEFAULT_MAX_DISCOVERED_SESSIONS);
         assert!(report.is_truncated());
@@ -263,7 +313,7 @@ mod tests {
             );
             message.ts_ms = Some(index as i64);
             session.messages.push(message);
-            retain_session(&mut retained, session);
+            retain_session(&mut retained, session, DEFAULT_MAX_DISCOVERED_SESSIONS);
         }
 
         assert_eq!(retained.len(), DEFAULT_MAX_DISCOVERED_SESSIONS);
@@ -320,6 +370,7 @@ mod tests {
             |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
             &mut sessions,
             &mut discovered_count,
+            DEFAULT_MAX_DISCOVERED_SESSIONS,
         )
         .expect("discover Claude transcripts");
 
@@ -327,6 +378,38 @@ mod tests {
         assert_eq!(discovered_count, 1);
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].id, "claude-local-1");
+    }
+
+    #[test]
+    fn auto_loader_accepts_cursor_agent_transcripts_root() {
+        let root = tempfile::tempdir().expect("temp root");
+        std::fs::write(
+            root.path().join("agent-session.jsonl"),
+            serde_json::json!({
+                "conversationId": "cursor-agent-1",
+                "role": "user",
+                "content": "hello from the Cursor agent"
+            })
+            .to_string(),
+        )
+        .expect("write transcript");
+
+        let mut sessions = Vec::new();
+        let mut discovered_count = 0;
+        let roots = load_json_corpus(
+            root.path(),
+            |path| session_ledger::CursorDir::new(path.to_path_buf()),
+            &mut sessions,
+            &mut discovered_count,
+            DEFAULT_MAX_DISCOVERED_SESSIONS,
+        )
+        .expect("discover Cursor agent transcripts");
+
+        assert_eq!(roots, 1);
+        assert_eq!(discovered_count, 1);
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, "cursor-agent-1");
+        assert_eq!(sessions[0].messages[0].content, "hello from the Cursor agent");
     }
 
     #[cfg(feature = "sqlite")]

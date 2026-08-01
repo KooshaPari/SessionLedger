@@ -22,3 +22,13 @@ coverage/
 **/coverage/
 *.info
 **/*.info
+
+# cargo-mutants side artifact dirs
+mutants.out.old/
+**/mutants.out.old/
+
+# cargo-mutants test result dirs (regenerated on every run)
+mutants.out/
+**/mutants.out/
+mutants.out.*/
+**/mutants.out.*/

@@ -15,7 +15,6 @@ use crate::help_overlay::HelpOverlay;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
-use crate::mock_data::sample_bundles;
 use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
 use crate::session_transcript::SessionTranscript;
@@ -149,6 +148,44 @@ fn initial_tab_for_viewer() -> Tab {
 /// Real corpus data is loaded once at startup and injected via Dioxus context
 /// so every child component can access it without prop-drilling.
 #[component]
+/// Derive `ContinuationBundle`s from real session data.
+///
+/// One `ContinuationBundle` per session (`source_id = session.id`).
+/// First Bundle is `BundleKind::Context` (title + corpus) if a title exists.
+/// Then one `Bundle` per message with `BundleKind` derived from `Role`.
+fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
+    let mut out: Vec<ContinuationBundle> = Vec::with_capacity(sessions.len());
+    for s in sessions {
+        let mut cb = ContinuationBundle::new(s.id.clone());
+        if let Some(title) = &s.title {
+            cb.bundles.push(Bundle::new(
+                BundleKind::Context,
+                serde_json::json!({
+                    "title": title,
+                    "corpus": format!("{:?}", s.corpus),
+                }),
+            ));
+        }
+        for msg in &s.messages {
+            let kind = match msg.role {
+                Role::User | Role::Subagent => BundleKind::Intent,
+                Role::Assistant => BundleKind::Worklog,
+                Role::Tool => BundleKind::Contract,
+                Role::System => BundleKind::Provenance,
+            };
+            cb.bundles.push(Bundle::new(
+                kind,
+                serde_json::json!({
+                    "role": format!("{:?}", msg.role),
+                    "content": msg.content,
+                }),
+            ));
+        }
+        out.push(cb);
+    }
+    out
+}
+
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -349,7 +386,10 @@ pub fn App() -> Element {
         Tab::Memory => rsx! { MemoryWiki {} },
         Tab::LiveFeed => rsx! { LiveFeed {} },
         Tab::Search => rsx! { SearchView {} },
-        Tab::Timeline => rsx! { TimelineView { bundles: sample_bundles() } },
+        Tab::Timeline => {
+            let bundles = build_bundles_from_sessions(&sessions_signal.read());
+            rsx! { TimelineView { bundles } }
+        },
         Tab::Replay => rsx! { ReplayView {} },
     };
 
@@ -923,7 +963,7 @@ fn BundlesTab() -> Element {
         let _ = load_gen();
         loading.set(true);
         load_error.set(None);
-        let loaded = sample_bundles();
+        let loaded = build_bundles_from_sessions(&sessions_signal.read());
         if loaded.is_empty() {
             load_error.set(Some("No bundles available to display.".into()));
         } else {

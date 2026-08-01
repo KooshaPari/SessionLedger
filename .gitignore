@@ -16,3 +16,9 @@ target-w34-*/
 .cache/
 .claude/worktrees/
 packaging/dist/
+
+# Test coverage artifacts (cargo-llvm-cov / tarpaulin)
+coverage/
+**/coverage/
+*.info
+**/*.info

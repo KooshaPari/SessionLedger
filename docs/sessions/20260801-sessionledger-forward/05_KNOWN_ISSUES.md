@@ -21,6 +21,13 @@
    override) while still counting all discovered inputs; this is a release
    blocker until the updated artifact is re-probed on the same corpus.
 
+   The pre-window installed viewer (candidate `f9c1ddec`, default 128 retained
+   sessions) reproduced the host-memory failure: PID 97520 measured roughly
+   85 MB RSS at 5 s, 283 MB at 10 s, 956 MB peak at 15 s, 592 MB at 40 s, and
+   91 MB at 60 s. A physical-footprint sample reported 343.7 MB current and
+   1.4 GB peak. This is baseline evidence only; the windowed build must be
+   installed and measured on the same corpus before the hold can move.
+
 ## Important gaps
 
 - Full installed-app dogfood against automatically discovered local sessions is
@@ -37,6 +44,12 @@
   visible count notice. `SESSION_LEDGER_VIEWER_MAX_SESSIONS` accepts an
   explicit positive override but clamps at 256. It is not release evidence
   until a fresh installed app measurement confirms the host memory budget.
+- Native JSON/JSONL discovery now enumerates transcript paths as an index,
+  ranks them by filesystem modification time (with a deterministic ID
+  tie-break), and parses only the newest bounded window. `discovered_count`
+  therefore reports indexed transcript records, including records not parsed
+  in this startup window; it does not claim that historical payloads were
+  validated. Empty/malformed records in the parsed window remain warnings.
 - Hosted qgate run `30679369252` is green, but it is a web/CI gate and cannot
   close the local release holds above.
 

@@ -42,6 +42,10 @@ const MAX_DISCOVERED_SESSIONS_ENV: &str = "SESSION_LEDGER_VIEWER_MAX_SESSIONS";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionLoadReport {
     pub sessions: Vec<Session>,
+    /// Number of transcript files enumerated by native discovery.  Native
+    /// discovery intentionally counts the filesystem index, not only the
+    /// bounded payloads parsed below; older files remain on disk and are not
+    /// decompressed during startup.
     pub discovered_count: usize,
     pub retained_count: usize,
 }
@@ -210,17 +214,52 @@ where
     }
     let source = make_source(root);
     let ids = source.list().map_err(|e| format!("discover {}: {e}", root.display()))?;
-    for id in ids {
+    let listed_count = ids.len();
+    // `list` is an index-only operation.  Rank the IDs from filesystem
+    // metadata and load only the bounded newest window; in particular, this
+    // prevents historical `.jsonl.zst` transcripts from being decompressed
+    // just to discover that they will be evicted from the viewer anyway.
+    for id in recent_ids(root, ids, max_sessions) {
         match source.load(&id) {
             Ok(session) if !session.messages.is_empty() => {
-                *discovered_count += 1;
                 retain_session(sessions, session, max_sessions);
             }
             Ok(_) => {}
             Err(error) => eprintln!("[sl-viewer] skipping {}:{}: {error}", root.display(), id),
         }
     }
+    // This is deliberately the number of indexed transcript records, not the
+    // number successfully parsed in the bounded window.  A malformed or empty
+    // historical record is therefore still visible in the truncation notice
+    // without claiming that it was loaded successfully.
+    *discovered_count += listed_count;
     Ok(1)
+}
+
+/// Return the newest transcript IDs without opening or decompressing them.
+///
+/// Filesystem modification time is the best available recency signal for
+/// adapters whose IDs are UUIDs (Claude/Cursor).  The ID is a deterministic
+/// tie-breaker and also preserves Codex's date-prefixed path ordering when
+/// archives share a timestamp.
+fn recent_ids(root: &std::path::Path, ids: Vec<String>, limit: usize) -> Vec<String> {
+    let mut ranked = ids
+        .into_iter()
+        .map(|id| {
+            let modified_ns = root
+                .join(&id)
+                .metadata()
+                .and_then(|metadata| metadata.modified())
+                .ok()
+                .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
+                .map_or(0, |duration| duration.as_nanos());
+            (modified_ns, id)
+        })
+        .collect::<Vec<_>>();
+    ranked.sort_unstable_by(|(left_time, left_id), (right_time, right_id)| {
+        left_time.cmp(right_time).then_with(|| left_id.cmp(right_id))
+    });
+    ranked.into_iter().rev().take(limit).map(|(_, id)| id).collect()
 }
 
 /// Open a Forge SQLite DB at `path` and ingest all conversations.
@@ -410,6 +449,82 @@ mod tests {
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].id, "cursor-agent-1");
         assert_eq!(sessions[0].messages[0].content, "hello from the Cursor agent");
+    }
+
+    #[test]
+    fn bounded_window_indexes_all_files_but_loads_only_newest_ids() {
+        use std::sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        };
+
+        #[derive(Clone)]
+        struct CountingSource {
+            ids: Vec<String>,
+            loads: Arc<AtomicUsize>,
+        }
+
+        impl session_ledger::ports::CorpusSource for CountingSource {
+            fn list(&self) -> Result<Vec<String>, session_ledger::ports::PortError> {
+                Ok(self.ids.clone())
+            }
+
+            fn load(&self, id: &str) -> Result<Session, session_ledger::ports::PortError> {
+                self.loads.fetch_add(1, Ordering::SeqCst);
+                let mut session = Session::new(id, session_ledger::domain::session::Corpus::Codex);
+                session.messages.push(session_ledger::domain::session::Message::new(
+                    session_ledger::domain::session::Role::User,
+                    "payload",
+                ));
+                Ok(session)
+            }
+        }
+
+        let root = tempfile::tempdir().expect("temp root");
+        let ids = (0..8).map(|index| format!("session-{index:02}.jsonl")).collect::<Vec<_>>();
+        for id in &ids {
+            std::fs::write(root.path().join(id), b"indexed").expect("index fixture");
+        }
+        // A non-transcript file is ignored by real adapters' `list` method;
+        // the count below therefore remains an honest transcript-file count.
+        std::fs::write(root.path().join("notes.txt"), b"not a transcript").expect("non-transcript");
+
+        let loads = Arc::new(AtomicUsize::new(0));
+        let mut sessions = Vec::new();
+        let mut discovered_count = 0;
+        let ids_for_source = ids.clone();
+        let loads_for_source = Arc::clone(&loads);
+        load_json_corpus(
+            root.path(),
+            move |_| CountingSource { ids: ids_for_source, loads: loads_for_source },
+            &mut sessions,
+            &mut discovered_count,
+            3,
+        )
+        .expect("bounded discovery");
+
+        assert_eq!(discovered_count, ids.len());
+        assert_eq!(loads.load(Ordering::SeqCst), 3);
+        assert_eq!(sessions.len(), 3);
+        assert!(sessions.iter().all(|session| session.id.ends_with(".jsonl")));
+        assert!(sessions.iter().any(|session| session.id == "session-07.jsonl"));
+    }
+
+    #[test]
+    fn recent_ids_is_deterministic_when_metadata_ties() {
+        let root = tempfile::tempdir().expect("temp root");
+        let ids = ["session-b.jsonl", "session-a.jsonl", "session-c.jsonl"]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
+        for id in &ids {
+            std::fs::write(root.path().join(id), b"indexed").expect("index fixture");
+        }
+
+        let first = recent_ids(root.path(), ids.clone(), ids.len());
+        let second = recent_ids(root.path(), ids.clone(), ids.len());
+        assert_eq!(first, second, "filesystem index ordering must be stable");
+        assert_eq!(first.len(), 3);
     }
 
     #[cfg(feature = "sqlite")]

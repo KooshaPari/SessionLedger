@@ -14,7 +14,8 @@
 | CI policy | eval, package, fuzz, rootless matrix/no-net SelfChecks | PASS |
 | Native discovery probe (2026-08-01) | 6,124 Codex inputs; 6,323 bundles; `/readyz` 200; `/api/bundles` >5s timeout; ~41% CPU/~919 MB RSS; launch agent stopped | BLOCKED |
 | Discovery rescan regression | Commit `73e92c12`; `cargo test --lib ingestion::json_source --no-default-features` (4 passed) and `--locked` (4 passed) | PASS |
-| Viewer bounded discovery | `cargo test -p sl-viewer --lib corpus_loader -- --nocapture` (10 focused contracts; retain newest 128 during iteration; env override clamps at 256) | PASS (local; installed-app rerun required) |
+| Viewer bounded discovery | `cargo test -p sl-viewer --lib corpus_loader -- --nocapture` (12 focused contracts; filesystem-index window loads only newest bound, deterministic ties, indexed-count accounting; env override clamps at 256) | PASS (local; installed-app rerun required) |
+| Viewer pre-window memory baseline | Installed `f9c1ddec`, PID 97520: 85 MB RSS @5 s, 283 MB @10 s, 956 MB peak @15 s, ~592 MB @40 s, 91 MB @60 s; physical footprint 343.7 MB current / 1.4 GB peak | BLOCKED baseline; windowed artifact rerun required |
 | Cursor live transcript roots | `cargo test --manifest-path crates/sl-daemon/Cargo.toml --bin sl-daemon discovery` plus viewer `auto_loader_accepts_cursor_agent_transcripts_root`; covers `projects` and `agent-transcripts` | PASS (source-level; installed-app rerun required) |
 
 ## Required next matrix

@@ -57,8 +57,25 @@ jobs:
       - name: build sl-daemon workspace
         working-directory: crates/sl-daemon
         run: cargo build --locked
+      - name: build sl-daemon macOS arm64 release
+        if: matrix.os == 'macos-latest'
+        working-directory: crates/sl-daemon
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-darwin
+          cargo build --locked --release --target aarch64-apple-darwin --bin sl-daemon
+          shasum -a 256 target/aarch64-apple-darwin/release/sl-daemon > sl-daemon-macos-arm64.sha256
+      - name: upload sl-daemon macOS arm64 artifact
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sessionledger-sl-daemon-macos-arm64-${{ github.sha }}
+          path: |
+            crates/sl-daemon/target/aarch64-apple-darwin/release/sl-daemon
+            crates/sl-daemon/sl-daemon-macos-arm64.sha256
+          if-no-files-found: error
 
-  session-ledger-build:
+
     name: session-ledger build · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:

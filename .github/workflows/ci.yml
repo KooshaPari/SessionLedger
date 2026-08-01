@@ -332,6 +332,18 @@ jobs:
         shell: pwsh
         run: ./scripts/rootless-matrix-check.ps1 -SelfCheck
 
+  # Blocking C11 L112 platform signing-readiness evidence -- full PR gate in
+  # .github/workflows/signing-hard.yml; this is a fast ci.yml anchor smoke.
+  # Keep this policy job blocking so branch protection sees the hard SelfCheck.
+  signing-readiness-policy:
+    name: platform signing readiness policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: assert platform signing readiness hard CI anchors
+        shell: pwsh
+        run: ./scripts/signing-readiness-check.ps1 -SelfCheck
+
   # ===========================================================================
   # STAGE 5: Aggregation gate for branch protection
   # ===========================================================================

@@ -60,9 +60,12 @@ pub fn all_wiki_pages_from_sessions(
 pub fn MemoryWiki() -> Element {
     let ctx = use_context::<SessionContext>();
     let pages = use_memo(move || all_wiki_pages_from_sessions(&ctx.0.read()));
-    let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
+    let mut selected_id: Signal<Option<String>> = use_signal(|| None);
+    let selected_id_value = selected_id();
 
-    let selected = selected_idx().and_then(|idx| pages.get(idx)).map(|r| (*r).clone());
+    let selected = selected_id_value
+        .as_deref()
+        .and_then(|id| pages.iter().find(|page| page.session_id == id).map(|page| (*page).clone()));
 
     rsx! {
         style { r#"
@@ -132,12 +135,12 @@ pub fn MemoryWiki() -> Element {
         "# }
         div { class: "sidebar",
             h2 { "Distilled Memory" }
-            for (i, page) in pages.iter().enumerate() {
+            for (_i, page) in pages.iter().enumerate() {
                 WikiRow {
                     key: "{page.session_id}",
                     page: page.clone(),
-                    is_selected: selected_idx() == Some(i),
-                    on_click: move |_| { selected_idx.set(Some(i)); },
+                    is_selected: selected_id_value.as_deref() == Some(page.session_id.as_str()),
+                    on_click: move |id: String| { selected_id.set(Some(id)); },
                 }
             }
         }
@@ -152,7 +155,7 @@ pub fn MemoryWiki() -> Element {
 
 /// A single row in the wiki sidebar.
 #[component]
-fn WikiRow(page: MemoryWikiPage, is_selected: bool, on_click: EventHandler<()>) -> Element {
+fn WikiRow(page: MemoryWikiPage, is_selected: bool, on_click: EventHandler<String>) -> Element {
     let sel_class = if is_selected { " selected" } else { "" };
     let title_text = page.title.clone().unwrap_or_else(|| "(untitled)".into());
 
@@ -176,7 +179,7 @@ fn WikiRow(page: MemoryWikiPage, is_selected: bool, on_click: EventHandler<()>) 
     rsx! {
         div {
             class: "wiki-entry{sel_class}",
-            onclick: move |_| on_click.call(()),
+            onclick: move |_| on_click.call(page.session_id.clone()),
             div { class: "wiki-title",
                 "{title_text}"
             }

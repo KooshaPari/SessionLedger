@@ -194,9 +194,19 @@ pub fn App() -> Element {
             let result: std::result::Result<Result<Vec<Session>, String>, String> = {
                 #[cfg(feature = "desktop")]
                 {
-                    tokio::task::spawn_blocking(move || load_sessions(&source))
-                        .await
-                        .map_err(|error| error.to_string())
+                    match tokio::task::spawn_blocking(move || load_sessions(&source)).await {
+                        Ok(result) => Ok(result),
+                        Err(error) => {
+                            let message = if error.is_panic() {
+                                format!("load task panicked: {error}")
+                            } else if error.is_cancelled() {
+                                format!("load task cancelled: {error}")
+                            } else {
+                                format!("load task failed: {error}")
+                            };
+                            Err(message)
+                        }
+                    }
                 }
                 #[cfg(not(feature = "desktop"))]
                 {
@@ -212,8 +222,8 @@ pub fn App() -> Element {
                     error_signal.set(Some(e));
                 }
                 Err(e) => {
-                    eprintln!("[sl-viewer] load task panicked: {e}");
-                    error_signal.set(Some(format!("load task panicked: {e}")));
+                    eprintln!("[sl-viewer] {e}");
+                    error_signal.set(Some(e));
                 }
             }
         });

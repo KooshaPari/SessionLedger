@@ -109,9 +109,12 @@ fn corpus_label(corpus: Corpus) -> &'static str {
 pub fn HistoryTimeline() -> Element {
     let ctx = use_context::<SessionContext>();
     let entries = use_memo(move || all_timeline_entries(&ctx.0.read()));
-    let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
+    let mut selected_id: Signal<Option<String>> = use_signal(|| None);
+    let selected_id_value = selected_id();
 
-    let selected = selected_idx().and_then(|idx| entries.get(idx)).map(|r| (*r).clone());
+    let selected = selected_id_value.as_deref().and_then(|id| {
+        entries.iter().find(|entry| entry.summary.id == id).map(|entry| (*entry).clone())
+    });
 
     rsx! {
         style { r#"
@@ -190,12 +193,12 @@ pub fn HistoryTimeline() -> Element {
         "# }
         div { class: "sidebar",
             h2 { "Session History" }
-            for (i, entry) in entries.iter().enumerate() {
+            for (_i, entry) in entries.iter().enumerate() {
                 TimelineRow {
                     key: "{entry.summary.id}",
                     entry: entry.clone(),
-                    is_selected: selected_idx() == Some(i),
-                    on_click: move |_| { selected_idx.set(Some(i)); },
+                    is_selected: selected_id_value.as_deref() == Some(entry.summary.id.as_str()),
+                    on_click: move |id: String| { selected_id.set(Some(id)); },
                 }
             }
         }
@@ -210,7 +213,7 @@ pub fn HistoryTimeline() -> Element {
 
 /// A single row in the history timeline.
 #[component]
-fn TimelineRow(entry: TimelineEntry, is_selected: bool, on_click: EventHandler<()>) -> Element {
+fn TimelineRow(entry: TimelineEntry, is_selected: bool, on_click: EventHandler<String>) -> Element {
     let sel_class = if is_selected { " selected" } else { "" };
     let corpus_class = format!("corpus-badge corpus-{}", corpus_label(entry.corpus));
     let status_text = if entry.summary.unfinished { "in progress" } else { "completed" };
@@ -218,7 +221,7 @@ fn TimelineRow(entry: TimelineEntry, is_selected: bool, on_click: EventHandler<(
     rsx! {
         div {
             class: "history-entry{sel_class}",
-            onclick: move |_| on_click.call(()),
+            onclick: move |_| on_click.call(entry.summary.id.clone()),
             div { class: "session-id", "{entry.summary.id}" }
             div { class: "session-title",
                 if let Some(ref title) = entry.summary.title {

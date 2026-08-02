@@ -272,7 +272,7 @@ function Invoke-TypeScriptAdapter {
         [Parameter(Mandatory = $true)][string]$FixturePath
     )
 
-    $output = & $Node --experimental-strip-types $AdapterPath $Command $FixturePath 2>&1
+    $output = & $Node --no-warnings --experimental-strip-types $AdapterPath $Command $FixturePath 2>&1
     $exitCode = $LASTEXITCODE
     $text = ($output | Out-String).TrimEnd()
     if ($exitCode -ne 0) {

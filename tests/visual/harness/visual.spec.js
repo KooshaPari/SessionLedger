@@ -91,7 +91,9 @@ test("viewer exposes type tokens and persists theme preference", async ({ page }
     };
   });
 
-  expect(tokens.display).toContain("Georgia");
+  // The display face intentionally follows the system stack: it avoids the
+  // serif-heavy hierarchy that made the dense ledger screen harder to scan.
+  expect(tokens.display).toContain("system-ui");
   expect(tokens.body).toContain("system-ui");
   expect(tokens.mono).toContain("monospace");
   expect(tokens.ui).toContain("system-ui");

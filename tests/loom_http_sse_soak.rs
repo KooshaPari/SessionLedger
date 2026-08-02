@@ -15,10 +15,10 @@
 //! `cargo test` never builds it.
 //!
 //! Traceability:
-//!   - WAVE44_SCOPE.md (rank 1), docs/ops/WAVE44_PERT.md (lane B1)
+//!   - `WAVE44_SCOPE.md` (rank 1), `docs/ops/WAVE44_PERT.md` (lane B1)
 //!   - audit/.lane-c00/C00.md — L7 evidence
 //!   - docs/ops/daemon-graph-hard.md — live tokio port
-//!   - tests/loom_model.rs — channel primitives (Wave-43)
+//!   - `tests/loom_model.rs` — channel primitives (Wave-43)
 
 #[cfg(not(loom))]
 #[test]

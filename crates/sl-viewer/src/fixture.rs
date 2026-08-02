@@ -5,17 +5,14 @@
 pub fn query_fixture_name() -> Option<String> {
     #[cfg(feature = "web")]
     {
-        let window = match web_sys::window() {
-            Some(window) => window,
-            None => return None,
-        };
+        let window = web_sys::window()?;
         let location = window.location();
         let search = location.search().unwrap_or_default();
         let params = match web_sys::UrlSearchParams::new_with_str(&search) {
             Ok(params) => params,
             Err(_) => return None,
         };
-        return params.get("fixture").filter(|value| !value.trim().is_empty());
+        params.get("fixture").filter(|value| !value.trim().is_empty())
     }
 
     #[cfg(not(feature = "web"))]

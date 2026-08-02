@@ -24,8 +24,10 @@ USAGE:
     sl-viewer [--help | -h] [--version | -V]
 
 ENVIRONMENT:
-    SL_DAEMON_URL   Compile-time daemon base URL (default: {DEFAULT_DAEMON_BASE}).
-                    Rebuild with SL_DAEMON_URL set to change API endpoints.
+    SL_DAEMON_URL   Runtime daemon base URL override (default: {DEFAULT_DAEMON_BASE}).
+                    Set one URL to force endpoint resolution.
+    SL_DAEMON_URLS  Runtime URL set (comma/semicolon/space-separated), tried in order.
+                    Use for port failover, eg: http://127.0.0.1:9001,http://127.0.0.1:8080.
     FORGE_DB        Runtime path to a Forge SQLite corpus (requires --features sqlite).
     SL_VIEWER_DEMO  Set to 1 for in-memory demo data (desktop only).
 

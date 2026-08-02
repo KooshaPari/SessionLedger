@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Origin corpus a session was ingested from.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Corpus {
     Forge,

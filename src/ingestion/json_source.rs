@@ -216,7 +216,10 @@ fn apply_metadata(value: &Value, session: &mut Session) {
         object
     };
 
-    if let Some(id) = string_field(metadata, &["sessionId", "session_id", "conversationId", "id"]) {
+    if let Some(id) = string_field(
+        metadata,
+        &["sessionId", "session_id", "conversationId", "conversation_id", "id"],
+    ) {
         id.clone_into(&mut session.id);
     }
     if session.cwd.is_none() {

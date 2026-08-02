@@ -95,7 +95,7 @@ pub fn typing_focus_active() -> bool {
         if let Ok(html) = element.dyn_into::<web_sys::HtmlElement>() {
             return html.is_content_editable();
         }
-        return false;
+        false
     }
     #[cfg(not(feature = "web"))]
     {

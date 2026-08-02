@@ -5,7 +5,9 @@
 use dioxus::prelude::*;
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
-use crate::daemon_url::daemon_base_url;
+#[cfg(any(target_arch = "wasm32", not(feature = "desktop")))]
+use crate::daemon_url::daemon_api_url_options;
+use crate::daemon_url::daemon_base_url_candidates;
 use crate::fixture::query_fixture_active;
 
 use futures_util::StreamExt;
@@ -113,17 +115,27 @@ pub fn ReplayView() -> Element {
         let mut entries = entries;
         let mut state = state;
         let mut progress = progress;
-        move |mut rx: UnboundedReceiver<(String, f64, String, u64)>| async move {
-            while let Some((id, spd, daemon_url, token)) = rx.next().await {
+        move |mut rx: UnboundedReceiver<(String, f64, u64)>| async move {
+            while let Some((id, spd, token)) = rx.next().await {
                 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
                 {
                     use tokio::io::{AsyncBufReadExt, BufReader};
                     use tokio_util::io::StreamReader;
 
-                    let url = format!("{daemon_url}/api/replay/{id}?speed={spd}");
-                    let response = match reqwest::Client::new().get(url).send().await {
-                        Ok(response) if response.status().is_success() => response,
-                        Ok(_) | Err(_) => {
+                    let mut response = None;
+                    for daemon_url in daemon_base_url_candidates() {
+                        let url = format!("{daemon_url}/api/replay/{id}?speed={spd}");
+                        match reqwest::Client::new().get(url).send().await {
+                            Ok(resp) if resp.status().is_success() => {
+                                response = Some(resp);
+                                break;
+                            }
+                            Ok(_) | Err(_) => {}
+                        }
+                    }
+                    let response = match response {
+                        Some(response) => response,
+                        None => {
                             state.set(ReplayState::Error("replay stream unavailable".into()));
                             continue;
                         }
@@ -160,10 +172,17 @@ pub fn ReplayView() -> Element {
                         use wasm_bindgen::{closure::Closure, JsCast};
                         use web_sys::{Event, EventSource, MessageEvent};
 
-                        let url = format!("{daemon_url}/api/replay/{id}?speed={spd}");
-                        let source = match EventSource::new(&url) {
-                            Ok(source) => source,
-                            Err(_) => {
+                        let mut source = None;
+                        for daemon_url in daemon_api_url_options("/api/replay/") {
+                            let url = format!("{daemon_url}{id}?speed={spd}");
+                            if let Ok(ok) = EventSource::new(&url) {
+                                source = Some(ok);
+                                break;
+                            }
+                        }
+                        let source = match source {
+                            Some(source) => source,
+                            None => {
                                 state.set(ReplayState::Error("replay stream unavailable".into()));
                                 continue;
                             }
@@ -211,7 +230,7 @@ pub fn ReplayView() -> Element {
                     }
                     #[cfg(not(target_arch = "wasm32"))]
                     {
-                        let _ = (id, spd, daemon_url, token);
+                        let _ = (id, spd, token);
                         state.set(ReplayState::Error(
                             "replay streaming requires the desktop target".into(),
                         ));
@@ -220,8 +239,6 @@ pub fn ReplayView() -> Element {
             }
         }
     });
-
-    let daemon_url = daemon_base_url();
 
     if query_fixture_active("replay-error") {
         return rsx! {
@@ -346,7 +363,7 @@ pub fn ReplayView() -> Element {
                                 progress.set((0, 0));
                                 state.set(ReplayState::Playing);
                                 generation.set(generation() + 1);
-                                replay_task.send((id.clone(), normalize_speed(spd), daemon_url.to_string(), generation()));
+                                replay_task.send((id.clone(), normalize_speed(spd), generation()));
                             }
                         },
                         "Play"
@@ -373,7 +390,7 @@ pub fn ReplayView() -> Element {
                             progress.set((0, 0));
                             generation.set(generation() + 1);
                             state.set(ReplayState::Playing);
-                            replay_task.send((id, normalize_speed(*speed.read()), daemon_url.to_string(), generation()));
+                            replay_task.send((id, normalize_speed(*speed.read()), generation()));
                         },
                         "Resume"
                     }

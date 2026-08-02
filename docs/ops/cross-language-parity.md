@@ -90,7 +90,6 @@ Language-agnostic contract (see [`adapters/README.md`](../../adapters/README.md)
 
 Reference implementations (stdlib only):
 
-<<<<<<< HEAD
 | Path | CLI |
 |------|-----|
 | [`adapters/python/okf_adapter.py`](../../adapters/python/okf_adapter.py) | `validate` / `emit` against a fixture path |
@@ -103,18 +102,6 @@ it also runs the TypeScript adapter against `codex-typescript-023.okf.json`;
 when `go` is installed it runs the Go adapter against `forge-go-module-026.okf.json`;
 otherwise TypeScript/Go execute steps are explicit skips while hermetic doc/source
 anchors still pass.
-=======
-| Language | Path | CLI |
-|----------|------|-----|
-| Python | [`adapters/python/okf_adapter.py`](../../adapters/python/okf_adapter.py) | `validate` / `emit` against a fixture path |
-| TypeScript | [`adapters/typescript/okf_adapter.ts`](../../adapters/typescript/okf_adapter.ts) | `validate` / `emit` via `node --experimental-strip-types` |
-
-SelfCheck runs the Python adapter against the Python matrix fixture
-(`cursor-python-029.okf.json`) and the TypeScript adapter against the TypeScript
-matrix fixture (`codex-typescript-023.okf.json`) to prove validate + emit beyond
-PowerShell-only structural comparison. Go and additional host languages may
-mirror the same interface later.
->>>>>>> f323a5a (feat(okf): TypeScript adapter stub for C08 L75 cross-language parity (Wave-36))
 
 ## Explicit non-goals
 
@@ -132,15 +119,9 @@ mirror the same interface later.
 
 ## Machine verification (SelfCheck)
 
-<<<<<<< HEAD
 Hermetic doc + fixture path + structural harness + Python/Go/TypeScript adapter stub check
 (no daemon, no network, no cargo; uses host `python`/`python3` stdlib; optional
 host `go` and Node ≥22 `--experimental-strip-types`):
-=======
-Hermetic doc + fixture path + structural harness + Python/TypeScript adapter stub
-check (no daemon, no network, no cargo; uses host `python`/`python3` and optional
-Node ≥22 `--experimental-strip-types`):
->>>>>>> f323a5a (feat(okf): TypeScript adapter stub for C08 L75 cross-language parity (Wave-36))
 
 ```powershell
 pwsh ./scripts/cross-language-parity-check.ps1 -SelfCheck
@@ -150,14 +131,9 @@ pwsh ./scripts/cross-language-parity-check.ps1 -SelfCheck
 structural invariant harness section, native language adapter stub section,
 EVAL_SCOPE / Harbor N/A boundary, that each matrix fixture exists with a
 matching `source_id` language tag, that the structural harness finds an
-<<<<<<< HEAD
 identical shared-core fingerprint across rows, that the Python reference
 adapter validates and emits the Python fixture, and that Go and TypeScript adapter
 sources exist (with runtime `go run` / Node when available). `tests/cross_language_parity.rs`
-=======
-identical shared-core fingerprint across rows, and that the Python and TypeScript
-reference adapters validate and emit their matrix fixtures. `tests/cross_language_parity.rs`
->>>>>>> f323a5a (feat(okf): TypeScript adapter stub for C08 L75 cross-language parity (Wave-36))
 wraps the same command for optional `cargo test` proof.
 
 CI: [`.github/workflows/eval-compression.yml`](../../.github/workflows/eval-compression.yml)

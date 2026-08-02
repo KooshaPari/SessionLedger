@@ -25,8 +25,6 @@ use crate::theme::ThemeColors;
 use crate::timeline::TimelineView;
 use crate::tokens::{TOKENS_CSS, VIEWER_COLOR_SCHEME};
 use crate::unfinished_tab::UnfinishedWork;
-use session_ledger::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
-use session_ledger::domain::session::Role as SessionRole;
 
 /// Tab identifiers for the viewer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -153,39 +151,6 @@ fn initial_tab_for_viewer() -> Tab {
 /// Real corpus data is loaded once at startup and injected via Dioxus context
 /// so every child component can access it without prop-drilling.
 /// Derive `ContinuationBundle`s from real session data.
-<<<<<<< Updated upstream
-///
-/// One `ContinuationBundle` per session (`source_id = session.id`).
-/// First Bundle is `BundleKind::Context` (title + corpus) if a title exists.
-/// Then one `Bundle` per message with `BundleKind` derived from `Role`.
-fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
-    let mut out: Vec<ContinuationBundle> = Vec::with_capacity(sessions.len());
-    for s in sessions {
-        let mut cb = ContinuationBundle::new(s.id.clone());
-        if let Some(title) = &s.title {
-            cb.bundles.push(Bundle::new(
-                BundleKind::Context,
-                serde_json::json!({
-                    "title": title,
-                    "corpus": format!("{:?}", s.corpus),
-                }),
-            ));
-        }
-        for msg in &s.messages {
-            let kind = match msg.role {
-                Role::User | Role::Subagent => BundleKind::Intent,
-                Role::Assistant => BundleKind::Worklog,
-                Role::Tool => BundleKind::Contract,
-                Role::System => BundleKind::Provenance,
-            };
-            cb.bundles.push(Bundle::new(
-                kind,
-                serde_json::json!({
-                    "role": format!("{:?}", msg.role),
-                    "content": msg.content,
-                }),
-            ));
-=======
 fn bundles_for_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
     let mut out: Vec<ContinuationBundle> = Vec::with_capacity(sessions.len());
     for s in sessions {
@@ -200,10 +165,10 @@ fn bundles_for_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
         ));
         for msg in &s.messages {
             let kind = match msg.role {
-                SessionRole::User | SessionRole::Subagent => BundleKind::Intent,
-                SessionRole::Assistant => BundleKind::Worklog,
-                SessionRole::Tool => BundleKind::Contract,
-                SessionRole::System => BundleKind::Provenance,
+                Role::User | Role::Subagent => BundleKind::Intent,
+                Role::Assistant => BundleKind::Worklog,
+                Role::Tool => BundleKind::Contract,
+                Role::System => BundleKind::Provenance,
             };
             let body = if kind == BundleKind::Intent {
                 serde_json::json!({
@@ -215,17 +180,13 @@ fn bundles_for_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
                 serde_json::json!({"role": format!("{:?}", msg.role), "content": msg.content})
             };
             cb.bundles.push(Bundle::new(kind, body));
->>>>>>> Stashed changes
         }
         out.push(cb);
     }
     out
 }
 
-<<<<<<< Updated upstream
-=======
 #[allow(non_snake_case)]
->>>>>>> Stashed changes
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -264,13 +225,8 @@ pub fn App() -> Element {
     // renders immediately. The web build keeps its synchronous mock path and
     // does not enable the optional Tokio dependency.
     let mut sessions_signal = use_signal(Vec::<Session>::new);
-<<<<<<< Updated upstream
-    let mut error_signal: Signal<Option<String>> = use_signal(|| None);
-=======
     let mut corpus_error_signal: Signal<Option<String>> = use_signal(|| None);
     let mut corpus_loading_signal = use_signal(|| true);
-
->>>>>>> Stashed changes
     use_effect(move || {
         let source = resolve_data_source();
         spawn(async move {
@@ -292,19 +248,12 @@ pub fn App() -> Element {
                     corpus_loading_signal.set(false);
                 }
                 Ok(Err(e)) => {
-<<<<<<< Updated upstream
-                    error_signal.set(Some(e));
-                }
-                Err(e) => {
-                    error_signal.set(Some(format!("Internal error: {e}")));
-=======
                     corpus_error_signal.set(Some(e));
                     corpus_loading_signal.set(false);
                 }
                 Err(e) => {
                     corpus_error_signal.set(Some(format!("Internal error: {e}")));
                     corpus_loading_signal.set(false);
->>>>>>> Stashed changes
                 }
             }
         });
@@ -443,7 +392,6 @@ pub fn App() -> Element {
             BundlesTab {
                 bundles: bundles_for_sessions(&sessions_signal.read()),
                 loading: corpus_loading_signal(),
-                error: corpus_error_signal(),
             }
         },
         Tab::History => rsx! { HistoryTimeline {} },
@@ -451,16 +399,9 @@ pub fn App() -> Element {
         Tab::Memory => rsx! { MemoryWiki {} },
         Tab::LiveFeed => rsx! { LiveFeed {} },
         Tab::Search => rsx! { SearchView {} },
-<<<<<<< Updated upstream
-        Tab::Timeline => {
-            let bundles = build_bundles_from_sessions(&sessions_signal.read());
-            rsx! { TimelineView { bundles } }
-        },
-=======
         Tab::Timeline => rsx! { TimelineView {
             bundles: bundles_for_sessions(&sessions_signal.read())
         } },
->>>>>>> Stashed changes
         Tab::Replay => rsx! { ReplayView {} },
     };
 
@@ -936,13 +877,11 @@ pub fn App() -> Element {
                         }
                     }
                 }
-                if active_tab() == Tab::Bundles {
-                    if let Some(ref err) = *error_signal.read() {
+                if let Some(ref err) = *corpus_error_signal.read() {
                     div { class: "corpus-error-banner",
                         ErrorState {
                             message: format!("Corpus load failed ({err}); no sessions are available."),
                         }
-                    }
                     }
                 }
             }
@@ -1017,32 +956,12 @@ pub fn App() -> Element {
 
 /// The compiled-bundles tab — the original sidebar + detail panel.
 #[component]
-fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool, error: Option<String>) -> Element {
+fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool) -> Element {
     // Show useful content immediately; an empty detail pane on first render
     // made the inbox look broken and hid the chat transcript behind a click.
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| Some(0));
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
 
-<<<<<<< Updated upstream
-    // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
-    // Today this is synchronous sample data; the same signals work for a future
-    // daemon/HTTP loader without changing the chrome.
-    let ctx = use_context::<SessionContext>();
-    use_effect(move || {
-        let _ = load_gen();
-        loading.set(true);
-        load_error.set(None);
-        let loaded = build_bundles_from_sessions(&*ctx.0.read());
-        if loaded.is_empty() {
-            load_error.set(Some("No bundles available to display.".into()));
-        } else {
-            bundles.set(loaded);
-        }
-        loading.set(false);
-    });
-
-=======
->>>>>>> Stashed changes
     if query_fixture_active("first-run") {
         return rsx! {
             h2 { "Compiled Bundles" }
@@ -1072,15 +991,6 @@ fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool, error: Option<Str
             ContentSkeleton { layout: SkeletonLayout::Bundles }
         };
     }
-    if let Some(err) = error {
-        return rsx! {
-            h2 { "Compiled Bundles" }
-            ErrorState {
-                message: err,
-            }
-        };
-    }
-
     let summaries: Vec<BundleSummary> = bundles.iter().map(summarize).collect();
     // Resolve stale selection during render without writing signals in render.
     // The visible-list callback persists a corrected value only after filtering.

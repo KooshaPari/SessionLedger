@@ -1163,7 +1163,7 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
                             div { class: "session-meta",
                                 span { class: "meta-bundles", "{s.bundle_count} slices" }
                                 if s.has_acceptance {
-                                    span { class: "badge badge-ok", "✓ AC" }
+                                    span { class: "badge badge-ok", "AC" }
                                 }
                                 if s.has_contract {
                                     span { class: "badge badge-contract", "◎ CT" }

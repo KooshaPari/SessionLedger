@@ -26,17 +26,41 @@ fi
 command -v ditto >/dev/null || { echo "error: ditto is required." >&2; exit 1; }
 
 mkdir -p "$(dirname "$APP_DEST")"
-if [[ -e "$APP_DEST" ]]; then
-  backup="${APP_DEST}.previous"
-  # Rotate the previous archive: only archive the currently-installed app when
-  # no prior .previous exists, so Spotlight sees at most one SessionLedger.app
-  # bundle and a single .previous (the previous-previous is dropped).
-  if [[ ! -e "$backup" ]]; then
-    ditto "$APP_DEST" "$backup"
-  fi
+stage_root="$(mktemp -d "${APP_DEST}.staging.XXXXXX")"
+stage_app="$stage_root/$APP_NAME.app"
+backup="${APP_DEST}.previous"
+had_dest=0
+
+cleanup_stage() {
+  rm -rf "$stage_root"
+}
+trap cleanup_stage EXIT
+
+# Stage and validate the replacement before touching the installed bundle.
+ditto "$APP_SOURCE" "$stage_app"
+if [[ ! -x "$stage_app/Contents/MacOS/$APP_NAME" ]]; then
+  echo "error: staged app bundle is invalid: $stage_app" >&2
+  exit 1
 fi
-rm -rf "$APP_DEST"
-ditto "$APP_SOURCE" "$APP_DEST"
+
+if [[ -e "$APP_DEST" ]]; then
+  had_dest=1
+  # Rotate the single previous archive only after the replacement is known to
+  # be valid. A failed swap can therefore restore the installed app.
+  rm -rf "$backup"
+  ditto "$APP_DEST" "$backup"
+fi
+
+if ! rm -rf "$APP_DEST" || ! mv "$stage_app" "$APP_DEST"; then
+  echo "error: failed to swap staged app into $APP_DEST" >&2
+  rm -rf "$APP_DEST"
+  if (( had_dest )); then
+    if ! ditto "$backup" "$APP_DEST"; then
+      echo "error: rollback failed; restore $backup manually" >&2
+    fi
+  fi
+  exit 1
+fi
 
 if [[ "$INSTALL_DAEMON" == "1" ]]; then
   if [[ ! -x "$DAEMON_BINARY" ]]; then

@@ -1,5 +1,8 @@
 use dioxus::prelude::*;
-use session_ledger::domain::session::Session;
+use session_ledger::domain::{
+    bundle::{Bundle, BundleKind, ContinuationBundle},
+    session::{Role, Session},
+};
 
 use crate::async_states::{
     ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState, SkeletonLayout,
@@ -147,7 +150,6 @@ fn initial_tab_for_viewer() -> Tab {
 ///
 /// Real corpus data is loaded once at startup and injected via Dioxus context
 /// so every child component can access it without prop-drilling.
-#[component]
 /// Derive `ContinuationBundle`s from real session data.
 ///
 /// One `ContinuationBundle` per session (`source_id = session.id`).
@@ -959,11 +961,12 @@ fn BundlesTab() -> Element {
     // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
     // Today this is synchronous sample data; the same signals work for a future
     // daemon/HTTP loader without changing the chrome.
+    let ctx = use_context::<SessionContext>();
     use_effect(move || {
         let _ = load_gen();
         loading.set(true);
         load_error.set(None);
-        let loaded = build_bundles_from_sessions(&sessions_signal.read());
+        let loaded = build_bundles_from_sessions(&*ctx.0.read());
         if loaded.is_empty() {
             load_error.set(Some("No bundles available to display.".into()));
         } else {

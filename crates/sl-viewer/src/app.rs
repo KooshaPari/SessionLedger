@@ -392,7 +392,6 @@ pub fn App() -> Element {
             BundlesTab {
                 bundles: bundles_for_sessions(&sessions_signal.read()),
                 loading: corpus_loading_signal(),
-                error: corpus_error_signal(),
             }
         },
         Tab::History => rsx! { HistoryTimeline {} },
@@ -957,7 +956,7 @@ pub fn App() -> Element {
 
 /// The compiled-bundles tab — the original sidebar + detail panel.
 #[component]
-fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool, error: Option<String>) -> Element {
+fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool) -> Element {
     // Show useful content immediately; an empty detail pane on first render
     // made the inbox look broken and hid the chat transcript behind a click.
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| Some(0));
@@ -992,15 +991,6 @@ fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool, error: Option<Str
             ContentSkeleton { layout: SkeletonLayout::Bundles }
         };
     }
-    if let Some(err) = error {
-        return rsx! {
-            h2 { "Compiled Bundles" }
-            ErrorState {
-                message: err,
-            }
-        };
-    }
-
     let summaries: Vec<BundleSummary> = bundles.iter().map(summarize).collect();
     // Resolve stale selection during render without writing signals in render.
     // The visible-list callback persists a corrected value only after filtering.

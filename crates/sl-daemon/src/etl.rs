@@ -14,6 +14,26 @@ use session_ledger::ports::CorpusSource;
 use session_ledger::ports::MemoryStore;
 use session_ledger::{compile_and_store, process_session, read_jsonl_sessions, CodexDir};
 
+/// Default cap on a single transcript file the ETL pipeline will ingest.
+///
+/// Transcripts are buffered wholesale during ingestion (`parse_jsonl_sessions`
+/// accumulates every session of a file, then each is compiled and exported),
+/// so a multi-GB file used to grow the daemon's heap without bound. Files
+/// larger than the cap are rejected with [`EtlError::TooLarge`] instead of
+/// being loaded into RAM. Override with `SL_ETL_MAX_FILE_BYTES` (min 1 MiB).
+const DEFAULT_ETL_MAX_FILE_BYTES: u64 = 512 * 1024 * 1024; // 512 MiB
+const MIN_ETL_MAX_FILE_BYTES: u64 = 1024 * 1024; // 1 MiB
+
+/// Resolve the per-file ingest cap from `SL_ETL_MAX_FILE_BYTES` (fallback:
+/// [`DEFAULT_ETL_MAX_FILE_BYTES`]). Values below 1 MiB are treated as unset.
+pub fn max_etl_file_bytes() -> u64 {
+    std::env::var("SL_ETL_MAX_FILE_BYTES")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|value| *value >= MIN_ETL_MAX_FILE_BYTES)
+        .unwrap_or(DEFAULT_ETL_MAX_FILE_BYTES)
+}
+
 /// Errors surfaced while transforming one JSONL file into OKF documents.
 #[derive(Debug, thiserror::Error)]
 pub enum EtlError {
@@ -29,12 +49,23 @@ pub enum EtlError {
         #[source]
         source: std::io::Error,
     },
+    #[error("I/O error for {path}: {source}")]
+    Io {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
     #[error("memory persistence failed for {path}: {source}")]
     Memory {
         path: PathBuf,
         #[source]
         source: session_ledger::ports::PortError,
     },
+    #[error(
+        "transcript exceeds ingest size cap ({size} bytes > {max} bytes); \
+         raise SL_ETL_MAX_FILE_BYTES to ingest it: {path}"
+    )]
+    TooLarge { path: PathBuf, size: u64, max: u64 },
     #[error("serializing OKF: {0}")]
     Serialize(#[from] serde_json::Error),
 }
@@ -52,6 +83,8 @@ pub fn transform_file(
     out_dir: &Path,
     memory_store: Option<&dyn MemoryStore>,
 ) -> Result<Vec<PathBuf>, EtlError> {
+    enforce_size_cap(jsonl_path)?;
+
     let sessions = read_sessions(jsonl_path)
         .map_err(|source| EtlError::Ingest { path: jsonl_path.to_path_buf(), source })?;
 
@@ -74,6 +107,23 @@ pub fn transform_file(
         written.push(out_path);
     }
     Ok(written)
+}
+
+/// Reject transcripts larger than the configured ingest cap before any of the
+/// file is buffered into RAM.
+fn enforce_size_cap(path: &Path) -> Result<(), EtlError> {
+    enforce_size_cap_with(path, max_etl_file_bytes())
+}
+
+/// Core cap check, parameterized for direct unit testing.
+fn enforce_size_cap_with(path: &Path, max: u64) -> Result<(), EtlError> {
+    let size = std::fs::metadata(path)
+        .map_err(|source| EtlError::Io { path: path.to_path_buf(), source })?
+        .len();
+    if size > max {
+        return Err(EtlError::TooLarge { path: path.to_path_buf(), size, max });
+    }
+    Ok(())
 }
 
 fn read_sessions(
@@ -179,6 +229,48 @@ mod tests {
     fn sanitize_replaces_path_separators() {
         assert_eq!(sanitize("a/b:c\\d"), "a_b_c_d");
         assert_eq!(sanitize("plain-id"), "plain-id");
+    }
+
+    #[test]
+    fn size_cap_rejects_oversized_transcript() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let jsonl = tmp.path().join("giant.jsonl");
+        std::fs::write(&jsonl, vec![b'x'; 2 * 1024 * 1024]).expect("write oversized transcript");
+
+        let error = enforce_size_cap_with(&jsonl, 1024 * 1024)
+            .expect_err("oversized file must be rejected");
+        assert!(matches!(error, EtlError::TooLarge { .. }), "got {error}");
+    }
+
+    #[test]
+    fn size_cap_accepts_transcript_at_the_limit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let jsonl = tmp.path().join("boundary.jsonl");
+        std::fs::write(&jsonl, vec![b'y'; 1024 * 1024]).expect("write boundary transcript");
+
+        enforce_size_cap_with(&jsonl, 1024 * 1024).expect("file at the cap must be accepted");
+    }
+
+    #[test]
+    fn size_cap_surfaces_io_errors_for_missing_files() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let missing = tmp.path().join("missing.jsonl");
+
+        let error = enforce_size_cap_with(&missing, 1024).expect_err("missing file must error");
+        assert!(matches!(error, EtlError::Io { .. }), "got {error}");
+    }
+
+    #[test]
+    fn size_cap_env_parsing_is_single_sequenced_check() {
+        // One test, no parallel env races: valid override, garbage, and
+        // sub-minimum values are handled deterministically.
+        std::env::set_var("SL_ETL_MAX_FILE_BYTES", (2 * 1024 * 1024).to_string());
+        assert_eq!(max_etl_file_bytes(), 2 * 1024 * 1024);
+        std::env::set_var("SL_ETL_MAX_FILE_BYTES", "not-a-number");
+        assert_eq!(max_etl_file_bytes(), DEFAULT_ETL_MAX_FILE_BYTES);
+        std::env::set_var("SL_ETL_MAX_FILE_BYTES", "0");
+        assert_eq!(max_etl_file_bytes(), DEFAULT_ETL_MAX_FILE_BYTES);
+        std::env::remove_var("SL_ETL_MAX_FILE_BYTES");
     }
 
     #[cfg(feature = "sqlite")]

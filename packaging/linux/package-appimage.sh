@@ -24,12 +24,23 @@ exec "$HERE/usr/bin/sl-viewer" "$@"
 EOF
 chmod 0755 "$APPDIR/AppRun"
 
-cat >"$APPDIR/sessionledger.desktop" <<'EOF'
+# appimagetool refuses to build (exit 1) when the desktop entry references an
+# icon that is not present in the AppDir. Ship the brand icon so packaging
+# succeeds instead of failing silently under continue-on-error.
+ICON_SRC="$ROOT/assets/icons/sessionledger.iconset/icon_256x256.png"
+if [ -f "$ICON_SRC" ]; then
+    install -m 0644 "$ICON_SRC" "$APPDIR/sessionledger.png"
+else
+    echo "warning: brand icon not found at $ICON_SRC; AppImage will be built without an icon." >&2
+fi
+
+cat >"$APPDIR/sessionledger.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=SessionLedger
 Comment=View SessionLedger session bundles
 Exec=sl-viewer
+Icon=sessionledger
 Categories=Utility;
 Terminal=false
 EOF

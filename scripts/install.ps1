@@ -78,7 +78,23 @@ if (-not $Version.StartsWith("v")) {
     $Version = "v$Version"
 }
 
-$archive = "sl-viewer-$Version-$Target.zip"
+# Release archives historically used the tag verbatim (sl-viewer-v0.1.1-...)
+# and later dropped the leading `v` (sl-viewer-0.1.1-...). Probe both spellings
+# so the installer works against every published release.
+$assetVersion = $Version.TrimStart("v")
+$archive = $null
+foreach ($candidate in @("sl-viewer-$Version-$Target.zip", "sl-viewer-$assetVersion-$Target.zip")) {
+    try {
+        Invoke-WebRequest -Uri "$baseUrl/$candidate" -Method Head -UseBasicParsing -ErrorAction Stop | Out-Null
+        $archive = $candidate
+        break
+    } catch {
+        # Not this spelling; try the next one.
+    }
+}
+if (-not $archive) {
+    throw "No sl-viewer archive found for $Version ($Target). Tried: sl-viewer-$Version-$Target.zip, sl-viewer-$assetVersion-$Target.zip"
+}
 $baseUrl = "https://github.com/$Repo/releases/download/$Version"
 $tmpRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("sessionledger-install-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $tmpRoot | Out-Null

@@ -878,13 +878,11 @@ pub fn App() -> Element {
                         }
                     }
                 }
-                if active_tab() == Tab::Bundles {
-                    if let Some(ref err) = *corpus_error_signal.read() {
+                if let Some(ref err) = *corpus_error_signal.read() {
                     div { class: "corpus-error-banner",
                         ErrorState {
                             message: format!("Corpus load failed ({err}); no sessions are available."),
                         }
-                    }
                     }
                 }
             }

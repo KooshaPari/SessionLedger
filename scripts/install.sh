@@ -109,11 +109,29 @@ if [ -z "$version" ] || [ "$version" = "v" ] || [ "$version" = "latest" ]; then
     exit 1
 fi
 
-archive="sl-viewer-${version}-${os_target}.tar.gz"
 base_url="https://github.com/${REPO}/releases/download/${version}"
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sessionledger-install.XXXXXX")"
 cleanup() { rm -rf "$tmp_dir"; }
 trap cleanup EXIT HUP INT TERM
+
+# Resolve the archive name. Release archives historically used the tag verbatim
+# (sl-viewer-v0.1.1-...) and later dropped the leading `v` (sl-viewer-0.1.1-...).
+# Probe both spellings and use the first that exists so the installer works
+# against every published release.
+asset_version="${version#v}"
+archive=""
+for candidate in "sl-viewer-${version}-${os_target}.tar.gz" \
+                "sl-viewer-${asset_version}-${os_target}.tar.gz"; do
+    if curl -fsSL -I -o /dev/null "${base_url}/${candidate}" 2>/dev/null; then
+        archive="$candidate"
+        break
+    fi
+done
+if [ -z "$archive" ]; then
+    echo "error: no sl-viewer archive found for ${version} (${os_target})." >&2
+    echo "Tried: sl-viewer-${version}-${os_target}.tar.gz, sl-viewer-${asset_version}-${os_target}.tar.gz" >&2
+    exit 1
+fi
 
 echo "Installing SessionLedger sl-viewer ${version} (${os_target})"
 echo "  archive: ${archive}"
@@ -157,7 +175,7 @@ tar -xzf "${tmp_dir}/${archive}" -C "$tmp_dir"
 
 bin_path=""
 for candidate in \
-    "${tmp_dir}/sl-viewer-${version}-${os_target}/sl-viewer" \
+    "${tmp_dir}/${archive%.tar.gz}/sl-viewer" \
     "${tmp_dir}/sl-viewer" \
     ; do
     if [ -f "$candidate" ]; then

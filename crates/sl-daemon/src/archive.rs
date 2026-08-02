@@ -223,6 +223,13 @@ fn parse_date(s: &str) -> Option<chrono::NaiveDate> {
     chrono::NaiveDate::parse_from_str(date_part, "%Y-%m-%d").ok()
 }
 
+/// Upper bound on bytes a single archived bundle may decompress to.
+///
+/// A malicious or corrupt `.gz` archive can expand arbitrarily (zip-bomb);
+/// the restore path reads the whole decompressed payload into RAM, so entries
+/// that would exceed this cap are rejected instead of buffered without limit.
+const MAX_RESTORE_BYTES: usize = 256 * 1024 * 1024; // 256 MiB
+
 fn gzip_bytes(data: &[u8]) -> Vec<u8> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
     encoder.write_all(data).expect("gzip write failed");
@@ -230,11 +237,25 @@ fn gzip_bytes(data: &[u8]) -> Vec<u8> {
 }
 
 fn gunzip_bytes(data: &[u8], path: &Path) -> Result<Vec<u8>, ArchiveError> {
+    gunzip_bounded(data, path, MAX_RESTORE_BYTES)
+}
+
+fn gunzip_bounded(data: &[u8], path: &Path, max_bytes: usize) -> Result<Vec<u8>, ArchiveError> {
     let mut decoder = GzDecoder::new(data);
     let mut out = Vec::new();
-    decoder
+    let read = decoder
+        .by_ref()
+        .take(max_bytes as u64 + 1)
         .read_to_end(&mut out)
         .map_err(|e| ArchiveError::Io { path: path.to_path_buf(), source: e })?;
+    if read > max_bytes {
+        return Err(ArchiveError::Io {
+            path: path.to_path_buf(),
+            source: std::io::Error::other(format!(
+                "archive decompresses beyond the {max_bytes} byte restore cap; refusing to buffer it"
+            )),
+        });
+    }
     Ok(out)
 }
 
@@ -378,5 +399,29 @@ mod tests {
 
         let result = find_archive_path(&archive_root, "nonexistent-bundle");
         assert!(result.is_err());
+    }
+
+    // 9. a gzip stream that would expand past the restore cap is rejected.
+    #[test]
+    fn gunzip_bounded_rejects_oversized_expansion() {
+        let compressed = gzip_bytes(&vec![0u8; 1024 * 1024]); // expands to 1 MiB
+
+        let error = gunzip_bounded(&compressed, Path::new("bomb.json.gz"), 16 * 1024)
+            .expect_err("expansion beyond cap must be rejected");
+        assert!(
+            error.to_string().contains("restore cap"),
+            "error should describe the cap, got: {error}"
+        );
+    }
+
+    // 10. decompression within the cap still round-trips.
+    #[test]
+    fn gunzip_bounded_accepts_normal_payload() {
+        let payload = b"{\"session_id\": \"ok\"}".repeat(8);
+        let compressed = gzip_bytes(&payload);
+
+        let restored = gunzip_bounded(&compressed, Path::new("ok.json.gz"), 1024)
+            .expect("payload within cap must restore");
+        assert_eq!(restored, payload);
     }
 }

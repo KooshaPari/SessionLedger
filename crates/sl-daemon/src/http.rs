@@ -272,10 +272,18 @@ fn parse_positive_u64(name: &str, value: &str) -> Result<u64, String> {
 }
 
 /// Process-local replay cache for successful `POST /api/ingest` idempotency keys.
+///
+/// The map is bounded: unique `Idempotency-Key` values arriving at a long-running
+/// daemon used to accumulate without eviction. When the cap is hit the cache is
+/// reset (idempotency replay is an optimization, not a durability contract —
+/// stale keys are re-validated against the body hash on the next request).
 #[derive(Clone, Default)]
 pub(crate) struct IngestIdempotencyCache {
     entries: Arc<Mutex<HashMap<String, IdempotentIngest>>>,
 }
+
+/// Maximum distinct `Idempotency-Key` values retained process-wide.
+const IDEMPOTENCY_CACHE_MAX_ENTRIES: usize = 4096;
 
 #[derive(Clone)]
 struct IdempotentIngest {
@@ -301,6 +309,10 @@ impl IngestIdempotencyCache {
             } else {
                 Err(())
             };
+        }
+        if entries.len() >= IDEMPOTENCY_CACHE_MAX_ENTRIES {
+            // Bound memory instead of growing without limit.
+            entries.clear();
         }
         entries.insert(key, IdempotentIngest { body_hash, response: response.clone() });
         Ok(response)
@@ -2140,5 +2152,27 @@ mod tests {
             assert!(profile.bytes().await.unwrap().len() > 16);
         }
         server.abort();
+    }
+
+    #[test]
+    fn idempotency_cache_remains_bounded() {
+        use super::{IngestIdempotencyCache, IDEMPOTENCY_CACHE_MAX_ENTRIES};
+
+        let cache = IngestIdempotencyCache::default();
+        for i in 0..(IDEMPOTENCY_CACHE_MAX_ENTRIES + 50) {
+            let _ = cache.record_success(
+                format!("key-{i}"),
+                i as u64,
+                crate::validation::ValidationResult { valid: true, errors: Vec::new() },
+            );
+        }
+        // The cache must not retain every inserted key.
+        let entries = cache.entries.lock().expect("poisoned");
+        assert!(
+            entries.len() <= IDEMPOTENCY_CACHE_MAX_ENTRIES,
+            "cache grew to {} entries; expected at most {}",
+            entries.len(),
+            IDEMPOTENCY_CACHE_MAX_ENTRIES
+        );
     }
 }

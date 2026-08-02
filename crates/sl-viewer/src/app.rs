@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use session_ledger::domain::session::Session;
+use session_ledger::ContinuationBundle;
 
 use crate::async_states::{
     ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState, SkeletonLayout,
@@ -15,6 +16,7 @@ use crate::help_overlay::HelpOverlay;
 use crate::history_tab::HistoryTimeline;
 use crate::live_feed::LiveFeed;
 use crate::memory_tab::MemoryWiki;
+use crate::mock_data::sample_bundles;
 use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
 use crate::session_transcript::SessionTranscript;
@@ -148,44 +150,6 @@ fn initial_tab_for_viewer() -> Tab {
 /// Real corpus data is loaded once at startup and injected via Dioxus context
 /// so every child component can access it without prop-drilling.
 #[component]
-/// Derive `ContinuationBundle`s from real session data.
-///
-/// One `ContinuationBundle` per session (`source_id = session.id`).
-/// First Bundle is `BundleKind::Context` (title + corpus) if a title exists.
-/// Then one `Bundle` per message with `BundleKind` derived from `Role`.
-fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
-    let mut out: Vec<ContinuationBundle> = Vec::with_capacity(sessions.len());
-    for s in sessions {
-        let mut cb = ContinuationBundle::new(s.id.clone());
-        if let Some(title) = &s.title {
-            cb.bundles.push(Bundle::new(
-                BundleKind::Context,
-                serde_json::json!({
-                    "title": title,
-                    "corpus": format!("{:?}", s.corpus),
-                }),
-            ));
-        }
-        for msg in &s.messages {
-            let kind = match msg.role {
-                Role::User | Role::Subagent => BundleKind::Intent,
-                Role::Assistant => BundleKind::Worklog,
-                Role::Tool => BundleKind::Contract,
-                Role::System => BundleKind::Provenance,
-            };
-            cb.bundles.push(Bundle::new(
-                kind,
-                serde_json::json!({
-                    "role": format!("{:?}", msg.role),
-                    "content": msg.content,
-                }),
-            ));
-        }
-        out.push(cb);
-    }
-    out
-}
-
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -251,6 +215,7 @@ pub fn App() -> Element {
         });
     });
     use_context_provider(|| SessionContext(sessions_signal));
+    let session_signal = use_context::<SessionContext>().0;
 
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let mut help_open: Signal<bool> = use_signal(|| false);
@@ -387,9 +352,9 @@ pub fn App() -> Element {
         Tab::LiveFeed => rsx! { LiveFeed {} },
         Tab::Search => rsx! { SearchView {} },
         Tab::Timeline => {
-            let bundles = build_bundles_from_sessions(&sessions_signal.read());
+            let bundles = compile_bundles_from_sessions(&session_signal());
             rsx! { TimelineView { bundles } }
-        },
+        }
         Tab::Replay => rsx! { ReplayView {} },
     };
 
@@ -944,9 +909,20 @@ pub fn App() -> Element {
 // Bundles tab (original compiled-bundles view)
 // ---------------------------------------------------------------------------
 
+/// Compile loaded real sessions into continuation bundles for the Bundles and
+/// Timeline views. Falls back to the hard-coded demo bundles when the corpus
+/// is empty (demo mode, or no local session stores were discovered).
+fn compile_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
+    if sessions.is_empty() {
+        return sample_bundles();
+    }
+    sessions.iter().map(session_ledger::distill::compile).collect()
+}
+
 /// The compiled-bundles tab — the original sidebar + detail panel.
 #[component]
 fn BundlesTab() -> Element {
+    let session_signal = use_context::<SessionContext>().0;
     let mut bundles = use_signal(Vec::new);
     let mut loading = use_signal(|| true);
     let mut load_error: Signal<Option<String>> = use_signal(|| None);
@@ -957,13 +933,15 @@ fn BundlesTab() -> Element {
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
 
     // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
-    // Today this is synchronous sample data; the same signals work for a future
-    // daemon/HTTP loader without changing the chrome.
+    // Bundles are compiled from the real sessions loaded at startup (the same
+    // corpus the History tab shows); demo bundles are used only when the
+    // corpus is empty (demo mode / no local session stores found).
     use_effect(move || {
         let _ = load_gen();
         loading.set(true);
         load_error.set(None);
-        let loaded = build_bundles_from_sessions(&sessions_signal.read());
+        let sessions = session_signal();
+        let loaded = compile_bundles_from_sessions(&sessions);
         if loaded.is_empty() {
             load_error.set(Some("No bundles available to display.".into()));
         } else {

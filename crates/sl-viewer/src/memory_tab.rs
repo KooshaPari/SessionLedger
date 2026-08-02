@@ -59,8 +59,14 @@ pub fn all_wiki_pages_from_sessions(
 #[component]
 pub fn MemoryWiki() -> Element {
     let ctx = use_context::<SessionContext>();
-    let pages = use_signal(move || all_wiki_pages_from_sessions(&ctx.0.read()));
+    let mut pages = use_signal(Vec::<MemoryWikiPage>::new);
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
+
+    // Reactive: re-derive the wiki whenever the loaded corpus changes so a
+    // late async session load is reflected instead of leaving an empty page.
+    use_effect(move || {
+        pages.set(all_wiki_pages_from_sessions(&ctx.0.read()));
+    });
 
     let selected = selected_idx().and_then(|idx| pages.get(idx)).map(|r| (*r).clone());
 

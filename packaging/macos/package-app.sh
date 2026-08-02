@@ -23,6 +23,22 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 install -m 0755 "$BINARY" "$APP/Contents/MacOS/$APP_NAME"
 
+# Embed the application icon (CFBundleIconFile) when the canonical iconset is present.
+ICON_EMBEDDED=0
+ICONSET_DIR="$ROOT/assets/icons/sessionledger.iconset"
+if [[ -d "$ICONSET_DIR" ]]; then
+  ICONUTIL_BIN="$(command -v iconutil || true)"
+  if [[ -n "$ICONUTIL_BIN" ]]; then
+    if "$ICONUTIL_BIN" -c icns "$ICONSET_DIR" -o "$APP/Contents/Resources/AppIcon.icns"; then
+      ICON_EMBEDDED=1
+    else
+      echo "WARN: iconutil failed — skipping icon embed" >&2
+    fi
+  else
+    echo "WARN: iconutil not found — skipping icon embed" >&2
+  fi
+fi
+
 cat >"$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -48,30 +64,26 @@ cat >"$APP/Contents/Info.plist" <<EOF
   <true/>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
-  <key>CFBundleIconFile</key>
-  <string>AppIcon</string>
-  <key>CFBundleIconName</key>
-  <string>AppIcon</string>
+  <key>LSUIElement</key>
+  <false/>
   <key>NSSupportsAutomaticGraphicsSwitching</key>
   <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright © 2026 SessionLedger. All rights reserved.</string>
 </dict>
 </plist>
 EOF
 
+if [[ "$ICON_EMBEDDED" == "1" ]]; then
+  /usr/bin/plutil -replace CFBundleIconFile -string AppIcon "$APP/Contents/Info.plist"
+  /usr/bin/plutil -replace CFBundleIconName -string AppIcon "$APP/Contents/Info.plist"
+fi
+
+/usr/bin/plutil -lint "$APP/Contents/Info.plist"
+
 # Stamp architecture into a sidecar for CI naming when ARCH_LABEL is set.
 if [[ -n "$ARCH_LABEL" ]]; then
   printf '%s\n' "$ARCH_LABEL" >"$APP/Contents/Resources/arch.txt"
-fi
-
-# Embed icon from the iconset if it exists.
-ICONSET="$ROOT/assets/icons/sessionledger.iconset"
-if [[ -d "$ICONSET" ]]; then
-  if command -v iconutil &>/dev/null; then
-    iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
-    echo "Embedded AppIcon.icns from iconset"
-  else
-    echo "WARN: iconutil not found — skipping icon embed" >&2
-  fi
 fi
 
 echo "macOS app bundle (unsigned): $APP"

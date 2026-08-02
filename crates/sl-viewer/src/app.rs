@@ -221,9 +221,12 @@ pub fn App() -> Element {
         }
     });
 
-    // Load sessions once at the root; propagate via context.
+    // Load sessions once at the root; propagate the live signal via context.
+    // Desktop corpus discovery runs on Tokio's blocking pool so the window
+    // renders immediately. The web build keeps its synchronous mock path and
+    // does not enable the optional Tokio dependency.
     let mut sessions_signal = use_signal(Vec::<Session>::new);
-    let mut corpus_error_signal: Signal<Option<String>> = use_signal(|| None);
+    let mut error_signal: Signal<Option<String>> = use_signal(|| None);
     use_effect(move || {
         let source = resolve_data_source();
         spawn(async move {
@@ -244,10 +247,10 @@ pub fn App() -> Element {
                     sessions_signal.set(sessions);
                 }
                 Ok(Err(e)) => {
-                    corpus_error_signal.set(Some(e));
+                    error_signal.set(Some(e));
                 }
                 Err(e) => {
-                    corpus_error_signal.set(Some(format!("Internal error: {e}")));
+                    error_signal.set(Some(format!("Internal error: {e}")));
                 }
             }
         });
@@ -868,7 +871,7 @@ pub fn App() -> Element {
                     }
                 }
                 if active_tab() == Tab::Bundles {
-                    if let Some(ref err) = *corpus_error_signal.read() {
+                    if let Some(ref err) = *error_signal.read() {
                     div { class: "corpus-error-banner",
                         ErrorState {
                             message: format!("Corpus load failed ({err}); no sessions are available."),

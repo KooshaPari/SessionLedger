@@ -20,6 +20,13 @@
 FROM rust:1-slim AS build
 WORKDIR /src
 
+# Build tools for native deps: the default-on platform allocator
+# (tikv-jemalloc-sys, W43-B3) requires `make` + a C toolchain, which
+# rust:1-slim does not ship.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the full workspace (daemon depends on the root `session-ledger` crate).
 COPY . .
 

@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
-use crate::daemon_url::daemon_api_url_options;
+use crate::daemon_url::daemon_api_url;
 use crate::fixture::query_fixture_active;
 
 /// Slim bundle metadata returned by `GET /api/search`.
@@ -180,19 +180,19 @@ pub fn SearchView() -> Element {
             return;
         }
         let qs = build_query(&since(), &until(), &model(), &min_tokens(), &tags(), &limit());
+        let url = format!("{}?{qs}", daemon_api_url("/api/search"));
         let mut results = results;
         let mut error = error;
         let mut loading = loading;
         let mut zero_match = zero_match;
         let mut clear_pending = clear_pending;
-        let urls = daemon_api_url_options("/api/search");
 
         loading.set(true);
         error.set(None);
         clear_pending.set(false);
 
         spawn(async move {
-            match reqwest_search(urls, &qs).await {
+            match reqwest_search(&url).await {
                 Ok(data) => {
                     let empty = data.is_empty();
                     results.set(data);
@@ -536,33 +536,17 @@ fn SearchFixtureChrome(invalid: bool) -> Element {
 /// Cross-platform HTTP fetch used by the desktop and WASM renderers.
 ///
 /// Returns the parsed results or an error string.
-async fn reqwest_search(urls: Vec<String>, query: &str) -> Result<Vec<SearchResult>, String> {
+async fn reqwest_search(url: &str) -> Result<Vec<SearchResult>, String> {
     let client = reqwest::Client::new();
-    let mut last_error: Option<String> = None;
+    let resp = client.get(url).send().await.map_err(|e| format!("daemon not reachable: {e}"))?;
 
-    for base in urls {
-        let url = format!("{base}?{query}");
-        let resp = match client.get(&url).send().await {
-            Ok(resp) => resp,
-            Err(e) => {
-                last_error = Some(format!("daemon not reachable: {e}"));
-                continue;
-            }
-        };
-
-        if resp.status().is_success() {
-            return resp
-                .json::<Vec<SearchResult>>()
-                .await
-                .map_err(|e| format!("failed to parse response: {e}"));
-        }
-
+    if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        last_error = Some(format!("daemon returned {status}: {body}"));
+        return Err(format!("daemon returned {status}: {body}"));
     }
 
-    Err(last_error.unwrap_or_else(|| "daemon not reachable".to_owned()))
+    resp.json::<Vec<SearchResult>>().await.map_err(|e| format!("failed to parse response: {e}"))
 }
 
 // ---------------------------------------------------------------------------

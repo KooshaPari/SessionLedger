@@ -6,7 +6,7 @@
 use dioxus::prelude::*;
 
 use crate::async_states::{ContentSkeleton, ErrorState, SkeletonLayout};
-use crate::daemon_url::{daemon_api_url_options, daemon_host_display};
+use crate::daemon_url::{daemon_api_url, daemon_host_display};
 use crate::fixture::query_fixture_active;
 #[cfg_attr(any(target_arch = "wasm32", not(feature = "desktop")), allow(dead_code))]
 const MAX_ENTRIES: usize = 20;
@@ -45,65 +45,52 @@ pub fn LiveFeed() -> Element {
     let _feed_task = use_coroutine(move |_rx: UnboundedReceiver<()>| {
         let _version = trigger_connect();
         async move {
+            status.set(FeedStatus::Connecting);
+
             #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
             {
-                use std::time::Duration;
                 use tokio::io::{AsyncBufReadExt, BufReader};
-                let mut attempt_delay = Duration::from_secs(1);
 
-                loop {
-                    status.set(FeedStatus::Connecting);
-                    let client = reqwest::Client::new();
-                    let mut resp = None;
-                    for stream_url in daemon_api_url_options("/api/stream") {
-                        if let Ok(r) = client.get(&stream_url).send().await {
-                            if r.status().is_success() {
-                                resp = Some(r);
-                                break;
-                            }
-                        }
+                let client = reqwest::Client::new();
+                let stream_url = daemon_api_url("/api/stream");
+                let resp = match client.get(&stream_url).send().await {
+                    Ok(r) if r.status().is_success() => r,
+                    Ok(_) => {
+                        status.set(FeedStatus::Disconnected);
+                        return;
                     }
-                    let resp = match resp {
-                        Some(r) => r,
-                        None => {
-                            status.set(FeedStatus::Disconnected);
-                            tokio::time::sleep(attempt_delay).await;
-                            attempt_delay =
-                                std::cmp::min(attempt_delay * 2, Duration::from_secs(30));
+                    Err(_) => {
+                        status.set(FeedStatus::Disconnected);
+                        return;
+                    }
+                };
+
+                status.set(FeedStatus::Live);
+                let stream = resp.bytes_stream();
+                use futures_util::StreamExt;
+                use tokio_util::io::StreamReader;
+
+                let stream = stream.map(|r| r.map_err(std::io::Error::other));
+                let reader = StreamReader::new(stream);
+                let mut lines = BufReader::new(reader).lines();
+
+                while let Ok(Some(line)) = lines.next_line().await {
+                    let line = line.trim().to_owned();
+                    if let Some(path) = line.strip_prefix("data:") {
+                        let path = path.trim().to_owned();
+                        if path.is_empty() {
                             continue;
                         }
-                    };
-
-                    status.set(FeedStatus::Live);
-                    attempt_delay = Duration::from_secs(1);
-                    let stream = resp.bytes_stream();
-                    use futures_util::StreamExt;
-                    use tokio_util::io::StreamReader;
-
-                    let stream = stream.map(|r| r.map_err(std::io::Error::other));
-                    let reader = StreamReader::new(stream);
-                    let mut lines = BufReader::new(reader).lines();
-                    while let Ok(Some(line)) = lines.next_line().await {
-                        let line = line.trim().to_owned();
-                        if let Some(path) = line.strip_prefix("data:") {
-                            let path = path.trim().to_owned();
-                            if path.is_empty() {
-                                continue;
+                        let ts = chrono::Local::now().format("%H:%M:%S").to_string();
+                        entries.with_mut(|v| {
+                            if v.len() >= MAX_ENTRIES {
+                                v.remove(0);
                             }
-                            let ts = chrono::Local::now().format("%H:%M:%S").to_string();
-                            entries.with_mut(|v| {
-                                if v.len() >= MAX_ENTRIES {
-                                    v.remove(0);
-                                }
-                                v.push(FeedEntry { path, timestamp: ts });
-                            });
-                        }
+                            v.push(FeedEntry { path, timestamp: ts });
+                        });
                     }
-
-                    status.set(FeedStatus::Disconnected);
-                    tokio::time::sleep(attempt_delay).await;
-                    attempt_delay = std::cmp::min(attempt_delay * 2, Duration::from_secs(30));
                 }
+                status.set(FeedStatus::Disconnected);
             }
 
             #[cfg(any(target_arch = "wasm32", not(feature = "desktop")))]
@@ -113,17 +100,10 @@ pub fn LiveFeed() -> Element {
                     use wasm_bindgen::{closure::Closure, JsCast};
                     use web_sys::{EventSource, MessageEvent};
 
-                    status.set(FeedStatus::Connecting);
-                    let mut source = None;
-                    for stream_url in daemon_api_url_options("/api/stream") {
-                        if let Ok(ok) = EventSource::new(&stream_url) {
-                            source = Some(ok);
-                            break;
-                        }
-                    }
-                    let source = match source {
-                        Some(source) => source,
-                        None => {
+                    let stream_url = daemon_api_url("/api/stream");
+                    let source = match EventSource::new(&stream_url) {
+                        Ok(source) => source,
+                        Err(_) => {
                             status.set(FeedStatus::Disconnected);
                             return;
                         }
@@ -165,6 +145,11 @@ pub fn LiveFeed() -> Element {
                     source.set_onerror(Some(onerror.as_ref().unchecked_ref()));
                     std::future::pending::<()>().await;
                     drop((source, onopen, onmessage, onerror));
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let _ = entries;
+                    status.set(FeedStatus::Disconnected);
                 }
             }
         }

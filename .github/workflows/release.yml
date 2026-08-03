@@ -72,6 +72,15 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: ensure cross-compile target std
+        shell: bash
+        run: |
+          set -euo pipefail
+          # macos-latest now runs arm64 hardware; dtolnay/rust-toolchain can
+          # silently miss the x86_64-apple-darwin rust-std, failing builds
+          # with E0463 "can't find crate for core". Re-assert the target.
+          rustup target add "${{ matrix.target }}"
+
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           key: release-${{ matrix.target }}

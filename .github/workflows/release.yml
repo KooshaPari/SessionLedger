@@ -140,7 +140,8 @@ jobs:
             fi
             if [ "${{ matrix.os }}" = "windows-latest" ]; then
               cp "${root}/${pkg}.exe" "${dir}/"
-              7z a -tzip "${dir}.zip" "${dir}"
+              # Banner must not reach stdout: package_bin output feeds GITHUB_ENV.
+              7z a -tzip "${dir}.zip" "${dir}" > /dev/null
               cp "${dir}.zip" "dist-out/"
               echo "${dir}.zip"
             else

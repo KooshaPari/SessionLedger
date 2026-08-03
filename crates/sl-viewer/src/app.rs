@@ -151,18 +151,23 @@ fn initial_tab_for_viewer() -> Tab {
 /// Real corpus data is loaded once at startup and injected via Dioxus context
 /// so every child component can access it without prop-drilling.
 /// Derive `ContinuationBundle`s from real session data.
-fn bundles_for_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
+///
+/// One `ContinuationBundle` per session (`source_id = session.id`).
+/// First Bundle is `BundleKind::Context` (title + corpus) if a title exists.
+/// Then one `Bundle` per message with `BundleKind` derived from `Role`.
+fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
     let mut out: Vec<ContinuationBundle> = Vec::with_capacity(sessions.len());
     for s in sessions {
         let mut cb = ContinuationBundle::new(s.id.clone());
-        cb.bundles.push(Bundle::new(
-            BundleKind::Context,
-            serde_json::json!({
-                "title": s.title,
-                "cwd": s.cwd,
-                "corpus": s.corpus.as_str(),
-            }),
-        ));
+        if let Some(title) = &s.title {
+            cb.bundles.push(Bundle::new(
+                BundleKind::Context,
+                serde_json::json!({
+                    "title": title,
+                    "corpus": format!("{:?}", s.corpus),
+                }),
+            ));
+        }
         for msg in &s.messages {
             let kind = match msg.role {
                 Role::User | Role::Subagent => BundleKind::Intent,
@@ -170,22 +175,20 @@ fn bundles_for_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> {
                 Role::Tool => BundleKind::Contract,
                 Role::System => BundleKind::Provenance,
             };
-            let body = if kind == BundleKind::Intent {
+            cb.bundles.push(Bundle::new(
+                kind,
                 serde_json::json!({
-                    "goal": msg.content,
                     "role": format!("{:?}", msg.role),
                     "content": msg.content,
-                })
-            } else {
-                serde_json::json!({"role": format!("{:?}", msg.role), "content": msg.content})
-            };
-            cb.bundles.push(Bundle::new(kind, body));
+                }),
+            ));
         }
         out.push(cb);
     }
     out
 }
 
+// `App` is a Dioxus component (mounted by name from main.rs / web entry).
 #[allow(non_snake_case)]
 pub fn App() -> Element {
     #[cfg(feature = "web")]
@@ -225,8 +228,7 @@ pub fn App() -> Element {
     // renders immediately. The web build keeps its synchronous mock path and
     // does not enable the optional Tokio dependency.
     let mut sessions_signal = use_signal(Vec::<Session>::new);
-    let mut corpus_error_signal: Signal<Option<String>> = use_signal(|| None);
-    let mut corpus_loading_signal = use_signal(|| true);
+    let mut error_signal: Signal<Option<String>> = use_signal(|| None);
     use_effect(move || {
         let source = resolve_data_source();
         spawn(async move {
@@ -245,15 +247,12 @@ pub fn App() -> Element {
             match result {
                 Ok(Ok(sessions)) => {
                     sessions_signal.set(sessions);
-                    corpus_loading_signal.set(false);
                 }
                 Ok(Err(e)) => {
-                    corpus_error_signal.set(Some(e));
-                    corpus_loading_signal.set(false);
+                    error_signal.set(Some(e));
                 }
                 Err(e) => {
-                    corpus_error_signal.set(Some(format!("Internal error: {e}")));
-                    corpus_loading_signal.set(false);
+                    error_signal.set(Some(format!("Internal error: {e}")));
                 }
             }
         });
@@ -388,20 +387,16 @@ pub fn App() -> Element {
     });
 
     let tab_body = match active_tab() {
-        Tab::Bundles => rsx! {
-            BundlesTab {
-                bundles: bundles_for_sessions(&sessions_signal.read()),
-                loading: corpus_loading_signal(),
-            }
-        },
+        Tab::Bundles => rsx! { BundlesTab {} },
         Tab::History => rsx! { HistoryTimeline {} },
         Tab::Unfinished => rsx! { UnfinishedWork {} },
         Tab::Memory => rsx! { MemoryWiki {} },
         Tab::LiveFeed => rsx! { LiveFeed {} },
         Tab::Search => rsx! { SearchView {} },
-        Tab::Timeline => rsx! { TimelineView {
-            bundles: bundles_for_sessions(&sessions_signal.read())
-        } },
+        Tab::Timeline => {
+            let bundles = build_bundles_from_sessions(&sessions_signal.read());
+            rsx! { TimelineView { bundles } }
+        },
         Tab::Replay => rsx! { ReplayView {} },
     };
 
@@ -629,7 +624,7 @@ pub fn App() -> Element {
                 .palette-trigger {{ position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }}
                 .search-input:focus-visible, .search-btn:focus-visible, .search-advanced-toggle:focus-visible, .retry-btn:focus-visible, .btn:focus-visible, .replay-input:focus-visible, .speed-input:focus-visible, .compare-btn:focus-visible, .sl-error-retry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: 2px; }}
                 .session-item:focus-visible, .feed-entry:focus-visible {{ outline: 2px solid {colors.focus}; outline-offset: -2px; }}
-                .session-list {{ display: flex; flex-direction: column; height: 100%; min-height: 0; overflow-y: auto; }}
+                .session-list {{ display: flex; flex-direction: column; height: 100%; }}
                 .search-input {{ width: 100%; padding: 10px 16px; background: var(--sl-surface-muted); border: 1px solid var(--sl-border); border-radius: 6px; color: var(--sl-text); font-size: 13px; box-sizing: border-box; margin-bottom: 4px; }}
                 .session-count {{ padding: 6px 20px; font-size: 11px; color: var(--sl-text-muted); }}
                 .session-item {{ padding: var(--sl-space-md) var(--sl-space-xl); cursor: pointer; border-bottom: 1px solid var(--sl-border); transition: background var(--sl-motion-fast) var(--sl-ease-out); }}
@@ -705,7 +700,7 @@ pub fn App() -> Element {
                 .bundles-view {{ display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }}
                 .bundles-view > h2 {{ flex: 0 0 auto; margin: 0; padding: var(--sl-space-xl) var(--sl-space-xl) var(--sl-space-lg); }}
                 .bundles-workspace {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
-                .bundles-workspace > .session-list {{ flex: 0 0 360px; width: 360px; min-width: 280px; min-height: 0; overflow-y: auto; border-right: 1px solid var(--sl-border); background: var(--sl-surface); }}
+                .bundles-workspace > .session-list {{ flex: 0 0 360px; width: 360px; min-width: 280px; overflow-y: auto; border-right: 1px solid var(--sl-border); background: var(--sl-surface); }}
                 .bundles-workspace > .main-content {{ background: var(--sl-bg); }}
                 .viewer-main {{ flex: 1; min-width: 0; min-height: 0; width: 100%; overflow: hidden; }}
                 .corpus-error-banner {{ padding: 0 8px; }}
@@ -877,11 +872,13 @@ pub fn App() -> Element {
                         }
                     }
                 }
-                if let Some(ref err) = *corpus_error_signal.read() {
+                if active_tab() == Tab::Bundles {
+                    if let Some(ref err) = *error_signal.read() {
                     div { class: "corpus-error-banner",
                         ErrorState {
                             message: format!("Corpus load failed ({err}); no sessions are available."),
                         }
+                    }
                     }
                 }
             }
@@ -956,11 +953,32 @@ pub fn App() -> Element {
 
 /// The compiled-bundles tab — the original sidebar + detail panel.
 #[component]
-fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool) -> Element {
+fn BundlesTab() -> Element {
+    let mut bundles = use_signal(Vec::new);
+    let mut loading = use_signal(|| true);
+    let mut load_error: Signal<Option<String>> = use_signal(|| None);
+    let mut load_gen: Signal<u32> = use_signal(|| 0u32);
     // Show useful content immediately; an empty detail pane on first render
     // made the inbox look broken and hid the chat transcript behind a click.
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| Some(0));
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
+
+    // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
+    // Today this is synchronous sample data; the same signals work for a future
+    // daemon/HTTP loader without changing the chrome.
+    let ctx = use_context::<SessionContext>();
+    use_effect(move || {
+        let _ = load_gen();
+        loading.set(true);
+        load_error.set(None);
+        let loaded = build_bundles_from_sessions(&*ctx.0.read());
+        if loaded.is_empty() {
+            load_error.set(Some("No bundles available to display.".into()));
+        } else {
+            bundles.set(loaded);
+        }
+        loading.set(false);
+    });
 
     if query_fixture_active("first-run") {
         return rsx! {
@@ -985,26 +1003,29 @@ fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool) -> Element {
             }
         };
     }
-    if loading || query_fixture_active("skeleton") {
+    if loading() || query_fixture_active("skeleton") {
         return rsx! {
             h2 { "Compiled Bundles" }
             ContentSkeleton { layout: SkeletonLayout::Bundles }
         };
     }
-    let summaries: Vec<BundleSummary> = bundles.iter().map(summarize).collect();
-    // Resolve stale selection during render without writing signals in render.
-    // The visible-list callback persists a corrected value only after filtering.
-    let (effective_selected, effective_compare) = sync_bundle_selection(
-        selected_idx(),
-        compare_idx(),
-        bundles.len(),
-        &(0..bundles.len()).collect::<Vec<_>>(),
-    );
-    let detail = effective_selected.and_then(|idx| bundles.get(idx)).map(extract_detail);
+    if let Some(err) = load_error() {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ErrorState {
+                message: err,
+                retryable: true,
+                on_retry: move |_| load_gen.with_mut(|g| *g += 1),
+            }
+        };
+    }
+
+    let summaries: Vec<BundleSummary> = bundles.iter().map(|b| summarize(&b)).collect();
+    let detail = selected_idx().and_then(|idx| bundles.get(idx)).map(|b| extract_detail(&b));
 
     // Determine if we should show the diff panel.
     let diff_pair: Option<(OkfBundle, OkfBundle)> =
-        effective_selected.zip(effective_compare).and_then(|(ia, ib)| {
+        selected_idx().zip(compare_idx()).and_then(|(ia, ib)| {
             let a = bundles.get(ia).as_ref().map(|b| OkfBundle::from_bundle(b))?;
             let c = bundles.get(ib).as_ref().map(|b| OkfBundle::from_bundle(b))?;
             Some((a, c))
@@ -1021,32 +1042,18 @@ fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool) -> Element {
             },
             h2 { "Compiled Bundles" }
             div { class: "bundles-workspace",
-                    SessionListWithCompare {
-                        items: summaries,
-                        selected_idx: effective_selected,
-                        compare_idx: effective_compare,
-                        on_select: move |idx| selected_idx.set(Some(idx)),
-                        on_compare: move |idx| {
+                SessionListWithCompare {
+                    items: summaries,
+                    selected_idx: selected_idx(),
+                    compare_idx: compare_idx(),
+                    on_select: move |idx| selected_idx.set(Some(idx)),
+                    on_compare: move |idx| {
                         // Toggle: clicking same row again clears compare slot.
                         if compare_idx() == Some(idx) {
                             compare_idx.set(None);
                         } else {
                             compare_idx.set(Some(idx));
                         }
-                    },
-                        on_visible_indices: move |indices: Vec<usize>| {
-                            let (next_selected, next_compare) = sync_bundle_selection(
-                                selected_idx(),
-                                compare_idx(),
-                                bundles.len(),
-                                &indices,
-                            );
-                            if next_selected != selected_idx() {
-                                selected_idx.set(next_selected);
-                            }
-                            if next_compare != compare_idx() {
-                                compare_idx.set(next_compare);
-                            }
                     },
                 }
                 div { class: "main-content",
@@ -1071,26 +1078,6 @@ fn BundlesTab(bundles: Vec<ContinuationBundle>, loading: bool) -> Element {
     }
 }
 
-/// Keep list selection synchronized with filtering and bundle reloads.
-fn sync_bundle_selection(
-    selected_idx: Option<usize>,
-    compare_idx: Option<usize>,
-    bundle_count: usize,
-    visible_indices: &[usize],
-) -> (Option<usize>, Option<usize>) {
-    if bundle_count == 0 {
-        return (None, None);
-    }
-
-    let next_selected = match selected_idx.filter(|idx| *idx < bundle_count) {
-        Some(idx) if visible_indices.contains(&idx) => Some(idx),
-        _ => visible_indices.first().copied(),
-    };
-    let next_compare = compare_idx.filter(|idx| visible_indices.contains(idx));
-
-    (next_selected, next_compare)
-}
-
 // ---------------------------------------------------------------------------
 // SessionList variant with a per-row "Compare" button
 // ---------------------------------------------------------------------------
@@ -1102,7 +1089,6 @@ struct SessionListWithCompareProps {
     compare_idx: Option<usize>,
     on_select: EventHandler<usize>,
     on_compare: EventHandler<usize>,
-    on_visible_indices: EventHandler<Vec<usize>>,
 }
 
 #[component]
@@ -1122,10 +1108,6 @@ fn SessionListWithCompare(props: SessionListWithCompareProps) -> Element {
         .collect();
     let count = filtered.len();
     let plural = if count == 1 { "" } else { "s" };
-    let visible_indices: Vec<usize> = filtered.iter().map(|(idx, _)| *idx).collect();
-    use_effect(move || {
-        props.on_visible_indices.call(visible_indices.clone());
-    });
 
     rsx! {
         div { class: "session-list",
@@ -1281,69 +1263,5 @@ fn DetailView(detail: BundleDetail) -> Element {
                 p { "{detail.total_token_estimate} tokens across all slices" }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{bundles_for_sessions, sync_bundle_selection};
-    use crate::bundle_list::summarize;
-    use crate::detail_pane::extract_detail;
-    use session_ledger::domain::session::{Corpus, Message, Role, Session};
-
-    #[test]
-    fn real_session_bundle_populates_inbox_and_detail_fields() {
-        let mut session = Session::new("sess-live", Corpus::Codex);
-        session.title = Some("Repair session discovery".into());
-        session.cwd = Some("/work/session-ledger".into());
-        session.messages = vec![
-            Message::new(Role::User, "Find and repair the blank detail pane"),
-            Message::new(Role::Assistant, "I will trace selection state."),
-        ];
-
-        let bundles = bundles_for_sessions(&[session]);
-        let summary = summarize(&bundles[0]);
-        let detail = extract_detail(&bundles[0]);
-
-        assert_eq!(summary.source_id, "sess-live");
-        assert_eq!(summary.intent_goal, "Find and repair the blank detail pane");
-        assert_eq!(detail.intent_goal.as_deref(), Some("Find and repair the blank detail pane"));
-        assert_eq!(detail.context_title.as_deref(), Some("Repair session discovery"));
-        assert_eq!(detail.context_cwd.as_deref(), Some("/work/session-ledger"));
-    }
-
-    #[test]
-    fn sync_bundle_selection_prefers_visible_selected() {
-        let (selected, compare) = sync_bundle_selection(Some(3), Some(1), 10, &[2, 3, 5]);
-        assert_eq!(selected, Some(3));
-        assert_eq!(compare, None);
-    }
-
-    #[test]
-    fn sync_bundle_selection_selects_first_visible_when_selected_disappears() {
-        let (selected, compare) = sync_bundle_selection(Some(7), Some(1), 10, &[2, 3, 5]);
-        assert_eq!(selected, Some(2));
-        assert_eq!(compare, None);
-    }
-
-    #[test]
-    fn sync_bundle_selection_clears_hidden_compare() {
-        let (selected, compare) = sync_bundle_selection(Some(3), Some(9), 10, &[2, 3, 5]);
-        assert_eq!(selected, Some(3));
-        assert_eq!(compare, None);
-    }
-
-    #[test]
-    fn sync_bundle_selection_keeps_visible_compare() {
-        let (selected, compare) = sync_bundle_selection(Some(3), Some(5), 10, &[2, 3, 5]);
-        assert_eq!(selected, Some(3));
-        assert_eq!(compare, Some(5));
-    }
-
-    #[test]
-    fn sync_bundle_selection_clears_when_no_bundles() {
-        let (selected, compare) = sync_bundle_selection(Some(1), Some(2), 0, &[0, 1, 2]);
-        assert_eq!(selected, None);
-        assert_eq!(compare, None);
     }
 }

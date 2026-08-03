@@ -11,7 +11,7 @@ use sl_viewer::{cli_help, App};
 const VIEWER_TITLE: &str = "Session Ledger Viewer";
 
 #[cfg(feature = "desktop")]
-fn launch_desktop() {
+fn main() {
     use dioxus::desktop::{Config, WindowBuilder};
 
     if let Some(argument) = std::env::args().nth(1) {
@@ -33,22 +33,12 @@ fn launch_desktop() {
         .launch(App);
 }
 
-#[cfg(all(feature = "web", not(feature = "desktop")))]
-fn launch_web() {
+#[cfg(feature = "web")]
+fn main() {
     // The web launcher reads the title from `Dioxus.toml` (see
     // `app_title()` in `dioxus_cli_config`); if we ever need to set it
     // programmatically we can switch to a wrapper component that emits a
     // `<Title>` element from `dioxus::document`.
     let _ = VIEWER_TITLE;
     dioxus::LaunchBuilder::web().with_cfg(dioxus::web::Config::default()).launch(App);
-}
-
-#[cfg(feature = "desktop")]
-fn main() {
-    launch_desktop();
-}
-
-#[cfg(all(feature = "web", not(feature = "desktop")))]
-fn main() {
-    launch_web();
 }

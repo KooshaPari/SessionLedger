@@ -59,67 +59,13 @@ pub fn all_wiki_pages_from_sessions(
 #[component]
 pub fn MemoryWiki() -> Element {
     let ctx = use_context::<SessionContext>();
-    let mut pages: Signal<Vec<MemoryWikiPage>> = use_signal(Vec::new);
+    let pages = use_signal(move || all_wiki_pages_from_sessions(&ctx.0.read()));
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
-
-    use_effect(move || {
-        pages.set(all_wiki_pages_from_sessions(&ctx.0.read()));
-
-        if pages().is_empty() {
-            selected_idx.set(None);
-        } else if selected_idx().is_none() || selected_idx().is_some_and(|idx| idx >= pages().len())
-        {
-            selected_idx.set(Some(0));
-        }
-    });
 
     let selected = selected_idx().and_then(|idx| pages.get(idx)).map(|r| (*r).clone());
 
     rsx! {
         style { r#"
-            .memory-view {{
-                display: flex;
-                flex: 1;
-                min-width: 0;
-                min-height: 0;
-                overflow: hidden;
-            }}
-            .memory-view > .sidebar {{
-                flex: 0 0 360px;
-                width: 360px;
-                min-width: 280px;
-                max-width: 360px;
-                border-right: 1px solid #2a2d35;
-                overflow-y: auto;
-            }}
-            .memory-view > .wiki-page {{
-                flex: 1;
-                min-width: 0;
-                min-height: 0;
-            }}
-            .memory-empty {{
-                flex: 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #8b8fa3;
-                font-size: 14px;
-            }}
-            @media (max-width: 600px) {{
-                .memory-view {{
-                    flex-direction: column;
-                    overflow-y: auto;
-                }}
-                .memory-view > .sidebar {{
-                    flex: 0 0 auto;
-                    width: 100%;
-                    min-width: 0;
-                    max-width: 100%;
-                    max-height: 42%;
-                    border-right: none;
-                    border-bottom: 1px solid #2a2d35;
-                }}
-            }}
             .wiki-entry {{
                 padding: 14px 20px;
                 cursor: pointer;
@@ -184,26 +130,22 @@ pub fn MemoryWiki() -> Element {
                 color: #8b8fa3; font-size: 14px;
             }}
         "# }
-        div { class: "memory-view",
-            div { class: "sidebar",
-                h2 { "Distilled Memory" }
-                for (i, page) in pages.iter().enumerate() {
-                    WikiRow {
-                        key: "{page.session_id}",
-                        page: page.clone(),
-                        is_selected: selected_idx() == Some(i),
-                        on_click: move |_| { selected_idx.set(Some(i)); },
-                    }
+        div { class: "sidebar",
+            h2 { "Distilled Memory" }
+            for (i, page) in pages.iter().enumerate() {
+                WikiRow {
+                    key: "{page.session_id}",
+                    page: page.clone(),
+                    is_selected: selected_idx() == Some(i),
+                    on_click: move |_| { selected_idx.set(Some(i)); },
                 }
             }
-            {
-                match selected {
-                    Some(ref page) => rsx! { WikiPageDetail { page: page.clone() } },
-                    None => rsx! {
-                        div { class: "memory-empty", "Select a memory entry to view its distilled facts" }
-                    },
-                }
-            }
+        }
+        match selected {
+            Some(ref page) => rsx! { WikiPageDetail { page: page.clone() } },
+            None => rsx! {
+                div { class: "wiki-empty", "Select a memory entry to view its distilled facts" }
+            },
         }
     }
 }

@@ -195,6 +195,21 @@ jobs:
         with:
           fail-on-severity: low
 
+  # Platform signing-readiness policy (C04 L32 / C11 L112). The hard blocking
+  # gate lives in signing-hard.yml (runs on pull_request); this job runs the
+  # same SelfCheck here so the signing posture is asserted on every PR and
+  # independently of the hard workflow, and stays cross-referenced from ci.yml
+  # as the signing-readiness-check.ps1 contract requires.
+  signing-readiness-policy:
+    name: Platform Signing Readiness (signing-hard.yml gate)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: signing readiness SelfCheck
+        shell: pwsh
+        run: ./scripts/signing-readiness-check.ps1 -SelfCheck
+
   lint:
     name: ci / lint
     if: always()

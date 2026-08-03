@@ -108,70 +108,13 @@ fn corpus_label(corpus: Corpus) -> &'static str {
 #[component]
 pub fn HistoryTimeline() -> Element {
     let ctx = use_context::<SessionContext>();
-    let mut entries: Signal<Vec<TimelineEntry>> = use_signal(Vec::new);
+    let entries = use_signal(move || all_timeline_entries(&ctx.0.read()));
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
-
-    use_effect(move || {
-        entries.set(all_timeline_entries(&ctx.0.read()));
-
-        if entries().is_empty() {
-            selected_idx.set(None);
-        } else if selected_idx().is_none()
-            || selected_idx().is_some_and(|idx| idx >= entries().len())
-        {
-            selected_idx.set(Some(0));
-        }
-    });
 
     let selected = selected_idx().and_then(|idx| entries.get(idx)).map(|r| (*r).clone());
 
     rsx! {
         style { r#"
-            .history-view {{
-                display: flex;
-                flex: 1;
-                min-width: 0;
-                min-height: 0;
-                overflow: hidden;
-            }}
-            .history-view > .sidebar {{
-                flex: 0 0 360px;
-                width: 360px;
-                min-width: 280px;
-                max-width: 360px;
-                border-right: 1px solid #1e2029;
-                overflow-y: auto;
-            }}
-            .history-view > .timeline-detail {{
-                flex: 1;
-                min-width: 0;
-                min-height: 0;
-            }}
-            .history-empty {{
-                flex: 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #8b8fa3;
-                font-size: 14px;
-                min-height: 0;
-                overflow-y: auto;
-            }}
-            @media (max-width: 600px) {{
-                .history-view {{
-                    flex-direction: column;
-                    overflow-y: auto;
-                }}
-                .history-view > .sidebar {{
-                    flex: 0 0 auto;
-                    width: 100%;
-                    min-width: 0;
-                    max-width: 100%;
-                    max-height: 42%;
-                    border-right: none;
-                    border-bottom: 1px solid #1e2029;
-                }}
-            }}
             .history-entry {{
                 padding: 14px 20px;
                 cursor: pointer;
@@ -211,10 +154,7 @@ pub fn HistoryTimeline() -> Element {
             .corpus-droid {{ background: #1a2a2a; color: #2dd4bf; }}
             .status-unfinished {{ color: #fb923c; }}
             .timeline-detail {{
-                flex: 1;
-                overflow-y: auto;
-                padding: 32px 40px;
-                box-sizing: border-box;
+                flex: 1; overflow-y: auto; padding: 32px 40px;
             }}
             .timeline-detail h1 {{
                 font-size: 18px; font-weight: 600; margin: 0 0 24px 0; color: #e1e4ea;
@@ -248,26 +188,22 @@ pub fn HistoryTimeline() -> Element {
             .role-tool {{ color: #fb923c; }}
             .role-system {{ color: #8b8fa3; }}
         "# }
-        div { class: "history-view",
-            div { class: "sidebar",
-                h2 { "Session History" }
-                for (i, entry) in entries.iter().enumerate() {
-                    TimelineRow {
-                        key: "{entry.summary.id}",
-                        entry: entry.clone(),
-                        is_selected: selected_idx() == Some(i),
-                        on_click: move |_| { selected_idx.set(Some(i)); },
-                    }
+        div { class: "sidebar",
+            h2 { "Session History" }
+            for (i, entry) in entries.iter().enumerate() {
+                TimelineRow {
+                    key: "{entry.summary.id}",
+                    entry: entry.clone(),
+                    is_selected: selected_idx() == Some(i),
+                    on_click: move |_| { selected_idx.set(Some(i)); },
                 }
             }
-            {
-                match selected {
-                    Some(ref entry) => rsx! { TimelineDetail { entry: entry.clone() } },
-                    None => rsx! {
-                        div { class: "history-empty", "Select a session from the timeline to inspect" }
-                    },
-                }
-            }
+        }
+        match selected {
+            Some(ref entry) => rsx! { TimelineDetail { entry: entry.clone() } },
+            None => rsx! {
+                div { class: "empty-state", "Select a session from the timeline to inspect" }
+            },
         }
     }
 }

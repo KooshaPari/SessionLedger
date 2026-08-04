@@ -42,7 +42,7 @@ rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
 # Platform allocators: jemalloc on Unix, mimalloc on Windows (see jemalloc-default-on.md).
 [target.'cfg(unix)'.dependencies]
 pprof = { version = "0.15.0", default-features = false, features = ["prost-codec"] }
-tikv-jemallocator = "0.6"
+tikv-jemallocator = "0.7"
 
 [target.'cfg(windows)'.dependencies]
 mimalloc = { version = "0.1", default-features = false }

@@ -26,7 +26,9 @@
 
   <Fragment>
     <ComponentGroup Id="ApplicationComponents" Directory="INSTALLFOLDER">
-      <Component Guid="*">
+      <!-- Fixed GUID: WiX 4 forbids auto-generated guids on components that
+           hold a registry keypath alongside a file. -->
+      <Component Guid="8F2C1B3A-5E9D-4C7A-9B1E-3D6A2F4C8B7E">
         <File Id="ViewerExecutable" Source="$(var.SourceDir)\sl-viewer.exe">
           <Shortcut
             Id="StartMenuShortcut"

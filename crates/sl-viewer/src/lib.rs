@@ -34,6 +34,7 @@ pub mod theme;
 pub mod timeline;
 pub mod tokens;
 pub mod unfinished_tab;
+pub mod web_exports;
 
 pub use app::App;
 pub use async_states::{ContentSkeleton, ErrorState, LoadingState, SkeletonLayout};

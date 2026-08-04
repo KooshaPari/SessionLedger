@@ -10,7 +10,6 @@
 use session_ledger::domain::session::Session;
 
 use crate::mock_data::sample_sessions;
-use crate::web_exports::*;
 
 /// Source configuration for the viewer's session list.
 #[derive(Debug, Clone, Default)]

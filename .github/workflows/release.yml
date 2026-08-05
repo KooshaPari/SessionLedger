@@ -363,6 +363,16 @@ jobs:
           name: x86_64-unknown-linux-gnu
           path: artifact
 
+      - name: install Linux runtime dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The viewer dlopens webkit2gtk/gtk/libxdo at startup; the runner
+          # image does not ship them (exit 127 otherwise).
+          sudo apt-get update
+          sudo apt-get install -y libxdo3 libwebkit2gtk-4.1-0 libgtk-3-0 \
+            libgdk-pixbuf-2.0-0 libayatana-appindicator3-1
+
       - name: extract and run version
         shell: bash
         run: |

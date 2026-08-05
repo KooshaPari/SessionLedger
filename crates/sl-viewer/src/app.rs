@@ -94,6 +94,20 @@ impl Tab {
         Self::ALL.iter().position(|&t| t == self).unwrap_or(0)
     }
 
+    /// Return the SVG icon name for this tab.
+    fn icon(&self) -> &'static str {
+        match self {
+            Self::Memory    => "memory",
+            Self::Bundles   => "bundles",
+            Self::History   => "history",
+            Self::Unfinished => "unfinished",
+            Self::LiveFeed  => "live",
+            Self::Timeline  => "timeline",
+            Self::Search    => "search",
+            Self::Replay    => "replay",
+        }
+    }
+
     fn from_index(i: usize) -> Tab {
         Self::ALL[i % Self::ALL.len()]
     }
@@ -190,6 +204,30 @@ fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> 
 
 // `App` is a Dioxus component (mounted by name from main.rs / web entry).
 #[allow(non_snake_case)]
+/// Inline SVG icons for each tab.
+const ICON_SVG_BUNDLES: &str = include_str!("../../../assets/icons/line/bundles.svg");
+const ICON_SVG_HISTORY: &str = include_str!("../../../assets/icons/line/history.svg");
+const ICON_SVG_MEMORY: &str = include_str!("../../../assets/icons/line/memory.svg");
+const ICON_SVG_UNFINISHED: &str = include_str!("../../../assets/icons/line/unfinished.svg");
+const ICON_SVG_TIMELINE: &str = include_str!("../../../assets/icons/line/timeline.svg");
+const ICON_SVG_LIVE: &str = include_str!("../../../assets/icons/line/live.svg");
+const ICON_SVG_SEARCH: &str = include_str!("../../../assets/icons/line/search.svg");
+const ICON_SVG_REPLAY: &str = include_str!("../../../assets/icons/line/replay.svg");
+
+/// Lookup table for tab icon SVGs.
+fn icon_svg(tab_icon: &str) -> &'static str {
+    match tab_icon {
+        "bundles"    => ICON_SVG_BUNDLES,
+        "history"    => ICON_SVG_HISTORY,
+        "memory"     => ICON_SVG_MEMORY,
+        "unfinished" => ICON_SVG_UNFINISHED,
+        "timeline"   => ICON_SVG_TIMELINE,
+        "live"       => ICON_SVG_LIVE,
+        "search"     => ICON_SVG_SEARCH,
+        "replay"     => ICON_SVG_REPLAY,
+        _            => ICON_SVG_BUNDLES,
+    }
+}
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -865,7 +903,10 @@ pub fn App() -> Element {
                                                 _ => {}
                                             }
                                         },
-                                        "{tab.label()}"
+                                        span {
+                            dangerous_inner_html: "{icon_svg(tab.icon())}"
+                        }
+                        "{tab.label()}" 
                                     }
                                 }
                             }

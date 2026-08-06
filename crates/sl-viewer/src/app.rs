@@ -4,13 +4,12 @@ use session_ledger::domain::{
     session::{Role, Session},
 };
 
-use crate::async_states::{
-    ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState, SkeletonLayout,
-};
+use crate::async_states::{ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions, DataSource};
+use crate::corpus_tab::CorpusTab;
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::visual_fixture_active;
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
@@ -37,10 +36,14 @@ enum Tab {
     Search,
     Timeline,
     Replay,
+    /// Raw sessions view — exposes the underlying `Vec<Session>` that every
+    /// other tab derives from, so users can see what was discovered and reload
+    /// discovery on demand. (FR-RAW-1)
+    Corpus,
 }
 
 impl Tab {
-    const ALL: [Tab; 8] = [
+    const ALL: [Tab; 9] = [
         Tab::Bundles,
         Tab::History,
         Tab::Unfinished,
@@ -49,6 +52,7 @@ impl Tab {
         Tab::Search,
         Tab::Timeline,
         Tab::Replay,
+        Tab::Corpus,
     ];
 
     fn label(self) -> &'static str {
@@ -61,6 +65,7 @@ impl Tab {
             Tab::Search => "Search",
             Tab::Timeline => "Timeline",
             Tab::Replay => "Replay",
+            Tab::Corpus => "Raw Sessions",
         }
     }
 
@@ -74,6 +79,7 @@ impl Tab {
             Tab::Search => "tab-search",
             Tab::Timeline => "tab-timeline",
             Tab::Replay => "tab-replay",
+            Tab::Corpus => "tab-corpus",
         }
     }
 
@@ -87,11 +93,27 @@ impl Tab {
             Tab::Search => "panel-search",
             Tab::Timeline => "panel-timeline",
             Tab::Replay => "panel-replay",
+            Tab::Corpus => "panel-corpus",
         }
     }
 
     fn index(self) -> usize {
         Self::ALL.iter().position(|&t| t == self).unwrap_or(0)
+    }
+
+    /// Return the SVG icon name for this tab.
+    fn icon(&self) -> &'static str {
+        match self {
+            Self::Bundles => "bundles",
+            Self::History => "history",
+            Self::Unfinished => "unfinished",
+            Self::Memory => "memory",
+            Self::LiveFeed => "live",
+            Self::Search => "search",
+            Self::Timeline => "timeline",
+            Self::Replay => "replay",
+            Self::Corpus => "corpus",
+        }
     }
 
     fn from_index(i: usize) -> Tab {
@@ -104,6 +126,10 @@ impl Tab {
 /// Consumers call `use_context::<SessionContext>()` to access the loaded sessions.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SessionContext(pub Signal<Vec<Session>>);
+
+/// Counter the Corpus tab increments to re-run [`App`]'s discovery effect.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ReloadTrigger(pub Signal<u32>);
 
 /// Resolve the active [`DataSource`].
 ///
@@ -190,6 +216,33 @@ fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> 
 
 // `App` is a Dioxus component (mounted by name from main.rs / web entry).
 #[allow(non_snake_case)]
+/// Inline SVG icons for each tab (loaded at compile time).
+const ICON_SVG_BUNDLES: &str = include_str!("../../../assets/icons/line/bundles.svg");
+const ICON_SVG_HISTORY: &str = include_str!("../../../assets/icons/line/history.svg");
+const ICON_SVG_MEMORY: &str = include_str!("../../../assets/icons/line/memory.svg");
+const ICON_SVG_UNFINISHED: &str = include_str!("../../../assets/icons/line/unfinished.svg");
+const ICON_SVG_TIMELINE: &str = include_str!("../../../assets/icons/line/timeline.svg");
+const ICON_SVG_LIVE: &str = include_str!("../../../assets/icons/line/live.svg");
+const ICON_SVG_SEARCH: &str = include_str!("../../../assets/icons/line/search.svg");
+const ICON_SVG_REPLAY: &str = include_str!("../../../assets/icons/line/replay.svg");
+const ICON_SVG_CORPUS: &str = include_str!("../../../assets/icons/line/corpus.svg");
+
+/// Lookup table for tab icon SVGs.
+fn icon_svg(tab_icon: &str) -> &'static str {
+    match tab_icon {
+        "bundles" => ICON_SVG_BUNDLES,
+        "history" => ICON_SVG_HISTORY,
+        "memory" => ICON_SVG_MEMORY,
+        "unfinished" => ICON_SVG_UNFINISHED,
+        "timeline" => ICON_SVG_TIMELINE,
+        "live" => ICON_SVG_LIVE,
+        "search" => ICON_SVG_SEARCH,
+        "replay" => ICON_SVG_REPLAY,
+        "corpus" => ICON_SVG_CORPUS,
+        _ => ICON_SVG_BUNDLES,
+    }
+}
+
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -229,7 +282,10 @@ pub fn App() -> Element {
     // does not enable the optional Tokio dependency.
     let mut sessions_signal = use_signal(Vec::<Session>::new);
     let mut error_signal: Signal<Option<String>> = use_signal(|| None);
+    let reload_trigger: Signal<u32> = use_signal(|| 0u32);
+    use_context_provider(|| ReloadTrigger(reload_trigger));
     use_effect(move || {
+        let _ = reload_trigger();
         let source = resolve_data_source();
         spawn(async move {
             let result: std::result::Result<Result<Vec<Session>, String>, String> = {
@@ -396,8 +452,9 @@ pub fn App() -> Element {
         Tab::Timeline => {
             let bundles = build_bundles_from_sessions(&sessions_signal.read());
             rsx! { TimelineView { bundles } }
-        },
+        }
         Tab::Replay => rsx! { ReplayView {} },
+        Tab::Corpus => rsx! { CorpusTab {} },
     };
 
     let mut activate = move |tab: Tab| {
@@ -860,12 +917,16 @@ pub fn App() -> Element {
                                                 }
                                                 Key::End => {
                                                     evt.prevent_default();
-                                                    activate(Tab::Replay);
+                                                    activate(Tab::Corpus);
                                                 }
                                                 _ => {}
                                             }
                                         },
-                                        "{tab.label()}"
+                                        span {
+                                            class: "tab-icon",
+                                            dangerous_inner_html: "{icon_svg(tab.icon())}"
+                                        }
+                                        span { class: "tab-label", "{tab.label()}" }
                                     }
                                 }
                             }
@@ -954,31 +1015,17 @@ pub fn App() -> Element {
 /// The compiled-bundles tab — the original sidebar + detail panel.
 #[component]
 fn BundlesTab() -> Element {
-    let mut bundles = use_signal(Vec::new);
-    let mut loading = use_signal(|| true);
-    let mut load_error: Signal<Option<String>> = use_signal(|| None);
-    let mut load_gen: Signal<u32> = use_signal(|| 0u32);
-    // Show useful content immediately; an empty detail pane on first render
-    // made the inbox look broken and hid the chat transcript behind a click.
+    let ctx = use_context::<SessionContext>();
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| Some(0));
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
 
-    // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
-    // Today this is synchronous sample data; the same signals work for a future
-    // daemon/HTTP loader without changing the chrome.
-    let ctx = use_context::<SessionContext>();
-    use_effect(move || {
-        let _ = load_gen();
-        loading.set(true);
-        load_error.set(None);
-        let loaded = build_bundles_from_sessions(&*ctx.0.read());
-        if loaded.is_empty() {
-            load_error.set(Some("No bundles available to display.".into()));
-        } else {
-            bundles.set(loaded);
-        }
-        loading.set(false);
-    });
+    // Compute bundles directly from the session context. Reading `ctx.0` is
+    // a reactive read in Dioxus 0.6 — the function body re-runs whenever
+    // the async corpus loader updates the signal. Earlier revisions used
+    // `use_effect` + a separate `bundles` signal, but the effect ran only
+    // once at mount (when sessions were empty), so the tab stayed frozen
+    // on "No bundles" forever even after discovery finished.
+    let bundles = build_bundles_from_sessions(&ctx.0.read());
 
     if query_fixture_active("first-run") {
         return rsx! {
@@ -1003,20 +1050,10 @@ fn BundlesTab() -> Element {
             }
         };
     }
-    if loading() || query_fixture_active("skeleton") {
+    if bundles.is_empty() {
         return rsx! {
             h2 { "Compiled Bundles" }
-            ContentSkeleton { layout: SkeletonLayout::Bundles }
-        };
-    }
-    if let Some(err) = load_error() {
-        return rsx! {
-            h2 { "Compiled Bundles" }
-            ErrorState {
-                message: err,
-                retryable: true,
-                on_retry: move |_| load_gen.with_mut(|g| *g += 1),
-            }
+            FirstRunEmpty {}
         };
     }
 

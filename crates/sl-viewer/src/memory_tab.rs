@@ -59,7 +59,11 @@ pub fn all_wiki_pages_from_sessions(
 #[component]
 pub fn MemoryWiki() -> Element {
     let ctx = use_context::<SessionContext>();
-    let pages = use_signal(move || all_wiki_pages_from_sessions(&ctx.0.read()));
+    // Reactive read: re-runs on every render that sees a session signal
+    // change. Mirrors the HistoryTimeline fix — `use_signal(move || ...)`
+    // initializer only runs once at mount, so the previous code froze on
+    // the initial empty value.
+    let pages = all_wiki_pages_from_sessions(&ctx.0.read());
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
 
     let selected = selected_idx().and_then(|idx| pages.get(idx)).map(|r| (*r).clone());

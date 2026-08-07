@@ -239,6 +239,13 @@ const ICON_SVG_SEARCH: &str = include_str!("../../../assets/icons/line/search.sv
 const ICON_SVG_REPLAY: &str = include_str!("../../../assets/icons/line/replay.svg");
 const ICON_SVG_CORPUS: &str = include_str!("../../../assets/icons/line/corpus.svg");
 
+/// Brand mascot (Getta) for the launch splash. Embedded at compile time so
+/// the splash renders even before the assets server is reachable. The 2.5D
+/// line-art "listening" pose matches the always-on default — happy /
+/// thinking variants can be swapped in later via a runtime selector if
+/// the launch state needs to surface.
+const SPLASH_MASCOT_SVG: &str = include_str!("../../../assets/brand/mascot/getta-base.svg");
+
 /// Lookup table for tab icon SVGs.
 fn icon_svg(tab_icon: &str) -> &'static str {
     match tab_icon {
@@ -608,7 +615,31 @@ pub fn App() -> Element {
                     visibility: visible;
                     pointer-events: auto;
                 }}
-                .launch-splash-inner {{ text-align: center; }}
+                .launch-splash-inner {{ text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--sl-space-md); }}
+                .launch-splash-mascot {{
+                    width: 96px;
+                    height: 96px;
+                    margin: 0 auto var(--sl-space-sm);
+                    display: block;
+                    filter: drop-shadow(0 4px 14px color-mix(in srgb, var(--sl-accent) 18%, transparent));
+                    animation: splash-mascot-float 2.4s ease-in-out infinite;
+                }}
+                .launch-splash-mascot svg {{ width: 100%; height: 100%; display: block; }}
+                .launch-splash-spinner {{
+                    display: inline-flex;
+                    gap: 6px;
+                    margin-top: var(--sl-space-sm);
+                }}
+                .launch-splash-spinner-dot {{
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: var(--sl-accent);
+                    opacity: 0.35;
+                    animation: splash-spinner-bounce 1.1s ease-in-out infinite;
+                }}
+                .launch-splash-spinner-dot:nth-child(2) {{ animation-delay: 0.18s; }}
+                .launch-splash-spinner-dot:nth-child(3) {{ animation-delay: 0.36s; }}
                 .launch-splash-mark {{
                     display: block;
                     font-family: var(--font-display);
@@ -629,6 +660,14 @@ pub fn App() -> Element {
                 }}
                 @keyframes splash-dismiss {{
                     to {{ opacity: 0; visibility: hidden; pointer-events: none; }}
+                }}
+                @keyframes splash-mascot-float {{
+                    0%, 100% {{ transform: translateY(0); }}
+                    50% {{ transform: translateY(-6px); }}
+                }}
+                @keyframes splash-spinner-bounce {{
+                    0%, 80%, 100% {{ opacity: 0.35; transform: scale(0.8); }}
+                    40% {{ opacity: 1; transform: scale(1); }}
                 }}
                 .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sl-text-muted); font-size: 14px; }}
                 .sl-content-skeleton {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
@@ -881,8 +920,23 @@ pub fn App() -> Element {
                         role: "presentation",
                         "data-testid": "launch-splash",
                         div { class: "launch-splash-inner",
+                            div {
+                                class: "launch-splash-mascot",
+                                "data-testid": "launch-splash-mascot",
+                                "aria-hidden": "true",
+                                dangerous_inner_html: "{SPLASH_MASCOT_SVG}"
+                            }
                             span { class: "launch-splash-mark", "SessionLedger" }
-                            span { class: "launch-splash-caption", "Viewer" }
+                            span { class: "launch-splash-caption", "Session viewer" }
+                            div {
+                                class: "launch-splash-spinner",
+                                "data-testid": "launch-splash-spinner",
+                                role: "progressbar",
+                                "aria-label": "Loading viewer",
+                                div { class: "launch-splash-spinner-dot" }
+                                div { class: "launch-splash-spinner-dot" }
+                                div { class: "launch-splash-spinner-dot" }
+                            }
                         }
                     }
                 }

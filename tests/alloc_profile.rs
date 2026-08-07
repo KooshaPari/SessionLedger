@@ -81,9 +81,10 @@ fn alloc_profile_script_self_check_parses_args_and_ceilings() {
             );
             assert!(stdout.contains("Profiler: dhat"), "expected profiler echo, got:\n{stdout}");
         }
-        Err(error) => {
-            if cfg!(target_os = "windows") {
-                panic!("failed to spawn pwsh for self-check: {error}");
+        Err(_error) => {
+            #[cfg(target_os = "windows")]
+            {
+                panic!("failed to spawn pwsh for self-check: {_error}");
             }
 
             let (max_bytes, total_blocks) = load_profile();

@@ -147,7 +147,7 @@ fn read_sessions(
 }
 
 /// Make a session id safe to use as a filename (path separators → `_`).
-fn sanitize(id: &str) -> String {
+pub(crate) fn sanitize(id: &str) -> String {
     id.chars().map(|c| if matches!(c, '/' | '\\' | ':') { '_' } else { c }).collect()
 }
 

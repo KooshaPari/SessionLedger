@@ -1165,7 +1165,8 @@ fn run_validate(bundle_id: &str, data_dir: &Path) {
         "valid": errors.is_empty(),
         "errors": errors,
     });
-    println!("{result}");
+    let json = serde_json::to_string_pretty(&result).unwrap_or_default();
+    println!("{json}");
     if !errors.is_empty() {
         std::process::exit(cli::EXIT_NOT_OK);
     }

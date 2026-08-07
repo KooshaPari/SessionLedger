@@ -194,6 +194,13 @@ pub fn validate_okf_document(document: &OkfDocument) -> Vec<OkfValidationError> 
 
     let mut entity_ids = std::collections::HashSet::with_capacity(document.entities.len());
     for (index, entity) in document.entities.iter().enumerate() {
+        if entity.id.is_empty() {
+            errors.push(OkfValidationError {
+                field: format!("entities[{index}].id"),
+                code: "empty_entity_id".into(),
+                message: "entity id must not be empty".into(),
+            });
+        }
         if !entity_ids.insert(entity.id.as_str()) {
             errors.push(OkfValidationError {
                 field: format!("entities[{index}].id"),
@@ -290,6 +297,21 @@ mod tests {
         let errors = validate_okf_document(&document);
         assert!(errors.iter().any(|error| {
             error.code == "duplicate_entity_id" && error.field == "entities[1].id"
+        }));
+    }
+
+    #[test]
+    fn validation_rejects_empty_entity_ids() {
+        let mut document = valid_document();
+        document.entities.push(OkfEntity {
+            id: String::new(),
+            r#type: "intent".into(),
+            label: "goal".into(),
+            properties: serde_json::Value::Null,
+        });
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "empty_entity_id" && error.field == "entities[0].id"
         }));
     }
 

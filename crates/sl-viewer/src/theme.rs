@@ -2,11 +2,23 @@ use serde::{Deserialize, Serialize};
 
 use crate::tokens::lab_coat;
 
+/// User-facing theme preference.
+///
+/// - `Light` / `Dark` lock the palette to one mode.
+/// - `System` defers to the host OS / browser preference when the renderer
+///   can resolve it (web via `prefers-color-scheme`), otherwise falls back
+///   to [`Theme::Dark`] on desktop.
+///
+/// Serialised in lowercase for portability across hand-edited
+/// `settings.json` files and the existing `localStorage` value contract
+/// (`sl-viewer-theme` stores `"light"` / `"dark"`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Theme {
-    #[default]
-    Dark,
     Light,
+    Dark,
+    #[default]
+    System,
 }
 #[derive(Debug, Clone)]
 pub struct ThemeColors {
@@ -56,6 +68,11 @@ impl ThemeColors {
         match t {
             Theme::Dark => Self::dark(),
             Theme::Light => Self::light(),
+            // `System` resolves to the dark palette on desktop where there is
+            // no host signal to consult. The web renderer resolves `System`
+            // separately by reading `prefers-color-scheme` before applying
+            // the dataset.
+            Theme::System => Self::dark(),
         }
     }
 }
@@ -78,6 +95,14 @@ mod tests {
     #[test]
     fn for_light() {
         assert_eq!(ThemeColors::for_theme(Theme::Light).bg, ThemeColors::light().bg);
+    }
+    #[test]
+    fn for_system_falls_back_to_dark() {
+        assert_eq!(ThemeColors::for_theme(Theme::System).accent, ThemeColors::dark().accent);
+    }
+    #[test]
+    fn system_is_default_theme() {
+        assert_eq!(Theme::default(), Theme::System);
     }
     #[test]
     fn secondary_stays_lab_coat_teal_family() {

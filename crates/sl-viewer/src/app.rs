@@ -21,7 +21,9 @@ use crate::memory_tab::MemoryWiki;
 use crate::replay_view::ReplayView;
 use crate::search_view::SearchView;
 use crate::session_transcript::SessionTranscript;
-use crate::theme::ThemeColors;
+use crate::settings::{DefaultTab, Settings};
+use crate::settings_tab::SettingsTab;
+use crate::theme::{Theme, ThemeColors};
 use crate::timeline::TimelineView;
 use crate::tokens::{TOKENS_CSS, VIEWER_COLOR_SCHEME};
 use crate::unfinished_tab::UnfinishedWork;
@@ -41,10 +43,13 @@ enum Tab {
     /// other tab derives from, so users can see what was discovered and reload
     /// discovery on demand. (FR-RAW-1)
     Corpus,
+    /// Persistent user preferences (theme, default tab, daemon URL, version).
+    /// (FR-VIEWER-SETTINGS-1)
+    Settings,
 }
 
 impl Tab {
-    const ALL: [Tab; 9] = [
+    const ALL: [Tab; 10] = [
         Tab::Bundles,
         Tab::History,
         Tab::Unfinished,
@@ -54,6 +59,7 @@ impl Tab {
         Tab::Timeline,
         Tab::Replay,
         Tab::Corpus,
+        Tab::Settings,
     ];
 
     fn label(self) -> &'static str {
@@ -67,6 +73,7 @@ impl Tab {
             Tab::Timeline => "Timeline",
             Tab::Replay => "Replay",
             Tab::Corpus => "Raw Sessions",
+            Tab::Settings => "Settings",
         }
     }
 
@@ -81,6 +88,7 @@ impl Tab {
             Tab::Timeline => "tab-timeline",
             Tab::Replay => "tab-replay",
             Tab::Corpus => "tab-corpus",
+            Tab::Settings => "tab-settings",
         }
     }
 
@@ -95,6 +103,7 @@ impl Tab {
             Tab::Timeline => "panel-timeline",
             Tab::Replay => "panel-replay",
             Tab::Corpus => "panel-corpus",
+            Tab::Settings => "panel-settings",
         }
     }
 
@@ -114,11 +123,30 @@ impl Tab {
             Self::Timeline => "timeline",
             Self::Replay => "replay",
             Self::Corpus => "corpus",
+            Self::Settings => "settings",
         }
     }
 
     fn from_index(i: usize) -> Tab {
         Self::ALL[i % Self::ALL.len()]
+    }
+}
+
+/// Map a persisted [`DefaultTab`] to its runtime [`Tab`] counterpart.
+///
+/// [`DefaultTab`] deliberately omits [`Tab::Settings`] (we never auto-launch
+/// into settings), so every variant maps cleanly.
+fn default_tab_to_tab(t: DefaultTab) -> Tab {
+    match t {
+        DefaultTab::Bundles => Tab::Bundles,
+        DefaultTab::History => Tab::History,
+        DefaultTab::Unfinished => Tab::Unfinished,
+        DefaultTab::Memory => Tab::Memory,
+        DefaultTab::LiveFeed => Tab::LiveFeed,
+        DefaultTab::Search => Tab::Search,
+        DefaultTab::Timeline => Tab::Timeline,
+        DefaultTab::Replay => Tab::Replay,
+        DefaultTab::Corpus => Tab::Corpus,
     }
 }
 
@@ -157,6 +185,12 @@ impl CustomCorpusPaths {
         self.0.set(CustomCorpusPath::default());
     }
 }
+
+/// Persisted user settings, exposed at the root so [`SettingsTab`] and
+/// other consumers can read and update them. The settings are persisted
+/// to disk by an effect that watches this signal.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SettingsSignal(pub Signal<Settings>);
 
 /// Discovery status published at the root so every tab can render a
 /// loading / error / ready state without the App's spawn_blocking effect
@@ -217,7 +251,10 @@ fn initial_tab_for_viewer() -> Tab {
     } else if query_fixture_active("stream-skeleton") {
         Tab::LiveFeed
     } else {
-        Tab::Bundles
+        // Honour the persisted default tab so a user who lands on Search
+        // every time does not have to click into it on every launch.
+        let persisted = Settings::load();
+        default_tab_to_tab(persisted.default_tab)
     }
 }
 
@@ -269,6 +306,7 @@ fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> 
     out
 }
 
+// `App` is a Dioxus component (mounted by name from main.rs / web entry).
 /// Inline SVG icons for each tab (loaded at compile time).
 const ICON_SVG_BUNDLES: &str = include_str!("../../../assets/icons/line/bundles.svg");
 const ICON_SVG_HISTORY: &str = include_str!("../../../assets/icons/line/history.svg");
@@ -279,6 +317,7 @@ const ICON_SVG_LIVE: &str = include_str!("../../../assets/icons/line/live.svg");
 const ICON_SVG_SEARCH: &str = include_str!("../../../assets/icons/line/search.svg");
 const ICON_SVG_REPLAY: &str = include_str!("../../../assets/icons/line/replay.svg");
 const ICON_SVG_CORPUS: &str = include_str!("../../../assets/icons/line/corpus.svg");
+const ICON_SVG_SETTINGS: &str = include_str!("../../../assets/icons/line/settings.svg");
 
 /// Brand mascot (Getta) for the launch splash. Embedded at compile time so
 /// the splash renders even before the assets server is reachable. The 2.5D
@@ -299,6 +338,7 @@ fn icon_svg(tab_icon: &str) -> &'static str {
         "search" => ICON_SVG_SEARCH,
         "replay" => ICON_SVG_REPLAY,
         "corpus" => ICON_SVG_CORPUS,
+        "settings" => ICON_SVG_SETTINGS,
         _ => ICON_SVG_BUNDLES,
     }
 }
@@ -349,7 +389,7 @@ pub fn App() -> Element {
     let reload_trigger: Signal<u32> = use_signal(|| 0u32);
     let custom_paths_signal: Signal<CustomCorpusPath> = use_signal(initial_custom_corpus_paths);
     use_context_provider(|| ReloadTrigger(reload_trigger));
-    use_context_provider(|| CustomCorpusPaths(custom_paths_signal));
+use_context_provider(|| CustomCorpusPaths(custom_paths_signal));
     use_context_provider(|| DiscoveryState { loading: loading_signal, error: error_signal });
     use_effect(move || {
         let _ = reload_trigger();
@@ -455,9 +495,44 @@ pub fn App() -> Element {
         });
     }
 
-    let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
+    // Persisted user settings (theme + default tab). Loaded once at mount;
+    // mutations propagate through `SettingsSignal` and the effect below
+    // persists them back to `settings.json`.
+    let initial_settings = Settings::load();
+    let settings_signal = use_signal(|| initial_settings);
+    use_context_provider(|| SettingsSignal(settings_signal));
+    let settings_for_persist = settings_signal;
+    use_effect(move || {
+        let snapshot = settings_for_persist();
+        // Best-effort write — failures here should not crash the viewer.
+        if let Err(err) = snapshot.save() {
+            eprintln!("[sl-viewer] could not persist settings: {err}");
+        }
+        // Mirror the persisted theme to the DOM dataset so CSS picks it up.
+        let theme_attr = match snapshot.theme {
+            Theme::Light => "light",
+            Theme::Dark => "dark",
+            Theme::System => "system",
+        };
+        let _ = document::eval(&format!(
+            r#"
+            (function() {{
+              const desired = {theme_attr:?};
+              if (desired === 'system') {{
+                const prefersLight = window.matchMedia
+                  && window.matchMedia('(prefers-color-scheme: light)').matches;
+                const resolved = prefersLight ? 'light' : 'dark';
+                document.documentElement.dataset.theme = resolved;
+              }} else {{
+                document.documentElement.dataset.theme = desired;
+              }}
+            }})();
+            "#,
+        ));
+    });
     let mut help_open: Signal<bool> = use_signal(|| false);
     let mut palette_open: Signal<bool> = use_signal(|| false);
+    let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let colors = ThemeColors::dark();
 
     let mut close_help = move || {
@@ -582,6 +657,11 @@ pub fn App() -> Element {
         let _ = document::eval(&script);
     });
 
+    let mut activate = move |tab: Tab| {
+        active_tab.set(tab);
+        let _ = document::eval(&format!("document.getElementById('{}')?.focus();", tab.id()));
+    };
+
     let tab_body = match active_tab() {
         Tab::Bundles => rsx! { BundlesTab {} },
         Tab::History => rsx! { HistoryTimeline {} },
@@ -595,11 +675,13 @@ pub fn App() -> Element {
         }
         Tab::Replay => rsx! { ReplayView {} },
         Tab::Corpus => rsx! { CorpusTab {} },
-    };
-
-    let mut activate = move |tab: Tab| {
-        active_tab.set(tab);
-        let _ = document::eval(&format!("document.getElementById('{}')?.focus();", tab.id()));
+        Tab::Settings => {
+            let on_open_corpus = move |_| {
+                active_tab.set(Tab::Corpus);
+                let _ = document::eval("document.getElementById('tab-corpus')?.focus();");
+            };
+            rsx! { SettingsTab { on_open_corpus_paths: on_open_corpus } }
+        }
     };
 
     let run_palette_action = move |action: PaletteAction| {
@@ -649,7 +731,22 @@ pub fn App() -> Element {
                 );
             }
             PaletteAction::ToggleTheme => {
-                let _ = document::eval("document.getElementById('viewer-theme-toggle')?.click();");
+                // Legacy command: route through the Settings tab so the
+                // user's choice persists via the new settings store.
+                active_tab.set(Tab::Settings);
+                let _ = document::eval(
+                    r#"
+                    window.requestAnimationFrame(() => {
+                      const themeInput = document.querySelector(
+                        'input[name="settings-theme"]:not(:checked)'
+                      );
+                      themeInput?.focus();
+                    });
+                    "#,
+                );
+            }
+            PaletteAction::OpenSettings => {
+                activate(Tab::Settings);
             }
         }
     };
@@ -1104,7 +1201,7 @@ pub fn App() -> Element {
                                                 }
                                                 Key::End => {
                                                     evt.prevent_default();
-                                                    activate(Tab::Corpus);
+                                                    activate(Tab::Settings);
                                                 }
                                                 _ => {}
                                             }
@@ -1167,19 +1264,30 @@ pub fn App() -> Element {
                     id: "viewer-theme-toggle",
                     class: "theme-toggle",
                     r#type: "button",
-                    "aria-label": "Toggle light and dark theme",
+                    "aria-label": "Open settings to change theme",
                     onclick: move |_| {
+                        active_tab.set(Tab::Settings);
                         let _ = document::eval(
                             r#"
-                            const root = document.documentElement;
-                            const current = root.dataset.theme === 'light' ? 'light' : 'dark';
-                            const next = current === 'light' ? 'dark' : 'light';
-                            root.dataset.theme = next;
-                            window.localStorage.setItem('sl-viewer-theme', next);
+                            window.requestAnimationFrame(() => {
+                              const focusable = document.querySelector(
+                                '#settings-theme-radios input[type="radio"]'
+                              );
+                              focusable?.focus();
+                            });
                             "#,
                         );
                     },
-                    "Toggle Theme"
+                    "Theme"
+                }
+                button {
+                    id: "viewer-settings-button",
+                    class: "help-toggle",
+                    r#type: "button",
+                    "aria-haspopup": "tab",
+                    "aria-controls": "panel-settings",
+                    onclick: move |_| activate(Tab::Settings),
+                    "Settings"
                 }
             }
             HelpOverlay {

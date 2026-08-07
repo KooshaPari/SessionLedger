@@ -9,10 +9,7 @@
 
 use session_ledger::domain::session::Session;
 
-<<<<<<< Updated upstream
 use crate::mock_data::sample_sessions;
-=======
->>>>>>> Stashed changes
 use crate::web_exports::*;
 
 /// Source configuration for the viewer's session list.

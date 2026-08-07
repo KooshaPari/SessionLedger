@@ -20,7 +20,7 @@ pub enum Theme {
     #[default]
     System,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ThemeColors {
     pub bg: &'static str,
     pub surface: &'static str,

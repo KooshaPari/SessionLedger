@@ -308,6 +308,7 @@
       "evidence": [
         "tests/properties.rs",
         "crates/sl-viewer/tests/properties_viewer.rs",
+        "crates/sl-viewer/tests/properties_viewer_theme_url.rs",
         "fuzz/fuzz_targets/okf_roundtrip.rs",
         "fuzz/fuzz_targets/jsonl_ingest.rs",
         ".github/workflows/ci.yml",

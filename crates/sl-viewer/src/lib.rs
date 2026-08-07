@@ -27,6 +27,8 @@ pub mod history_tab;
 pub mod live_feed;
 pub mod memory_tab;
 pub mod mock_data;
+#[cfg(feature = "parquet")]
+pub mod parquet_source;
 pub mod replay_view;
 pub mod search_view;
 pub mod session_list;

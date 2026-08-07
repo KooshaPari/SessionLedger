@@ -8,6 +8,8 @@
 //! without a UI runtime.
 
 use session_ledger::domain::session::Session;
+#[cfg(feature = "parquet")]
+use session_ledger::ports::CorpusSource;
 
 use crate::mock_data::sample_sessions;
 
@@ -61,6 +63,15 @@ fn load_discovered_sessions() -> Result<Vec<Session>, String> {
         |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
         &mut sessions,
     )?;
+    // Claude Code on newer macOS builds drops conversation history as
+    // `.parquet` files under the same `~/.claude/projects` tree. The JSONL
+    // adapter above ignores those; the parquet adapter below fills that gap
+    // when the `parquet` feature is enabled.
+    #[cfg(feature = "parquet")]
+    {
+        discovered_roots +=
+            load_parquet_corpus(&home.join(".claude").join("projects"), &mut sessions)?;
+    }
     // Cursor stores exported conversation JSON/JSONL under its global data
     // directory on macOS. Only existing roots are scanned; caches and plans
     // that do not contain transcript-shaped files are ignored by the adapter.
@@ -123,6 +134,36 @@ where
             Ok(session) if !session.messages.is_empty() => sessions.push(session),
             Ok(_) => {}
             Err(error) => eprintln!("[sl-viewer] skipping {}:{}: {error}", root.display(), id),
+        }
+    }
+    Ok(1)
+}
+
+/// Scan `root` for Claude conversation `.parquet` files and append parsed
+/// sessions to `sessions`. Returns 1 when the root contains at least one
+/// parquet file (counts as a "discovered" root for the empty-store check),
+/// 0 when the directory is missing or has no parquet files, and an error
+/// only when the discovery step itself fails (e.g. unreadable directory).
+#[cfg(feature = "parquet")]
+fn load_parquet_corpus(
+    root: &std::path::Path,
+    sessions: &mut Vec<Session>,
+) -> Result<usize, String> {
+    if !root.is_dir() {
+        return Ok(0);
+    }
+    let source = crate::parquet_source::ParquetCorpusSource::new(root);
+    let ids = source.list().map_err(|e| format!("discover parquet {}: {e}", root.display()))?;
+    if ids.is_empty() {
+        return Ok(0);
+    }
+    for id in ids {
+        match source.load(&id) {
+            Ok(session) if !session.messages.is_empty() => sessions.push(session),
+            Ok(_) => {}
+            Err(error) => {
+                eprintln!("[sl-viewer] skipping parquet {}:{}: {error}", root.display(), id)
+            }
         }
     }
     Ok(1)
@@ -221,6 +262,129 @@ mod tests {
         assert_eq!(roots, 1);
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].id, "claude-local-1");
+    }
+
+    // ── Parquet source ────────────────────────────────────────────────────────
+
+    /// Re-export of the fixture writer used to materialise a tiny parquet file
+    /// on disk for corpus-loader integration tests. The fixture matches the
+    /// Claude-conversation schema used by [`crate::parquet_source`]'s unit tests.
+    #[cfg(feature = "parquet")]
+    fn write_parquet_fixture(
+        path: &std::path::Path,
+        rows: &[crate::parquet_source::test_fixture::FixtureRow],
+    ) {
+        crate::parquet_source::test_fixture::write_fixture(path, rows);
+    }
+
+    #[cfg(feature = "parquet")]
+    #[test]
+    fn parquet_loader_returns_one_when_root_contains_a_parquet_file() {
+        use crate::parquet_source::test_fixture::FixtureRow;
+
+        let root = tempfile::tempdir().expect("temp root");
+        let path = root.path().join("transcripts.parquet");
+        write_parquet_fixture(
+            &path,
+            &[FixtureRow {
+                session_id: "parquet-session-1".into(),
+                role: "user".into(),
+                content: "hello from parquet".into(),
+                ts_ms: Some(1_700_000_000_000),
+                cwd: Some("/code/parquet".into()),
+                title: Some("Parquet session".into()),
+            }],
+        );
+
+        let mut sessions = Vec::new();
+        let roots = load_parquet_corpus(root.path(), &mut sessions).expect("parquet discover");
+
+        assert_eq!(roots, 1);
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, "parquet-session-1");
+        assert_eq!(sessions[0].corpus, session_ledger::domain::session::Corpus::ClaudeCode);
+        assert_eq!(sessions[0].messages.len(), 1);
+        assert_eq!(sessions[0].messages[0].content, "hello from parquet");
+        assert_eq!(sessions[0].messages[0].ts_ms, Some(1_700_000_000_000));
+    }
+
+    #[cfg(feature = "parquet")]
+    #[test]
+    fn parquet_loader_returns_zero_when_root_has_no_parquet_files() {
+        let root = tempfile::tempdir().expect("temp root");
+        std::fs::write(root.path().join("README.md"), b"no parquet here").expect("write file");
+
+        let mut sessions = Vec::new();
+        let roots = load_parquet_corpus(root.path(), &mut sessions).expect("parquet discover");
+        assert_eq!(roots, 0);
+        assert!(sessions.is_empty());
+    }
+
+    #[cfg(feature = "parquet")]
+    #[test]
+    fn parquet_loader_returns_zero_for_missing_root() {
+        let root = tempfile::tempdir().expect("temp root");
+        let mut sessions = Vec::new();
+        let roots =
+            load_parquet_corpus(&root.path().join("does-not-exist"), &mut sessions).expect("ok");
+        assert_eq!(roots, 0);
+        assert!(sessions.is_empty());
+    }
+
+    #[cfg(feature = "parquet")]
+    #[test]
+    fn jsonl_and_parquet_loaders_coexist_on_claude_projects_root() {
+        use crate::parquet_source::test_fixture::FixtureRow;
+
+        // Both loaders scan the same `~/.claude/projects` tree; the JSONL
+        // adapter should ignore parquet files and vice-versa, so two
+        // physically-distinct sessions — one JSONL, one parquet — both survive.
+        let root = tempfile::tempdir().expect("temp root");
+        let project = root.path().join("-Users-demo-parquet");
+        std::fs::create_dir_all(&project).expect("project root");
+
+        std::fs::write(
+            project.join("session.jsonl"),
+            serde_json::json!({
+                "type": "user",
+                "sessionId": "jsonl-session-1",
+                "message": {"role": "user", "content": "hello from jsonl"}
+            })
+            .to_string(),
+        )
+        .expect("write jsonl");
+        write_parquet_fixture(
+            &project.join("session.parquet"),
+            &[FixtureRow {
+                session_id: "parquet-session-2".into(),
+                role: "user".into(),
+                content: "hello from parquet".into(),
+                ts_ms: Some(1_700_000_000_000),
+                cwd: Some("/code/parquet".into()),
+                title: None,
+            }],
+        );
+
+        // JSONL loader sees only the JSONL file.
+        let mut jsonl_sessions = Vec::new();
+        let jsonl_roots = load_json_corpus(
+            root.path(),
+            |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
+            &mut jsonl_sessions,
+        )
+        .expect("jsonl discover");
+        assert_eq!(jsonl_roots, 1);
+        assert_eq!(jsonl_sessions.len(), 1);
+        assert_eq!(jsonl_sessions[0].id, "jsonl-session-1");
+
+        // Parquet loader sees only the parquet file.
+        let mut parquet_sessions = Vec::new();
+        let parquet_roots =
+            load_parquet_corpus(root.path(), &mut parquet_sessions).expect("parquet discover");
+        assert_eq!(parquet_roots, 1);
+        assert_eq!(parquet_sessions.len(), 1);
+        assert_eq!(parquet_sessions[0].id, "parquet-session-2");
+        assert_eq!(parquet_sessions[0].messages[0].content, "hello from parquet");
     }
 
     #[cfg(feature = "sqlite")]

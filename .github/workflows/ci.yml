@@ -223,6 +223,18 @@ jobs:
       - name: fuzz smoke JSONL ingest parse (10s)
         run: cargo +nightly fuzz run jsonl_ingest --sanitizer address --target x86_64-unknown-linux-gnu -- -max_total_time=10
 
+  # Blocking C04 L40 rootless-only OCI runner matrix scaffold. The full gate
+  # lives in rootless-matrix.yml; this policy job keeps ci.yml cross-referenced
+  # and executes the same hermetic SelfCheck.
+  rootless-matrix-policy:
+    name: rootless-only matrix policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: assert rootless-only OCI runner scaffold anchors
+        shell: pwsh
+        run: ./scripts/rootless-matrix-check.ps1 -SelfCheck
+
   # Platform signing-readiness policy (C04 L32 / C11 L112). The hard blocking
   # gate lives in signing-hard.yml (runs on pull_request); this job runs the
   # same SelfCheck here so the signing posture is asserted on every PR and

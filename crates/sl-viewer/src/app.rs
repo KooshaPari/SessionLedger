@@ -131,6 +131,18 @@ pub struct SessionContext(pub Signal<Vec<Session>>);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ReloadTrigger(pub Signal<u32>);
 
+/// Discovery status published at the root so every tab can render a
+/// loading / error / ready state without the App's spawn_blocking effect
+/// having to thread the status through props. The corpus scan can take
+/// minutes on a large local corpus (Codex alone has 10k+ files), so a
+/// dedicated loading indicator is the difference between "the app is
+/// frozen" and "the app is working".
+#[derive(Clone, Debug, PartialEq)]
+pub struct DiscoveryState {
+    pub loading: Signal<bool>,
+    pub error: Signal<Option<String>>,
+}
+
 /// Resolve the active [`DataSource`].
 ///
 /// Resolution order:
@@ -282,10 +294,17 @@ pub fn App() -> Element {
     // does not enable the optional Tokio dependency.
     let mut sessions_signal = use_signal(Vec::<Session>::new);
     let mut error_signal: Signal<Option<String>> = use_signal(|| None);
+    let mut loading_signal: Signal<bool> = use_signal(|| true);
     let reload_trigger: Signal<u32> = use_signal(|| 0u32);
     use_context_provider(|| ReloadTrigger(reload_trigger));
+    use_context_provider(|| DiscoveryState {
+        loading: loading_signal,
+        error: error_signal,
+    });
     use_effect(move || {
         let _ = reload_trigger();
+        loading_signal.set(true);
+        error_signal.set(None);
         let source = resolve_data_source();
         spawn(async move {
             let result: std::result::Result<Result<Vec<Session>, String>, String> = {
@@ -300,6 +319,7 @@ pub fn App() -> Element {
                     Ok(load_sessions(&source))
                 }
             };
+            loading_signal.set(false);
             match result {
                 Ok(Ok(sessions)) => {
                     sessions_signal.set(sessions);
@@ -1016,6 +1036,8 @@ pub fn App() -> Element {
 #[component]
 fn BundlesTab() -> Element {
     let ctx = use_context::<SessionContext>();
+    let discovery = use_context::<DiscoveryState>();
+    let mut reload = use_context::<ReloadTrigger>();
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| Some(0));
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
 
@@ -1026,6 +1048,8 @@ fn BundlesTab() -> Element {
     // once at mount (when sessions were empty), so the tab stayed frozen
     // on "No bundles" forever even after discovery finished.
     let bundles = build_bundles_from_sessions(&ctx.0.read());
+    let loading = discovery.loading.cloned();
+    let load_error = discovery.error.cloned();
 
     if query_fixture_active("first-run") {
         return rsx! {
@@ -1047,6 +1071,28 @@ fn BundlesTab() -> Element {
             LoadingState {
                 message: "Loading bundles…".to_string(),
                 patience_hint: true,
+            }
+        };
+    }
+    // Discovery is still running — show the same skeleton the visual
+    // fixture path uses so the operator knows the app is working, not
+    // frozen. Full codex+claude+cursor scans can take minutes.
+    if loading && bundles.is_empty() {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            LoadingState {
+                message: "Discovering local session corpus…".to_string(),
+                patience_hint: true,
+            }
+        };
+    }
+    if let Some(err) = load_error.as_ref() {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ErrorState {
+                message: err.clone(),
+                retryable: true,
+                on_retry: move |_| reload.0.with_mut(|t| *t += 1),
             }
         };
     }

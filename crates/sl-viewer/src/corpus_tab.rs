@@ -11,7 +11,7 @@
 use dioxus::prelude::*;
 use session_ledger::domain::session::{Corpus, Session};
 
-use crate::app::{ReloadTrigger, SessionContext};
+use crate::app::{DiscoveryState, ReloadTrigger, SessionContext};
 
 /// Stable, human-readable label for a [`Corpus`].
 fn corpus_label(corpus: Corpus) -> &'static str {
@@ -75,6 +75,7 @@ fn epoch_to_ymdhm(secs: i64) -> (i32, u32, u32, u32, u32) {
 #[component]
 pub fn CorpusTab() -> Element {
     let ctx = use_context::<SessionContext>();
+    let discovery = use_context::<DiscoveryState>();
     let mut reload = use_context::<ReloadTrigger>();
 
     // Reactive read: rebuilt on every render that sees a sessions signal
@@ -86,6 +87,8 @@ pub fn CorpusTab() -> Element {
     let total = sessions_sorted.len();
     let by_corpus = corpus_breakdown(&sessions_sorted);
     let plural = if total == 1 { "session" } else { "sessions" };
+    let loading = discovery.loading.cloned();
+    let load_error = discovery.error.cloned();
 
     rsx! {
         style { r#"
@@ -232,10 +235,24 @@ pub fn CorpusTab() -> Element {
                 }
             }
             if sessions_sorted.is_empty() {
-                div {
-                    class: "corpus-empty",
-                    role: "status",
-                    "No sessions loaded yet. Reload discovery or check that one of $HOME/.codex/sessions, $HOME/.claude/projects, $HOME/.cursor/projects exists."
+                if let Some(err) = load_error.as_ref() {
+                    div {
+                        class: "corpus-empty",
+                        role: "status",
+                        "Corpus load failed: {err}. Use Reload discovery to retry."
+                    }
+                } else if loading {
+                    div {
+                        class: "corpus-empty",
+                        role: "status",
+                        "Discovering local session corpus… (Codex + Claude + Cursor)"
+                    }
+                } else {
+                    div {
+                        class: "corpus-empty",
+                        role: "status",
+                        "No sessions loaded yet. Reload discovery or check that one of $HOME/.codex/sessions, $HOME/.claude/projects, $HOME/.cursor/projects exists."
+                    }
                 }
             } else {
                 div {

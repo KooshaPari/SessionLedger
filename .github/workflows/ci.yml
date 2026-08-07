@@ -87,6 +87,9 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: eval reproducibility manifest SelfCheck
+        shell: pwsh
+        run: ./scripts/eval-repro-check.ps1 -SelfCheck
       - name: cargo fmt --check
         run: |
           cargo fmt --all -- --check 2>&1 || echo "::warning::cargo fmt issues (advisory)"

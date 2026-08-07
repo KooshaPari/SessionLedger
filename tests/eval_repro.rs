@@ -33,4 +33,21 @@ fn eval_repro_manifest_self_check_validates_lockfile_and_fixtures() {
         stdout.contains("cargo_lock_sha256="),
         "expected cargo_lock_sha256 echo, got:\n{stdout}"
     );
+
+    let ci_workflow = std::fs::read_to_string(repo_root().join(".github/workflows/ci.yml"))
+        .expect("expected ci.yml to be readable");
+    assert!(
+        ci_workflow.contains("shell: pwsh\n        run: ./scripts/eval-repro-check.ps1 -SelfCheck"),
+        "ci.yml must invoke eval-repro-check.ps1 -SelfCheck with PowerShell"
+    );
+}
+
+#[test]
+fn ci_workflow_runs_eval_repro_self_check_with_powershell() {
+    let ci_workflow = std::fs::read_to_string(repo_root().join(".github/workflows/ci.yml"))
+        .expect("expected ci.yml to be readable");
+    assert!(
+        ci_workflow.contains("shell: pwsh\n        run: ./scripts/eval-repro-check.ps1 -SelfCheck"),
+        "ci.yml must invoke eval-repro-check.ps1 -SelfCheck with PowerShell"
+    );
 }

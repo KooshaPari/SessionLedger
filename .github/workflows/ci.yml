@@ -171,6 +171,20 @@ jobs:
             npm test 2>&1 || echo "::warning::test failures (advisory)"
           fi
 
+  # Hermetic eval reproducibility manifest wiring (C08 L79). The script's
+  # SelfCheck verifies this workflow anchor so the manifest cannot silently
+  # drift away from CI coverage.
+  eval-reproducibility-policy:
+    name: Eval Reproducibility SelfCheck
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: eval reproducibility SelfCheck
+        shell: pwsh
+        run: ./scripts/eval-repro-check.ps1 -SelfCheck
+
   security:
     name: Security Scan
     needs: detect

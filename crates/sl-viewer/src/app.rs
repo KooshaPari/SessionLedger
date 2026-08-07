@@ -389,7 +389,7 @@ pub fn App() -> Element {
     let reload_trigger: Signal<u32> = use_signal(|| 0u32);
     let custom_paths_signal: Signal<CustomCorpusPath> = use_signal(initial_custom_corpus_paths);
     use_context_provider(|| ReloadTrigger(reload_trigger));
-use_context_provider(|| CustomCorpusPaths(custom_paths_signal));
+    use_context_provider(|| CustomCorpusPaths(custom_paths_signal));
     use_context_provider(|| DiscoveryState { loading: loading_signal, error: error_signal });
     use_effect(move || {
         let _ = reload_trigger();

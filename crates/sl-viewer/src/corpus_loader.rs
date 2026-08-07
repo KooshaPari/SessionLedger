@@ -196,7 +196,7 @@ fn load_rooted_corpus(root: &Path, sessions: &mut Vec<Session>) -> Result<usize,
             |path| session_ledger::CodexDir::new(path.to_path_buf()),
             sessions,
         ),
-        "projects" => load_json_corpus(
+        "projects" => {
             // Claude projects and Cursor projects both live under `.projects`
             // directories in their respective roots, but the surrounding
             // directory name tells them apart at a glance. Prefer ClaudeDir
@@ -204,10 +204,25 @@ fn load_rooted_corpus(root: &Path, sessions: &mut Vec<Session>) -> Result<usize,
             // and Cursor second — the adapters fail fast on the wrong
             // schema, so wrong-adapter picks simply contribute zero rows
             // and the right one wins.
-            root,
-            |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
-            sessions,
-        ),
+            let json_rows = load_json_corpus(
+                root,
+                |path| session_ledger::ClaudeDir::new(path.to_path_buf()),
+                sessions,
+            )?;
+            // Claude Code on newer macOS builds drops conversation history as
+            // `.parquet` files under the same `~/.claude/projects` tree. The
+            // JSONL adapter above ignores those; the parquet adapter below
+            // fills that gap when the `parquet` feature is enabled.
+            #[cfg(feature = "parquet")]
+            {
+                let parquet_rows = load_parquet_corpus(root, sessions)?;
+                Ok(json_rows.saturating_add(parquet_rows))
+            }
+            #[cfg(not(feature = "parquet"))]
+            {
+                Ok(json_rows)
+            }
+        }
         // Generic root (most custom-path case): try Codex first, then
         // Claude, then Cursor. The first adapter that recognizes the
         // shape contributes rows; the rest contribute zero and fall

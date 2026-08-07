@@ -10,6 +10,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - sl-viewer property-test surface extended (WBS-6.2 #426): `crates/sl-viewer/tests/properties_viewer_theme_url.rs` adds 6 proptest properties covering `theme::Theme` JSON round-trip + default invariant + `ThemeColors::for_theme` total-mapping, and `daemon_url::daemon_api_url` slash normalisation + `daemon_host_display` scheme stripping. `ThemeColors` gains `PartialEq, Eq` derives so the property test can compare palettes structurally.
 
+- IntentState serde property surface (WBS-6.2 #426): `tests/properties.rs` adds `intent_state_json_round_trip_preserves_variant` (every variant serialises to its kebab-case `Debug` name and round-trips back) and `intent_state_terminal_invariant_holds_across_serde` (`is_terminal` agrees with the serde representation). Guards drift in the `#[serde(rename_all = "kebab-case")]` attribute.
+
 - Wave-44 plan landed: `WAVE44_SCOPE.md` + `docs/ops/WAVE44_PERT.md` enumerate 6 close-out lanes (3 machine, 3 human-gated) for the 6 unpaid residuals from Wave-43 (396/402 → 402/402 target). Theme: stack-stability closure + i18n migration + eval coverage + supply-chain signing.
 - Wave-44 reaudit (Wave-44-D): `audit/SCORECARD.md` refresh at commit `13c974f7` (machine-w44-reaudit); `docs/ops/TRACEABILITY.json` overall_audit wave=Wave-44 commit=13c974f7 (conservative hold at 396/402); `docs/ops/GAP_QA_MATRIX.md` C00 + C08 + PLAN-W8-B rows reflect Wave-44 closure (#368 W44-B6 corpus / #372 W44-B1 loom / #373 PERT correction). 2 of 3 machine lanes shipped 2026-07-24; remaining 6 raw pts across C04 L36 / C08 L76 / C11 L110.
 

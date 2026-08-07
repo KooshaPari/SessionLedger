@@ -123,6 +123,21 @@ pub struct OkfDocument {
     pub tags: Vec<String>,
 }
 
+/// A structural violation in an [`OkfDocument`].
+///
+/// This validates the exported OKF graph, not the separate HTTP ingest
+/// payload used to create a session. In particular, OKF entity types such as
+/// `intent` and `gate` are graph node types, not chat-message roles.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OkfValidationError {
+    /// JSON-like location of the invalid field.
+    pub field: String,
+    /// Stable machine-readable classification.
+    pub code: String,
+    /// Human-readable explanation of the violation.
+    pub message: String,
+}
+
 impl OkfDocument {
     /// Create a bare OKF document with provenance derived from `bundle`.
     #[must_use]
@@ -147,6 +162,65 @@ impl OkfDocument {
     pub fn to_json_pretty<W: std::io::Write>(&self, writer: W) -> serde_json::Result<()> {
         serde_json::to_writer_pretty(writer, self)
     }
+}
+
+/// Validate the structural invariants of an exported OKF v1 document.
+///
+/// The validator intentionally does not require ingest-only fields such as
+/// `created_at`, `messages`, or chat roles: canonical OKF documents are
+/// knowledge graphs containing entities, relations, and provenance.
+#[must_use]
+pub fn validate_okf_document(document: &OkfDocument) -> Vec<OkfValidationError> {
+    let mut errors = Vec::new();
+
+    if document.okf != "1.0" {
+        errors.push(OkfValidationError {
+            field: "okf".into(),
+            code: "unsupported_version".into(),
+            message: format!("expected OKF version \"1.0\", got {:?}", document.okf),
+        });
+    }
+
+    if document.provenance.source_id != document.source_id {
+        errors.push(OkfValidationError {
+            field: "provenance.source_id".into(),
+            code: "source_id_mismatch".into(),
+            message: format!(
+                "provenance.source_id {:?} does not match source_id {:?}",
+                document.provenance.source_id, document.source_id
+            ),
+        });
+    }
+
+    let mut entity_ids = std::collections::HashSet::with_capacity(document.entities.len());
+    for (index, entity) in document.entities.iter().enumerate() {
+        if !entity_ids.insert(entity.id.as_str()) {
+            errors.push(OkfValidationError {
+                field: format!("entities[{index}].id"),
+                code: "duplicate_entity_id".into(),
+                message: format!("entity id {:?} is duplicated", entity.id),
+            });
+        }
+    }
+
+    for (index, relation) in document.relations.iter().enumerate() {
+        if !entity_ids.contains(relation.source.as_str()) {
+            errors.push(OkfValidationError {
+                field: format!("relations[{index}].source"),
+                code: "dangling_relation_source".into(),
+                message: format!("relation source {:?} is not an entity id", relation.source),
+            });
+        }
+        if !entity_ids.contains(relation.target.as_str()) {
+            errors.push(OkfValidationError {
+                field: format!("relations[{index}].target"),
+                code: "dangling_relation_target".into(),
+                message: format!("relation target {:?} is not an entity id", relation.target),
+            });
+        }
+    }
+
+    errors
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +252,76 @@ pub trait OkfExporter {
 mod tests {
     use super::*;
     use std::io::{Error, Write};
+
+    fn valid_document() -> OkfDocument {
+        OkfDocument::new(&ContinuationBundle::new("session-42"), "forge")
+    }
+
+    #[test]
+    fn validation_rejects_unsupported_version() {
+        let mut document = valid_document();
+        document.okf = "2.0".into();
+        let errors = validate_okf_document(&document);
+        assert!(errors
+            .iter()
+            .any(|error| { error.code == "unsupported_version" && error.field == "okf" }));
+    }
+
+    #[test]
+    fn validation_rejects_provenance_source_mismatch() {
+        let mut document = valid_document();
+        document.provenance.source_id = "other-session".into();
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "source_id_mismatch" && error.field == "provenance.source_id"
+        }));
+    }
+
+    #[test]
+    fn validation_rejects_duplicate_entity_ids() {
+        let mut document = valid_document();
+        let entity = OkfEntity {
+            id: "entity-0".into(),
+            r#type: "intent".into(),
+            label: "goal".into(),
+            properties: serde_json::Value::Null,
+        };
+        document.entities = vec![entity.clone(), entity];
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "duplicate_entity_id" && error.field == "entities[1].id"
+        }));
+    }
+
+    #[test]
+    fn validation_rejects_dangling_relation_source() {
+        let mut document = valid_document();
+        document.relations.push(OkfRelation {
+            source: "missing".into(),
+            target: "present".into(),
+            r#type: "grounds".into(),
+            provenance: document.provenance.clone(),
+        });
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "dangling_relation_source" && error.field == "relations[0].source"
+        }));
+    }
+
+    #[test]
+    fn validation_rejects_dangling_relation_target() {
+        let mut document = valid_document();
+        document.relations.push(OkfRelation {
+            source: "present".into(),
+            target: "missing".into(),
+            r#type: "grounds".into(),
+            provenance: document.provenance.clone(),
+        });
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "dangling_relation_target" && error.field == "relations[0].target"
+        }));
+    }
 
     #[test]
     fn new_document_copies_source_provenance_and_starts_empty() {

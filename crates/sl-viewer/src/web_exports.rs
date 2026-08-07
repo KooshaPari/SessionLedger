@@ -43,15 +43,6 @@ impl WebExportProvider {
             WebExportProvider::Gemini => Corpus::GeminiWeb,
         }
     }
-
-    /// The default subdirectory under `~/Downloads` for this provider's exports.
-    fn default_subdir(self) -> &'static str {
-        match self {
-            WebExportProvider::ChatGpt => "ChatGPT",
-            WebExportProvider::Claude => "Claude",
-            WebExportProvider::Gemini => "Gemini",
-        }
-    }
 }
 
 /// Resolve the set of web-export roots visible to this process.

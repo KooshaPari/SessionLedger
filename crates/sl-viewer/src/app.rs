@@ -228,6 +228,7 @@ fn icon_svg(tab_icon: &str) -> &'static str {
         _ => ICON_SVG_BUNDLES,
     }
 }
+#[allow(non_snake_case)]
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -1012,7 +1013,7 @@ fn BundlesTab() -> Element {
         let _ = load_gen();
         loading.set(true);
         load_error.set(None);
-        let loaded = build_bundles_from_sessions(&*ctx.0.read());
+        let loaded = build_bundles_from_sessions(&ctx.0.read());
         if loaded.is_empty() {
             load_error.set(Some("No bundles available to display.".into()));
         } else {

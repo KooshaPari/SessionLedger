@@ -3,6 +3,8 @@
 //! Desktop  : `cargo run -p sl-viewer`             (default feature)
 //! Web WASM : `dx serve --platform web -p sl-viewer`  (requires `web` feature)
 
+#[cfg(feature = "desktop")]
+use sl_viewer::menu;
 use sl_viewer::{cli_help, App};
 
 /// Human-readable window title — surfaced via the OS window chrome on
@@ -29,7 +31,17 @@ fn main() {
     }
 
     dioxus::LaunchBuilder::desktop()
-        .with_cfg(Config::new().with_window(WindowBuilder::new().with_title(VIEWER_TITLE)))
+        .with_cfg(
+            Config::new()
+                .with_window(WindowBuilder::new().with_title(VIEWER_TITLE))
+                // Custom menu bar (File / Edit / View / Window / Help) — see
+                // `sl_viewer::menu::build_menu` for the structure. The default
+                // dioxus menu only ships Edit + Window on desktop, so we
+                // override it to surface the viewer-specific shortcuts
+                // (Reload, Command Palette, Toggle Help, etc.) in the
+                // platform menu bar.
+                .with_menu(menu::build_menu()),
+        )
         .launch(App);
 }
 

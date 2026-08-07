@@ -26,6 +26,8 @@ pub mod help_overlay;
 pub mod history_tab;
 pub mod live_feed;
 pub mod memory_tab;
+#[cfg(feature = "desktop")]
+pub mod menu;
 pub mod mock_data;
 #[cfg(feature = "parquet")]
 pub mod parquet_source;

@@ -7,6 +7,7 @@ use session_ledger::domain::{
 use crate::async_states::{ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
+use crate::cli_help;
 use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions, DataSource};
 use crate::corpus_tab::CorpusTab;
@@ -262,6 +263,9 @@ fn icon_svg(tab_icon: &str) -> &'static str {
     }
 }
 
+// `App` is the Dioxus entry point — main.rs and the web launcher mount it
+// by name, so the upper-case identifier is part of the public surface.
+#[allow(non_snake_case)]
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -304,10 +308,7 @@ pub fn App() -> Element {
     let mut loading_signal: Signal<bool> = use_signal(|| true);
     let reload_trigger: Signal<u32> = use_signal(|| 0u32);
     use_context_provider(|| ReloadTrigger(reload_trigger));
-    use_context_provider(|| DiscoveryState {
-        loading: loading_signal,
-        error: error_signal,
-    });
+    use_context_provider(|| DiscoveryState { loading: loading_signal, error: error_signal });
     use_effect(move || {
         let _ = reload_trigger();
         loading_signal.set(true);
@@ -341,6 +342,72 @@ pub fn App() -> Element {
         });
     });
     use_context_provider(|| SessionContext(sessions_signal));
+
+    // Desktop menu bar wiring: dispatch each `muda::MenuEvent` to the same
+    // DOM controls the keyboard hotkeys already use, so a single source of
+    // truth owns state (palette, help, theme, reload). File → Reload
+    // Discovery is the one case that mutates Rust state directly because
+    // it triggers a fresh `tokio::spawn_blocking(load_sessions)` from the
+    // `use_effect` above.
+    #[cfg(feature = "desktop")]
+    {
+        let mut reload_trigger_for_menu = reload_trigger;
+        use dioxus::desktop::use_muda_event_handler;
+        use_muda_event_handler(move |event| {
+            use crate::menu::{
+                ID_APP_ABOUT, ID_APP_SETTINGS, ID_EDIT_FIND, ID_FILE_RELOAD_DISCOVERY,
+                ID_FILE_SETTINGS, ID_HELP_TOGGLE, ID_VIEW_COMMAND_PALETTE, ID_VIEW_RELOAD,
+                ID_VIEW_TOGGLE_THEME,
+            };
+            match event.id().0.as_str() {
+                ID_VIEW_COMMAND_PALETTE => {
+                    let _ = document::eval(
+                        "document.getElementById('viewer-palette-button')?.click();",
+                    );
+                }
+                ID_HELP_TOGGLE => {
+                    let _ =
+                        document::eval("document.getElementById('viewer-help-button')?.click();");
+                }
+                ID_VIEW_TOGGLE_THEME => {
+                    let _ =
+                        document::eval("document.getElementById('viewer-theme-toggle')?.click();");
+                }
+                ID_VIEW_RELOAD => {
+                    // Cmd+R: re-fetch the corpus (same effect as the Raw
+                    // Sessions tab's "Reload discovery" button).
+                    reload_trigger_for_menu.with_mut(|t| *t = t.wrapping_add(1));
+                }
+                ID_FILE_RELOAD_DISCOVERY => {
+                    reload_trigger_for_menu.with_mut(|t| *t = t.wrapping_add(1));
+                }
+                ID_EDIT_FIND => {
+                    // Stub: focus the existing Search tab button so keyboard
+                    // ⌘F opens the search pane. A dedicated search input
+                    // focus is a follow-up; today the Search tab body owns
+                    // its own keyboard listener.
+                    let _ = document::eval("document.getElementById('tab-search')?.click();");
+                }
+                ID_APP_SETTINGS | ID_FILE_SETTINGS => {
+                    // Settings dialog is not implemented yet; surface a
+                    // discoverable stub so users (and the visual-fixture
+                    // suites) see the menu item work end-to-end.
+                    let _ = document::eval(
+                        "window.alert('SessionLedger settings are coming soon.\\n\\nSee docs/functional_requirements.md for the roadmap.');",
+                    );
+                }
+                ID_APP_ABOUT => {
+                    let payload = cli_help::version_text().replace('\'', "\\'");
+                    let script = format!(
+                        "window.alert('SessionLedger Viewer\\n\\n{}\\n\\nA hexagonal session-bundle compiler + viewer for OKF streams.');",
+                        payload
+                    );
+                    let _ = document::eval(&script);
+                }
+                _ => {}
+            }
+        });
+    }
 
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let mut help_open: Signal<bool> = use_signal(|| false);
@@ -1157,8 +1224,8 @@ fn BundlesTab() -> Element {
         };
     }
 
-    let summaries: Vec<BundleSummary> = bundles.iter().map(|b| summarize(&b)).collect();
-    let detail = selected_idx().and_then(|idx| bundles.get(idx)).map(|b| extract_detail(&b));
+    let summaries: Vec<BundleSummary> = bundles.iter().map(summarize).collect();
+    let detail = selected_idx().and_then(|idx| bundles.get(idx)).map(extract_detail);
 
     // Determine if we should show the diff panel.
     let diff_pair: Option<(OkfBundle, OkfBundle)> =

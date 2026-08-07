@@ -146,9 +146,22 @@ fn read_sessions(
     Ok(vec![session])
 }
 
-/// Make a session id safe to use as a filename (path separators → `_`).
+/// Encode a session id as one injective, safe filename component.
+///
+/// Underscores are escaped as well as path separators so an encoded separator
+/// can never collide with an input that already contained the escape marker.
 pub(crate) fn sanitize(id: &str) -> String {
-    id.chars().map(|c| if matches!(c, '/' | '\\' | ':') { '_' } else { c }).collect()
+    let mut encoded = String::with_capacity(id.len());
+    for character in id.chars() {
+        match character {
+            '_' => encoded.push_str("_x5f"),
+            '/' => encoded.push_str("_x2f"),
+            '\\' => encoded.push_str("_x5c"),
+            ':' => encoded.push_str("_x3a"),
+            character => encoded.push(character),
+        }
+    }
+    encoded
 }
 
 #[cfg(test)]
@@ -196,6 +209,32 @@ mod tests {
     }
 
     #[test]
+    fn transform_file_keeps_colliding_ids_distinct() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let jsonl = tmp.path().join("collisions.jsonl");
+        let sessions = ["a/b", "a_b"];
+        let mut content = String::new();
+        for id in sessions {
+            let mut session = Session::new(id, Corpus::Forge);
+            session.messages.push(Message::new(Role::User, "keep distinct"));
+            content.push_str(&serde_json::to_string(&session).expect("serialize session"));
+            content.push('\n');
+        }
+        std::fs::write(&jsonl, content).expect("write fixture");
+
+        let written = transform_file(&jsonl, &tmp.path().join("out"), None).expect("transform");
+
+        assert_eq!(written.len(), 2);
+        assert_ne!(written[0], written[1]);
+        for (path, source_id) in written.iter().zip(sessions) {
+            let document: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(path).expect("read OKF"))
+                    .expect("parse OKF");
+            assert_eq!(document["source_id"], source_id);
+        }
+    }
+
+    #[test]
     fn transform_file_creates_missing_out_dir() {
         let tmp = tempfile::tempdir().expect("tempdir");
         let jsonl = write_fixture(tmp.path(), 1);
@@ -227,7 +266,8 @@ mod tests {
 
     #[test]
     fn sanitize_replaces_path_separators() {
-        assert_eq!(sanitize("a/b:c\\d"), "a_b_c_d");
+        assert_eq!(sanitize("a/b:c\\d"), "a_x2fb_x3ac_x5cd");
+        assert_eq!(sanitize("a_b"), "a_x5fb");
         assert_eq!(sanitize("plain-id"), "plain-id");
     }
 

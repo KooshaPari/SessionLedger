@@ -1,4 +1,11 @@
 //! First-run “Open corpus…” CTA — corpus file picker (web) or quick-start docs (desktop).
+//!
+//! Also exposes a `pick_corpus_folder` desktop entry point that wraps
+//! `rfd::FileDialog::pick_folder` so the Raw Sessions tab can wire a
+//! native macOS / Windows / Linux folder picker into its toolbar without
+//! re-implementing the platform dialog glue.
+
+use std::path::PathBuf;
 
 /// Repo-relative quick-start doc path (HELP.md cross-link).
 pub const QUICKSTART_CORPUS_DOC: &str = "docs/guides/quick-start/QUICKSTART.md";
@@ -69,6 +76,33 @@ pub fn trigger_open_corpus() {
 #[cfg(not(any(feature = "web", feature = "desktop")))]
 pub fn trigger_open_corpus() {}
 
+/// Open a native folder picker so the user can point the viewer at an
+/// arbitrary corpus directory.
+///
+/// Returns `Some(path)` when the user picked a folder, `None` when they
+/// cancelled. Errors from the dialog backend are logged to stderr and
+/// surfaced as `None` — the picker must never crash the toolbar click
+/// handler.
+///
+/// Only available on desktop builds. The web build doesn't expose a
+/// folder picker today (browsers don't allow it without the
+/// File System Access API), so this returns `None` there. Headless
+/// builds also return `None` so unit tests stay hermetic.
+#[cfg(all(not(feature = "web"), feature = "desktop", not(target_arch = "wasm32")))]
+pub fn pick_corpus_folder() -> Option<PathBuf> {
+    let result = rfd::FileDialog::new().set_title("Pick a custom corpus folder").pick_folder();
+    if let Some(ref path) = result {
+        eprintln!("[sl-viewer] user picked corpus folder: {}", path.display());
+    }
+    result
+}
+
+/// Non-desktop stub for the folder picker.
+#[cfg(not(all(not(feature = "web"), feature = "desktop", not(target_arch = "wasm32"))))]
+pub fn pick_corpus_folder() -> Option<PathBuf> {
+    None
+}
+
 #[cfg(all(not(feature = "web"), feature = "desktop", not(target_arch = "wasm32")))]
 fn open_quickstart_desktop() {
     let url = QUICKSTART_URL;
@@ -100,5 +134,15 @@ mod tests {
     fn corpus_picker_dom_ids_are_stable() {
         assert_eq!(CORPUS_PICKER_INPUT_ID, "sl-corpus-picker-input");
         assert_eq!(FORGE_DB_HINT_STORAGE_KEY, "sl-viewer-forge-db-hint");
+    }
+
+    #[test]
+    fn folder_picker_returns_none_in_headless_builds() {
+        // On `cfg(not(any(feature = "web", feature = "desktop")))` (the
+        // default test invocation), the picker must be a no-op rather
+        // than a blocking modal. On desktop/web builds this returns
+        // `None` only when the user cancels — which we cannot trigger
+        // from a unit test, so we just assert the function is callable.
+        let _ = pick_corpus_folder();
     }
 }

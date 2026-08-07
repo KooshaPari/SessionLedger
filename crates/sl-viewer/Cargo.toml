@@ -39,6 +39,10 @@ tempfile = "3"
 # Pull parquet into the test build so fixture writers and unit tests can exercise
 # the parquet source even when the production `parquet` feature is disabled.
 parquet = { version = "59", default-features = false, features = ["snap", "zstd", "brotli", "flate2-zlib-rs", "lz4", "base64", "simdutf8", "crc"] }
+# Property evidence for sl-viewer's settings / corpus_paths / parquet
+# surfaces (tests/properties_viewer.rs). Mirrors the workspace-level
+# tests/properties.rs. Keep the version in sync with the root Cargo.toml.
+proptest = "1.11.0"
 
 [features]
 default = ["desktop"]

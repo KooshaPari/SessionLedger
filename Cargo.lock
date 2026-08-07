@@ -5449,6 +5449,7 @@ dependencies = [
  "futures-util",
  "js-sys",
  "parquet",
+ "proptest",
  "reqwest",
  "rfd",
  "rusqlite",

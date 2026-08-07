@@ -253,6 +253,76 @@ mod tests {
     use super::*;
     use std::io::{Error, Write};
 
+    fn valid_document() -> OkfDocument {
+        OkfDocument::new(&ContinuationBundle::new("session-42"), "forge")
+    }
+
+    #[test]
+    fn validation_rejects_unsupported_version() {
+        let mut document = valid_document();
+        document.okf = "2.0".into();
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "unsupported_version" && error.field == "okf"
+        }));
+    }
+
+    #[test]
+    fn validation_rejects_provenance_source_mismatch() {
+        let mut document = valid_document();
+        document.provenance.source_id = "other-session".into();
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "source_id_mismatch" && error.field == "provenance.source_id"
+        }));
+    }
+
+    #[test]
+    fn validation_rejects_duplicate_entity_ids() {
+        let mut document = valid_document();
+        let entity = OkfEntity {
+            id: "entity-0".into(),
+            r#type: "intent".into(),
+            label: "goal".into(),
+            properties: serde_json::Value::Null,
+        };
+        document.entities = vec![entity.clone(), entity];
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "duplicate_entity_id" && error.field == "entities[1].id"
+        }));
+    }
+
+    #[test]
+    fn validation_rejects_dangling_relation_source() {
+        let mut document = valid_document();
+        document.relations.push(OkfRelation {
+            source: "missing".into(),
+            target: "present".into(),
+            r#type: "grounds".into(),
+            provenance: document.provenance.clone(),
+        });
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "dangling_relation_source" && error.field == "relations[0].source"
+        }));
+    }
+
+    #[test]
+    fn validation_rejects_dangling_relation_target() {
+        let mut document = valid_document();
+        document.relations.push(OkfRelation {
+            source: "present".into(),
+            target: "missing".into(),
+            r#type: "grounds".into(),
+            provenance: document.provenance.clone(),
+        });
+        let errors = validate_okf_document(&document);
+        assert!(errors.iter().any(|error| {
+            error.code == "dangling_relation_target" && error.field == "relations[0].target"
+        }));
+    }
+
     #[test]
     fn new_document_copies_source_provenance_and_starts_empty() {
         let bundle = ContinuationBundle::new("session-42");

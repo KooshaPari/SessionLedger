@@ -1166,7 +1166,7 @@ fn run_validate(bundle_id: &str, data_dir: &Path) {
         "errors": errors,
     });
     println!("{result}");
-    if !result["valid"].as_bool().unwrap_or(false) {
+    if !errors.is_empty() {
         std::process::exit(cli::EXIT_NOT_OK);
     }
 }
@@ -1175,7 +1175,7 @@ fn validate_on_disk_okf(
     bundle_id: &str,
     data_dir: &Path,
 ) -> Result<Vec<session_ledger::OkfValidationError>, String> {
-    let path = data_dir.join(format!("{bundle_id}.okf.json"));
+    let path = data_dir.join(format!("{}.okf.json", crate::etl::sanitize(bundle_id)));
     let text = std::fs::read_to_string(&path)
         .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
     let document: session_ledger::OkfDocument = serde_json::from_str(&text)
@@ -1364,7 +1364,7 @@ mod tests {
         std::fs::create_dir_all(&watch).expect("create watch directory");
 
         let mut session =
-            session_ledger::Session::new("self-validate", session_ledger::Corpus::Forge);
+            session_ledger::Session::new("nested/session", session_ledger::Corpus::Forge);
         session.messages.push(session_ledger::Message::new(session_ledger::Role::User, "ship it"));
         let transcript = serde_json::to_string(&session).expect("serialize session");
         std::fs::write(watch.join("session.jsonl"), format!("{transcript}\n"))
@@ -1373,7 +1373,7 @@ mod tests {
         let written = crate::etl::transform_file(&watch.join("session.jsonl"), &out, None)
             .expect("daemon ETL should export OKF");
         assert_eq!(written.len(), 1);
-        assert!(validate_on_disk_okf("self-validate", &out)
+        assert!(validate_on_disk_okf("nested/session", &out)
             .expect("validate daemon output")
             .is_empty());
     }

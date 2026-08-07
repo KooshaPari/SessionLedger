@@ -78,10 +78,7 @@ pub fn web_export_roots_with_env(
         explicit_list
             .into_iter()
             .map(|p| {
-                let provider = match p
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                {
+                let provider = match p.file_name().and_then(|s| s.to_str()) {
                     Some("ChatGPT") | Some("chatgpt") => WebExportProvider::ChatGpt,
                     Some("Claude") | Some("claude") => WebExportProvider::Claude,
                     _ => WebExportProvider::Gemini,
@@ -90,10 +87,7 @@ pub fn web_export_roots_with_env(
             })
             .collect()
     } else {
-        defaults
-            .into_iter()
-            .filter(|(_, p)| p.exists())
-            .collect()
+        defaults.into_iter().filter(|(_, p)| p.exists()).collect()
     }
 }
 
@@ -109,12 +103,8 @@ pub fn load_web_export_corpus(
     let label = provider.label();
     let mut loaded = 0usize;
 
-    let entries = fs::read_dir(path).map_err(|e| {
-        format!(
-            "could not read {label} export root {}: {e}",
-            path.display()
-        )
-    })?;
+    let entries = fs::read_dir(path)
+        .map_err(|e| format!("could not read {label} export root {}: {e}", path.display()))?;
 
     for entry in entries.flatten() {
         let entry_path = entry.path();
@@ -125,10 +115,7 @@ pub fn load_web_export_corpus(
         }
 
         // only attempt files we recognise as JSON exports
-        let ext = entry_path
-            .extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or_default();
+        let ext = entry_path.extension().and_then(|s| s.to_str()).unwrap_or_default();
         if !matches!(ext, "json") {
             continue;
         }
@@ -190,71 +177,49 @@ fn parse_web_export(raw: &str, corpus: Corpus) -> Option<Session> {
             format!("{:x}", h.finish())
         });
 
-    let messages: Vec<session_ledger::domain::session::Message> = if let Some(arr) =
-        value.get("messages").and_then(|m| m.as_array())
-    {
-        arr.iter()
-            .filter_map(|m| {
-                let role = m
-                    .get("role")
-                    .and_then(|v| v.as_str())
-                    .and_then(parse_role)?;
-                let content = m
-                    .get("content")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_owned();
-                let ts_ms = m.get("ts_ms").and_then(|v| v.as_i64());
-                Some(session_ledger::domain::session::Message {
-                    role,
-                    content,
-                    ts_ms,
+    let messages: Vec<session_ledger::domain::session::Message> =
+        if let Some(arr) = value.get("messages").and_then(|m| m.as_array()) {
+            arr.iter()
+                .filter_map(|m| {
+                    let role = m.get("role").and_then(|v| v.as_str()).and_then(parse_role)?;
+                    let content =
+                        m.get("content").and_then(|v| v.as_str()).unwrap_or_default().to_owned();
+                    let ts_ms = m.get("ts_ms").and_then(|v| v.as_i64());
+                    Some(session_ledger::domain::session::Message { role, content, ts_ms })
                 })
-            })
-            .collect()
-    } else if let Some(map) = value
-        .get("mapping")
-        .and_then(|m| m.as_object())
-    {
-        map.values()
-            .filter_map(|node| {
-                let msg = node.get("message")?;
-                let role = msg
-                    .get("author")
-                    .and_then(|a| a.get("role"))
-                    .and_then(|v| v.as_str())
-                    .and_then(parse_role)?;
-                let content = msg
-                    .get("content")
-                    .map(|c| match c {
-                        serde_json::Value::String(s) => s.clone(),
-                        serde_json::Value::Array(parts) => parts
-                            .iter()
-                            .filter_map(|p| p.get("text").and_then(|v| v.as_str()).map(String::from))
-                            .collect::<Vec<_>>()
-                            .join("\n"),
-                        _ => String::new(),
-                    })
-                    .unwrap_or_default();
-                let ts_ms = msg.get("create_time").and_then(|v| v.as_f64().map(|f| f as i64));
-                Some(session_ledger::domain::session::Message {
-                    role,
-                    content,
-                    ts_ms,
+                .collect()
+        } else if let Some(map) = value.get("mapping").and_then(|m| m.as_object()) {
+            map.values()
+                .filter_map(|node| {
+                    let msg = node.get("message")?;
+                    let role = msg
+                        .get("author")
+                        .and_then(|a| a.get("role"))
+                        .and_then(|v| v.as_str())
+                        .and_then(parse_role)?;
+                    let content = msg
+                        .get("content")
+                        .map(|c| match c {
+                            serde_json::Value::String(s) => s.clone(),
+                            serde_json::Value::Array(parts) => parts
+                                .iter()
+                                .filter_map(|p| {
+                                    p.get("text").and_then(|v| v.as_str()).map(String::from)
+                                })
+                                .collect::<Vec<_>>()
+                                .join("\n"),
+                            _ => String::new(),
+                        })
+                        .unwrap_or_default();
+                    let ts_ms = msg.get("create_time").and_then(|v| v.as_f64().map(|f| f as i64));
+                    Some(session_ledger::domain::session::Message { role, content, ts_ms })
                 })
-            })
-            .collect()
-    } else {
-        Vec::new()
-    };
+                .collect()
+        } else {
+            Vec::new()
+        };
 
-    Some(Session {
-        id,
-        corpus,
-        cwd: None,
-        title,
-        messages,
-    })
+    Some(Session { id, corpus, cwd: None, title, messages })
 }
 
 fn parse_role(s: &str) -> Option<session_ledger::domain::session::Role> {

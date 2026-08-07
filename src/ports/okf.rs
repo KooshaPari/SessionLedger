@@ -269,9 +269,9 @@ mod tests {
         let mut document = valid_document();
         document.okf = "2.0".into();
         let errors = validate_okf_document(&document);
-        assert!(errors.iter().any(|error| {
-            error.code == "unsupported_version" && error.field == "okf"
-        }));
+        assert!(errors
+            .iter()
+            .any(|error| { error.code == "unsupported_version" && error.field == "okf" }));
     }
 
     #[test]
@@ -310,9 +310,9 @@ mod tests {
             properties: serde_json::Value::Null,
         });
         let errors = validate_okf_document(&document);
-        assert!(errors.iter().any(|error| {
-            error.code == "empty_entity_id" && error.field == "entities[0].id"
-        }));
+        assert!(errors
+            .iter()
+            .any(|error| { error.code == "empty_entity_id" && error.field == "entities[0].id" }));
     }
 
     #[test]

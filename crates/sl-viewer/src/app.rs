@@ -97,14 +97,14 @@ impl Tab {
     /// Return the SVG icon name for this tab.
     fn icon(&self) -> &'static str {
         match self {
-            Self::Memory    => "memory",
-            Self::Bundles   => "bundles",
-            Self::History   => "history",
+            Self::Memory => "memory",
+            Self::Bundles => "bundles",
+            Self::History => "history",
             Self::Unfinished => "unfinished",
-            Self::LiveFeed  => "live",
-            Self::Timeline  => "timeline",
-            Self::Search    => "search",
-            Self::Replay    => "replay",
+            Self::LiveFeed => "live",
+            Self::Timeline => "timeline",
+            Self::Search => "search",
+            Self::Replay => "replay",
         }
     }
 
@@ -217,15 +217,15 @@ const ICON_SVG_REPLAY: &str = include_str!("../../../assets/icons/line/replay.sv
 /// Lookup table for tab icon SVGs.
 fn icon_svg(tab_icon: &str) -> &'static str {
     match tab_icon {
-        "bundles"    => ICON_SVG_BUNDLES,
-        "history"    => ICON_SVG_HISTORY,
-        "memory"     => ICON_SVG_MEMORY,
+        "bundles" => ICON_SVG_BUNDLES,
+        "history" => ICON_SVG_HISTORY,
+        "memory" => ICON_SVG_MEMORY,
         "unfinished" => ICON_SVG_UNFINISHED,
-        "timeline"   => ICON_SVG_TIMELINE,
-        "live"       => ICON_SVG_LIVE,
-        "search"     => ICON_SVG_SEARCH,
-        "replay"     => ICON_SVG_REPLAY,
-        _            => ICON_SVG_BUNDLES,
+        "timeline" => ICON_SVG_TIMELINE,
+        "live" => ICON_SVG_LIVE,
+        "search" => ICON_SVG_SEARCH,
+        "replay" => ICON_SVG_REPLAY,
+        _ => ICON_SVG_BUNDLES,
     }
 }
 pub fn App() -> Element {
@@ -434,7 +434,7 @@ pub fn App() -> Element {
         Tab::Timeline => {
             let bundles = build_bundles_from_sessions(&sessions_signal.read());
             rsx! { TimelineView { bundles } }
-        },
+        }
         Tab::Replay => rsx! { ReplayView {} },
     };
 
@@ -906,7 +906,7 @@ pub fn App() -> Element {
                                         span {
                             dangerous_inner_html: "{icon_svg(tab.icon())}"
                         }
-                        "{tab.label()}" 
+                        "{tab.label()}"
                                     }
                                 }
                             }

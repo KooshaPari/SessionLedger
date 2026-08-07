@@ -4,13 +4,12 @@ use session_ledger::domain::{
     session::{Role, Session},
 };
 
-use crate::async_states::{
-    ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState, SkeletonLayout,
-};
+use crate::async_states::{ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions, DataSource};
+use crate::corpus_tab::CorpusTab;
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::visual_fixture_active;
 use crate::fixture::{query_fixture_active, splash_hold_fixture_active};
@@ -37,10 +36,14 @@ enum Tab {
     Search,
     Timeline,
     Replay,
+    /// Raw sessions view — exposes the underlying `Vec<Session>` that every
+    /// other tab derives from, so users can see what was discovered and reload
+    /// discovery on demand. (FR-RAW-1)
+    Corpus,
 }
 
 impl Tab {
-    const ALL: [Tab; 8] = [
+    const ALL: [Tab; 9] = [
         Tab::Bundles,
         Tab::History,
         Tab::Unfinished,
@@ -49,6 +52,7 @@ impl Tab {
         Tab::Search,
         Tab::Timeline,
         Tab::Replay,
+        Tab::Corpus,
     ];
 
     fn label(self) -> &'static str {
@@ -61,6 +65,7 @@ impl Tab {
             Tab::Search => "Search",
             Tab::Timeline => "Timeline",
             Tab::Replay => "Replay",
+            Tab::Corpus => "Raw Sessions",
         }
     }
 
@@ -74,6 +79,7 @@ impl Tab {
             Tab::Search => "tab-search",
             Tab::Timeline => "tab-timeline",
             Tab::Replay => "tab-replay",
+            Tab::Corpus => "tab-corpus",
         }
     }
 
@@ -87,11 +93,27 @@ impl Tab {
             Tab::Search => "panel-search",
             Tab::Timeline => "panel-timeline",
             Tab::Replay => "panel-replay",
+            Tab::Corpus => "panel-corpus",
         }
     }
 
     fn index(self) -> usize {
         Self::ALL.iter().position(|&t| t == self).unwrap_or(0)
+    }
+
+    /// Return the SVG icon name for this tab.
+    fn icon(&self) -> &'static str {
+        match self {
+            Self::Bundles => "bundles",
+            Self::History => "history",
+            Self::Unfinished => "unfinished",
+            Self::Memory => "memory",
+            Self::LiveFeed => "live",
+            Self::Search => "search",
+            Self::Timeline => "timeline",
+            Self::Replay => "replay",
+            Self::Corpus => "corpus",
+        }
     }
 
     fn from_index(i: usize) -> Tab {
@@ -104,6 +126,22 @@ impl Tab {
 /// Consumers call `use_context::<SessionContext>()` to access the loaded sessions.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SessionContext(pub Signal<Vec<Session>>);
+
+/// Counter the Corpus tab increments to re-run [`App`]'s discovery effect.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ReloadTrigger(pub Signal<u32>);
+
+/// Discovery status published at the root so every tab can render a
+/// loading / error / ready state without the App's spawn_blocking effect
+/// having to thread the status through props. The corpus scan can take
+/// minutes on a large local corpus (Codex alone has 10k+ files), so a
+/// dedicated loading indicator is the difference between "the app is
+/// frozen" and "the app is working".
+#[derive(Clone, Debug, PartialEq)]
+pub struct DiscoveryState {
+    pub loading: Signal<bool>,
+    pub error: Signal<Option<String>>,
+}
 
 /// Resolve the active [`DataSource`].
 ///
@@ -190,6 +228,40 @@ fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> 
 
 // `App` is a Dioxus component (mounted by name from main.rs / web entry).
 #[allow(non_snake_case)]
+/// Inline SVG icons for each tab (loaded at compile time).
+const ICON_SVG_BUNDLES: &str = include_str!("../../../assets/icons/line/bundles.svg");
+const ICON_SVG_HISTORY: &str = include_str!("../../../assets/icons/line/history.svg");
+const ICON_SVG_MEMORY: &str = include_str!("../../../assets/icons/line/memory.svg");
+const ICON_SVG_UNFINISHED: &str = include_str!("../../../assets/icons/line/unfinished.svg");
+const ICON_SVG_TIMELINE: &str = include_str!("../../../assets/icons/line/timeline.svg");
+const ICON_SVG_LIVE: &str = include_str!("../../../assets/icons/line/live.svg");
+const ICON_SVG_SEARCH: &str = include_str!("../../../assets/icons/line/search.svg");
+const ICON_SVG_REPLAY: &str = include_str!("../../../assets/icons/line/replay.svg");
+const ICON_SVG_CORPUS: &str = include_str!("../../../assets/icons/line/corpus.svg");
+
+/// Brand mascot (Getta) for the launch splash. Embedded at compile time so
+/// the splash renders even before the assets server is reachable. The 2.5D
+/// line-art "listening" pose matches the always-on default — happy /
+/// thinking variants can be swapped in later via a runtime selector if
+/// the launch state needs to surface.
+const SPLASH_MASCOT_SVG: &str = include_str!("../../../assets/brand/mascot/getta-base.svg");
+
+/// Lookup table for tab icon SVGs.
+fn icon_svg(tab_icon: &str) -> &'static str {
+    match tab_icon {
+        "bundles" => ICON_SVG_BUNDLES,
+        "history" => ICON_SVG_HISTORY,
+        "memory" => ICON_SVG_MEMORY,
+        "unfinished" => ICON_SVG_UNFINISHED,
+        "timeline" => ICON_SVG_TIMELINE,
+        "live" => ICON_SVG_LIVE,
+        "search" => ICON_SVG_SEARCH,
+        "replay" => ICON_SVG_REPLAY,
+        "corpus" => ICON_SVG_CORPUS,
+        _ => ICON_SVG_BUNDLES,
+    }
+}
+
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
@@ -229,7 +301,17 @@ pub fn App() -> Element {
     // does not enable the optional Tokio dependency.
     let mut sessions_signal = use_signal(Vec::<Session>::new);
     let mut error_signal: Signal<Option<String>> = use_signal(|| None);
+    let mut loading_signal: Signal<bool> = use_signal(|| true);
+    let reload_trigger: Signal<u32> = use_signal(|| 0u32);
+    use_context_provider(|| ReloadTrigger(reload_trigger));
+    use_context_provider(|| DiscoveryState {
+        loading: loading_signal,
+        error: error_signal,
+    });
     use_effect(move || {
+        let _ = reload_trigger();
+        loading_signal.set(true);
+        error_signal.set(None);
         let source = resolve_data_source();
         spawn(async move {
             let result: std::result::Result<Result<Vec<Session>, String>, String> = {
@@ -244,6 +326,7 @@ pub fn App() -> Element {
                     Ok(load_sessions(&source))
                 }
             };
+            loading_signal.set(false);
             match result {
                 Ok(Ok(sessions)) => {
                     sessions_signal.set(sessions);
@@ -396,8 +479,9 @@ pub fn App() -> Element {
         Tab::Timeline => {
             let bundles = build_bundles_from_sessions(&sessions_signal.read());
             rsx! { TimelineView { bundles } }
-        },
+        }
         Tab::Replay => rsx! { ReplayView {} },
+        Tab::Corpus => rsx! { CorpusTab {} },
     };
 
     let mut activate = move |tab: Tab| {
@@ -531,7 +615,31 @@ pub fn App() -> Element {
                     visibility: visible;
                     pointer-events: auto;
                 }}
-                .launch-splash-inner {{ text-align: center; }}
+                .launch-splash-inner {{ text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--sl-space-md); }}
+                .launch-splash-mascot {{
+                    width: 96px;
+                    height: 96px;
+                    margin: 0 auto var(--sl-space-sm);
+                    display: block;
+                    filter: drop-shadow(0 4px 14px color-mix(in srgb, var(--sl-accent) 18%, transparent));
+                    animation: splash-mascot-float 2.4s ease-in-out infinite;
+                }}
+                .launch-splash-mascot svg {{ width: 100%; height: 100%; display: block; }}
+                .launch-splash-spinner {{
+                    display: inline-flex;
+                    gap: 6px;
+                    margin-top: var(--sl-space-sm);
+                }}
+                .launch-splash-spinner-dot {{
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: var(--sl-accent);
+                    opacity: 0.35;
+                    animation: splash-spinner-bounce 1.1s ease-in-out infinite;
+                }}
+                .launch-splash-spinner-dot:nth-child(2) {{ animation-delay: 0.18s; }}
+                .launch-splash-spinner-dot:nth-child(3) {{ animation-delay: 0.36s; }}
                 .launch-splash-mark {{
                     display: block;
                     font-family: var(--font-display);
@@ -552,6 +660,14 @@ pub fn App() -> Element {
                 }}
                 @keyframes splash-dismiss {{
                     to {{ opacity: 0; visibility: hidden; pointer-events: none; }}
+                }}
+                @keyframes splash-mascot-float {{
+                    0%, 100% {{ transform: translateY(0); }}
+                    50% {{ transform: translateY(-6px); }}
+                }}
+                @keyframes splash-spinner-bounce {{
+                    0%, 80%, 100% {{ opacity: 0.35; transform: scale(0.8); }}
+                    40% {{ opacity: 1; transform: scale(1); }}
                 }}
                 .empty-state {{ display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sl-text-muted); font-size: 14px; }}
                 .sl-content-skeleton {{ display: flex; flex: 1; min-height: 0; overflow: hidden; }}
@@ -804,8 +920,23 @@ pub fn App() -> Element {
                         role: "presentation",
                         "data-testid": "launch-splash",
                         div { class: "launch-splash-inner",
+                            div {
+                                class: "launch-splash-mascot",
+                                "data-testid": "launch-splash-mascot",
+                                "aria-hidden": "true",
+                                dangerous_inner_html: "{SPLASH_MASCOT_SVG}"
+                            }
                             span { class: "launch-splash-mark", "SessionLedger" }
-                            span { class: "launch-splash-caption", "Viewer" }
+                            span { class: "launch-splash-caption", "Session viewer" }
+                            div {
+                                class: "launch-splash-spinner",
+                                "data-testid": "launch-splash-spinner",
+                                role: "progressbar",
+                                "aria-label": "Loading viewer",
+                                div { class: "launch-splash-spinner-dot" }
+                                div { class: "launch-splash-spinner-dot" }
+                                div { class: "launch-splash-spinner-dot" }
+                            }
                         }
                     }
                 }
@@ -860,12 +991,16 @@ pub fn App() -> Element {
                                                 }
                                                 Key::End => {
                                                     evt.prevent_default();
-                                                    activate(Tab::Replay);
+                                                    activate(Tab::Corpus);
                                                 }
                                                 _ => {}
                                             }
                                         },
-                                        "{tab.label()}"
+                                        span {
+                                            class: "tab-icon",
+                                            dangerous_inner_html: "{icon_svg(tab.icon())}"
+                                        }
+                                        span { class: "tab-label", "{tab.label()}" }
                                     }
                                 }
                             }
@@ -954,31 +1089,21 @@ pub fn App() -> Element {
 /// The compiled-bundles tab — the original sidebar + detail panel.
 #[component]
 fn BundlesTab() -> Element {
-    let mut bundles = use_signal(Vec::new);
-    let mut loading = use_signal(|| true);
-    let mut load_error: Signal<Option<String>> = use_signal(|| None);
-    let mut load_gen: Signal<u32> = use_signal(|| 0u32);
-    // Show useful content immediately; an empty detail pane on first render
-    // made the inbox look broken and hid the chat transcript behind a click.
+    let ctx = use_context::<SessionContext>();
+    let discovery = use_context::<DiscoveryState>();
+    let mut reload = use_context::<ReloadTrigger>();
     let mut selected_idx: Signal<Option<usize>> = use_signal(|| Some(0));
     let mut compare_idx: Signal<Option<usize>> = use_signal(|| None);
 
-    // Structured load gate so LoadingState / ErrorState cover async bundle fetch.
-    // Today this is synchronous sample data; the same signals work for a future
-    // daemon/HTTP loader without changing the chrome.
-    let ctx = use_context::<SessionContext>();
-    use_effect(move || {
-        let _ = load_gen();
-        loading.set(true);
-        load_error.set(None);
-        let loaded = build_bundles_from_sessions(&*ctx.0.read());
-        if loaded.is_empty() {
-            load_error.set(Some("No bundles available to display.".into()));
-        } else {
-            bundles.set(loaded);
-        }
-        loading.set(false);
-    });
+    // Compute bundles directly from the session context. Reading `ctx.0` is
+    // a reactive read in Dioxus 0.6 — the function body re-runs whenever
+    // the async corpus loader updates the signal. Earlier revisions used
+    // `use_effect` + a separate `bundles` signal, but the effect ran only
+    // once at mount (when sessions were empty), so the tab stayed frozen
+    // on "No bundles" forever even after discovery finished.
+    let bundles = build_bundles_from_sessions(&ctx.0.read());
+    let loading = discovery.loading.cloned();
+    let load_error = discovery.error.cloned();
 
     if query_fixture_active("first-run") {
         return rsx! {
@@ -1003,20 +1128,32 @@ fn BundlesTab() -> Element {
             }
         };
     }
-    if loading() || query_fixture_active("skeleton") {
+    // Discovery is still running — show the same skeleton the visual
+    // fixture path uses so the operator knows the app is working, not
+    // frozen. Full codex+claude+cursor scans can take minutes.
+    if loading && bundles.is_empty() {
         return rsx! {
             h2 { "Compiled Bundles" }
-            ContentSkeleton { layout: SkeletonLayout::Bundles }
+            LoadingState {
+                message: "Discovering local session corpus…".to_string(),
+                patience_hint: true,
+            }
         };
     }
-    if let Some(err) = load_error() {
+    if let Some(err) = load_error.as_ref() {
         return rsx! {
             h2 { "Compiled Bundles" }
             ErrorState {
-                message: err,
+                message: err.clone(),
                 retryable: true,
-                on_retry: move |_| load_gen.with_mut(|g| *g += 1),
+                on_retry: move |_| reload.0.with_mut(|t| *t += 1),
             }
+        };
+    }
+    if bundles.is_empty() {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            FirstRunEmpty {}
         };
     }
 

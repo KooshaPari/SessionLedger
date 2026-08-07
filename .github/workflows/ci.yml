@@ -235,6 +235,18 @@ jobs:
         shell: pwsh
         run: ./scripts/rootless-matrix-check.ps1 -SelfCheck
 
+  # Blocking C04 L40 rootless/no-net scaffold. The full gate lives in
+  # rootless-nonet.yml; this policy job keeps ci.yml cross-referenced and
+  # executes the same hermetic SelfCheck on every pull request.
+  rootless-nonet-policy:
+    name: rootless/no-net policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: assert rootless/no-net scaffold anchors
+        shell: pwsh
+        run: ./scripts/rootless-nonet-check.ps1 -SelfCheck
+
   # Platform signing-readiness policy (C04 L32 / C11 L112). The hard blocking
   # gate lives in signing-hard.yml (runs on pull_request); this job runs the
   # same SelfCheck here so the signing posture is asserted on every PR and

@@ -9,7 +9,7 @@ use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::cli_help;
 use crate::command_palette::{CommandPalette, PaletteAction};
-use crate::corpus_loader::{load_sessions, DataSource};
+use crate::corpus_loader::{load_sessions_with_custom, CustomCorpusPath, DataSource};
 use crate::corpus_tab::CorpusTab;
 use crate::detail_pane::{extract_detail, BundleDetail};
 use crate::fixture::visual_fixture_active;
@@ -132,6 +132,32 @@ pub struct SessionContext(pub Signal<Vec<Session>>);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ReloadTrigger(pub Signal<u32>);
 
+/// User-supplied corpus directories, persisted across launches.
+///
+/// The wrapped signal is mutated by the Raw Sessions tab when the user
+/// picks a new folder or resets to defaults. The discovery effect reads
+/// the latest value on every re-run, so a pick immediately triggers a
+/// reload without restarting the app.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CustomCorpusPaths(pub Signal<CustomCorpusPath>);
+
+impl CustomCorpusPaths {
+    /// Read the current custom paths snapshot.
+    pub fn snapshot(&self) -> CustomCorpusPath {
+        self.0.cloned()
+    }
+
+    /// Replace the current custom paths (used by the Raw Sessions toolbar).
+    pub fn set(&mut self, paths: CustomCorpusPath) {
+        self.0.set(paths);
+    }
+
+    /// Clear the override and revert to the default discovery set.
+    pub fn clear(&mut self) {
+        self.0.set(CustomCorpusPath::default());
+    }
+}
+
 /// Discovery status published at the root so every tab can render a
 /// loading / error / ready state without the App's spawn_blocking effect
 /// having to thread the status through props. The corpus scan can take
@@ -163,6 +189,22 @@ fn resolve_data_source() -> DataSource {
         return DataSource::ForgeDb(p);
     }
     DataSource::Auto
+}
+
+/// Load the persisted custom corpus paths at startup.
+///
+/// Missing or unreadable files degrade silently to an empty
+/// [`CustomCorpusPath`] — the viewer must always be able to launch, even
+/// if the config directory is locked down. Parse errors are logged to
+/// stderr so the operator notices but the UI does not break.
+fn initial_custom_corpus_paths() -> CustomCorpusPath {
+    match crate::corpus_paths::load_config() {
+        Ok(config) => CustomCorpusPath::from(config.custom_paths),
+        Err(error) => {
+            eprintln!("[sl-viewer] custom corpus paths unavailable: {error}");
+            CustomCorpusPath::default()
+        }
+    }
 }
 
 fn initial_tab_for_viewer() -> Tab {
@@ -227,8 +269,6 @@ fn build_bundles_from_sessions(sessions: &[Session]) -> Vec<ContinuationBundle> 
     out
 }
 
-// `App` is a Dioxus component (mounted by name from main.rs / web entry).
-#[allow(non_snake_case)]
 /// Inline SVG icons for each tab (loaded at compile time).
 const ICON_SVG_BUNDLES: &str = include_str!("../../../assets/icons/line/bundles.svg");
 const ICON_SVG_HISTORY: &str = include_str!("../../../assets/icons/line/history.svg");
@@ -307,24 +347,30 @@ pub fn App() -> Element {
     let mut error_signal: Signal<Option<String>> = use_signal(|| None);
     let mut loading_signal: Signal<bool> = use_signal(|| true);
     let reload_trigger: Signal<u32> = use_signal(|| 0u32);
+    let custom_paths_signal: Signal<CustomCorpusPath> = use_signal(initial_custom_corpus_paths);
     use_context_provider(|| ReloadTrigger(reload_trigger));
+    use_context_provider(|| CustomCorpusPaths(custom_paths_signal));
     use_context_provider(|| DiscoveryState { loading: loading_signal, error: error_signal });
     use_effect(move || {
         let _ = reload_trigger();
+        let _ = custom_paths_signal();
         loading_signal.set(true);
         error_signal.set(None);
         let source = resolve_data_source();
+        let custom_snapshot = custom_paths_signal.cloned();
         spawn(async move {
             let result: std::result::Result<Result<Vec<Session>, String>, String> = {
                 #[cfg(feature = "desktop")]
                 {
-                    tokio::task::spawn_blocking(move || load_sessions(&source))
-                        .await
-                        .map_err(|error| error.to_string())
+                    tokio::task::spawn_blocking(move || {
+                        load_sessions_with_custom(&source, &custom_snapshot)
+                    })
+                    .await
+                    .map_err(|error| error.to_string())
                 }
                 #[cfg(not(feature = "desktop"))]
                 {
-                    Ok(load_sessions(&source))
+                    Ok(load_sessions_with_custom(&source, &custom_snapshot))
                 }
             };
             loading_signal.set(false);

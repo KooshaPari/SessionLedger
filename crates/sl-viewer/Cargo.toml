@@ -24,6 +24,13 @@ web-sys = { version = "0.3", optional = true, features = ["Document", "Element",
 # parquet feature: ingest Claude conversation parquet exports under ~/.claude/projects.
 # Uses the row-based API (no arrow) for minimal dependency footprint.
 parquet = { version = "59", optional = true, default-features = false, features = ["snap", "zstd", "brotli", "flate2-zlib-rs", "lz4", "base64", "simdutf8", "crc"] }
+# Native folder-picker dialog for the "Pick folder…" affordance (desktop only).
+# Uses `rfd`'s cocoa backend on macOS, native Win32 dialogs on Windows, and
+# the XDG-portal/GTK3 stack on Linux. Default features are required on
+# Linux so the dialog can talk to a portal service.
+rfd = { version = "0.17", optional = true }
+# Resolve the platform config directory for persisted corpus paths.
+dirs = "6"
 
 [dev-dependencies]
 rusqlite = "0.40"
@@ -35,7 +42,7 @@ parquet = { version = "59", default-features = false, features = ["snap", "zstd"
 
 [features]
 default = ["desktop"]
-desktop = ["dioxus/desktop", "dep:reqwest", "dep:tokio", "dep:tokio-util", "dep:futures-util", "dep:chrono", "compressed-sessions"]
+desktop = ["dioxus/desktop", "dep:reqwest", "dep:tokio", "dep:tokio-util", "dep:futures-util", "dep:chrono", "dep:rfd", "compressed-sessions"]
 compressed-sessions = ["dep:zstd", "session-ledger/compress"]
 web = ["dioxus/web", "dep:reqwest", "dep:futures-util", "dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
 # Enable loading real Forge SQLite sessions in the viewer.

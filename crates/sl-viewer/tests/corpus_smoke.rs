@@ -31,14 +31,8 @@ fn cursor_only_returns_real_sessions() {
         return;
     }
     let started = std::time::Instant::now();
-    let ids = session_ledger::CursorDir::new(cursor.clone())
-        .list()
-        .expect("list cursor projects");
-    eprintln!(
-        "cursor: {} projects in {:?}",
-        ids.len(),
-        started.elapsed()
-    );
+    let ids = session_ledger::CursorDir::new(cursor.clone()).list().expect("list cursor projects");
+    eprintln!("cursor: {} projects in {:?}", ids.len(), started.elapsed());
     assert!(!ids.is_empty(), "cursor list is empty");
 }
 
@@ -54,22 +48,12 @@ fn auto_source_returns_real_sessions_when_roots_exist() {
     let cursor = home.join(".cursor").join("projects");
 
     if !codex.is_dir() && !claude.is_dir() && !cursor.is_dir() {
-        eprintln!(
-            "skip: no codex/claude/cursor roots under {}",
-            home.display()
-        );
+        eprintln!("skip: no codex/claude/cursor roots under {}", home.display());
         return;
     }
 
     let started = std::time::Instant::now();
     let sessions = load_sessions(&DataSource::Auto).expect("auto corpus load");
-    eprintln!(
-        "auto: {} sessions in {:?}",
-        sessions.len(),
-        started.elapsed()
-    );
-    assert!(
-        !sessions.is_empty(),
-        "DataSource::Auto returned 0 sessions from existing roots"
-    );
+    eprintln!("auto: {} sessions in {:?}", sessions.len(), started.elapsed());
+    assert!(!sessions.is_empty(), "DataSource::Auto returned 0 sessions from existing roots");
 }

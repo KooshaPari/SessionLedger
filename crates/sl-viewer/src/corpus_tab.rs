@@ -2,16 +2,21 @@
 //! tab derives from, so users can see exactly what corpus discovery found
 //! and reload discovery on demand.
 //!
-//! This is the closest the viewer comes to a "feed it data myself" affordance
-//! for the local session corpora. A future revision will add a custom-path
-//! picker that points [`corpus_loader::load_sessions`] at a directory the
-//! user chooses (FR-RAW-2). For now the tab re-runs the same Auto discovery
-//! the app already uses, with a Reload button to refresh.
+//! The toolbar holds three controls:
+//! - **Reload discovery** — re-runs the existing Auto discovery with no
+//!   overrides.
+//! - **Pick folder…** — opens a native folder picker; the picked path is
+//!   persisted to the platform config directory and added to the next
+//!   discovery pass in addition to the defaults.
+//! - **Reset to default** — appears whenever a custom path is set; clicking
+//!   clears the persisted override and reverts to native-only discovery.
 
 use dioxus::prelude::*;
 use session_ledger::domain::session::{Corpus, Session};
 
-use crate::app::{DiscoveryState, ReloadTrigger, SessionContext};
+use crate::app::{CustomCorpusPaths, DiscoveryState, ReloadTrigger, SessionContext};
+use crate::corpus_cta::pick_corpus_folder;
+use crate::corpus_loader::CustomCorpusPath;
 
 /// Stable, human-readable label for a [`Corpus`].
 fn corpus_label(corpus: Corpus) -> &'static str {
@@ -77,6 +82,12 @@ pub fn CorpusTab() -> Element {
     let ctx = use_context::<SessionContext>();
     let discovery = use_context::<DiscoveryState>();
     let mut reload = use_context::<ReloadTrigger>();
+    let custom_paths = use_context::<CustomCorpusPaths>();
+    // Clone the context wrapper once per button so each `move` closure
+    // owns its own copy — Dioxus `onclick` handlers are `FnOnce + Send`
+    // and we have three of them touching the same context.
+    let mut custom_paths_pick = custom_paths.clone();
+    let mut custom_paths_reset = custom_paths.clone();
 
     // Reactive read: rebuilt on every render that sees a sessions signal
     // change (or a manual Reload click). Sorted newest-first so the user
@@ -89,6 +100,10 @@ pub fn CorpusTab() -> Element {
     let plural = if total == 1 { "session" } else { "sessions" };
     let loading = discovery.loading.cloned();
     let load_error = discovery.error.cloned();
+
+    let current_custom_paths = custom_paths.snapshot();
+    let custom_paths_display: Vec<String> =
+        current_custom_paths.iter().map(|path| path.display().to_string()).collect();
 
     rsx! {
         style { r#"
@@ -105,6 +120,7 @@ pub fn CorpusTab() -> Element {
                 padding: var(--sl-space-md) var(--sl-space-xl);
                 border-bottom: 1px solid var(--sl-border);
                 background: var(--sl-surface-muted);
+                flex-wrap: wrap;
             }}
             .corpus-title {{
                 font-family: var(--font-ui);
@@ -132,8 +148,15 @@ pub fn CorpusTab() -> Element {
                 background: color-mix(in srgb, var(--sl-accent) 14%, transparent);
                 color: var(--sl-accent);
             }}
-            .corpus-reload-btn {{
+            .corpus-toolbar-actions {{
                 margin-left: auto;
+                display: flex;
+                gap: var(--sl-space-sm);
+                flex-wrap: wrap;
+            }}
+            .corpus-reload-btn,
+            .corpus-pick-btn,
+            .corpus-reset-btn {{
                 padding: 6px 14px;
                 font-size: 12px;
                 font-weight: 600;
@@ -143,9 +166,39 @@ pub fn CorpusTab() -> Element {
                 color: var(--sl-text);
                 cursor: pointer;
             }}
-            .corpus-reload-btn:hover {{
+            .corpus-reload-btn:hover,
+            .corpus-pick-btn:hover,
+            .corpus-reset-btn:hover {{
                 border-color: var(--sl-accent);
                 color: var(--sl-accent);
+            }}
+            .corpus-pick-btn:focus-visible,
+            .corpus-reload-btn:focus-visible,
+            .corpus-reset-btn:focus-visible {{
+                outline: 2px solid var(--sl-accent);
+                outline-offset: 2px;
+            }}
+            .corpus-reset-btn {{
+                border-color: color-mix(in srgb, var(--sl-danger) 40%, var(--sl-border));
+                color: var(--sl-danger);
+            }}
+            .corpus-reset-btn:hover {{
+                border-color: var(--sl-danger);
+                color: var(--sl-danger);
+            }}
+            .corpus-custom-paths {{
+                flex-basis: 100%;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--sl-text-muted);
+                padding: 4px 0;
+                word-break: break-all;
+            }}
+            .corpus-custom-paths-label {{
+                font-family: var(--font-ui);
+                font-weight: 600;
+                color: var(--sl-accent);
+                margin-right: 6px;
             }}
             .corpus-list {{
                 flex: 1;
@@ -226,12 +279,67 @@ pub fn CorpusTab() -> Element {
                         }
                     }
                 }
-                button {
-                    class: "corpus-reload-btn",
-                    r#type: "button",
-                    "data-testid": "corpus-reload",
-                    onclick: move |_| reload.0.with_mut(|t| *t += 1),
-                    "Reload discovery"
+                div {
+                    class: "corpus-toolbar-actions",
+                    button {
+                        class: "corpus-pick-btn",
+                        r#type: "button",
+                        "data-testid": "corpus-pick",
+                        title: "Pick a folder to scan in addition to the default session stores",
+                        onclick: move |_| {
+                            // Snapshot the latest value at click time so a
+                            // second pick in the same session sees the
+                            // first pick rather than the stale render-time
+                            // copy captured by this closure.
+                            let mut next = custom_paths_pick.snapshot();
+                            if let Some(path) = pick_corpus_folder() {
+                                let path_str = path.display().to_string();
+                                next.0.retain(|existing| existing.display().to_string() != path_str);
+                                next.0.push(path);
+                                persist_custom_corpus_paths(&next);
+                                custom_paths_pick.set(next);
+                                reload.0.with_mut(|t| *t += 1);
+                            }
+                        },
+                        "Pick folder…"
+                    }
+                    button {
+                        class: "corpus-reload-btn",
+                        r#type: "button",
+                        "data-testid": "corpus-reload",
+                        onclick: move |_| reload.0.with_mut(|t| *t += 1),
+                        "Reload discovery"
+                    }
+                    if !current_custom_paths.is_empty() {
+                        button {
+                            class: "corpus-reset-btn",
+                            r#type: "button",
+                            "data-testid": "corpus-reset",
+                            title: "Clear the custom folder override and use only the default session stores",
+                            onclick: move |_| {
+                                custom_paths_reset.clear();
+                                persist_custom_corpus_paths(&CustomCorpusPath::default());
+                                reload.0.with_mut(|t| *t += 1);
+                            },
+                            "Reset to default"
+                        }
+                    }
+                }
+                if !custom_paths_display.is_empty() {
+                    div {
+                        class: "corpus-custom-paths",
+                        "data-testid": "corpus-custom-paths",
+                        span {
+                            class: "corpus-custom-paths-label",
+                            "Custom corpus path:"
+                        }
+                        for (idx, path) in custom_paths_display.iter().enumerate() {
+                            if idx > 0 {
+                                span { " · " }
+                            }
+                            span { "{path}" }
+                        }
+                    }
                 }
             }
             if sessions_sorted.is_empty() {
@@ -245,13 +353,13 @@ pub fn CorpusTab() -> Element {
                     div {
                         class: "corpus-empty",
                         role: "status",
-                        "Discovering local session corpus… (Codex + Claude + Cursor)"
+                        "Discovering local session corpus… (Codex + Claude + Cursor + custom)"
                     }
                 } else {
                     div {
                         class: "corpus-empty",
                         role: "status",
-                        "No sessions loaded yet. Reload discovery or check that one of $HOME/.codex/sessions, $HOME/.claude/projects, $HOME/.cursor/projects exists."
+                        "No sessions loaded yet. Reload discovery, pick a custom folder, or check that one of $HOME/.codex/sessions, $HOME/.claude/projects, $HOME/.cursor/projects exists."
                     }
                 }
             } else {
@@ -264,6 +372,20 @@ pub fn CorpusTab() -> Element {
                 }
             }
         }
+    }
+}
+
+/// Persist the current custom-paths selection to the platform config dir.
+///
+/// Thin wrapper around [`crate::corpus_paths::save_config`] so the
+/// `onclick` handler above can stay declarative. Logs to stderr on error
+/// (the user is already looking at the toolbar; the picker must never
+/// crash the click handler).
+fn persist_custom_corpus_paths(paths: &CustomCorpusPath) {
+    use crate::corpus_paths::CorpusPathConfig;
+    let config = CorpusPathConfig { custom_paths: paths.0.clone() };
+    if let Err(error) = crate::corpus_paths::save_config(&config) {
+        eprintln!("[sl-viewer] could not persist custom corpus path: {error}");
     }
 }
 

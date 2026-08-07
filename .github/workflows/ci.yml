@@ -210,6 +210,19 @@ jobs:
         shell: pwsh
         run: ./scripts/signing-readiness-check.ps1 -SelfCheck
 
+  # Eval reproducibility manifest contract (C08 L79). Keep the workflow
+  # anchor next to the hermetic SelfCheck so the Rust wrapper can verify that
+  # CI actually runs the same no-network manifest/docs check.
+  eval-reproducibility:
+    name: Eval Reproducibility SelfCheck
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: eval reproducibility SelfCheck
+        shell: pwsh
+        run: ./scripts/eval-repro-check.ps1 -SelfCheck
+
   lint:
     name: ci / lint
     if: always()

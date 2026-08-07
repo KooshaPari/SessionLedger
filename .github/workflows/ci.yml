@@ -195,6 +195,34 @@ jobs:
         with:
           fail-on-severity: low
 
+  # Fast PR fuzz smoke. Sustained blocking and scheduled lanes live in their
+  # dedicated workflows; keep this deterministic and bounded at 10 seconds.
+  fuzz-smoke:
+    name: fuzz smoke
+    needs: detect
+    if: needs.detect.outputs.has_rust == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    env:
+      RUSTFLAGS: ""
+      RUSTUP_TOOLCHAIN: nightly
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # nightly for fuzz
+        with:
+          toolchain: nightly
+          components: rust-src
+          targets: x86_64-unknown-linux-gnu
+      - uses: taiki-e/install-action@e28ac56891501ddb0600608470dbe94544964ed4 # cargo-fuzz
+        with:
+          tool: cargo-fuzz
+      - name: fuzz smoke OKF parse and roundtrip (10s)
+        run: cargo +nightly fuzz run okf_roundtrip --sanitizer address --target x86_64-unknown-linux-gnu -- -max_total_time=10
+      - name: fuzz smoke JSONL ingest parse (10s)
+        run: cargo +nightly fuzz run jsonl_ingest --sanitizer address --target x86_64-unknown-linux-gnu -- -max_total_time=10
+
   # Platform signing-readiness policy (C04 L32 / C11 L112). The hard blocking
   # gate lives in signing-hard.yml (runs on pull_request); this job runs the
   # same SelfCheck here so the signing posture is asserted on every PR and

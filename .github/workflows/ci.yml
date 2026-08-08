@@ -188,6 +188,23 @@ jobs:
         shell: pwsh
         run: ./scripts/eval-repro-check.ps1 -SelfCheck
 
+  # Hard C04 L40 rootless / no-net CI evidence cross-reference. The blocking
+  # PR gate lives in `.github/workflows/rootless-nonet.yml`; this PR-only
+  # smoke re-runs the script's `-SelfCheck` mode so `ci.yml` retains its
+  # cross-reference anchor (per `scripts/rootless-nonet-check.ps1` and
+  # `docs/ops/sandbox-boundary.md` C04 L40 row). Does NOT enforce live
+  # rootless-only runners or blocking no-net on cargo-fetch jobs — those
+  # remain unpaid.
+  rootless-nonet-policy:
+    name: ci / rootless-nonet policy smoke
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: rootless / no-net SelfCheck
+        shell: pwsh
+        run: ./scripts/rootless-nonet-check.ps1 -SelfCheck
+
   security:
     name: Security Scan
     needs: detect

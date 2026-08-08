@@ -169,10 +169,14 @@ if ($workflow -notmatch 'okf_roundtrip' -or $workflow -notmatch 'jsonl_ingest') 
 [void](Write-Check -Label "workflow exercises both fuzz targets" -Ok $true)
 
 Write-Host "PR smoke stays short:"
-if ($ci -notmatch 'max_total_time=10') {
-    throw "ci.yml fuzz-smoke must keep -max_total_time=10 (do not slow PR CI here)."
+# The PR smoke contract was consolidated into fuzz-blocking.yml (C07 L67
+# follow-up). The 10 s `ci.yml` `fuzz-smoke` job no longer exists; the
+# blocking sustained PR budget is now `fuzz-blocking.yml` at 30 s / target.
+# Enforce that here so PR CI doesn't silently lose its bounded PR fuzz.
+if ($blockingWorkflow -notmatch 'max_total_time=30') {
+    throw "fuzz-blocking.yml must keep -max_total_time=30 for the PR fuzz budget (do not slow PR CI here)."
 }
-[void](Write-Check -Label "ci.yml fuzz-smoke max_total_time=10" -Ok $true)
+[void](Write-Check -Label "fuzz-blocking.yml PR fuzz max_total_time=30" -Ok $true)
 
 Write-Host "Fuzz cadence SelfCheck passed"
 exit 0

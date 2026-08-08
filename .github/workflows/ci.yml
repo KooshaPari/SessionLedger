@@ -227,6 +227,17 @@ jobs:
         shell: pwsh
         run: ./scripts/signing-readiness-check.ps1 -SelfCheck
 
+  # Blocking C04 L40 rootless-only OCI runner matrix scaffold — full PR gate in
+  # .github/workflows/rootless-matrix.yml; this job is a fast ci.yml anchor smoke.
+  rootless-matrix-policy:
+    name: rootless-only matrix policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: assert rootless-only OCI runner matrix scaffold anchors
+        shell: pwsh
+        run: ./scripts/rootless-matrix-check.ps1 -SelfCheck
+
   lint:
     name: ci / lint
     if: always()

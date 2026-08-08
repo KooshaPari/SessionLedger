@@ -149,7 +149,14 @@ if ($securityWf -match '(?ms)^  rootless-matrix:(.*?)(?=^  [a-z][a-z0-9-]*:)') {
 }
 [void](Write-Check -Label "security.yml rootless-matrix job is blocking when present" -Ok $true)
 
-if ($ciWf -match '(?ms)^  rootless-matrix-policy:.*?continue-on-error:\s*true') {
+if (-not ($ciWf -match '(?ms)^  rootless-matrix-policy:')) {
+    throw "ci.yml must define a rootless-matrix-policy job block (C04 L40 cross-reference anchor)."
+}
+$matrixPolicyBlockMatch = [regex]::Match(
+    $ciWf,
+    '(?ms)^  rootless-matrix-policy:.*?(?=^  [A-Za-z][\w-]*:\s|\z)'
+)
+if ($matrixPolicyBlockMatch.Success -and $matrixPolicyBlockMatch.Value -match 'continue-on-error:\s*true') {
     throw "ci.yml rootless-matrix-policy job must be blocking (no continue-on-error)."
 }
 [void](Write-Check -Label "ci.yml rootless-matrix-policy job is blocking when present" -Ok $true)

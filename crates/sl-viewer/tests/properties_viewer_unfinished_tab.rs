@@ -21,7 +21,7 @@
 
 use proptest::prelude::*;
 use session_ledger::domain::session::{Corpus, Message, Role, Session};
-use session_ledger::domain::worklog::{UnfinishedReason, UnfinishedWorkItem};
+use session_ledger::domain::worklog::UnfinishedReason;
 use sl_viewer::unfinished_tab::{reason_label, unfinished_items};
 
 // ── strategies ─────────────────────────────────────────────────────────────
@@ -30,19 +30,18 @@ fn session_strategy() -> impl Strategy<Value = Session> {
     (
         // session_id — non-empty, identifier-shaped.
         "[a-zA-Z0-9_-]{1,16}",
-        // 0..6 messages; mix of roles + content. Bounded so the
-        // `detect_unfinished` projection runs cheaply.
+        // 0..6 messages; each message has its own independent
+        // `Option<i64>` ts_ms so the `detect_unfinished` projection's
+        // `find_map(|m| m.ts_ms).rev()` contract is exercised naturally
+        // (per-message timestamps, not a session-wide value).
         prop::collection::vec(
-            (0u8..5, "[ -~]{1,40}"),
+            (0u8..5, "[ -~]{1,40}", prop::option::of(0i64..1_000_000_000_000)),
             0..6,
         ),
-        // last_activity_ms — Some(i64) or None. None is the "unknown
-        // last activity" sentinel the worklog projector uses.
-        prop::option::of(0i64..1_000_000_000_000),
     )
-        .prop_map(|(session_id, messages, ts_ms)| {
+        .prop_map(|(session_id, messages)| {
             let mut session = Session::new(format!("sess-{session_id}"), Corpus::Forge);
-            for (role_idx, content) in messages {
+            for (role_idx, content, ts_ms) in messages {
                 let role = match role_idx % 5 {
                     0 => Role::User,
                     1 => Role::Assistant,
@@ -109,26 +108,46 @@ proptest! {
     }
 
     /// Property: `unfinished_items` orders known timestamps descending.
-    /// Two items with the same `last_activity_ms` may appear in any order
-    /// (we don't constrain the tiebreak here; see next property).
+    /// Two invariants:
+    ///   (a) within the sliding window of items with a known timestamp,
+    ///       timestamps are non-increasing;
+    ///   (b) once an item with `last_activity_ms == None` appears, no
+    ///       later item may carry a known timestamp (None is the
+    ///       "unknown last activity" sentinel and always sorts last).
     #[test]
     fn unfinished_items_orders_known_timestamps_descending(
         sessions in prop::collection::vec(session_strategy(), 1..10),
     ) {
         let items = unfinished_items(&sessions);
 
-        // Filter to items with a known timestamp so the descending
-        // invariant applies cleanly.
-        let with_ts: Vec<&UnfinishedWorkItem> =
-            items.iter().filter(|i| i.last_activity_ms.is_some()).collect();
+        // (a) descending among items with a known timestamp.
+        for window in items.windows(2) {
+            let prev = &window[0];
+            let next = &window[1];
+            match (prev.last_activity_ms, next.last_activity_ms) {
+                (Some(a), Some(b)) => {
+                    prop_assert!(
+                        a >= b,
+                        "known timestamps must be non-increasing: {a} came before {b}",
+                    );
+                }
+                _ => {}
+            }
+        }
 
-        for window in with_ts.windows(2) {
-            let prev = window[0].last_activity_ms.expect("filtered Some");
-            let next = window[1].last_activity_ms.expect("filtered Some");
-            prop_assert!(
-                prev >= next,
-                "known timestamps must be descending: {prev} came before {next}",
-            );
+        // (b) no Some(ts) appears after a None.
+        let mut seen_none = false;
+        for item in &items {
+            if seen_none {
+                prop_assert!(
+                    item.last_activity_ms.is_none(),
+                    "Some(ts) found after None: {:?} appeared after a None item",
+                    item.last_activity_ms,
+                );
+            }
+            if item.last_activity_ms.is_none() {
+                seen_none = true;
+            }
         }
     }
 
@@ -176,5 +195,36 @@ proptest! {
             combined_items >= base_items,
             "appending sessions must not lose items: base={base_items}, combined={combined_items}",
         );
+    }
+
+    /// Property: for each projected item, `last_activity_ms` equals the
+    /// maximum known `ts_ms` over the *session's* messages, or `None`
+    /// if none of the session's messages carried a timestamp. This pins
+    /// the per-message → projected-Item reduction explicitly (the unit
+    /// tests in `domain/worklog.rs` cover specific values; this property
+    /// pins the projection over many shapes).
+    #[test]
+    fn unfinished_items_last_activity_matches_session_max_ts(
+        sessions in prop::collection::vec(session_strategy(), 0..8),
+    ) {
+        let items = unfinished_items(&sessions);
+
+        for item in &items {
+            // Reconstruct the source session by id.
+            let session = sessions
+                .iter()
+                .find(|s| s.id == item.session_id)
+                .expect("projected item must reference an input session");
+
+            let expected_last_activity_ms =
+                session.messages.iter().rev().find_map(|m| m.ts_ms);
+
+            prop_assert_eq!(
+                item.last_activity_ms,
+                expected_last_activity_ms,
+                "session {}: projected last_activity_ms must equal session max known ts_ms",
+                session.id,
+            );
+        }
     }
 }

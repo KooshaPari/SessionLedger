@@ -45,7 +45,7 @@ impl WebExportProvider {
     }
 
     /// The default subdirectory under `~/Downloads` for this provider's exports.
-    fn default_subdir(self) -> &'static str {
+    pub fn default_subdir(self) -> &'static str {
         match self {
             WebExportProvider::ChatGpt => "ChatGPT",
             WebExportProvider::Claude => "Claude",
@@ -69,9 +69,18 @@ pub fn web_export_roots_with_env(
     };
 
     let defaults = [
-        (WebExportProvider::ChatGpt, home.join("Downloads").join("ChatGPT")),
-        (WebExportProvider::Claude, home.join("Downloads").join("Claude")),
-        (WebExportProvider::Gemini, home.join("Downloads").join("Gemini")),
+        (
+            WebExportProvider::ChatGpt,
+            home.join("Downloads").join(WebExportProvider::ChatGpt.default_subdir()),
+        ),
+        (
+            WebExportProvider::Claude,
+            home.join("Downloads").join(WebExportProvider::Claude.default_subdir()),
+        ),
+        (
+            WebExportProvider::Gemini,
+            home.join("Downloads").join(WebExportProvider::Gemini.default_subdir()),
+        ),
     ];
 
     if !explicit_list.is_empty() {

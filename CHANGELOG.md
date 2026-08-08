@@ -12,6 +12,10 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - IntentState serde property surface (WBS-6.2 #426): `tests/properties.rs` adds `intent_state_json_round_trip_preserves_variant` (every variant serialises to its kebab-case `Debug` name and round-trips back) and `intent_state_terminal_invariant_holds_across_serde` (`is_terminal` agrees with the serde representation). Guards drift in the `#[serde(rename_all = "kebab-case")]` attribute.
 
+- sl-viewer unfinished-tab property surface (WBS-6.2 #428): `crates/sl-viewer/tests/properties_viewer_unfinished_tab.rs` adds 6 proptest properties — `reason_label` is non-empty + injective; `unfinished_items` is deterministic, orders known `last_activity_ms` descending, ties break by `session_id` ascending, is length-monotonic w.r.t. input.
+
+- CI drift cleanups (WBS-6.2 #428): `scripts/fuzz-cadence-check.ps1` re-points the "PR smoke stays short" anchor from `ci.yml` (10 s budget) to `fuzz-blocking.yml` (30 s budget) since the PR smoke was consolidated there. `scripts/rootless-nonet-check.ps1` + `.github/workflows/ci.yml` restore the documented `rootless-nonet-policy` cross-reference smoke job, with the script's regex tightened so `continue-on-error` detection can't bleed across jobs. `tests/alloc_profile.rs` + `tests/replay_breadth.rs` clear `clippy::panic_in_if_then` / `clippy::unnecessary_trailing_comma` under `--all-targets --all-features`.
+
 - Wave-44 plan landed: `WAVE44_SCOPE.md` + `docs/ops/WAVE44_PERT.md` enumerate 6 close-out lanes (3 machine, 3 human-gated) for the 6 unpaid residuals from Wave-43 (396/402 → 402/402 target). Theme: stack-stability closure + i18n migration + eval coverage + supply-chain signing.
 - Wave-44 reaudit (Wave-44-D): `audit/SCORECARD.md` refresh at commit `13c974f7` (machine-w44-reaudit); `docs/ops/TRACEABILITY.json` overall_audit wave=Wave-44 commit=13c974f7 (conservative hold at 396/402); `docs/ops/GAP_QA_MATRIX.md` C00 + C08 + PLAN-W8-B rows reflect Wave-44 closure (#368 W44-B6 corpus / #372 W44-B1 loom / #373 PERT correction). 2 of 3 machine lanes shipped 2026-07-24; remaining 6 raw pts across C04 L36 / C08 L76 / C11 L110.
 

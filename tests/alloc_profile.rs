@@ -82,22 +82,27 @@ fn alloc_profile_script_self_check_parses_args_and_ceilings() {
             assert!(stdout.contains("Profiler: dhat"), "expected profiler echo, got:\n{stdout}");
         }
         Err(error) => {
+            // Windows can't fall back to a portable load + print, so the
+            // spawn failure is unrecoverable there. Other targets run the
+            // portable fallback below. The clippy `panic_in_if_then` lint
+            // requires the if-then to have an else branch — fold the
+            // fallback into `else` so the panic sits on the windows-only path.
             if cfg!(target_os = "windows") {
                 panic!("failed to spawn pwsh for self-check: {error}");
+            } else {
+                let (max_bytes, total_blocks) = load_profile();
+                println!(
+                    "pwsh unavailable; running portable alloc-profile SelfCheck fallback.\nSelf-check passed\nMax bytes ceiling: {max_bytes}\nTotal blocks ceiling: {total_blocks}\nProfiler: dhat"
+                );
+                assert!(
+                    max_bytes >= 1024 * 1024,
+                    "max_bytes ceiling should stay >= 1 MiB for debug smoke (got {max_bytes})"
+                );
+                assert!(
+                    total_blocks >= 1_000,
+                    "total_blocks ceiling should stay generous (got {total_blocks})"
+                );
             }
-
-            let (max_bytes, total_blocks) = load_profile();
-            println!(
-                "pwsh unavailable; running portable alloc-profile SelfCheck fallback.\nSelf-check passed\nMax bytes ceiling: {max_bytes}\nTotal blocks ceiling: {total_blocks}\nProfiler: dhat"
-            );
-            assert!(
-                max_bytes >= 1024 * 1024,
-                "max_bytes ceiling should stay >= 1 MiB for debug smoke (got {max_bytes})"
-            );
-            assert!(
-                total_blocks >= 1_000,
-                "total_blocks ceiling should stay generous (got {total_blocks})"
-            );
         }
     }
 }

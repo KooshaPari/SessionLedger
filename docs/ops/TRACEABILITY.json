@@ -309,6 +309,7 @@
         "tests/properties.rs",
         "crates/sl-viewer/tests/properties_viewer.rs",
         "crates/sl-viewer/tests/properties_viewer_theme_url.rs",
+        "crates/sl-viewer/tests/properties_viewer_unfinished_tab.rs",
         "fuzz/fuzz_targets/okf_roundtrip.rs",
         "fuzz/fuzz_targets/jsonl_ingest.rs",
         ".github/workflows/ci.yml",

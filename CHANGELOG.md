@@ -45,6 +45,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - sl-viewer corpus_cta constants property surface (WBS-6.2 #453): `crates/sl-viewer/tests/properties_viewer_corpus_cta.rs` adds 9 proptest properties — `QUICKSTART_URL` is non-empty, uses HTTPS, ends in `QUICKSTART.md`, and points at the canonical `KooshaPari/SessionLedger` repo. `QUICKSTART_CORPUS_DOC` is the documented `docs/guides/quick-start/QUICKSTART.md` repo path, and its basename matches the URL basename. `CORPUS_PICKER_INPUT_ID` and `FORGE_DB_HINT_STORAGE_KEY` are non-empty, kebab-case ASCII, and distinct.
 
+
 - Commit signing header scan (C04 L34): `commit-signing-check.ps1` reads bounded commit headers via line-scanner (no unbounded `git cat-file` buffers or `(?ms)` regex); `-SelfCheck` + `tests/commit_signing_check.rs`.
 
 - Loom permutation CI timeout (P0 stability): split blocking `loom-permutation.yml` into core + per-daemon `loom_model` jobs with `LOOM_MAX_PREEMPTIONS` on broadcast/pipeline/shutdown; mirror in soft `loom-smoke.yml` so Wave-40 tokio-shaped daemon graph tests no longer exceed single-job ceilings.

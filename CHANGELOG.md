@@ -27,6 +27,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - Viewer first-run corpus CTA (C09): wire “Open corpus…” to a web Forge DB file picker (`corpus_cta.rs`) or open the quick-start runbook on desktop; `cargo test -p sl-viewer`.
 
+- sl-viewer web_exports property surface (WBS-6.2 #437): `crates/sl-viewer/tests/properties_viewer_web_exports.rs` adds 11 proptest properties — `WebExportProvider::label` is non-empty, distinct per variant, and free of tabs/newlines/double-spaces. `WebExportProvider::corpus` is total (every variant maps to a known `Corpus` web variant) and injective (distinct providers → distinct corpora). `WebExportProvider::default_subdir` is non-empty, distinct, and equals `label` (so `~/Downloads/<subdir>` lines up with the user-facing provider name). `web_export_roots_with_env(home, None)` returns an empty set for a non-existent home, returns the existing-default subset in input order for an existing home, and is total over the documented 3-provider set when all defaults exist.
+
 - Commit signing header scan (C04 L34): `commit-signing-check.ps1` reads bounded commit headers via line-scanner (no unbounded `git cat-file` buffers or `(?ms)` regex); `-SelfCheck` + `tests/commit_signing_check.rs`.
 
 - Loom permutation CI timeout (P0 stability): split blocking `loom-permutation.yml` into core + per-daemon `loom_model` jobs with `LOOM_MAX_PREEMPTIONS` on broadcast/pipeline/shutdown; mirror in soft `loom-smoke.yml` so Wave-40 tokio-shaped daemon graph tests no longer exceed single-job ceilings.

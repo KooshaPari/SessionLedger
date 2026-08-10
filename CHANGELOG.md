@@ -55,6 +55,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](
 
 - sl-viewer settings_tab HealthStatus property surface (WBS-6.2 #456): `crates/sl-viewer/tests/properties_viewer_settings_tab.rs` adds 11 proptest properties — `HealthStatus::Unknown.label()` is `"checking"`, `Healthy` is `"healthy"`, `Unreachable` is `"unreachable"`; every variant's label is non-empty, distinct across variants, single-line, and lowercase ASCII; `label()` is deterministic across calls. `THEME_RADIO_GROUP_ID` is non-empty, kebab-case ASCII, and distinct from `FORGE_DB_HINT_STORAGE_KEY`.
 
+- sl-viewer menu id taxonomy property surface (WBS-6.2 #457): `crates/sl-viewer/tests/properties_viewer_menu.rs` adds 5 proptest properties — every documented menu id (9 of them: `ID_APP_ABOUT`, `ID_APP_SETTINGS`, `ID_FILE_RELOAD_DISCOVERY`, `ID_FILE_SETTINGS`, `ID_EDIT_FIND`, `ID_VIEW_RELOAD`, `ID_VIEW_TOGGLE_THEME`, `ID_VIEW_COMMAND_PALETTE`, `ID_HELP_TOGGLE`) is non-empty, kebab-case ASCII, carries the `sl-viewer.` prefix, and is unique across the set so a muda event resolves to one DOM action. The menu taxonomy has exactly 9 documented ids so the operator documentation can be re-aligned if it drifts.
+
 - Commit signing header scan (C04 L34): `commit-signing-check.ps1` reads bounded commit headers via line-scanner (no unbounded `git cat-file` buffers or `(?ms)` regex); `-SelfCheck` + `tests/commit_signing_check.rs`.
 
 - Loom permutation CI timeout (P0 stability): split blocking `loom-permutation.yml` into core + per-daemon `loom_model` jobs with `LOOM_MAX_PREEMPTIONS` on broadcast/pipeline/shutdown; mirror in soft `loom-smoke.yml` so Wave-40 tokio-shaped daemon graph tests no longer exceed single-job ceilings.

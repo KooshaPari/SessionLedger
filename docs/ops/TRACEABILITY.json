@@ -328,9 +328,12 @@
         "crates/sl-viewer/tests/properties_viewer_async_states.rs",
         "crates/sl-viewer/tests/properties_session_ledger_okf.rs",
         "crates/sl-viewer/tests/properties_session_ledger_worklog.rs",
+<<<<<<< HEAD
         "crates/sl-viewer/tests/properties_session_ledger_export.rs",
         "crates/sl-viewer/tests/properties_session_ledger_distill.rs",
         "crates/sl-viewer/tests/properties_session_ledger_intent.rs",
+=======
+>>>>>>> ee2ad52c (test(viewer): session-ledger worklog projector proptest surface (WBS-6.2 #460))
         "fuzz/fuzz_targets/okf_roundtrip.rs",
         "fuzz/fuzz_targets/jsonl_ingest.rs",
         ".github/workflows/ci.yml",

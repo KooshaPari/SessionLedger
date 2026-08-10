@@ -328,19 +328,9 @@
         "crates/sl-viewer/tests/properties_viewer_async_states.rs",
         "crates/sl-viewer/tests/properties_session_ledger_okf.rs",
         "crates/sl-viewer/tests/properties_session_ledger_worklog.rs",
-<<<<<<< HEAD
-<<<<<<< HEAD
         "crates/sl-viewer/tests/properties_session_ledger_export.rs",
         "crates/sl-viewer/tests/properties_session_ledger_distill.rs",
-<<<<<<< HEAD
         "crates/sl-viewer/tests/properties_session_ledger_intent.rs",
-=======
->>>>>>> ee2ad52c (test(viewer): session-ledger worklog projector proptest surface (WBS-6.2 #460))
-=======
-        "crates/sl-viewer/tests/properties_session_ledger_export.rs",
->>>>>>> 3356e679 (test(viewer): session-ledger OKF export adapter proptest surface (WBS-6.2 #461))
-=======
->>>>>>> 22d1ea39 (test(viewer): session-ledger distill compiler proptest surface (WBS-6.2 #462))
         "fuzz/fuzz_targets/okf_roundtrip.rs",
         "fuzz/fuzz_targets/jsonl_ingest.rs",
         ".github/workflows/ci.yml",

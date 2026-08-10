@@ -4,10 +4,10 @@
 //! persists distilled facts in the versioned `memory_facts` table.
 
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
 use rusqlite::{params, Connection};
+use sha2::{Digest, Sha256};
 
 use super::{MemoryStore, PortError};
 use crate::schema::migrate::{self, MigrateError};
@@ -15,7 +15,6 @@ use crate::schema::migrate::{self, MigrateError};
 /// Durable [`MemoryStore`] backed by `SQLite` with forward-only migrations.
 pub struct SqliteMemoryStore {
     conn: Mutex<Connection>,
-    next_id: AtomicU64,
 }
 
 impl SqliteMemoryStore {
@@ -31,12 +30,7 @@ impl SqliteMemoryStore {
             .map_err(|error| map_sqlite(&error))?;
         migrate::apply_all(&conn).map_err(|error| map_migrate(&error))?;
 
-        let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM memory_facts", [], |row| row.get(0))
-            .map_err(|error| map_sqlite(&error))?;
-        let next_id = u64::try_from(count).unwrap_or(0);
-
-        Ok(Self { conn: Mutex::new(conn), next_id: AtomicU64::new(next_id) })
+        Ok(Self { conn: Mutex::new(conn) })
     }
 
     /// Open an in-memory database for tests.
@@ -47,7 +41,7 @@ impl SqliteMemoryStore {
     pub fn open_in_memory() -> Result<Self, PortError> {
         let conn = Connection::open_in_memory().map_err(|error| map_sqlite(&error))?;
         migrate::apply_all(&conn).map_err(|error| map_migrate(&error))?;
-        Ok(Self { conn: Mutex::new(conn), next_id: AtomicU64::new(0) })
+        Ok(Self { conn: Mutex::new(conn) })
     }
 
     /// Lightweight readiness probe for `/readyz` dependency checks.
@@ -65,8 +59,7 @@ impl SqliteMemoryStore {
 
 impl MemoryStore for SqliteMemoryStore {
     fn store(&self, session_id: &str, key: &str, content: &str) -> Result<String, PortError> {
-        let sequence = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let id = format!("memory-{sequence:020}");
+        let id = fact_id(session_id, key, content);
         let payload = serde_json::json!({
             "key": key,
             "content": content,
@@ -78,7 +71,9 @@ impl MemoryStore for SqliteMemoryStore {
             PortError::Backend(format!("sqlite memory store lock poisoned: {error}"))
         })?;
         conn.execute(
-            "INSERT INTO memory_facts (id, session_id, kind, payload_json) VALUES (?1, ?2, 'EPISODIC', ?3)",
+            "INSERT INTO memory_facts (id, session_id, kind, payload_json)
+             VALUES (?1, ?2, 'EPISODIC', ?3)
+             ON CONFLICT(id) DO NOTHING",
             params![id, session_id, payload_json],
         )
         .map_err(|error| map_sqlite(&error))?;
@@ -127,6 +122,21 @@ impl MemoryStore for SqliteMemoryStore {
 
         Ok(matches)
     }
+}
+
+fn fact_id(session_id: &str, key: &str, content: &str) -> String {
+    let mut hasher = Sha256::new();
+    for value in [session_id, key, content] {
+        hasher.update(u64::try_from(value.len()).unwrap_or(u64::MAX).to_be_bytes());
+        hasher.update(value.as_bytes());
+    }
+    let digest = hasher.finalize();
+    let mut id = String::from("memory-");
+    for byte in digest {
+        use std::fmt::Write;
+        let _ = write!(id, "{byte:02x}");
+    }
+    id
 }
 
 fn map_sqlite(error: &rusqlite::Error) -> PortError {

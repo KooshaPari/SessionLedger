@@ -291,4 +291,21 @@ mod tests {
         let recalled = store.recall("pagination", 5).expect("recall distilled facts");
         assert!(!recalled.is_empty(), "distilled episodic facts should persist");
     }
+
+    #[cfg(feature = "sqlite")]
+    #[test]
+    fn transform_file_does_not_duplicate_durable_facts_for_repeated_input() {
+        use session_ledger::SqliteMemoryStore;
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let jsonl = write_fixture(tmp.path(), 1);
+        let out = tmp.path().join("out");
+        let store = SqliteMemoryStore::open(tmp.path().join("memory.db")).expect("open memory db");
+
+        transform_file(&jsonl, &out, Some(&store)).expect("first transform");
+        transform_file(&jsonl, &out, Some(&store)).expect("repeated transform");
+
+        let facts = store.recall("session/sess-0", 10).expect("recall durable facts");
+        assert_eq!(facts.len(), 3, "repeated watcher events must not duplicate durable facts");
+    }
 }

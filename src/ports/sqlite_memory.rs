@@ -71,8 +71,10 @@ impl MemoryStore for SqliteMemoryStore {
             PortError::Backend(format!("sqlite memory store lock poisoned: {error}"))
         })?;
         conn.execute(
-            "INSERT INTO memory_facts (id, session_id, kind, payload_json)
-             VALUES (?1, ?2, 'EPISODIC', ?3)
+            "INSERT INTO memory_facts (id, session_id, kind, payload_json, insertion_order)
+             SELECT ?1, ?2, 'EPISODIC', ?3, COALESCE(MAX(insertion_order), 0) + 1
+             FROM memory_facts
+             WHERE TRUE
              ON CONFLICT(id) DO NOTHING",
             params![id, session_id, payload_json],
         )
@@ -97,7 +99,7 @@ impl MemoryStore for SqliteMemoryStore {
                 "SELECT payload_json FROM memory_facts
                  WHERE lower(session_id) LIKE ?1
                     OR lower(payload_json) LIKE ?1
-                 ORDER BY id ASC
+                 ORDER BY insertion_order ASC
                  LIMIT ?2",
             )
             .map_err(|error| map_sqlite(&error))?;
@@ -171,6 +173,37 @@ mod tests {
                 "Expose a database health endpoint".to_owned()
             ]
         );
+    }
+
+    #[test]
+    fn sqlite_memory_store_recall_uses_insertion_order_for_top_k() {
+        let store = SqliteMemoryStore::open_in_memory().expect("open memory db");
+        store.store("alpha", "one", "first").expect("store first memory");
+        store.store("alpha", "two", "second").expect("store second memory");
+
+        // These two deterministic SHA-256 ids sort in the reverse of their
+        // insertion order. `top_k` must remain chronological, not hash-ordered.
+        assert_eq!(store.recall("alpha", 1).expect("recall first memory"), vec!["first"]);
+    }
+
+    #[test]
+    fn sqlite_memory_store_duplicate_keeps_original_insertion_order() {
+        let store = SqliteMemoryStore::open_in_memory().expect("open memory db");
+        let first_id = store.store("alpha", "one", "first").expect("store first memory");
+        let second_id = store.store("alpha", "two", "second").expect("store second memory");
+        assert_eq!(store.store("alpha", "one", "first").expect("store duplicate memory"), first_id);
+
+        let conn = store.conn.lock().expect("lock memory db");
+        let mut stmt = conn
+            .prepare("SELECT id FROM memory_facts ORDER BY insertion_order ASC")
+            .expect("prepare insertion-order query");
+        let ids = stmt
+            .query_map([], |row| row.get::<_, String>(0))
+            .expect("query insertion order")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("read insertion order");
+
+        assert_eq!(ids, vec![first_id, second_id]);
     }
 
     #[test]

@@ -325,6 +325,7 @@
         "crates/sl-viewer/tests/properties_viewer_help_overlay.rs",
         "crates/sl-viewer/tests/properties_viewer_settings_tab.rs",
         "crates/sl-viewer/tests/properties_viewer_menu.rs",
+        "crates/sl-viewer/tests/properties_viewer_async_states.rs",
         "fuzz/fuzz_targets/okf_roundtrip.rs",
         "fuzz/fuzz_targets/jsonl_ingest.rs",
         ".github/workflows/ci.yml",

@@ -669,7 +669,7 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         if: steps.oci_gate.outputs.required == 'true'
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Log in to GHCR
         id: login

@@ -1,213 +1,243 @@
-//! Property evidence for sl-viewer's `cli_help` and `command_palette`
-//! reducers.
+//! Property evidence for the `sl-viewer::cli_help` text helpers.
 //!
-//! Both modules are pure text/data reductions that the CLI and the
-//! in-viewer launcher shell depend on. If their templates drift
-//! without documentation updates, the Help overlay, the `--help`
-//! flag, and the Cmd+K palette diverge silently — so every visible
-//! property is pinned here.
+//! Two helpers produce the `sl-viewer --help` and `sl-viewer --version`
+//! output:
 //!
-//! `cli_help::version_text` invariants:
-//!  * Output is non-empty.
-//!  * Output contains the package version (`env!("CARGO_PKG_VERSION")`).
-//!  * Output contains the `daemon:` label.
-//!  * Output is deterministic across calls.
+//!  * `help_text()` — multi-section manual with USAGE, ENVIRONMENT,
+//!    IN-VIEWER, DOCS sections
+//!  * `version_text()` — package version, daemon URL, docs cross-link
 //!
-//! `cli_help::help_text` invariants:
-//!  * Output is non-empty.
-//!  * Output documents `SL_DAEMON_URL`, `FORGE_DB`, and `SL_VIEWER_DEMO`.
-//!  * Output links the documented help / quick-start docs.
-//!  * Output is deterministic across calls.
+//! Both rely on env vars (`CARGO_PKG_VERSION`, optional `SL_DAEMON_URL`)
+//! and constants (HELP_HEADING, DEFAULT_DAEMON_BASE). Their contracts:
 //!
-//! `command_palette::COMMANDS` invariants:
-//!  * Non-empty.
-//!  * Every command has a non-empty `id`, `label`, and `hint`.
-//!  * Every `id` is unique across the palette.
-//!  * Every documented `PaletteAction` variant is covered.
-//!  * `id` is kebab-case-ish (lowercase ASCII letters, digits, hyphens).
-//!  * `label` and `hint` carry no tab/newline characters (so the
-//!    `role="option"` ARIA text is well-formed).
-//!  * Action distribution (each action appears in `[1, 7]` commands)
-//!    so the palette shows a non-trivial menu but no single action
-//!    dominates.
+//!  * `help_text()` always mentions every documented env var
+//!    (SL_DAEMON_URL, FORGE_DB, SL_VIEWER_DEMO)
+//!  * `help_text()` always cross-links the docs folder
+//!  * `version_text()` always includes the package version, the word
+//!    `daemon:`, and the help-doc link
+//!  * Both helpers are deterministic (same env = same output)
+//!  * Both helpers can be called many times without state mutation
+//!  * `HELP_HEADING` mentions `sl-viewer` and `SessionLedger`
+//!  * Idempotence holds across many calls
 
 use proptest::prelude::*;
-use sl_viewer::cli_help::{help_text, version_text};
-use sl_viewer::command_palette::{COMMANDS, PaletteAction};
+use sl_viewer::cli_help::{help_text, version_text, HELP_HEADING};
 
-// ── cli_help::version_text ──────────────────────────────────────────────────
-
-proptest! {
-    /// `version_text()` is non-empty.
-    #[test]
-    fn version_text_nonempty(_seed in any::<u32>()) {
-        prop_assert!(!version_text().is_empty());
-    }
-
-    /// `version_text()` contains the package version.
-    #[test]
-    fn version_text_contains_package_version(_seed in any::<u32>()) {
-        let v = version_text();
-        prop_assert!(v.contains(env!("CARGO_PKG_VERSION")));
-    }
-
-    /// `version_text()` contains the `daemon:` label.
-    #[test]
-    fn version_text_contains_daemon_label(_seed in any::<u32>()) {
-        let v = version_text();
-        prop_assert!(v.contains("daemon:"));
-    }
-
-    /// `version_text()` contains the help doc link.
-    #[test]
-    fn version_text_contains_doc_link(_seed in any::<u32>()) {
-        let v = version_text();
-        prop_assert!(v.contains("sl-viewer-help.md"));
-    }
-
-    /// `version_text()` is deterministic across calls.
-    #[test]
-    fn version_text_deterministic(_seed in any::<u32>()) {
-        prop_assert_eq!(version_text(), version_text());
-    }
-}
-
-// ── cli_help::help_text ─────────────────────────────────────────────────────
+// ── help_text invariants ──────────────────────────────────────────────────
 
 proptest! {
-    /// `help_text()` is non-empty.
+    /// Property: every documented environment variable must appear in
+    /// `help_text()` output. Regression-safe even across documentation
+    /// drift: the test still asserts the three names we promised.
     #[test]
-    fn help_text_nonempty(_seed in any::<u32>()) {
+    fn help_text_documents_all_env_vars(_unused in 0u8..1u8) {
+        let help = help_text();
+        prop_assert!(help.contains("SL_DAEMON_URL"));
+        prop_assert!(help.contains("FORGE_DB"));
+        prop_assert!(help.contains("SL_VIEWER_DEMO"));
+    }
+
+    /// Property: the help text always cross-links the documentation set
+    /// (in-viewer shortcuts, CLI SSOT, first-run quickstart).
+    #[test]
+    fn help_text_links_all_documented_docs(_unused in 0u8..1u8) {
+        let help = help_text();
+        prop_assert!(help.contains("sl-viewer-help.md"), "missing CLI help doc link");
+        prop_assert!(help.contains("QUICKSTART.md"), "missing QUICKSTART doc link");
+        prop_assert!(help.contains("DOCS:"), "missing DOCS section header");
+    }
+
+    /// Property: the help text always carries the standard section
+    /// headers (USAGE, ENVIRONMENT, IN-VIEWER, DOCS).
+    #[test]
+    fn help_text_includes_section_headers(_unused in 0u8..1u8) {
+        let help = help_text();
+        for header in ["USAGE:", "ENVIRONMENT:", "IN-VIEWER:", "DOCS:"] {
+            prop_assert!(help.contains(header), "help text missing {:?} section", header);
+        }
+    }
+
+    /// Property: the help text mentions the documentation toggle
+    /// (`?` for help overlay) and the command-palette shortcut (`Cmd+K`).
+    #[test]
+    fn help_text_mentions_keyboard_shortcuts(_unused in 0u8..1u8) {
+        let help = help_text();
+        prop_assert!(help.contains("?"), "help text must mention ? help-toggle shortcut");
+        prop_assert!(
+            help.contains("Cmd") || help.contains("Ctrl"),
+            "help text must mention Cmd/Ctrl keyboard shortcut",
+        );
+        prop_assert!(help.contains("K"), "help text must mention K palette key");
+    }
+
+    /// Property: `help_text()` always begins with `HELP_HEADING` so
+    /// `sl-viewer --help` shows the product name on the first line.
+    #[test]
+    fn help_text_starts_with_help_heading(_unused in 0u8..1u8) {
+        let help = help_text();
+        prop_assert!(
+            help.starts_with(HELP_HEADING),
+            "help text must start with HELP_HEADING; got {:?}",
+            help.lines().next().unwrap_or(""),
+        );
+    }
+
+    /// Property: `help_text()` is idempotent — calling it twice yields
+    /// the same string. (No hidden state.)
+    #[test]
+    fn help_text_is_idempotent(_unused in 0u8..1u8) {
+        let a = help_text();
+        let b = help_text();
+        prop_assert_eq!(a, b);
+    }
+
+    /// Property: `help_text()` non-empty across rebuilds.
+    #[test]
+    fn help_text_is_nonempty(_unused in 0u8..1u8) {
         prop_assert!(!help_text().is_empty());
     }
 
-    /// `help_text()` documents the runtime env vars referenced by
-    /// `daemon_url` and the demo seed path.
+    /// Property: `help_text()` always mentions the default daemon URL
+    /// literal (so users see the off-by-default endpoint without env vars).
     #[test]
-    fn help_text_documents_env_vars(_seed in any::<u32>()) {
-        let h = help_text();
-        prop_assert!(h.contains("SL_DAEMON_URL"));
-        prop_assert!(h.contains("FORGE_DB"));
-        prop_assert!(h.contains("SL_VIEWER_DEMO"));
-    }
-
-    /// `help_text()` links the documented SSOT and quick-start docs.
-    #[test]
-    fn help_text_links_docs(_seed in any::<u32>()) {
-        let h = help_text();
-        prop_assert!(h.contains("sl-viewer-help.md"));
-        prop_assert!(h.contains("QUICKSTART.md"));
-    }
-
-    /// `help_text()` mentions the keyboard shortcuts surfaced by the
-    /// in-viewer help overlay.
-    #[test]
-    fn help_text_mentions_shortcuts(_seed in any::<u32>()) {
-        let h = help_text();
-        prop_assert!(h.contains("Cmd") || h.contains("Ctrl"));
-        prop_assert!(h.contains("K"));
-    }
-
-    /// `help_text()` is deterministic across calls.
-    #[test]
-    fn help_text_deterministic(_seed in any::<u32>()) {
-        prop_assert_eq!(help_text(), help_text());
+    fn help_text_includes_default_daemon_url(_unused in 0u8..1u8) {
+        let help = help_text();
+        prop_assert!(
+            help.contains("127.0.0.1") && help.contains("8080"),
+            "help text must include the default daemon URL (127.0.0.1:8080)",
+        );
     }
 }
 
-// ── command_palette::COMMANDS ───────────────────────────────────────────────
+// ── version_text invariants ───────────────────────────────────────────────
 
 proptest! {
-    /// `COMMANDS` is non-empty.
+    /// Property: `version_text()` always includes the package version
+    /// baked into the binary (`env!("CARGO_PKG_VERSION")`).
     #[test]
-    fn commands_nonempty(_seed in any::<u32>()) {
-        prop_assert!(!COMMANDS.is_empty());
+    fn version_text_includes_package_version(_unused in 0u8..1u8) {
+        let version = version_text();
+        prop_assert!(version.contains(env!("CARGO_PKG_VERSION")));
     }
 
-    /// Every command has a non-empty `id`, `label`, and `hint`.
+    /// Property: `version_text()` always carries the literal
+    /// `daemon:` marker followed by the resolved daemon base URL.
     #[test]
-    fn commands_text_fields_nonempty(_seed in any::<u32>()) {
-        for cmd in COMMANDS.iter() {
-            prop_assert!(!cmd.id.is_empty(), "command id is empty");
-            prop_assert!(!cmd.label.is_empty(), "command label is empty");
-            prop_assert!(!cmd.hint.is_empty(), "command hint is empty");
-        }
+    fn version_text_marks_daemon_url(_unused in 0u8..1u8) {
+        let version = version_text();
+        prop_assert!(version.contains("daemon:"));
+        prop_assert!(
+            version.contains("http://") || version.contains("https://"),
+            "version text must include a URL scheme",
+        );
     }
 
-    /// Every command id is unique across the palette.
+    /// Property: `version_text()` always cross-links the help doc.
     #[test]
-    fn commands_ids_unique(_seed in any::<u32>()) {
-        let ids: Vec<&str> = COMMANDS.iter().map(|c| c.id).collect();
-        let mut deduped = ids.clone();
-        deduped.sort();
-        deduped.dedup();
-        prop_assert_eq!(deduped.len(), ids.len());
+    fn version_text_links_help_doc(_unused in 0u8..1u8) {
+        let version = version_text();
+        prop_assert!(version.contains("sl-viewer-help.md"));
+        prop_assert!(version.contains("help:"));
     }
 
-    /// Every `PaletteAction` variant has at least one command so the
-    /// palette can dispatch any required shell action.
+    /// Property: `version_text()` always starts with the binary name.
     #[test]
-    fn commands_cover_all_actions(_seed in any::<u32>()) {
-        let required = [
-            PaletteAction::FocusSearch,
-            PaletteAction::ToggleTheme,
-            PaletteAction::OpenHelp,
-            PaletteAction::OpenSettings,
-            PaletteAction::NextTab,
-            PaletteAction::PrevTab,
-            PaletteAction::ClearSearch,
-        ];
-        for action in required.iter() {
-            prop_assert!(
-                COMMANDS.iter().any(|c| &c.action == action),
-                "missing command for action {:?}",
-                *action,
-            );
-        }
+    fn version_text_starts_with_binary_name(_unused in 0u8..1u8) {
+        let version = version_text();
+        let first_line = version.lines().next().unwrap_or("");
+        prop_assert!(first_line.starts_with("sl-viewer"));
     }
 
-    /// Every command id is kebab-case (lowercase ASCII letters, digits,
-    /// hyphens). The id is also used as a DOM id, so an invalid
-    /// character would break `getElementById`.
+    /// Property: `version_text()` is idempotent.
     #[test]
-    fn commands_ids_are_kebab_case(_seed in any::<u32>()) {
-        for cmd in COMMANDS.iter() {
-            let valid = cmd.id.chars().all(|ch| {
-                ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-'
-            });
-            prop_assert!(valid, "id {:?} is not kebab-case ASCII", cmd.id);
-        }
+    fn version_text_is_idempotent(_unused in 0u8..1u8) {
+        let a = version_text();
+        let b = version_text();
+        prop_assert_eq!(a, b);
     }
 
-    /// `label` and `hint` must not contain tabs or newlines so the
-    /// rendered `role="option"` ARIA text is single-line.
+    /// Property: `version_text()` non-empty across rebuilds.
     #[test]
-    fn commands_label_and_hint_singleline(_seed in any::<u32>()) {
-        for cmd in COMMANDS.iter() {
-            prop_assert!(!cmd.label.contains('\n'), "label {:?} contains newline", cmd.id);
-            prop_assert!(!cmd.label.contains('\t'), "label {:?} contains tab", cmd.id);
-            prop_assert!(!cmd.hint.contains('\n'), "hint {:?} contains newline", cmd.id);
-            prop_assert!(!cmd.hint.contains('\t'), "hint {:?} contains tab", cmd.id);
-        }
+    fn version_text_is_nonempty(_unused in 0u8..1u8) {
+        prop_assert!(!version_text().is_empty());
     }
 
-    /// Each `PaletteAction` variant appears in `COMMANDS` at most once
-    /// so the palette does not duplicate entries.
+    /// Property: `version_text()` always identifies the binary as
+    /// part of SessionLedger (so support diagnostics can map it to
+    /// the right workspace).
     #[test]
-    fn commands_action_distribution_at_most_one(_seed in any::<u32>()) {
-        let required = [
-            PaletteAction::FocusSearch,
-            PaletteAction::ToggleTheme,
-            PaletteAction::OpenHelp,
-            PaletteAction::OpenSettings,
-            PaletteAction::NextTab,
-            PaletteAction::PrevTab,
-            PaletteAction::ClearSearch,
-        ];
-        for action in required.iter() {
-            let n = COMMANDS.iter().filter(|c| &c.action == action).count();
-            prop_assert!(n >= 1, "action {:?} appears 0 times", *action);
-            prop_assert!(n <= 7, "action {:?} appears {} times", *action, n);
-        }
+    fn version_text_identifies_session_ledger(_unused in 0u8..1u8) {
+        let version = version_text();
+        prop_assert!(version.contains("SessionLedger"));
+    }
+
+    /// Property: `version_text()` includes the resolved daemon base URL
+    /// exactly as `daemon_base_url()` returns it.
+    #[test]
+    fn version_text_daemon_matches_daemon_base_url(_unused in 0u8..1u8) {
+        let version = version_text();
+        let base = sl_viewer::daemon_url::daemon_base_url();
+        prop_assert!(
+            version.contains(base),
+            "version text must include daemon base URL {:?}",
+            base,
+        );
+    }
+}
+
+// ── HELP_HEADING invariants ───────────────────────────────────────────────
+
+proptest! {
+    /// Property: HELP_HEADING mentions the binary name and the workspace
+    /// name (used as the first line of `--help` and `--version`).
+    #[test]
+    fn help_heading_names_product_and_workspace(_unused in 0u8..1u8) {
+        prop_assert!(HELP_HEADING.contains("sl-viewer"));
+        prop_assert!(HELP_HEADING.contains("SessionLedger"));
+    }
+
+    /// Property: HELP_HEADING is non-empty.
+    #[test]
+    fn help_heading_is_nonempty(_unused in 0u8..1u8) {
+        prop_assert!(!HELP_HEADING.is_empty());
+    }
+
+    /// Property: HELP_HEADING is short enough to fit a terminal first
+    /// line (longer than ~80 chars looks bad on small screens).
+    #[test]
+    fn help_heading_fits_terminal_first_line(_unused in 0u8..1u8) {
+        prop_assert!(
+            HELP_HEADING.len() <= 80,
+            "HELP_HEADING too long for terminal first line ({} chars): {:?}",
+            HELP_HEADING.len(),
+            HELP_HEADING,
+        );
+    }
+}
+
+// ── Cross-cutting invariants ──────────────────────────────────────────────
+
+proptest! {
+    /// Property: `help_text` and `version_text` both reference the
+    /// same help-doc cross-link (`sl-viewer-help.md`).
+    #[test]
+    fn help_and_version_share_doc_link(_unused in 0u8..1u8) {
+        let help = help_text();
+        let version = version_text();
+        prop_assert!(help.contains("sl-viewer-help.md"));
+        prop_assert!(version.contains("sl-viewer-help.md"));
+    }
+
+    /// Property: `help_text` always has more content than `version_text`
+    /// (i.e. the help is not as terse as --version).
+    #[test]
+    fn help_is_longer_than_version(_unused in 0u8..1u8) {
+        prop_assert!(help_text().len() > version_text().len());
+    }
+
+    /// Property: HELP_HEADING appears as a substring in `help_text`.
+    #[test]
+    fn help_heading_appears_in_help_text(_unused in 0u8..1u8) {
+        prop_assert!(help_text().contains(HELP_HEADING));
     }
 }

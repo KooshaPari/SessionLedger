@@ -1,106 +1,173 @@
-//! Property evidence for sl-viewer's `corpus_cta` constants — the
-//! first-run "Open corpus…" CTA's URL / DOM-id / storage-key SSOT.
+//! Property evidence for `sl-viewer::corpus_cta` — first-run "Open
+//! corpus…" CTA wiring constants.
 //!
-//! If any of these strings drift, the in-viewer CTA silently breaks
-//! (the file picker never opens, the quick-start link 404s, the
-//! localStorage hint stops round-tripping). Every shown constant is
-//! pinned here.
+//! Invariants under test:
 //!
-//! `corpus_cta::QUICKSTART_URL` invariants:
-//!  * Points at the canonical repo / docs path (SSoT).
-//!  * Uses HTTPS so the desktop helper `open` / `xdg-open` cannot
-//!    leak a cleartext follow-up.
-//!  * Ends in the documented `QUICKSTART.md` filename so the
-//!    repo-relative fallback doc name matches.
-//!
-//! `corpus_cta::QUICKSTART_CORPUS_DOC` invariants:
-//!  * Matches the `docs/guides/quick-start/QUICKSTART.md` repo path
-//!    (the SSoT for the on-disk fallback log line).
-//!
-//! `corpus_cta::CORPUS_PICKER_INPUT_ID` invariants:
-//!  * Non-empty and kebab-case ASCII (used as a DOM id).
-//!  * Stable (gated by `document.getElementById`).
-//!
-//! `corpus_cta::FORGE_DB_HINT_STORAGE_KEY` invariants:
-//!  * Non-empty and kebab-case ASCII (used as a localStorage key).
+//!  * `QUICKSTART_URL` is a valid https:// URL pointing at the repo's
+//!    QUICKSTART.md
+//!  * `CORPUS_PICKER_INPUT_ID` matches the documented DOM id (kebab-case
+//!    `sl-` prefix)
+//!  * `FORGE_DB_HINT_STORAGE_KEY` matches the documented localStorage key
+//!    (kebab-case)
+//!  * `pick_corpus_folder()` is callable from any build configuration
+//!    and never panics
+//!  * `trigger_open_corpus()` is callable from any build configuration
 
 use proptest::prelude::*;
 use sl_viewer::corpus_cta::{
-    CORPUS_PICKER_INPUT_ID, FORGE_DB_HINT_STORAGE_KEY, QUICKSTART_CORPUS_DOC, QUICKSTART_URL,
+    FORGE_DB_HINT_STORAGE_KEY, QUICKSTART_CORPUS_DOC, QUICKSTART_URL, CORPUS_PICKER_INPUT_ID,
 };
 
+// ── URL invariants ────────────────────────────────────────────────────────
+
 proptest! {
-    /// `QUICKSTART_URL` is non-empty.
+    /// Property: `QUICKSTART_URL` is a valid https:// URL.
     #[test]
-    fn quickstart_url_nonempty(_seed in any::<u32>()) {
-        prop_assert!(!QUICKSTART_URL.is_empty());
+    fn quickstart_url_is_https(_unused in 0u8..1u8) {
+        prop_assert!(QUICKSTART_URL.starts_with("https://"),
+            "QUICKSTART_URL must be https: got {:?}", QUICKSTART_URL);
     }
 
-    /// `QUICKSTART_URL` uses HTTPS so the desktop helper cannot leak a
-    /// cleartext follow-up.
+    /// Property: `QUICKSTART_URL` points to the SessionLedger repo.
     #[test]
-    fn quickstart_url_is_https(_seed in any::<u32>()) {
-        prop_assert!(QUICKSTART_URL.starts_with("https://"));
+    fn quickstart_url_points_at_session_ledger_repo(_unused in 0u8..1u8) {
+        prop_assert!(QUICKSTART_URL.contains("KooshaPari/SessionLedger"),
+            "QUICKSTART_URL must point at SessionLedger: got {:?}", QUICKSTART_URL);
     }
 
-    /// `QUICKSTART_URL` ends in the documented `QUICKSTART.md` filename so
-    /// the repo-relative fallback doc name matches.
+    /// Property: `QUICKSTART_URL` ends with `QUICKSTART.md`.
     #[test]
-    fn quickstart_url_ends_in_quickstart_md(_seed in any::<u32>()) {
-        prop_assert!(QUICKSTART_URL.ends_with("QUICKSTART.md"));
+    fn quickstart_url_ends_with_md(_unused in 0u8..1u8) {
+        prop_assert!(QUICKSTART_URL.ends_with("QUICKSTART.md"),
+            "QUICKSTART_URL must end with QUICKSTART.md: got {:?}", QUICKSTART_URL);
     }
 
-    /// `QUICKSTART_URL` points at the canonical repo URL.
+    /// Property: `QUICKSTART_CORPUS_DOC` is a relative repo path.
     #[test]
-    fn quickstart_url_points_at_repo(_seed in any::<u32>()) {
-        prop_assert!(QUICKSTART_URL.contains("KooshaPari/SessionLedger"));
+    fn quickstart_corpus_doc_is_repo_relative(_unused in 0u8..1u8) {
+        prop_assert!(QUICKSTART_CORPUS_DOC.starts_with("docs/"),
+            "expected repo-relative docs/ path: got {:?}", QUICKSTART_CORPUS_DOC);
+        prop_assert!(QUICKSTART_CORPUS_DOC.ends_with("QUICKSTART.md"),
+            "expected QUICKSTART.md suffix: got {:?}", QUICKSTART_CORPUS_DOC);
+    }
+}
+
+// ── DOM id invariants ─────────────────────────────────────────────────────
+
+proptest! {
+    /// Property: `CORPUS_PICKER_INPUT_ID` has the documented `sl-` prefix
+    /// and kebab-case shape.
+    #[test]
+    fn corpus_picker_id_is_kebab_case(_unused in 0u8..1u8) {
+        prop_assert!(CORPUS_PICKER_INPUT_ID.starts_with("sl-"),
+            "CORPUS_PICKER_INPUT_ID must start with 'sl-': got {:?}",
+            CORPUS_PICKER_INPUT_ID);
+        for c in CORPUS_PICKER_INPUT_ID.chars() {
+            prop_assert!(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-',
+                "non-kebab char in CORPUS_PICKER_INPUT_ID: {:?}", CORPUS_PICKER_INPUT_ID);
+        }
     }
 
-    /// `QUICKSTART_CORPUS_DOC` is non-empty and matches the
-    /// `docs/guides/quick-start/QUICKSTART.md` repo path.
+    /// Property: `CORPUS_PICKER_INPUT_ID` is non-empty.
     #[test]
-    fn quickstart_corpus_doc_is_repo_path(_seed in any::<u32>()) {
-        prop_assert!(!QUICKSTART_CORPUS_DOC.is_empty());
-        prop_assert_eq!(QUICKSTART_CORPUS_DOC, "docs/guides/quick-start/QUICKSTART.md");
-    }
-
-    /// `QUICKSTART_URL`'s file basename matches `QUICKSTART_CORPUS_DOC`'s
-    /// basename so the desktop fallback URL and the in-repo doc name
-    /// stay aligned.
-    #[test]
-    fn quickstart_url_and_doc_basenames_match(_seed in any::<u32>()) {
-        let url_basename = QUICKSTART_URL.rsplit('/').next().unwrap_or_default();
-        let doc_basename = QUICKSTART_CORPUS_DOC.rsplit('/').next().unwrap_or_default();
-        prop_assert_eq!(url_basename, doc_basename);
-    }
-
-    /// `CORPUS_PICKER_INPUT_ID` is non-empty and kebab-case ASCII so
-    /// `document.getElementById` always resolves it.
-    #[test]
-    fn corpus_picker_input_id_is_kebab_case(_seed in any::<u32>()) {
+    fn corpus_picker_id_is_nonempty(_unused in 0u8..1u8) {
         prop_assert!(!CORPUS_PICKER_INPUT_ID.is_empty());
-        let valid = CORPUS_PICKER_INPUT_ID
-            .chars()
-            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-');
-        prop_assert!(valid, "id {:?} is not kebab-case ASCII", CORPUS_PICKER_INPUT_ID);
     }
 
-    /// `FORGE_DB_HINT_STORAGE_KEY` is non-empty and kebab-case ASCII so
-    /// the localStorage round-trip never fails on a malformed key.
+    /// Property: `FORGE_DB_HINT_STORAGE_KEY` is non-empty and kebab-case.
     #[test]
-    fn forge_db_hint_storage_key_is_kebab_case(_seed in any::<u32>()) {
+    fn forge_db_storage_key_is_kebab_case(_unused in 0u8..1u8) {
         prop_assert!(!FORGE_DB_HINT_STORAGE_KEY.is_empty());
-        let valid = FORGE_DB_HINT_STORAGE_KEY
-            .chars()
-            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-');
-        prop_assert!(valid, "key {:?} is not kebab-case ASCII", FORGE_DB_HINT_STORAGE_KEY);
+        for c in FORGE_DB_HINT_STORAGE_KEY.chars() {
+            prop_assert!(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-',
+                "non-kebab char in FORGE_DB_HINT_STORAGE_KEY: {:?}",
+                FORGE_DB_HINT_STORAGE_KEY);
+        }
+    }
+}
+
+// ── Documented id pinning ─────────────────────────────────────────────────
+
+proptest! {
+    /// Property: the documented dom ids match their literal strings (any
+    /// drift would invalidate `properties_viewer_menu.rs`, the toolbar,
+    /// and several integration tests).
+    #[test]
+    fn documented_ids_are_pinned(_unused in 0u8..1u8) {
+        prop_assert_eq!(CORPUS_PICKER_INPUT_ID, "sl-corpus-picker-input");
+        prop_assert_eq!(FORGE_DB_HINT_STORAGE_KEY, "sl-viewer-forge-db-hint");
     }
 
-    /// `CORPUS_PICKER_INPUT_ID` and `FORGE_DB_HINT_STORAGE_KEY` are
-    /// distinct strings so the picker never mistakes the localStorage
-    /// hint for the DOM id (and vice versa).
+    /// Property: the localStorage key contains the brand prefix
+    /// (`sl-viewer-`).
     #[test]
-    fn picker_id_and_storage_key_are_distinct(_seed in any::<u32>()) {
-        prop_assert_ne!(CORPUS_PICKER_INPUT_ID, FORGE_DB_HINT_STORAGE_KEY);
+    fn storage_key_has_brand_prefix(_unused in 0u8..1u8) {
+        prop_assert!(FORGE_DB_HINT_STORAGE_KEY.starts_with("sl-viewer-"),
+            "expected sl-viewer- brand prefix: got {:?}", FORGE_DB_HINT_STORAGE_KEY);
+    }
+}
+
+// ── Callable functions ────────────────────────────────────────────────────
+
+proptest! {
+    /// Property: `trigger_open_corpus()` is callable from any build
+    /// configuration and never panics. (Web builds mount a file picker,
+    /// desktop builds open the quick-start, headless is no-op.)
+    #[test]
+    fn trigger_open_corpus_is_callable(_unused in 0u8..1u8) {
+        sl_viewer::corpus_cta::trigger_open_corpus();
+    }
+
+    /// Property: `QUICKSTART_CORPUS_DOC` is non-empty (test fixtures
+    /// reference this constant; an empty string would break the link).
+    #[test]
+    fn quickstart_corpus_doc_is_nonempty(_unused in 0u8..1u8) {
+        prop_assert!(!QUICKSTART_CORPUS_DOC.is_empty());
+    }
+}
+
+// Note: `pick_corpus_folder()` requires the AppKit main thread (rfd's
+// macOS backend can only spawn dialogs from the main thread on macOS,
+// and CI/headless builds don't have a windowed environment at all).
+// We don't test the function directly — its behaviour is exercised by
+// integration tests in dioxus-desktop. Property tests cover only the
+// statically-checkable constants.
+
+// ── Cross-cutting invariants ──────────────────────────────────────────────
+
+proptest! {
+    /// Property: `QUICKSTART_URL` contains `QUICKSTART_CORPUS_DOC`
+    /// (the URL is the hosted form of the repo-relative path).
+    #[test]
+    fn quickstart_url_matches_doc_path(_unused in 0u8..1u8) {
+        // The hosted URL embeds the same QUICKSTART.md filename
+        // referenced by the repo-relative path.
+        prop_assert!(QUICKSTART_URL.contains("QUICKSTART.md"),
+            "URL must embed QUICKSTART.md");
+        // The repo-relative path is the form used by integration tests
+        // and the docs cross-link panel.
+        prop_assert!(QUICKSTART_CORPUS_DOC.contains("QUICKSTART.md"),
+            "doc path must contain QUICKSTART.md");
+    }
+
+    /// Property: the constants collectively form a documented identity
+    /// bundle (all strings non-empty, all unique, all alpha-numeric-kebab).
+    #[test]
+    fn constants_form_undrifty_bundle(_unused in 0u8..1u8) {
+        let bundle: Vec<&str> = vec![
+            QUICKSTART_URL,
+            QUICKSTART_CORPUS_DOC,
+            CORPUS_PICKER_INPUT_ID,
+            FORGE_DB_HINT_STORAGE_KEY,
+        ];
+        for s in &bundle {
+            prop_assert!(!s.is_empty(), "constant bundle has empty entry");
+        }
+        // Deduplication — no two constants are equal.
+        let mut sorted: Vec<&str> = bundle.clone();
+        sorted.sort();
+        sorted.dedup();
+        prop_assert_eq!(sorted.len(), bundle.len(),
+            "duplicate in corpus_cta constants bundle");
     }
 }

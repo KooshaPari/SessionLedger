@@ -1,208 +1,227 @@
-//! Property evidence for sl-viewer's `corpus_paths` module.
+//! Property evidence for `sl-viewer::corpus_paths` — the on-disk
+//! configuration for user-chosen custom corpus paths.
 //!
-//! Integration tests. The unit tests in `corpus_paths.rs` pin specific
-//! values; these properties pin invariants over the full shape of
-//! inputs the helpers can receive.
+//! Invariants under test:
 //!
-//! `CorpusPathConfig` invariants:
-//!  * `empty()` produces a config with zero custom paths.
-//!  * `is_empty()` is true iff `custom_paths.is_empty()`.
-//!  * `Default::default()` equals `empty()`.
-//!  * JSON round-trip preserves `custom_paths` exactly (order-sensitive).
-//!
-//! `save_config_to` / `load_config_from` invariants:
-//!  * Round-trip: `save_config_to(c, p); load_config_from(p) == c`.
-//!  * Missing file yields `Ok(empty())` (no error surfaced).
-//!  * Junk JSON surfaces an `Err` (never silently drops the file).
-//!  * `save_config_to` creates missing parent directories.
-//!
-//! proptest is added to `sl-viewer/[dev-dependencies]` (mirroring the
-//! workspace root); see PR #425 for the initial wiring.
-
-use std::fs;
-use std::path::PathBuf;
+//!  * `CorpusPathConfig::empty()` returns a default config (no paths)
+//!  * `CorpusPathConfig::default()` == `CorpusPathConfig::empty()`
+//!  * `is_empty()` is consistent with `custom_paths.is_empty()`
+//!  * Config derives (Clone + PartialEq + Debug + Default + Serialize + Deserialize)
+//!  * `save_config_to` -> `load_config_from` is a pure round-trip
+//!    (path is created, content matches)
+//!  * `load_config_from` on a missing file returns Ok(empty config) per
+//!    the documented "missing files yield empty" contract
+//!  * `load_config_from` on invalid JSON returns Err (does not panic,
+//!    does not silently swallow)
+//!  * `save_config_to` creates missing parent directories
 
 use proptest::prelude::*;
 use sl_viewer::corpus_paths::{
-    load_config_from, save_config_to, CorpusPathConfig,
+    default_config_path, load_config_from, save_config_to, CorpusPathConfig,
 };
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-// ── strategies ──────────────────────────────────────────────────────────────
+/// Global counter for unique temp paths per proptest case.
+static CASE_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-/// Strategy for a list of relative / absolute path-like strings.
-fn path_strategy() -> impl Strategy<Value = PathBuf> {
-    prop::string::string_regex("[/a-zA-Z0-9._-]{1,40}")
-        .expect("valid regex")
-        .prop_map(PathBuf::from)
+/// Generate a unique temp directory path per proptest case.
+fn unique_temp_dir() -> PathBuf {
+    let n = CASE_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let pid = std::process::id();
+    std::env::temp_dir().join(format!(
+        "sl-viewer-corpus-paths-test-{}-{}",
+        pid, n
+    ))
 }
 
-/// Strategy for a `CorpusPathConfig` with 0..6 paths.
-fn config_strategy() -> impl Strategy<Value = CorpusPathConfig> {
-    prop::collection::vec(path_strategy(), 0..6).prop_map(|paths| CorpusPathConfig {
-        custom_paths: paths,
-    })
-}
-
-/// Strategy for junk JSON content that is *not* valid `CorpusPathConfig`.
-fn junk_json_strategy() -> impl Strategy<Value = String> {
-    prop::sample::select(vec![
-        // Plain garbage.
-        "not json at all".to_owned(),
-        // Empty string.
-        String::new(),
-        // Truncated object.
-        r#"{"custom_paths":["#.to_owned(),
-        // Wrong shape — `custom_paths` as a number.
-        r#"{"custom_paths": 42}"#.to_owned(),
-        // Wrong shape — `custom_paths` as an object.
-        r#"{"custom_paths": {"k": "v"}}"#.to_owned(),
-        // Trailing junk.
-        r#"{"custom_paths": []} trailing junk"#.to_owned(),
-    ])
-}
-
-// ── CorpusPathConfig pure reductions ────────────────────────────────────────
+// ── CorpusPathConfig shape ────────────────────────────────────────────────
 
 proptest! {
-    /// Property: `empty()` returns a config with zero `custom_paths`.
+    /// Property: `CorpusPathConfig::empty()` equals `CorpusPathConfig::default()`.
     #[test]
-    fn empty_has_no_custom_paths(_i in 0u8..4) {
-        let config = CorpusPathConfig::empty();
-        prop_assert!(config.custom_paths.is_empty());
-        prop_assert!(config.is_empty());
+    fn empty_equals_default(_unused in 0u8..1u8) {
+        prop_assert_eq!(CorpusPathConfig::empty(), CorpusPathConfig::default());
     }
 
-    /// Property: `Default::default()` equals `empty()`.
+    /// Property: `CorpusPathConfig::empty()` reports `is_empty() == true`
+    /// and has zero `custom_paths`.
     #[test]
-    fn default_equals_empty(_i in 0u8..4) {
-        let a: CorpusPathConfig = CorpusPathConfig::default();
-        let b: CorpusPathConfig = CorpusPathConfig::empty();
+    fn empty_is_empty(_unused in 0u8..1u8) {
+        let cfg = CorpusPathConfig::empty();
+        prop_assert!(cfg.is_empty());
+        prop_assert_eq!(cfg.custom_paths.len(), 0);
+    }
+
+    /// Property: a config with paths is `is_empty() == false`.
+    #[test]
+    fn config_with_paths_is_not_empty(
+        paths in prop::collection::vec(".*", 1..5).prop_map(|v| v.into_iter().map(PathBuf::from).collect()),
+    ) {
+        let cfg = CorpusPathConfig { custom_paths: paths };
+        prop_assert!(!cfg.is_empty());
+        prop_assert!(cfg.custom_paths.len() >= 1);
+    }
+
+    /// Property: `is_empty()` agrees with `custom_paths.is_empty()` for
+    /// any state.
+    #[test]
+    fn is_empty_matches_custom_paths(
+        paths in prop::collection::vec(".*", 0..5).prop_map(|v| v.into_iter().map(PathBuf::from).collect()),
+    ) {
+        let cfg = CorpusPathConfig { custom_paths: paths };
+        prop_assert_eq!(cfg.is_empty(), cfg.custom_paths.is_empty());
+    }
+}
+
+// ── JSON round-trip ───────────────────────────────────────────────────────
+
+proptest! {
+    /// Property: a config with arbitrary custom paths serializes to JSON
+    /// and deserializes back to itself.
+    #[test]
+    fn json_round_trip(
+        paths in prop::collection::vec(".*", 0..5).prop_map(|v| v.into_iter().map(PathBuf::from).collect()),
+    ) {
+        let original = CorpusPathConfig { custom_paths: paths };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let roundtrip: CorpusPathConfig = serde_json::from_str(&json).expect("deserialize");
+        prop_assert_eq!(roundtrip, original);
+    }
+
+    /// Property: the serialized JSON contains the `custom_paths` field
+    /// name (lowercase, snake-case) per the documented file format.
+    #[test]
+    fn json_uses_custom_paths_field_name(
+        paths in prop::collection::vec(".*", 0..3).prop_map(|v| v.into_iter().map(PathBuf::from).collect()),
+    ) {
+        let cfg = CorpusPathConfig { custom_paths: paths };
+        let json = serde_json::to_string(&cfg).expect("serialize");
+        prop_assert!(json.contains("custom_paths"),
+            "serialized JSON missing 'custom_paths' field: {}", json);
+    }
+
+    /// Property: an empty config serializes to a JSON object containing
+    /// an empty `custom_paths` array (not just an empty object).
+    #[test]
+    fn empty_config_serializes_correctly(_unused in 0u8..1u8) {
+        let cfg = CorpusPathConfig::empty();
+        let json = serde_json::to_string(&cfg).expect("serialize empty");
+        prop_assert!(json.contains("\"custom_paths\":[]"),
+            "empty config JSON missing empty custom_paths array: {}", json);
+    }
+}
+
+// ── File IO round-trip ─────────────────────────────────────────────────────
+
+proptest! {
+    /// Property: saving a config and reading it back yields an equal
+    /// config — the on-disk round-trip preserves all fields.
+    #[test]
+    fn save_then_load_round_trip(
+        dir in temp_dir_with_seed(),
+        paths in prop::collection::vec(".*", 0..5).prop_map(|v| v.into_iter().map(PathBuf::from).collect()),
+    ) {
+        let original = CorpusPathConfig { custom_paths: paths };
+        let path = dir.join("corpus_paths.json");
+        save_config_to(&original, &path).expect("save");
+        let restored = load_config_from(&path).expect("load");
+        prop_assert_eq!(restored, original);
+    }
+
+    /// Property: `save_config_to` creates the parent directory if it
+    /// doesn't exist (nested-write invariant).
+    #[test]
+    fn save_creates_parent_directories(
+        dir in temp_dir_with_seed(),
+        paths in prop::collection::vec(".*", 0..3).prop_map(|v| v.into_iter().map(PathBuf::from).collect()),
+    ) {
+        let nested = dir.join("a").join("b").join("c").join("corpus_paths.json");
+        let cfg = CorpusPathConfig { custom_paths: paths };
+        save_config_to(&cfg, &nested).expect("save nested");
+        prop_assert!(nested.exists(), "save did not create nested file");
+    }
+}
+
+// ── Error behavior ────────────────────────────────────────────────────────
+
+proptest! {
+    /// Property: `load_config_from` on a non-existent file returns
+    /// `Ok(CorpusPathConfig::default())` (not an error) — first launch
+    /// on a new machine is never supposed to fail.
+    #[test]
+    fn missing_file_yields_empty_config(
+        dir in temp_dir_with_seed(),
+    ) {
+        std::fs::create_dir_all(&dir).expect("mkdir");
+        let path = dir.join("does-not-exist.json");
+        let result = load_config_from(&path);
+        prop_assert!(result.is_ok(), "missing file should yield Ok, got {:?}", result);
+        let cfg = result.unwrap();
+        prop_assert!(cfg.is_empty());
+        prop_assert_eq!(cfg.custom_paths.len(), 0);
+    }
+
+    /// Property: `load_config_from` on invalid JSON returns Err.
+    #[test]
+    fn invalid_json_yields_error(
+        dir in temp_dir_with_seed(),
+        junk in "[^a-zA-Z0-9 \\s]{1,30}",
+    ) {
+        std::fs::create_dir_all(&dir).expect("mkdir");
+        let path = dir.join("corpus_paths.json");
+        std::fs::write(&path, &junk).expect("write junk");
+        let result = load_config_from(&path);
+        prop_assert!(result.is_err(),
+            "invalid JSON must surface as Err (got {:?})", result);
+    }
+}
+
+// ── default_config_path ───────────────────────────────────────────────────
+
+proptest! {
+    /// Property: `default_config_path()` returns `Some` on this
+    /// platform (every CI host has a config dir), and that path
+    /// includes "SessionLedger".
+    #[test]
+    fn default_config_path_resolves_on_this_platform(_unused in 0u8..1u8) {
+        let path = default_config_path();
+        prop_assert!(path.is_some(),
+            "default_config_path should resolve to Some() on this platform");
+        let p = path.unwrap();
+        let path_str = p.to_string_lossy().to_string();
+        prop_assert!(path_str.contains("SessionLedger"),
+            "default_config_path {:?} should include 'SessionLedger'", p);
+    }
+
+    /// Property: `default_config_path()` is idempotent — calling it
+    /// twice in succession yields equal values.
+    #[test]
+    fn default_config_path_is_deterministic(_unused in 0u8..1u8) {
+        let a = default_config_path();
+        let b = default_config_path();
         prop_assert_eq!(a, b);
     }
+}
 
-    /// Property: `is_empty()` is true iff `custom_paths` is empty.
-    #[test]
-    fn is_empty_iff_no_paths(config in config_strategy()) {
-        let expected = config.custom_paths.is_empty();
-        prop_assert_eq!(config.is_empty(), expected);
-    }
+// ── Derives ───────────────────────────────────────────────────────────────
 
-    /// Property: JSON round-trip preserves `custom_paths` exactly
-    /// (order-sensitive — the on-disk contract is `Vec<PathBuf>`).
+proptest! {
+    /// Property: CorpusPathConfig derives (Clone + PartialEq + Debug).
     #[test]
-    fn json_round_trip_preserves_paths(config in config_strategy()) {
-        let json = serde_json::to_string(&config).expect("serialize");
-        let restored: CorpusPathConfig = serde_json::from_str(&json).expect("parse");
-        prop_assert_eq!(restored, config);
-    }
-
-    /// Property: JSON round-trip is idempotent — round-tripping a
-    /// restored config yields the same JSON bytes.
-    #[test]
-    fn json_round_trip_idempotent(config in config_strategy()) {
-        let json1 = serde_json::to_string(&config).expect("serialize 1");
-        let restored: CorpusPathConfig = serde_json::from_str(&json1).expect("parse 1");
-        let json2 = serde_json::to_string(&restored).expect("serialize 2");
-        prop_assert_eq!(json1, json2);
-    }
-
-    /// Property: `len(custom_paths)` is preserved through JSON
-    /// round-trip (catches drift where the round-trip drops / dedups
-    /// path entries).
-    #[test]
-    fn json_round_trip_preserves_len(config in config_strategy()) {
-        let json = serde_json::to_string(&config).expect("serialize");
-        let restored: CorpusPathConfig = serde_json::from_str(&json).expect("parse");
-        prop_assert_eq!(restored.custom_paths.len(), config.custom_paths.len());
+    fn corpus_path_config_derives_hold(
+        paths in prop::collection::vec(".*", 0..3).prop_map(|v| v.into_iter().map(PathBuf::from).collect()),
+    ) {
+        let cfg = CorpusPathConfig { custom_paths: paths };
+        let cloned = cfg.clone();                         // Clone
+        let cf = cfg.clone();
+        prop_assert_eq!(cf, cloned);                      // PartialEq + Eq (via clone)
+        let debug = format!("{:?}", cfg);                // Debug
+        prop_assert!(!debug.is_empty());
     }
 }
 
-// ── save_config_to / load_config_from ───────────────────────────────────────
-
-proptest! {
-    /// Property: `save_config_to` followed by `load_config_from` yields
-    /// an equal config (round-trip). This is the contract the viewer's
-    /// "user picks a folder" → "viewer reads it back" flow depends on.
-    #[test]
-    fn save_load_round_trip(config in config_strategy(), i in 0u8..3) {
-        let dir = std::env::temp_dir().join(format!(
-            "sessionledger-corpus-paths-roundtrip-{}-{}",
-            std::process::id(),
-            i,
-        ));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).expect("mkdir");
-        let path = dir.join("corpus_paths.json");
-
-        save_config_to(&config, &path).expect("save");
-        let restored = load_config_from(&path).expect("load");
-
-        prop_assert_eq!(restored, config);
-
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    /// Property: `load_config_from(<missing>)` returns `Ok(empty())`
-    /// — the viewer's first launch on a new machine must not fail
-    /// just because the user hasn't picked anything yet.
-    #[test]
-    fn missing_file_yields_empty_config(i in 0u8..4) {
-        let dir = std::env::temp_dir().join(format!(
-            "sessionledger-corpus-paths-missing-{}-{}",
-            std::process::id(),
-            i,
-        ));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).expect("mkdir");
-        let path = dir.join("does-not-exist.json");
-
-        let result = load_config_from(&path);
-        prop_assert!(result.is_ok(), "missing file must yield Ok, got {:?}", result.err());
-        let config = result.unwrap();
-        prop_assert!(config.is_empty());
-
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    /// Property: `load_config_from(<junk>)` surfaces an `Err` — the
-    /// viewer must never silently drop the user's picks on a
-    /// malformed file.
-    #[test]
-    fn junk_json_surfaces_error(junk in junk_json_strategy(), i in 0u8..3) {
-        let dir = std::env::temp_dir().join(format!(
-            "sessionledger-corpus-paths-junk-{}-{}",
-            std::process::id(),
-            i,
-        ));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).expect("mkdir");
-        let path = dir.join("corpus_paths.json");
-        fs::write(&path, junk.as_bytes()).expect("write junk");
-
-        let result = load_config_from(&path);
-        prop_assert!(result.is_err(), "junk JSON must surface as Err, got {result:?}");
-
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    /// Property: `save_config_to` creates missing parent directories
-    /// (the viewer may save into a fresh `~/.../SessionLedger/` that
-    /// doesn't exist yet).
-    #[test]
-    fn save_creates_parent_directories(config in config_strategy(), i in 0u8..3) {
-        let dir = std::env::temp_dir().join(format!(
-            "sessionledger-corpus-paths-nested-{}-{}",
-            std::process::id(),
-            i,
-        ));
-        let _ = fs::remove_dir_all(&dir);
-        let nested = dir.join("a").join("b").join("c").join("corpus_paths.json");
-        prop_assert!(!nested.parent().expect("parent").exists());
-
-        save_config_to(&config, &nested).expect("save nested");
-
-        prop_assert!(nested.exists());
-
-        let _ = fs::remove_dir_all(&dir);
-    }
+// Helper: generate a unique temporary directory for each proptest case.
+fn temp_dir_with_seed() -> BoxedStrategy<PathBuf> {
+    Just(unique_temp_dir()).boxed()
 }

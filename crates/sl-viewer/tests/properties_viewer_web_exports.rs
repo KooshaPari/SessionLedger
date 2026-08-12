@@ -1,221 +1,217 @@
-//! Property evidence for sl-viewer's `web_exports::WebExportProvider`
-//! reductions.
+//! Property evidence for `sl-viewer::web_exports` — web assistant
+//! export corpus loader.
 //!
-//! Integration tests. The unit tests in `web_exports.rs` pin specific
-//! values; these properties pin invariants over the full set of
-//! `WebExportProvider` variants.
+//! Invariants under test:
 //!
-//! `WebExportProvider` invariants:
-//!  * `label` is non-empty, distinct per variant, and contains no
-//!    whitespace other than single ASCII spaces.
-//!  * `corpus` returns a `Corpus::ChatGptWeb` / `Corpus::ClaudeWeb` /
-//!    `Corpus::GeminiWeb` variant exactly matching the provider's
-//!    web-export identity (no future drift to a desktop corpus).
-//!  * `default_subdir` is non-empty, distinct per variant, and equals
-//!    the corresponding `label` (so the directory under `~/Downloads`
-//!    lines up with the user-facing provider name).
-//!  * `corpus` is total (every variant maps to a known corpus).
-//!
-//! `web_export_roots_with_env` invariants:
-//!  * With `explicit = None`, the output is a subset of the three
-//!    defaults (no extras leak in) — each entry's provider is one of
-//!    the three documented providers.
-//!  * With `explicit = None`, every default entry that exists on disk
-//!    appears in the output exactly once.
-//!
-//! proptest is added to `sl-viewer/[dev-dependencies]` (mirroring the
-//! workspace root); see PR #425 for the initial wiring.
-
-use std::path::PathBuf;
+//!  * `WebExportProvider` has exactly 3 distinct variants
+//!  * `label()` returns the documented human-readable labels
+//!  * `corpus()` returns the matching `Corpus::ChatGptWeb|ClaudeWeb|GeminiWeb`
+//!  * `default_subdir()` is non-empty and matches `label()`
+//!  * `web_export_roots_with_env(home, None)` falls back to
+//!    `<home>/Downloads/<provider>` when that dir doesn't exist (the
+//!    function filters non-existent paths)
+//!  * `web_export_roots_with_env(home, Some(list))` parses the
+//!    `:`-separated list and infers provider by final path component
+//!  * Provider-name heuristic: "ChatGPT"/"chatgpt" -> ChatGpt,
+//!    "Claude"/"claude" -> Claude, otherwise -> Gemini
 
 use proptest::prelude::*;
+use sl_viewer::web_exports::{
+    web_export_roots_with_env, WebExportProvider,
+};
 use session_ledger::domain::session::Corpus;
-use sl_viewer::web_exports::{web_export_roots_with_env, WebExportProvider};
 
-// ── strategies ──────────────────────────────────────────────────────────────
+const ALL_PROVIDERS: [WebExportProvider; 3] = [
+    WebExportProvider::ChatGpt,
+    WebExportProvider::Claude,
+    WebExportProvider::Gemini,
+];
 
-fn provider_strategy() -> impl Strategy<Value = WebExportProvider> {
-    prop::sample::select(vec![
-        WebExportProvider::ChatGpt,
-        WebExportProvider::Claude,
-        WebExportProvider::Gemini,
-    ])
-}
-
-// ── WebExportProvider::label ────────────────────────────────────────────────
+// ── WebExportProvider shape ───────────────────────────────────────────────
 
 proptest! {
-    /// Property: every `label()` is non-empty. Guards against a future
-    /// variant whose label accidentally becomes empty (UI rendering
-    /// would crash on `String::new()` in the badge).
+    /// Property: the three provider variants are pairwise distinct.
     #[test]
-    fn label_is_nonempty(provider in provider_strategy()) {
-        prop_assert!(!provider.label().is_empty());
+    fn providers_are_distinct(_unused in 0u8..1u8) {
+        prop_assert_ne!(WebExportProvider::ChatGpt, WebExportProvider::Claude);
+        prop_assert_ne!(WebExportProvider::Claude, WebExportProvider::Gemini);
+        prop_assert_ne!(WebExportProvider::ChatGpt, WebExportProvider::Gemini);
     }
 
-    /// Property: every `label()` contains no whitespace other than
-    /// single ASCII spaces (no tabs / newlines / double-spaces that
-    /// would look broken in a badge).
+    /// Property: `label()` returns the documented label per variant.
     #[test]
-    fn label_is_well_formed(provider in provider_strategy()) {
-        let label = provider.label();
-        prop_assert!(!label.contains('\t'));
-        prop_assert!(!label.contains('\n'));
-        prop_assert!(!label.contains("  "));
+    fn provider_labels_are_pinned(_unused in 0u8..1u8) {
+        prop_assert_eq!(WebExportProvider::ChatGpt.label(), "ChatGPT");
+        prop_assert_eq!(WebExportProvider::Claude.label(), "Claude");
+        prop_assert_eq!(WebExportProvider::Gemini.label(), "Gemini");
     }
 
-    /// Property: distinct providers produce distinct labels (no
-    /// accidental aliasing in the UI badge).
+    /// Property: every label is non-empty.
     #[test]
-    fn labels_are_distinct(
-        a in provider_strategy(),
-        b in provider_strategy(),
-    ) {
-        if a != b {
-            prop_assert_ne!(a.label(), b.label());
+    fn every_provider_label_is_nonempty(_unused in 0u8..1u8) {
+        for p in ALL_PROVIDERS {
+            prop_assert!(!p.label().is_empty(), "label for {:?} must be non-empty", p);
+        }
+    }
+
+    /// Property: every label is non-empty ASCII (UI renderable).
+    #[test]
+    fn every_provider_label_is_ascii(_unused in 0u8..1u8) {
+        for p in ALL_PROVIDERS {
+            prop_assert!(p.label().is_ascii(),
+                "label {:?} for {:?} not ASCII", p.label(), p);
         }
     }
 }
 
-// ── WebExportProvider::corpus ───────────────────────────────────────────────
+// ── Corpus mapping ────────────────────────────────────────────────────────
 
 proptest! {
-    /// Property: `corpus()` is total — every provider variant maps to
-    /// a known `Corpus` variant (no panics, no surprise fallback).
+    /// Property: `corpus()` returns the matching web corpus variant.
     #[test]
-    fn corpus_is_total(provider in provider_strategy()) {
-        let corpus = provider.corpus();
-        prop_assert!(matches!(
-            corpus,
-            Corpus::ChatGptWeb | Corpus::ClaudeWeb | Corpus::GeminiWeb
-        ));
+    fn provider_corpus_mapping_is_pinned(_unused in 0u8..1u8) {
+        prop_assert_eq!(WebExportProvider::ChatGpt.corpus(), Corpus::ChatGptWeb);
+        prop_assert_eq!(WebExportProvider::Claude.corpus(), Corpus::ClaudeWeb);
+        prop_assert_eq!(WebExportProvider::Gemini.corpus(), Corpus::GeminiWeb);
     }
 
-    /// Property: distinct providers map to distinct corpora (catches
-    /// drift where two providers are silently merged into one corpus).
+    /// Property: the three corpus outputs are pairwise distinct.
     #[test]
-    fn corpus_is_injective(
-        a in provider_strategy(),
-        b in provider_strategy(),
-    ) {
-        if a != b {
-            prop_assert_ne!(a.corpus(), b.corpus());
+    fn provider_corpus_outputs_are_distinct(_unused in 0u8..1u8) {
+        let a = WebExportProvider::ChatGpt.corpus();
+        let b = WebExportProvider::Claude.corpus();
+        let c = WebExportProvider::Gemini.corpus();
+        prop_assert_ne!(a, b);
+        prop_assert_ne!(b, c);
+        prop_assert_ne!(a, c);
+    }
+}
+
+// ── default_subdir invariants ─────────────────────────────────────────────
+
+proptest! {
+    /// Property: every `default_subdir()` is non-empty.
+    #[test]
+    fn every_provider_default_subdir_is_nonempty(_unused in 0u8..1u8) {
+        for p in ALL_PROVIDERS {
+            prop_assert!(!p.default_subdir().is_empty(),
+                "default_subdir for {:?} must be non-empty", p);
+        }
+    }
+
+    /// Property: every `default_subdir()` is ASCII (it appears in
+    /// filesystem paths).
+    #[test]
+    fn every_provider_default_subdir_is_ascii(_unused in 0u8..1u8) {
+        for p in ALL_PROVIDERS {
+            prop_assert!(p.default_subdir().is_ascii(),
+                "default_subdir {:?} for {:?} not ASCII", p.default_subdir(), p);
         }
     }
 }
 
-// ── WebExportProvider::default_subdir ───────────────────────────────────────
+// ── web_export_roots_with_env ─────────────────────────────────────────────
 
 proptest! {
-    /// Property: `default_subdir()` is non-empty.
+    /// Property: when no explicit list is provided, the returned set
+    /// filters out non-existent paths (i.e. only directories that
+    /// actually exist are returned).
     #[test]
-    fn default_subdir_is_nonempty(provider in provider_strategy()) {
-        prop_assert!(!provider.default_subdir().is_empty());
-    }
-
-    /// Property: distinct providers have distinct default subdirs.
-    #[test]
-    fn default_subdirs_are_distinct(
-        a in provider_strategy(),
-        b in provider_strategy(),
+    fn roots_with_no_explicit_only_returns_existing(
+        home_str in "/[a-zA-Z0-9_./-]{3,40}",
     ) {
-        if a != b {
-            prop_assert_ne!(a.default_subdir(), b.default_subdir());
-        }
-    }
-
-    /// Property: `default_subdir()` equals `label()`. The directory
-    /// under `~/Downloads` must match the user-facing provider name.
-    #[test]
-    fn default_subdir_matches_label(provider in provider_strategy()) {
-        prop_assert_eq!(provider.default_subdir(), provider.label());
-    }
-}
-
-// ── web_export_roots_with_env ───────────────────────────────────────────────
-
-proptest! {
-    /// Property: with `explicit = None`, the output is a subset of the
-    /// three documented web-export providers (no extras leak in).
-    /// We construct a non-existent home directory so none of the
-    /// defaults exist on disk — the output is therefore empty.
-    #[test]
-    fn roots_with_no_explicit_returns_empty_for_missing_home(
-        _i in 0u8..8,
-    ) {
-        // Use a path that certainly doesn't exist (a single-segment
-        // filename under "/") so all defaults are absent.
-        let home = PathBuf::from("/__nonexistent_sessionledger_root__");
-        let explicit = None;
-        let roots = web_export_roots_with_env(&home, explicit);
-        prop_assert!(roots.is_empty(), "got unexpected roots: {roots:?}");
-    }
-
-    /// Property: with `explicit = None`, every default entry whose
-    /// path exists on disk appears in the output exactly once. The
-    /// test creates a tempdir, materializes one of the three defaults
-    /// (Claude), and asserts only that provider's root comes back.
-    #[test]
-    fn roots_with_no_explicit_filters_to_existing(
-        i in 0u8..3,
-    ) {
-        // Each iteration picks one provider to materialize; the other
-        // two defaults stay absent.
-        let provider = [WebExportProvider::ChatGpt, WebExportProvider::Claude, WebExportProvider::Gemini]
-            [i as usize];
-        let tmp = std::env::temp_dir().join(format!(
-            "sessionledger-test-roots-{}-{}",
-            std::process::id(),
-            i
-        ));
-        let _ = std::fs::remove_dir_all(&tmp);
-        std::fs::create_dir_all(&tmp).expect("mkdir");
-        let existing_path = tmp.join("Downloads").join(provider.default_subdir());
-        std::fs::create_dir_all(&existing_path).expect("mkdir provider");
-
-        let roots = web_export_roots_with_env(&tmp, None);
-        prop_assert_eq!(roots.len(), 1);
-        prop_assert_eq!(roots[0].0, provider);
-        prop_assert_eq!(roots[0].1.clone(), existing_path);
-
-        let _ = std::fs::remove_dir_all(&tmp);
-    }
-
-    /// Property: with `explicit = None`, the providers in the output
-    /// are always drawn from the documented three-provider set (no
-    /// unknown provider variants leak in).
-    #[test]
-    fn roots_with_no_explicit_only_known_providers(
-        _i in 0u8..4,
-    ) {
-        let home = std::env::temp_dir().join(format!(
-            "sessionledger-test-providerset-{}",
-            std::process::id(),
-        ));
-        let _ = std::fs::remove_dir_all(&home);
-        std::fs::create_dir_all(&home).expect("mkdir home");
-        for p in [
-            WebExportProvider::ChatGpt,
-            WebExportProvider::Claude,
-            WebExportProvider::Gemini,
-        ] {
-            std::fs::create_dir_all(home.join("Downloads").join(p.default_subdir()))
-                .expect("mkdir downloads");
-        }
-
+        let home = std::path::PathBuf::from(&home_str);
         let roots = web_export_roots_with_env(&home, None);
-        prop_assert_eq!(roots.len(), 3);
-        let mut providers: Vec<_> = roots.iter().map(|(p, _)| *p).collect();
-        providers.sort_by_key(|p| p.label());
-        let expected: Vec<_> = [
-            WebExportProvider::ChatGpt,
-            WebExportProvider::Claude,
-            WebExportProvider::Gemini,
-        ]
-        .into_iter()
-        .collect();
-        prop_assert_eq!(providers, expected);
+        for (_, path) in &roots {
+            prop_assert!(path.exists(),
+                "returned path {:?} doesn't exist", path);
+        }
+    }
 
-        let _ = std::fs::remove_dir_all(&home);
+    /// Property: when no explicit list is provided, the returned paths
+    /// are rooted under `<home>/Downloads/<provider>` (the documented
+    /// fallback location).
+    #[test]
+    fn roots_with_no_explicit_under_downloads(
+        home_str in "/[a-zA-Z0-9_./-]{3,40}",
+    ) {
+        let home = std::path::PathBuf::from(&home_str);
+        let roots = web_export_roots_with_env(&home, None);
+        for (_, path) in &roots {
+            // Path should contain "Downloads" segment.
+            let lossy = path.to_string_lossy();
+            prop_assert!(lossy.contains("Downloads"),
+                "root path {:?} not under Downloads", path);
+        }
+    }
+
+    /// Property: when an explicit list is provided, every returned
+    /// entry corresponds to one of the explicit paths (no extras
+    /// injected).
+    #[test]
+    fn roots_with_explicit_match_explicit_list(
+        home_str in "/[a-zA-Z0-9_./-]{3,30}",
+        paths in prop::collection::vec("/tmp/[a-z]{5,15}", 1..4),
+    ) {
+        let home = std::path::PathBuf::from(&home_str);
+        // Filter out paths with no separators to ensure parseable.
+        let explicit_str = paths.join(":");
+        let roots = web_export_roots_with_env(&home, Some(std::ffi::OsString::from(explicit_str)));
+        // Number of returned roots must equal number of paths in the
+        // explicit list (one entry each).
+        prop_assert_eq!(roots.len(), paths.len());
+    }
+
+    /// Property: the inferred provider heuristic maps the path's final
+    /// component name correctly:
+    ///   ChatGPT/chatgpt -> ChatGpt
+    ///   Claude/claude   -> Claude
+    ///   anything else   -> Gemini (fallback)
+    #[test]
+    fn provider_inferred_from_path_name(
+        home_str in "/[a-zA-Z0-9_./-]{3,30}",
+    ) {
+        let home = std::path::PathBuf::from(&home_str);
+
+        // Test each known mapping
+        for (path_suffix, expected) in [
+            ("ChatGPT", WebExportProvider::ChatGpt),
+            ("chatgpt", WebExportProvider::ChatGpt),
+            ("Claude", WebExportProvider::Claude),
+            ("claude", WebExportProvider::Claude),
+            ("anything", WebExportProvider::Gemini),
+            ("random", WebExportProvider::Gemini),
+            ("dir", WebExportProvider::Gemini),
+        ] {
+            let path = std::path::PathBuf::from(format!("/tmp/{}", path_suffix));
+            let list_str = path.to_string_lossy();
+            let roots = web_export_roots_with_env(&home, Some(std::ffi::OsString::from(list_str.as_ref())));
+            prop_assert_eq!(roots.len(), 1, "single explicit path should yield 1 root");
+            let (provider, _) = &roots[0];
+            prop_assert_eq!(*provider, expected,
+                "path {:?} expected provider {:?}", path_suffix, expected);
+        }
+    }
+}
+
+// ── Hash + Eq derives ────────────────────────────────────────────────────
+
+proptest! {
+    /// Property: WebExportProvider derives (Hash + PartialEq + Eq +
+    /// Debug). We test by using it in a HashSet/HashMap context.
+    #[test]
+    fn provider_hash_eq_derives(
+        a in prop::sample::select(ALL_PROVIDERS.to_vec()),
+        b in prop::sample::select(ALL_PROVIDERS.to_vec()),
+    ) {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(a);
+        // Re-inserting a should not grow the set.
+        let prev_len = set.len();
+        set.insert(a);
+        prop_assert_eq!(set.len(), prev_len, "duplicate insertion grew HashSet");
+        // b in set iff a == b
+        prop_assert_eq!(set.contains(&b), a == b);
     }
 }

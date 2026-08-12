@@ -9,7 +9,7 @@
 pub mod migrate;
 
 /// Current schema version after all bundled migrations are applied.
-pub const CURRENT_VERSION: u32 = 1;
+pub const CURRENT_VERSION: u32 = 2;
 
 /// One forward-only migration entry in the manifest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,11 +25,18 @@ pub struct Migration {
 /// Ordered migration manifest — the SSOT for durable schema evolution.
 #[must_use]
 pub fn migrations() -> &'static [Migration] {
-    &[Migration {
-        version: 1,
-        name: "initial_memory_facts",
-        sql: include_str!("migrations/001_initial.sql"),
-    }]
+    &[
+        Migration {
+            version: 1,
+            name: "initial_memory_facts",
+            sql: include_str!("migrations/001_initial.sql"),
+        },
+        Migration {
+            version: 2,
+            name: "memory_fact_insertion_order",
+            sql: include_str!("migrations/002_memory_fact_insertion_order.sql"),
+        },
+    ]
 }
 
 /// Returns the highest bundled migration version.

@@ -1,381 +1,314 @@
-//! Property evidence for sl-viewer's `settings::Settings` and
-//! `settings::DefaultTab` reducers.
+//! Property evidence for `sl-viewer::settings` — persistence of user
+//! preferences (FR-VIEWER-SETTINGS-1).
 //!
-//! The settings module is the persistence boundary for the viewer
-//! preferences. If the JSON contract drifts, the persisted
-//! `settings.json` file is silently broken on next launch. Every
-//! visible property is pinned here.
+//! Invariants under test:
 //!
-//! `settings::DefaultTab` invariants (8 properties):
-//!  * `DefaultTab::default()` is `DefaultTab::Bundles` (the documented
-//!    launch tab).
-//!  * `DefaultTab::ALL` contains every variant exactly once and is
-//!    9 long (the documented tab-bar count).
-//!  * `tab_id()` always starts with `tab-` and is kebab-case.
-//!  * `tab_id()` is unique across `ALL`.
-//!  * `value_attr()` is non-empty, kebab-case, and unique across `ALL`.
-//!  * `label()` is non-empty.
-//!  * `value_attr()` equals the `tab_id()` suffix (after the `tab-`
-//!    prefix).
-//!
-//! `settings::Settings` invariants (5 properties):
-//!  * `Settings::default()` equals
-//!    `Settings { theme: System, default_tab: Bundles }`.
-//!  * JSON round-trip preserves the struct (including partial fields).
-//!  * JSON serialises `theme` as lowercase (`"light"` / `"dark"` /
-//!    `"system"`) and `default_tab` as kebab-case (`"history"` /
-//!    `"live-feed"` / etc.).
-//!  * `save_to_path` / `load_from_path` round-trip equal configs.
-//!  * `load_from_path` on missing / corrupt files returns `default()`.
-//!
-//! `settings::resolve_settings_dir` invariants (4 properties):
-//!  * Override path is honoured when non-empty.
-//!  * Empty override falls through to the platform default.
-//!  * macOS path is `~/Library/Application Support/SessionLedger`.
-//!  * Windows path is `%APPDATA%/SessionLedger`.
-//!  * Linux path uses `XDG_CONFIG_HOME` when set, otherwise
-//!    `~/.config/SessionLedger`.
-
-use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+//!  * `DefaultTab` has 9 variants, all distinct
+//!  * `DefaultTab::ALL` is the documented canonical ordering
+//!  * Every `label()`, `tab_id()`, `value_attr()` returns a non-empty value
+//!  * `value_attr()` matches the documented kebab-case strings
+//!  * `tab_id()` always has the `tab-` prefix
+//!  * `Settings::default()` returns (Theme::System, DefaultTab::Bundles)
+//!  * `Settings::save_to_path` -> `load_from_path` is a round-trip identity
+//!  * `load_from_path` on a missing file returns defaults silently
+//!  * `load_from_path` on corrupt JSON returns defaults silently
+//!  * `load_from_path` with partial JSON fills missing fields with defaults
+//!  * `save_to_path` creates parent directories
+//!  * Every `DefaultTab` variant serializes to lowercase kebab-case JSON
 
 use proptest::prelude::*;
 use sl_viewer::settings::{DefaultTab, Settings};
 use sl_viewer::theme::Theme;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-// ── DefaultTab ──────────────────────────────────────────────────────────────
+/// Global counter for unique per-case temp paths.
+static CASE_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+/// Generate a unique temp directory for each proptest case.
+fn unique_temp_dir() -> PathBuf {
+    let n = CASE_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let pid = std::process::id();
+    std::env::temp_dir().join(format!("sl-viewer-settings-test-{}-{}", pid, n))
+}
+
+// ── DefaultTab enum shape ────────────────────────────────────────────────
+
+const ALL_TABS: [DefaultTab; 9] = [
+    DefaultTab::Bundles,
+    DefaultTab::History,
+    DefaultTab::Unfinished,
+    DefaultTab::Memory,
+    DefaultTab::LiveFeed,
+    DefaultTab::Search,
+    DefaultTab::Timeline,
+    DefaultTab::Replay,
+    DefaultTab::Corpus,
+];
 
 proptest! {
-    /// `DefaultTab::default()` is `DefaultTab::Bundles`.
+    /// Property: `DefaultTab::ALL` has exactly 9 entries.
     #[test]
-    fn default_tab_default_is_bundles(_seed in any::<u32>()) {
+    fn default_tab_all_cardinality_is_nine(_unused in 0u8..1u8) {
+        prop_assert_eq!(DefaultTab::ALL.len(), 9);
+    }
+
+    /// Property: `DefaultTab::ALL` matches the static local array of
+    /// 9 variants (i.e. we haven't drifted away from the canonical order).
+    #[test]
+    fn default_tab_all_matches_canonical(_unused in 0u8..1u8) {
+        prop_assert_eq!(DefaultTab::ALL.to_vec(), ALL_TABS.to_vec());
+    }
+
+    /// Property: every `DefaultTab` variant is distinct.
+    #[test]
+    fn default_tab_variants_are_distinct(_unused in 0u8..1u8) {
+        let mut seen: Vec<DefaultTab> = Vec::with_capacity(ALL_TABS.len());
+        for t in ALL_TABS {
+            prop_assert!(!seen.contains(&t),
+                "duplicate DefaultTab variant in canonical list: {:?}", t);
+            seen.push(t);
+        }
+    }
+
+    /// Property: `DefaultTab::default()` returns `Bundles`.
+    #[test]
+    fn default_tab_default_is_bundles(_unused in 0u8..1u8) {
         prop_assert_eq!(DefaultTab::default(), DefaultTab::Bundles);
-    }
-
-    /// `DefaultTab::ALL` contains every variant exactly once.
-    #[test]
-    fn default_tab_all_covers_variants(_seed in any::<u32>()) {
-        let all = DefaultTab::ALL;
-        prop_assert_eq!(all.len(), 9);
-        let mut sorted = all.to_vec();
-        sorted.sort_by_key(|t| *t as u8);
-        sorted.dedup();
-        prop_assert_eq!(sorted.len(), all.len());
-    }
-
-    /// Every `tab_id()` is non-empty and starts with `tab-`.
-    #[test]
-    fn default_tab_ids_start_with_tab(idx in 0usize..9) {
-        let id = DefaultTab::ALL[idx].tab_id();
-        prop_assert!(id.starts_with("tab-"), "id {id:?} must start with tab-");
-    }
-
-    /// Every `tab_id()` is unique across `ALL`.
-    #[test]
-    fn default_tab_ids_unique(_seed in any::<u32>()) {
-        let ids: Vec<&str> = DefaultTab::ALL.iter().map(|t| t.tab_id()).collect();
-        let mut deduped = ids.clone();
-        deduped.sort();
-        deduped.dedup();
-        prop_assert_eq!(deduped.len(), ids.len());
-    }
-
-    /// Every `value_attr()` is non-empty and kebab-case ASCII.
-    #[test]
-    fn default_tab_value_attrs_kebab_case(idx in 0usize..9) {
-        let v = DefaultTab::ALL[idx].value_attr();
-        prop_assert!(!v.is_empty());
-        let valid = v.chars().all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-');
-        prop_assert!(valid, "value attr {v:?} is not kebab-case ASCII");
-    }
-
-    /// Every `value_attr()` is unique across `ALL`.
-    #[test]
-    fn default_tab_value_attrs_unique(_seed in any::<u32>()) {
-        let attrs: Vec<&str> = DefaultTab::ALL.iter().map(|t| t.value_attr()).collect();
-        let mut deduped = attrs.clone();
-        deduped.sort();
-        deduped.dedup();
-        prop_assert_eq!(deduped.len(), attrs.len());
-    }
-
-    /// Every `label()` is non-empty.
-    #[test]
-    fn default_tab_labels_nonempty(idx in 0usize..9) {
-        prop_assert!(!DefaultTab::ALL[idx].label().is_empty());
-    }
-
-    /// `value_attr()` always equals the `tab_id()` suffix after `tab-`.
-    #[test]
-    fn default_tab_id_suffix_matches_value_attr(idx in 0usize..9) {
-        let tab = DefaultTab::ALL[idx];
-        let id = tab.tab_id();
-        let value = tab.value_attr();
-        let suffix = id.strip_prefix("tab-").unwrap_or_default();
-        prop_assert_eq!(suffix, value);
-    }
-
-    /// Stable `value_attr()` strings for the documented variants.
-    #[test]
-    fn default_tab_value_attrs_are_stable(_seed in any::<u32>()) {
-        prop_assert_eq!(DefaultTab::Bundles.value_attr(), "bundles");
-        prop_assert_eq!(DefaultTab::Corpus.value_attr(), "corpus");
-        prop_assert_eq!(DefaultTab::LiveFeed.value_attr(), "live-feed");
     }
 }
 
-// ── Settings ────────────────────────────────────────────────────────────────
+// ── DefaultTab per-variant invariants ─────────────────────────────────────
 
 proptest! {
-    /// `Settings::default()` is the documented default.
+    /// Property: every variant's `label()` is non-empty.
     #[test]
-    fn settings_default_matches_documented(_seed in any::<u32>()) {
+    fn every_default_tab_has_nonempty_label(_unused in 0u8..1u8) {
+        for t in ALL_TABS {
+            prop_assert!(!t.label().is_empty(),
+                "label for {:?} must be non-empty", t);
+        }
+    }
+
+    /// Property: every variant's `label()` is at most 30 chars (UI bound).
+    #[test]
+    fn every_default_tab_label_fits_select_option(_unused in 0u8..1u8) {
+        for t in ALL_TABS {
+            prop_assert!(t.label().len() <= 30,
+                "label {:?} too long for select option", t.label());
+        }
+    }
+
+    /// Property: every variant's `tab_id()` starts with the `tab-` prefix.
+    #[test]
+    fn every_default_tab_id_has_tab_prefix(_unused in 0u8..1u8) {
+        for t in ALL_TABS {
+            prop_assert!(t.tab_id().starts_with("tab-"),
+                "tab_id {:?} for {:?} must start with 'tab-'",
+                t.tab_id(), t);
+        }
+    }
+
+    /// Property: every variant's `tab_id()` matches the documented
+    /// runtime tab IDs in app.rs (stabilization contract).
+    #[test]
+    fn default_tab_ids_are_pinned(_unused in 0u8..1u8) {
+        prop_assert_eq!(DefaultTab::Bundles.tab_id(),    "tab-bundles");
+        prop_assert_eq!(DefaultTab::History.tab_id(),    "tab-history");
+        prop_assert_eq!(DefaultTab::Unfinished.tab_id(), "tab-unfinished");
+        prop_assert_eq!(DefaultTab::Memory.tab_id(),     "tab-memory");
+        prop_assert_eq!(DefaultTab::LiveFeed.tab_id(),   "tab-live-feed");
+        prop_assert_eq!(DefaultTab::Search.tab_id(),     "tab-search");
+        prop_assert_eq!(DefaultTab::Timeline.tab_id(),   "tab-timeline");
+        prop_assert_eq!(DefaultTab::Replay.tab_id(),     "tab-replay");
+        prop_assert_eq!(DefaultTab::Corpus.tab_id(),     "tab-corpus");
+    }
+
+    /// Property: every variant's `value_attr()` is non-empty kebab-case.
+    #[test]
+    fn every_default_tab_value_attr_is_nonempty(_unused in 0u8..1u8) {
+        for t in ALL_TABS {
+            let v = t.value_attr();
+            prop_assert!(!v.is_empty(),
+                "value_attr for {:?} must be non-empty", t);
+            for c in v.chars() {
+                prop_assert!(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-',
+                    "value_attr {:?} for {:?} has non-kebab char", v, t);
+            }
+        }
+    }
+
+    /// Property: documented value_attr strings are pinned.
+    #[test]
+    fn default_tab_value_attrs_are_pinned(_unused in 0u8..1u8) {
+        prop_assert_eq!(DefaultTab::Bundles.value_attr(), "bundles");
+        prop_assert_eq!(DefaultTab::Corpus.value_attr(), "corpus");
+        prop_assert_eq!(DefaultTab::LiveFeed.value_attr(), "live-feed");
+        prop_assert_eq!(DefaultTab::Memory.value_attr(), "memory");
+    }
+}
+
+// ── DefaultTab JSON serialization ────────────────────────────────────────
+
+proptest! {
+    /// Property: every DefaultTab variant roundtrips through JSON.
+    #[test]
+    fn default_tab_serializes_to_lowercase_kebab(
+        sample in prop::sample::select(ALL_TABS.to_vec()),
+    ) {
+        let json = serde_json::to_string(&sample).expect("serialize");
+        // Should be quoted kebab-case, e.g. `"live-feed"`.
+        let inner = json.trim_matches('"');
+        prop_assert!(matches!(inner, "bundles" | "history" | "unfinished" | "memory" | "live-feed" | "search" | "timeline" | "replay" | "corpus"),
+            "expected kebab-case token, got {:?}", inner);
+        let back: DefaultTab = serde_json::from_str(&json).expect("deserialize");
+        prop_assert_eq!(back, sample);
+    }
+
+    /// Property: every DefaultTab variant's value_attr() equals the JSON
+    /// representation stripped of quotes.
+    #[test]
+    fn default_tab_value_attr_matches_json_inner(_unused in 0u8..1u8) {
+        for t in ALL_TABS {
+            let json = serde_json::to_string(&t).expect("serialize");
+            let inner = json.trim_matches('"');
+            prop_assert_eq!(t.value_attr(), inner,
+                "{:?} value_attr should match JSON inner", t);
+        }
+    }
+}
+
+// ── Settings shape ────────────────────────────────────────────────────────
+
+proptest! {
+    /// Property: `Settings::default()` is `(Theme::System, DefaultTab::Bundles)`.
+    #[test]
+    fn settings_default_matches_documented(_unused in 0u8..1u8) {
         let s = Settings::default();
         prop_assert_eq!(s.theme, Theme::System);
         prop_assert_eq!(s.default_tab, DefaultTab::Bundles);
     }
 
-    /// `Settings` JSON round-trip preserves the struct.
+    /// Property: Settings derives (Copy + Clone + Default + PartialEq + Eq + Debug).
     #[test]
-    fn settings_json_round_trip(
-        theme in prop::sample::select(vec![Theme::Light, Theme::Dark, Theme::System]),
-        default_tab_idx in 0usize..9,
+    fn settings_derives_hold(
+        sample in prop::sample::select(vec![
+            Settings { theme: Theme::Light, default_tab: DefaultTab::Bundles },
+            Settings { theme: Theme::Dark,  default_tab: DefaultTab::Search },
+            Settings { theme: Theme::System, default_tab: DefaultTab::Replay },
+        ]),
     ) {
-        let default_tab = DefaultTab::ALL[default_tab_idx];
-        let s = Settings { theme, default_tab };
+        let copied = sample;                  // Copy
+        let cloned = sample.clone();           // Clone (only need to support)
+        prop_assert_eq!(sample, copied);
+        prop_assert_eq!(sample, cloned);
+        let debug = format!("{:?}", sample);
+        prop_assert!(!debug.is_empty());
+    }
+}
+
+// ── Settings JSON serialization ───────────────────────────────────────────
+
+proptest! {
+    /// Property: settings serialize with snake_case field names.
+    #[test]
+    fn settings_json_uses_snake_case(
+        theme in prop::sample::select(vec![Theme::Light, Theme::Dark, Theme::System]),
+        tab in prop::sample::select(ALL_TABS.to_vec()),
+    ) {
+        let s = Settings { theme, default_tab: tab };
         let json = serde_json::to_string(&s).expect("serialize");
+        prop_assert!(json.starts_with('{'), "expected JSON object, got {}", json);
+        // snake_case for both fields.
+        prop_assert!(json.contains("\"theme\""), "missing theme field: {}", json);
+        prop_assert!(json.contains("\"default_tab\""), "missing default_tab field: {}", json);
+    }
+
+    /// Property: settings JSON round-trip is identity.
+    #[test]
+    fn settings_json_round_trips(
+        theme in prop::sample::select(vec![Theme::Light, Theme::Dark, Theme::System]),
+        tab in prop::sample::select(ALL_TABS.to_vec()),
+    ) {
+        let original = Settings { theme, default_tab: tab };
+        let json = serde_json::to_string(&original).expect("serialize");
         let back: Settings = serde_json::from_str(&json).expect("deserialize");
-        prop_assert_eq!(back, s);
+        prop_assert_eq!(back, original);
     }
+}
 
-    /// Serialised `theme` uses lowercase + `default_tab` uses kebab-case.
-    #[test]
-    fn settings_json_uses_lowercase_kebab(
-        theme in prop::sample::select(vec![Theme::Light, Theme::Dark, Theme::System]),
-        default_tab_idx in 0usize..9,
-    ) {
-        let s = Settings {
-            theme,
-            default_tab: DefaultTab::ALL[default_tab_idx],
-        };
-        let json = serde_json::to_string(&s).expect("serialize");
-        let theme_repr = format!("\"theme\":\"{}\"", format!("{theme:?}").to_lowercase());
-        prop_assert!(
-            json.contains(&theme_repr),
-            "expected {theme_repr} in {json}",
-        );
-        let value = s.default_tab.value_attr();
-        prop_assert!(
-            json.contains(&format!("\"default_tab\":\"{value}\"")),
-            "expected default_tab {value:?} in {json}",
-        );
-    }
+// ── Settings filesystem persistence ───────────────────────────────────────
 
-    /// `save_to_path` then `load_from_path` round-trips equal configs.
+proptest! {
+    /// Property: save_to_path then load_from_path is a round-trip identity.
     #[test]
     fn settings_save_load_round_trip(
         theme in prop::sample::select(vec![Theme::Light, Theme::Dark, Theme::System]),
-        default_tab_idx in 0usize..9,
+        tab in prop::sample::select(ALL_TABS.to_vec()),
     ) {
-        let s = Settings {
-            theme,
-            default_tab: DefaultTab::ALL[default_tab_idx],
-        };
-        let mut dir = std::env::temp_dir();
-        dir.push(format!(
-            "sl-viewer-settings-prop-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_nanos())
-                .unwrap_or(0)
-        ));
-        std::fs::create_dir_all(&dir).expect("mkdir");
+        let dir = unique_temp_dir();
         let path = dir.join("settings.json");
-        s.save_to_path(&path).expect("save");
+        let original = Settings { theme, default_tab: tab };
+        original.save_to_path(&path).expect("save");
         let restored = Settings::load_from_path(&path);
-        prop_assert_eq!(restored, s);
-        let _ = std::fs::remove_dir_all(&dir);
+        prop_assert_eq!(restored, original,
+            "saved settings did not match loaded");
     }
 
-    /// `load_from_path` on a missing or corrupt file returns `default()`.
+    /// Property: load_from_path on a missing file returns defaults silently.
     #[test]
-    fn settings_load_missing_or_corrupt_returns_default(
-        seed in any::<u32>(),
+    fn settings_missing_file_yields_default(
+        _unused in 0u8..1u8,
     ) {
-        let mut dir = std::env::temp_dir();
-        dir.push(format!(
-            "sl-viewer-settings-prop-missing-{seed}-{}",
-            std::process::id(),
-        ));
+        let dir = unique_temp_dir();
+        let path = dir.join("does-not-exist.json");
+        let s = Settings::load_from_path(&path);
+        prop_assert_eq!(s, Settings::default());
+    }
+
+    /// Property: load_from_path on corrupt JSON returns defaults silently.
+    #[test]
+    fn settings_corrupt_json_yields_default(
+        junk in "[^a-zA-Z0-9 \\n]{0,40}",
+    ) {
+        let dir = unique_temp_dir();
         std::fs::create_dir_all(&dir).expect("mkdir");
         let path = dir.join("settings.json");
-
-        // Missing file.
-        let missing = Settings::load_from_path(&path);
-        prop_assert_eq!(missing, Settings::default());
-
-        // Corrupt file.
-        std::fs::write(&path, "{ not valid json").expect("write");
-        let corrupt = Settings::load_from_path(&path);
-        prop_assert_eq!(corrupt, Settings::default());
-
-        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::write(&path, &junk).expect("write junk");
+        let s = Settings::load_from_path(&path);
+        prop_assert_eq!(s, Settings::default(),
+            "corrupt JSON should yield default, got {:?}", s);
     }
 
-    /// `save_to_path` creates missing parent directories.
+    /// Property: load_from_path with partial JSON (e.g. only theme)
+    /// fills missing fields with their own defaults.
     #[test]
-    fn settings_save_creates_parent_dirs(_seed in any::<u32>()) {
-        let mut dir = std::env::temp_dir();
-        dir.push(format!(
-            "sl-viewer-settings-prop-nested-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_nanos())
-                .unwrap_or(0)
-        ));
-        let path = dir.join("a").join("b").join("settings.json");
-        let s = Settings::default();
-        s.save_to_path(&path).expect("save");
-        prop_assert!(path.exists());
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-}
-
-// ── settings::resolve_settings_dir (pure resolver) ──────────────────────────
-
-proptest! {
-    /// Override path is honoured when non-empty.
-    #[test]
-    fn resolve_settings_dir_override_is_honoured(seed in any::<u32>()) {
-        let dir = PathBuf::from(format!("/tmp/sl-viewer-override-{seed}"));
-        let resolved = resolve_settings_dir(Some(dir.to_str().unwrap()), None, None, None)
-            .expect("override resolves");
-        prop_assert_eq!(resolved, dir);
-    }
-
-    /// Empty override falls through to the platform default.
-    #[test]
-    fn resolve_settings_dir_empty_override_falls_through(
-        seed in any::<u32>(),
+    fn settings_partial_json_fills_missing(
+        theme in prop::sample::select(vec![Theme::Light, Theme::Dark, Theme::System]),
     ) {
-        if !(cfg!(target_os = "macos") || cfg!(target_os = "windows") || cfg!(target_os = "linux")) {
-            return Ok(());
-        }
-        let home = OsStr::new("/Users/agent-fallback");
-        let resolved = resolve_settings_dir(Some(""), Some(home), None, None).expect("resolved");
-        let resolved_str = resolved.to_string_lossy().to_string();
-        // Expected fragment depends on platform; we just assert the
-        // override path was bypassed (i.e. the result is not `""`).
-        prop_assert!(!resolved_str.is_empty(), "resolved path is empty");
-        // The fallback never equals the override path.
-        prop_assert_ne!(
-            resolved_str,
-            Path::new("").to_string_lossy().to_string(),
-        );
+        let dir = unique_temp_dir();
+        std::fs::create_dir_all(&dir).expect("mkdir");
+        let path = dir.join("settings.json");
+        let json_str = match theme {
+            Theme::Light => r#"{"theme":"light"}"#,
+            Theme::Dark  => r#"{"theme":"dark"}"#,
+            Theme::System => r#"{"theme":"system"}"#,
+        };
+        std::fs::write(&path, json_str).expect("write partial");
+        let s = Settings::load_from_path(&path);
+        prop_assert_eq!(s.theme, theme);
+        prop_assert_eq!(s.default_tab, DefaultTab::default());
     }
 
-    /// macOS path is `~/Library/Application Support/SessionLedger`.
+    /// Property: save_to_path creates missing parent directories.
     #[test]
-    fn resolve_settings_dir_macos_uses_application_support(_seed in any::<u32>()) {
-        let home = OsStr::new("/Users/agent");
-        let resolved = resolve_settings_dir(None, Some(home), None, None).expect("resolved");
-        let expected = PathBuf::from("/Users/agent/Library/Application Support/SessionLedger");
-        if cfg!(target_os = "macos") {
-            prop_assert_eq!(resolved, expected);
-        } else {
-            // Other platforms may not match — we just assert the
-            // resolver returned something.
-            prop_assert!(!resolved.to_string_lossy().is_empty());
-        }
+    fn settings_save_creates_parents(
+        theme in prop::sample::select(vec![Theme::Light, Theme::Dark, Theme::System]),
+    ) {
+        let dir = unique_temp_dir();
+        let path = dir.join("a").join("b").join("c").join("settings.json");
+        let s = Settings { theme, default_tab: DefaultTab::Bundles };
+        s.save_to_path(&path).expect("save nested");
+        prop_assert!(path.exists(), "settings.json should exist");
     }
-
-    /// Windows path is `%APPDATA%/SessionLedger`.
-    #[test]
-    fn resolve_settings_dir_windows_uses_appdata(_seed in any::<u32>()) {
-        let appdata = OsStr::new("C:/Users/agent/AppData/Roaming");
-        let resolved = resolve_settings_dir(None, None, Some(appdata), None);
-        let expected = PathBuf::from("C:/Users/agent/AppData/Roaming/SessionLedger");
-        if cfg!(target_os = "windows") {
-            prop_assert_eq!(resolved, Some(expected));
-        } else {
-            // macOS branch fires first and returns None without home.
-            // The test only asserts the resolver returned something when
-            // a meaningful input is given — on macOS we provide a home
-            // so the windows branch can still be exercised.
-            let home = OsStr::new("/Users/agent");
-            let resolved_with_home =
-                resolve_settings_dir(None, Some(home), Some(appdata), None);
-            if cfg!(target_os = "macos") {
-                // macOS path takes precedence; Windows APPDATA is ignored.
-                prop_assert!(resolved_with_home.is_some());
-            } else {
-                prop_assert!(resolved_with_home.is_some());
-            }
-        }
-    }
-
-    /// Linux path uses `XDG_CONFIG_HOME` when set.
-    #[test]
-    fn resolve_settings_dir_linux_uses_xdg_when_present(_seed in any::<u32>()) {
-        let home = OsStr::new("/home/agent");
-        let xdg = OsStr::new("/custom/cfg");
-        let resolved = resolve_settings_dir(None, Some(home), None, Some(xdg)).expect("resolved");
-        if cfg!(target_os = "linux") || cfg!(target_os = "freebsd") || cfg!(target_os = "netbsd") {
-            prop_assert_eq!(resolved, PathBuf::from("/custom/cfg/SessionLedger"));
-        } else {
-            prop_assert!(!resolved.to_string_lossy().is_empty());
-        }
-    }
-
-    /// Linux path falls back to `~/.config/SessionLedger` without XDG.
-    #[test]
-    fn resolve_settings_dir_linux_falls_back_to_dotconfig(_seed in any::<u32>()) {
-        let home = OsStr::new("/home/agent");
-        let resolved = resolve_settings_dir(None, Some(home), None, None).expect("resolved");
-        if cfg!(target_os = "linux") || cfg!(target_os = "freebsd") || cfg!(target_os = "netbsd") {
-            prop_assert_eq!(resolved, PathBuf::from("/home/agent/.config/SessionLedger"));
-        } else {
-            prop_assert!(!resolved.to_string_lossy().is_empty());
-        }
-    }
-}
-
-// ── private helper shim (mirrors private fn in `settings.rs`) ───────────────
-
-fn resolve_settings_dir(
-    override_dir: Option<&str>,
-    home: Option<&OsStr>,
-    appdata: Option<&OsStr>,
-    xdg_config: Option<&OsStr>,
-) -> Option<PathBuf> {
-    if let Some(dir) = override_dir {
-        if !dir.is_empty() {
-            return Some(PathBuf::from(dir));
-        }
-    }
-
-    if cfg!(target_os = "macos") {
-        let home = home?;
-        return Some(
-            PathBuf::from(home).join("Library").join("Application Support").join("SessionLedger"),
-        );
-    }
-
-    if cfg!(target_os = "windows") {
-        if let Some(appdata) = appdata {
-            return Some(PathBuf::from(appdata).join("SessionLedger"));
-        }
-        if let Some(home) = home {
-            return Some(PathBuf::from(home).join("AppData").join("Roaming").join("SessionLedger"));
-        }
-        return None;
-    }
-
-    if let Some(xdg) = xdg_config {
-        return Some(PathBuf::from(xdg).join("SessionLedger"));
-    }
-    let home = home?;
-    Some(PathBuf::from(home).join(".config").join("SessionLedger"))
 }

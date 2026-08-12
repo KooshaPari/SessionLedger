@@ -88,25 +88,36 @@ pub fn transform_file(
     let sessions = read_sessions(jsonl_path)
         .map_err(|source| EtlError::Ingest { path: jsonl_path.to_path_buf(), source })?;
 
+    let mut written = Vec::with_capacity(sessions.len());
+    for session in &sessions {
+        written.push(transform_session(session, out_dir, memory_store)?);
+    }
+    Ok(written)
+}
+
+/// Compile, optionally distill, and export one normalized session to its durable
+/// OKF document. Both filesystem-watch and HTTP ingestion use this path so they
+/// have identical persistence and SQLite-memory semantics.
+pub fn transform_session(
+    session: &session_ledger::Session,
+    out_dir: &Path,
+    memory_store: Option<&dyn MemoryStore>,
+) -> Result<PathBuf, EtlError> {
     std::fs::create_dir_all(out_dir)
         .map_err(|source| EtlError::Write { path: out_dir.to_path_buf(), source })?;
 
-    let mut written = Vec::with_capacity(sessions.len());
-    for session in &sessions {
-        let doc = if let Some(store) = memory_store {
-            let output = compile_and_store(session, store)
-                .map_err(|source| EtlError::Memory { path: jsonl_path.to_path_buf(), source })?;
-            export_to_okf(&output.bundle, session.corpus.as_str())
-        } else {
-            process_session(session)
-        };
-        let json = serde_json::to_string_pretty(&doc)?;
-        let out_path = out_dir.join(format!("{}.okf.json", sanitize(&session.id)));
-        std::fs::write(&out_path, json)
-            .map_err(|source| EtlError::Write { path: out_path.clone(), source })?;
-        written.push(out_path);
-    }
-    Ok(written)
+    let doc = if let Some(store) = memory_store {
+        let output = compile_and_store(session, store)
+            .map_err(|source| EtlError::Memory { path: out_dir.to_path_buf(), source })?;
+        export_to_okf(&output.bundle, session.corpus.as_str())
+    } else {
+        process_session(session)
+    };
+    let json = serde_json::to_string_pretty(&doc)?;
+    let out_path = out_dir.join(format!("{}.okf.json", sanitize(&session.id)));
+    std::fs::write(&out_path, json)
+        .map_err(|source| EtlError::Write { path: out_path.clone(), source })?;
+    Ok(out_path)
 }
 
 /// Reject transcripts larger than the configured ingest cap before any of the

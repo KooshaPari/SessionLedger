@@ -40,12 +40,13 @@ use serde_json::Value;
 use tokio::sync::{broadcast, Semaphore};
 
 use crate::audit::{self, AuditSink};
+use crate::etl;
 use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
 use crate::metrics::{compute_metrics, normalize_http_route, HttpMetrics};
 use crate::resilience::ApiCircuitBreaker;
-use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 use crate::resolver::{ResolveRequest, ResolveResponse, Resolver};
+use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 #[cfg(feature = "otel")]
 use opentelemetry::trace::{
     SpanContext, SpanId, TraceContextExt as _, TraceFlags, TraceId, TraceState,
@@ -957,10 +958,11 @@ async fn search_bundles(
     Json(matched).into_response()
 }
 
-/// `POST /api/ingest` — validate an OKF bundle payload before accepting it.
+/// `POST /api/ingest` — validate and durably ingest an OKF bundle payload.
 ///
 /// Returns `200 OK` with the [`crate::validation::ValidationResult`] JSON when the
-/// bundle passes all structural checks. Returns `422 Unprocessable Entity` with
+/// bundle passes all structural checks and is exported through the same pipeline
+/// as watched sessions. Returns `422 Unprocessable Entity` with
 /// the same JSON body when one or more validation errors are found. This allows
 /// clients to distinguish a transport-level failure (4xx/5xx from the proxy or
 /// server) from a business-logic rejection (422 with actionable error details).
@@ -1040,6 +1042,28 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
     };
     let result = validate_okf_bundle(&payload);
     if result.valid {
+        let session = session_from_ingest(&payload).expect("validated ingest roles must normalize");
+        #[cfg(feature = "sqlite")]
+        let memory_store = state
+            .memory_store
+            .as_ref()
+            .map(|store| store.as_ref() as &dyn session_ledger::ports::MemoryStore);
+        #[cfg(not(feature = "sqlite"))]
+        let memory_store: Option<&dyn session_ledger::ports::MemoryStore> = None;
+        let written = match etl::transform_session(&session, state.out_dir.as_ref(), memory_store) {
+            Ok(written) => written,
+            Err(error) => {
+                error!(error = %error, bundle_id = %payload.bundle_id, "HTTP ingest persistence failed");
+                audit_event(&state.audit_sink, "ingest", "failed", "persistence", &request_id);
+                return api_error(
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "persistence_failed",
+                    "validated ingest could not be persisted",
+                    &request_id,
+                );
+            }
+        };
+        let _ = state.broadcast_tx.send(written);
         audit_event(&state.audit_sink, "ingest", "accepted", "validation", &request_id);
         if let Some(key) = idempotency_key {
             let result = match state.idempotency_cache.record_success(key, body_hash, result) {
@@ -1067,6 +1091,27 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
         audit_event(&state.audit_sink, "ingest", "rejected", "validation", &request_id);
         (axum::http::StatusCode::UNPROCESSABLE_ENTITY, Json(&result)).into_response()
     }
+}
+
+fn session_from_ingest(payload: &PostBundle) -> Option<session_ledger::Session> {
+    use session_ledger::{Corpus, Message, Role, Session};
+
+    let mut session = Session::new(&payload.bundle_id, Corpus::Forge);
+    session.messages = payload
+        .messages
+        .iter()
+        .map(|message| {
+            let role = match message.role.as_str() {
+                "user" => Role::User,
+                "assistant" => Role::Assistant,
+                "system" => Role::System,
+                "tool" => Role::Tool,
+                _ => return None,
+            };
+            Some(Message::new(role, &message.content))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    Some(session)
 }
 
 // ---------------------------------------------------------------------------
@@ -1849,6 +1894,85 @@ mod tests {
         assert_eq!(last["action"], "ingest");
         assert_eq!(last["outcome"], "accepted");
         assert_eq!(last["reason"], "validation");
+    }
+
+    #[cfg(feature = "sqlite")]
+    #[tokio::test]
+    async fn accepted_ingest_persists_okf_and_deduplicates_distilled_facts() {
+        use session_ledger::ports::MemoryStore;
+
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let memory = session_ledger::SqliteMemoryStore::open(out_dir.path().join("memory.db"))
+            .expect("open durable memory store");
+        let mut state = test_state(out_dir.path());
+        state.memory_store = Some(Arc::new(memory));
+        let memory = state.memory_store.clone().expect("configured memory store");
+        let (addr, server) = start_test_server(state).await;
+
+        let response = reqwest::Client::new()
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .expect("post valid ingest bundle");
+
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let result: Value = response.json().await.expect("read ingest response");
+        assert_eq!(result["valid"], true);
+        assert!(
+            out_dir.path().join("bundle-auth-test.okf.json").is_file(),
+            "accepted ingest must write a durable OKF document"
+        );
+        assert!(
+            !memory.recall("hello", 10).expect("recall durable facts").is_empty(),
+            "accepted ingest must persist distilled facts"
+        );
+
+        let facts_after_first_ingest =
+            memory.recall("hello", 10).expect("recall durable facts after first ingest");
+        let repeated = reqwest::Client::new()
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .body(valid_ingest_body())
+            .send()
+            .await
+            .expect("repeat valid ingest bundle");
+        assert_eq!(repeated.status(), axum::http::StatusCode::OK);
+        assert_eq!(
+            memory.recall("hello", 10).expect("recall durable facts after repeated ingest"),
+            facts_after_first_ingest,
+            "repeated payloads must not duplicate durable facts"
+        );
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn ingest_rejects_bundle_ids_that_escape_the_output_directory() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        let (addr, server) = start_test_server(test_state(out_dir.path())).await;
+
+        let response = reqwest::Client::new()
+            .post(format!("http://{addr}/api/ingest"))
+            .header(CONTENT_TYPE, "application/json")
+            .body(
+                r#"{
+                    "bundle_id": "../outside",
+                    "created_at": "2026-07-13T21:40:00Z",
+                    "messages": [{"role": "user", "content": "hello"}],
+                    "token_count": 1
+                }"#,
+            )
+            .send()
+            .await
+            .expect("post traversal bundle id");
+
+        assert_eq!(response.status(), axum::http::StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(
+            !out_dir.path().join("outside.okf.json").exists(),
+            "invalid bundle id must never create an output file"
+        );
+        server.abort();
     }
 
     #[tokio::test]

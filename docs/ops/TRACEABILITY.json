@@ -331,6 +331,8 @@
         "crates/sl-viewer/tests/properties_session_ledger_export.rs",
         "crates/sl-viewer/tests/properties_session_ledger_distill.rs",
         "crates/sl-viewer/tests/properties_session_ledger_intent.rs",
+        "crates/sl-viewer/tests/properties_session_ledger_context.rs",
+        "crates/sl-viewer/tests/properties_session_ledger_contract.rs",
         "fuzz/fuzz_targets/okf_roundtrip.rs",
         "fuzz/fuzz_targets/jsonl_ingest.rs",
         ".github/workflows/ci.yml",

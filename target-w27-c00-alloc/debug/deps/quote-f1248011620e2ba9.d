@@ -1,0 +1,13 @@
+C:\Users\koosh\SessionLedger\target-w27-c00-alloc\debug\deps\quote-f1248011620e2ba9.d: E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\lib.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\ext.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\format.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\ident_fragment.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\to_tokens.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\runtime.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\spanned.rs
+
+C:\Users\koosh\SessionLedger\target-w27-c00-alloc\debug\deps\libquote-f1248011620e2ba9.rlib: E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\lib.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\ext.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\format.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\ident_fragment.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\to_tokens.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\runtime.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\spanned.rs
+
+C:\Users\koosh\SessionLedger\target-w27-c00-alloc\debug\deps\libquote-f1248011620e2ba9.rmeta: E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\lib.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\ext.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\format.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\ident_fragment.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\to_tokens.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\runtime.rs E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\spanned.rs
+
+E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\lib.rs:
+E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\ext.rs:
+E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\format.rs:
+E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\ident_fragment.rs:
+E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\to_tokens.rs:
+E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\runtime.rs:
+E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\spanned.rs:

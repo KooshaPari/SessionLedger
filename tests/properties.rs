@@ -505,4 +505,39 @@ proptest! {
         };
         prop_assert_eq!(item.reason, expected_reason);
     }
+
+    // ── IntentState serde round-trip (kebab-case contract) ─────────────────
+
+    #[test]
+    fn intent_state_json_round_trip_preserves_variant(state_idx in 0u8..5) {
+        let state = intent_state(state_idx);
+        let json = serde_json::to_string(&state).expect("serialize IntentState");
+        // `#[serde(rename_all = "kebab-case")]` contract — every variant
+        // serialises to its lowercase kebab-case Debug name. This guards
+        // against drift in the rename attribute.
+        let expected_name = match state {
+            IntentState::Pending => "pending",
+            IntentState::Extracting => "extracting",
+            IntentState::Extracted => "extracted",
+            IntentState::Verified => "verified",
+            IntentState::Pruned => "pruned",
+        };
+        prop_assert_eq!(json.clone(), format!("\"{expected_name}\""));
+        let restored: IntentState = serde_json::from_str(&json).expect("deserialize IntentState");
+        prop_assert_eq!(restored, state);
+    }
+
+    #[test]
+    fn intent_state_terminal_invariant_holds_across_serde(
+        state_idx in 0u8..5,
+    ) {
+        // `is_terminal` must agree with the serde JSON representation:
+        // Pruned is the only terminal state, and serialising + deserialising
+        // it must not silently turn it into something non-terminal.
+        let state = intent_state(state_idx);
+        prop_assert_eq!(state.is_terminal(), state == IntentState::Pruned);
+        let json = serde_json::to_string(&state).expect("serialize");
+        let restored: IntentState = serde_json::from_str(&json).expect("deserialize");
+        prop_assert_eq!(restored.is_terminal(), state.is_terminal());
+    }
 }

@@ -131,7 +131,18 @@ Test-DocContains -Doc $ciWf -Needle "rootless-nonet.yml" `
 Test-DocContains -Doc $ciWf -Needle "rootless-nonet-check.ps1" `
     -Label "ci.yml references rootless-nonet SelfCheck script" -Context ".github/workflows/ci.yml"
 
-if ($ciWf -match '(?ms)^  rootless-nonet-policy:.*?continue-on-error:\s*true') {
+# Extract just the rootless-nonet-policy: block (until the next top-level
+# job or end of file) so the continue-on-error check can't bleed across
+# into unrelated jobs like `security:`. (?ms) = multi-line + dotall so
+# `.*?` can span newlines.
+$policyBlockMatch = [regex]::Match(
+    $ciWf,
+    '(?ms)^  rootless-nonet-policy:.*?(?=^  [A-Za-z][\w-]*:\s|\z)'
+)
+if (-not $policyBlockMatch.Success) {
+    throw "ci.yml must define a rootless-nonet-policy job block (C04 L40 cross-reference anchor)."
+}
+if ($policyBlockMatch.Value -match 'continue-on-error:\s*true') {
     throw "ci.yml rootless-nonet-policy job must be blocking (no continue-on-error)."
 }
 [void](Write-Check -Label "ci.yml rootless-nonet-policy job is blocking when present" -Ok $true)

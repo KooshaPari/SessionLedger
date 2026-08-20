@@ -88,25 +88,36 @@ pub fn transform_file(
     let sessions = read_sessions(jsonl_path)
         .map_err(|source| EtlError::Ingest { path: jsonl_path.to_path_buf(), source })?;
 
+    let mut written = Vec::with_capacity(sessions.len());
+    for session in &sessions {
+        written.push(transform_session(session, out_dir, memory_store)?);
+    }
+    Ok(written)
+}
+
+/// Compile, optionally distill, and export one normalized session to its durable
+/// OKF document. Both filesystem-watch and HTTP ingestion use this path so they
+/// have identical persistence and SQLite-memory semantics.
+pub fn transform_session(
+    session: &session_ledger::Session,
+    out_dir: &Path,
+    memory_store: Option<&dyn MemoryStore>,
+) -> Result<PathBuf, EtlError> {
     std::fs::create_dir_all(out_dir)
         .map_err(|source| EtlError::Write { path: out_dir.to_path_buf(), source })?;
 
-    let mut written = Vec::with_capacity(sessions.len());
-    for session in &sessions {
-        let doc = if let Some(store) = memory_store {
-            let output = compile_and_store(session, store)
-                .map_err(|source| EtlError::Memory { path: jsonl_path.to_path_buf(), source })?;
-            export_to_okf(&output.bundle, session.corpus.as_str())
-        } else {
-            process_session(session)
-        };
-        let json = serde_json::to_string_pretty(&doc)?;
-        let out_path = out_dir.join(format!("{}.okf.json", sanitize(&session.id)));
-        std::fs::write(&out_path, json)
-            .map_err(|source| EtlError::Write { path: out_path.clone(), source })?;
-        written.push(out_path);
-    }
-    Ok(written)
+    let doc = if let Some(store) = memory_store {
+        let output = compile_and_store(session, store)
+            .map_err(|source| EtlError::Memory { path: out_dir.to_path_buf(), source })?;
+        export_to_okf(&output.bundle, session.corpus.as_str())
+    } else {
+        process_session(session)
+    };
+    let json = serde_json::to_string_pretty(&doc)?;
+    let out_path = out_dir.join(format!("{}.okf.json", sanitize(&session.id)));
+    std::fs::write(&out_path, json)
+        .map_err(|source| EtlError::Write { path: out_path.clone(), source })?;
+    Ok(out_path)
 }
 
 /// Reject transcripts larger than the configured ingest cap before any of the
@@ -147,7 +158,7 @@ fn read_sessions(
 }
 
 /// Make a session id safe to use as a filename (path separators → `_`).
-fn sanitize(id: &str) -> String {
+pub(crate) fn sanitize(id: &str) -> String {
     id.chars().map(|c| if matches!(c, '/' | '\\' | ':') { '_' } else { c }).collect()
 }
 
@@ -290,5 +301,22 @@ mod tests {
 
         let recalled = store.recall("pagination", 5).expect("recall distilled facts");
         assert!(!recalled.is_empty(), "distilled episodic facts should persist");
+    }
+
+    #[cfg(feature = "sqlite")]
+    #[test]
+    fn transform_file_does_not_duplicate_durable_facts_for_repeated_input() {
+        use session_ledger::SqliteMemoryStore;
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let jsonl = write_fixture(tmp.path(), 1);
+        let out = tmp.path().join("out");
+        let store = SqliteMemoryStore::open(tmp.path().join("memory.db")).expect("open memory db");
+
+        transform_file(&jsonl, &out, Some(&store)).expect("first transform");
+        transform_file(&jsonl, &out, Some(&store)).expect("repeated transform");
+
+        let facts = store.recall("session/sess-0", 10).expect("recall durable facts");
+        assert_eq!(facts.len(), 3, "repeated watcher events must not duplicate durable facts");
     }
 }

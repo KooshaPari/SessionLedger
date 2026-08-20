@@ -95,6 +95,13 @@ pub fn validate_okf_bundle(bundle: &PostBundle) -> ValidationResult {
             message: "bundle_id must not be empty".into(),
         });
     }
+    if bundle.bundle_id.contains("..") || bundle.bundle_id.contains(['/', '\\', ':']) {
+        errors.push(ValidationError {
+            field: "bundle_id".into(),
+            code: "unsafe_path".into(),
+            message: "bundle_id must not contain path traversal or path separators".into(),
+        });
+    }
 
     // 2. created_at — parseable RFC 3339
     if chrono::DateTime::parse_from_rfc3339(&bundle.created_at).is_err() {

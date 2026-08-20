@@ -936,7 +936,8 @@ async fn search_bundles(
     State(state): State<AppState>,
     Query(params): Query<SearchParams>,
 ) -> Response {
-    let raw = match read_all_bundles(&state.out_dir) {
+    let spec = params_to_spec(&params);
+    let matched = match read_matching_bundle_metas(&state.out_dir, &spec) {
         Ok(v) => v,
         Err(e) => {
             error!(error = %e, "failed to read bundles for search");
@@ -949,10 +950,7 @@ async fn search_bundles(
         }
     };
 
-    let metas: Vec<BundleMeta> = raw.iter().map(BundleMeta::from_value).collect();
-    let spec = params_to_spec(&params);
-    let matched: Vec<BundleMeta> = apply_filters(&metas, &spec).into_iter().cloned().collect();
-    info!(matched = matched.len(), scanned = metas.len(), "search_bundles");
+    info!(matched = matched.len(), limit = spec.limit, "search_bundles");
 
     Json(matched).into_response()
 }
@@ -1097,6 +1095,55 @@ fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
         if let Ok(contents) = std::fs::read_to_string(&path) {
             if let Ok(value) = serde_json::from_str::<Value>(&contents) {
                 results.push(value);
+            }
+        }
+    }
+
+    Ok(results)
+}
+
+/// Read bundle metadata one file at a time, filtering before retaining it.
+///
+/// Search must not materialize every OKF payload (which may contain large
+/// entity/message arrays) before applying a small result limit. As with
+/// [`read_all_bundles`], malformed JSON is ignored so one corrupt export does
+/// not poison the search response.
+fn read_matching_bundle_metas(
+    out_dir: &Path,
+    spec: &FilterSpec,
+) -> std::io::Result<Vec<BundleMeta>> {
+    let mut results = Vec::with_capacity(spec.limit.min(50));
+    if spec.limit == 0 {
+        return Ok(results);
+    }
+
+    let rd = match std::fs::read_dir(out_dir) {
+        Ok(rd) => rd,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(results),
+        Err(e) => return Err(e),
+    };
+
+    for entry in rd {
+        let entry = entry?;
+        let path = entry.path();
+        let is_okf = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with(".okf.json"));
+        if !is_okf {
+            continue;
+        }
+        let Ok(contents) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(value) = serde_json::from_str::<Value>(&contents) else {
+            continue;
+        };
+        let meta = BundleMeta::from_value(&value);
+        if !apply_filters(std::slice::from_ref(&meta), spec).is_empty() {
+            results.push(meta);
+            if results.len() == spec.limit {
+                break;
             }
         }
     }

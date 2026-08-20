@@ -62,7 +62,10 @@ pub use ports::adapters::ZstdCompressor;
 pub use ports::adapters::{
     InMemoryMemoryStore, NoopTraceSink, PassthroughCompressor, TracingTraceSink,
 };
-pub use ports::okf::{OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation};
+pub use ports::okf::{
+    validate_okf_document, OkfDocument, OkfEntity, OkfExporter, OkfProvenance, OkfRelation,
+    OkfValidationError,
+};
 #[cfg(feature = "sqlite")]
 pub use ports::sqlite_memory::SqliteMemoryStore;
 

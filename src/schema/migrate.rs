@@ -113,8 +113,9 @@ mod tests {
         apply_all(&conn).expect("apply");
 
         conn.execute(
-            "INSERT INTO memory_facts (id, session_id, kind, payload_json) VALUES (?1, ?2, ?3, ?4)",
-            params!["fact-1", "session-a", "EPISODIC", r#"{"summary":"ok"}"#],
+            "INSERT INTO memory_facts (id, session_id, kind, payload_json, insertion_order)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params!["fact-1", "session-a", "EPISODIC", r#"{"summary":"ok"}"#, 1],
         )
         .expect("insert fact");
 
@@ -122,5 +123,37 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM memory_facts", [], |row| row.get(0))
             .expect("count facts");
         assert_eq!(rows, 1);
+    }
+
+    #[test]
+    fn upgrades_v1_memory_facts_with_stable_insertion_order() {
+        let conn = Connection::open_in_memory().expect("in-memory db");
+        conn.execute_batch(include_str!("migrations/001_initial.sql")).expect("create v1 schema");
+        conn.execute(
+            "INSERT INTO schema_migrations (version, name) VALUES (1, 'initial_memory_facts')",
+            [],
+        )
+        .expect("record v1 migration");
+        conn.execute(
+            "INSERT INTO memory_facts (id, session_id, kind, payload_json) VALUES (?1, ?2, ?3, ?4)",
+            params!["legacy-first", "session-a", "EPISODIC", r#"{\"content\":\"first\"}"#],
+        )
+        .expect("insert first legacy fact");
+        conn.execute(
+            "INSERT INTO memory_facts (id, session_id, kind, payload_json) VALUES (?1, ?2, ?3, ?4)",
+            params!["legacy-second", "session-a", "EPISODIC", r#"{\"content\":\"second\"}"#],
+        )
+        .expect("insert second legacy fact");
+
+        assert_eq!(apply_all(&conn).expect("upgrade schema"), 2);
+
+        let ids = conn
+            .prepare("SELECT id FROM memory_facts ORDER BY insertion_order ASC")
+            .expect("prepare insertion-order query")
+            .query_map([], |row| row.get::<_, String>(0))
+            .expect("query insertion order")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("read insertion order");
+        assert_eq!(ids, vec!["legacy-first", "legacy-second"]);
     }
 }

@@ -8,6 +8,7 @@ pub enum PaletteAction {
     FocusSearch,
     ToggleTheme,
     OpenHelp,
+    OpenSettings,
     NextTab,
     PrevTab,
     ClearSearch,
@@ -22,13 +23,20 @@ pub struct PaletteCommand {
     pub action: PaletteAction,
 }
 
-/// Power-user command set for Wave-29 C09 (L81.14).
+/// Power-user command set for Wave-29 C09 (L81.14), extended with
+/// `OpenSettings` (FR-VIEWER-SETTINGS-1).
 pub const COMMANDS: &[PaletteCommand] = &[
     PaletteCommand {
         id: "focus-search",
         label: "Focus search",
         hint: "Switch to Search and focus the first filter",
         action: PaletteAction::FocusSearch,
+    },
+    PaletteCommand {
+        id: "open-settings",
+        label: "Open settings",
+        hint: "Switch to the Settings tab (theme, default tab, daemon)",
+        action: PaletteAction::OpenSettings,
     },
     PaletteCommand {
         id: "open-help",
@@ -39,7 +47,7 @@ pub const COMMANDS: &[PaletteCommand] = &[
     PaletteCommand {
         id: "next-tab",
         label: "Next view tab",
-        hint: "Select and focus the next tab, wrapping at Replay",
+        hint: "Select and focus the next tab, wrapping at Settings",
         action: PaletteAction::NextTab,
     },
     PaletteCommand {
@@ -182,19 +190,21 @@ mod tests {
         assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::FocusSearch));
         assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::ToggleTheme));
         assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::OpenHelp));
+        assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::OpenSettings));
         assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::NextTab));
         assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::PrevTab));
         assert!(COMMANDS.iter().any(|c| c.action == PaletteAction::ClearSearch));
-        assert_eq!(COMMANDS.len(), 6);
+        assert_eq!(COMMANDS.len(), 7);
     }
 
     #[test]
     fn command_ids_are_stable() {
         assert_eq!(COMMANDS[0].id, "focus-search");
-        assert_eq!(COMMANDS[1].id, "open-help");
-        assert_eq!(COMMANDS[2].id, "next-tab");
-        assert_eq!(COMMANDS[3].id, "prev-tab");
-        assert_eq!(COMMANDS[4].id, "clear-search");
-        assert_eq!(COMMANDS[5].id, "toggle-theme");
+        assert_eq!(COMMANDS[1].id, "open-settings");
+        assert_eq!(COMMANDS[2].id, "open-help");
+        assert_eq!(COMMANDS[3].id, "next-tab");
+        assert_eq!(COMMANDS[4].id, "prev-tab");
+        assert_eq!(COMMANDS[5].id, "clear-search");
+        assert_eq!(COMMANDS[6].id, "toggle-theme");
     }
 }

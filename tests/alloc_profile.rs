@@ -82,22 +82,30 @@ fn alloc_profile_script_self_check_parses_args_and_ceilings() {
             assert!(stdout.contains("Profiler: dhat"), "expected profiler echo, got:\n{stdout}");
         }
         Err(error) => {
+            // On non-Windows targets, a `NotFound` error means pwsh isn't
+            // installed — fall back to the portable SelfCheck. Any other
+            // I/O error (permission, broken pipe, etc.) is treated as a
+            // hard failure since it likely means the test environment is
+            // misconfigured (e.g., spawn denial, missing CWD). Windows has
+            // no portable fallback path, so any spawn failure is fatal.
             if cfg!(target_os = "windows") {
                 panic!("failed to spawn pwsh for self-check: {error}");
+            } else if error.kind() == std::io::ErrorKind::NotFound {
+                let (max_bytes, total_blocks) = load_profile();
+                println!(
+                    "pwsh unavailable; running portable alloc-profile SelfCheck fallback.\nSelf-check passed\nMax bytes ceiling: {max_bytes}\nTotal blocks ceiling: {total_blocks}\nProfiler: dhat"
+                );
+                assert!(
+                    max_bytes >= 1024 * 1024,
+                    "max_bytes ceiling should stay >= 1 MiB for debug smoke (got {max_bytes})"
+                );
+                assert!(
+                    total_blocks >= 1_000,
+                    "total_blocks ceiling should stay generous (got {total_blocks})"
+                );
+            } else {
+                panic!("failed to spawn pwsh for self-check (non-NotFound): {error}");
             }
-
-            let (max_bytes, total_blocks) = load_profile();
-            println!(
-                "pwsh unavailable; running portable alloc-profile SelfCheck fallback.\nSelf-check passed\nMax bytes ceiling: {max_bytes}\nTotal blocks ceiling: {total_blocks}\nProfiler: dhat"
-            );
-            assert!(
-                max_bytes >= 1024 * 1024,
-                "max_bytes ceiling should stay >= 1 MiB for debug smoke (got {max_bytes})"
-            );
-            assert!(
-                total_blocks >= 1_000,
-                "total_blocks ceiling should stay generous (got {total_blocks})"
-            );
         }
     }
 }

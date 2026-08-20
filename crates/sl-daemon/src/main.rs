@@ -293,11 +293,11 @@ enum Command {
         no_stream: bool,
     },
 
-    /// Validate an OKF bundle on disk against ingest rules.
+    /// Validate an OKF bundle on disk against the structural OKF contract.
     ///
-    /// Reads `<data_dir>/<bundle_id>.okf.json`, re-packages the metadata as a
-    /// `PostBundle`, and runs local validation.  Exits 0 when valid, 1 when
-    /// invalid (diagnostics printed to stdout as JSON), 2 on I/O or parse error.
+    /// Reads `<data_dir>/<bundle_id>.okf.json` and validates its v1 graph,
+    /// provenance, and relation references. Exits 0 when valid, 1 when invalid
+    /// (diagnostics printed to stdout as JSON), 2 on I/O or parse error.
     #[command(after_help = VALIDATE_AFTER_HELP)]
     Validate {
         /// Bundle ID (filename stem, without `.okf.json`).
@@ -1157,83 +1157,30 @@ fn run_restore(bundle_id: &str, data_dir: &Path, out: Option<&Path>) {
 // ---------------------------------------------------------------------------
 
 fn run_validate(bundle_id: &str, data_dir: &Path) {
-    use validation::{PostBundle, PostMessage};
-
-    let path = data_dir.join(format!("{bundle_id}.okf.json"));
-    let text = match std::fs::read_to_string(&path) {
-        Ok(t) => t,
-        Err(e) => cli::exit_error(format!("cannot read {}: {e}", path.display())),
+    let errors = match validate_on_disk_okf(bundle_id, data_dir) {
+        Ok(errors) => errors,
+        Err(error) => cli::exit_error(error),
     };
-
-    let value: serde_json::Value = match serde_json::from_str(&text) {
-        Ok(v) => v,
-        Err(e) => cli::exit_error(format!("cannot parse {}: {e}", path.display())),
-    };
-
-    // Re-package the on-disk OKF fields into a PostBundle for validation.
-    let get_str = |key: &str| {
-        value
-            .get(key)
-            .or_else(|| value.pointer(&format!("/metadata/{key}")))
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_owned()
-    };
-    let get_i64 = |key: &str| {
-        value
-            .get(key)
-            .or_else(|| value.pointer(&format!("/metadata/{key}")))
-            .and_then(|v| v.as_i64())
-            .unwrap_or(0)
-    };
-
-    // Build PostMessages from the OKF entities array (label → content, type → role).
-    let messages: Vec<PostMessage> = value
-        .get("entities")
-        .and_then(|e| e.as_array())
-        .map(|arr| {
-            arr.iter()
-                .map(|ent| {
-                    let role =
-                        ent.get("type").and_then(|v| v.as_str()).unwrap_or("assistant").to_owned();
-                    let content =
-                        ent.get("label").and_then(|v| v.as_str()).unwrap_or_default().to_owned();
-                    PostMessage { role, content }
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let bundle = PostBundle {
-        bundle_id: {
-            let id = get_str("source_id");
-            if id.is_empty() {
-                bundle_id.to_owned()
-            } else {
-                id
-            }
-        },
-        created_at: {
-            let ca = get_str("created_at");
-            // OKF documents may not carry created_at; fall back to a sentinel
-            // so the validator produces a useful diagnostic rather than silently
-            // accepting an empty string.
-            if ca.is_empty() {
-                String::new()
-            } else {
-                ca
-            }
-        },
-        messages,
-        token_count: get_i64("token_count"),
-    };
-
-    let result = validation::validate_okf_bundle(&bundle);
-    let json = serde_json::to_string_pretty(&result).unwrap_or_default();
-    println!("{json}");
-    if !result.valid {
+    let result = serde_json::json!({
+        "valid": errors.is_empty(),
+        "errors": errors,
+    });
+    println!("{result}");
+    if !errors.is_empty() {
         std::process::exit(cli::EXIT_NOT_OK);
     }
+}
+
+fn validate_on_disk_okf(
+    bundle_id: &str,
+    data_dir: &Path,
+) -> Result<Vec<session_ledger::OkfValidationError>, String> {
+    let path = data_dir.join(format!("{}.okf.json", crate::etl::sanitize(bundle_id)));
+    let text = std::fs::read_to_string(&path)
+        .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+    let document: session_ledger::OkfDocument = serde_json::from_str(&text)
+        .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+    Ok(session_ledger::validate_okf_document(&document))
 }
 
 // ---------------------------------------------------------------------------
@@ -1408,6 +1355,28 @@ async fn run_replay(base_url: &str, bundle_id: &str, speed: f64, no_stream: bool
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn validate_on_disk_okf_accepts_daemon_generated_document() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let watch = tmp.path().join("watch");
+        let out = tmp.path().join("out");
+        std::fs::create_dir_all(&watch).expect("create watch directory");
+
+        let mut session =
+            session_ledger::Session::new("nested/session", session_ledger::Corpus::Forge);
+        session.messages.push(session_ledger::Message::new(session_ledger::Role::User, "ship it"));
+        let transcript = serde_json::to_string(&session).expect("serialize session");
+        std::fs::write(watch.join("session.jsonl"), format!("{transcript}\n"))
+            .expect("write transcript");
+
+        let written = crate::etl::transform_file(&watch.join("session.jsonl"), &out, None)
+            .expect("daemon ETL should export OKF");
+        assert_eq!(written.len(), 1);
+        assert!(validate_on_disk_okf("nested/session", &out)
+            .expect("validate daemon output")
+            .is_empty());
+    }
 
     #[test]
     fn format_timestamp_zero() {

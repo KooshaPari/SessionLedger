@@ -87,6 +87,9 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: eval reproducibility manifest SelfCheck
+        shell: pwsh
+        run: ./scripts/eval-repro-check.ps1 -SelfCheck
       - name: cargo fmt --check
         run: |
           cargo fmt --all -- --check 2>&1 || echo "::warning::cargo fmt issues (advisory)"
@@ -119,7 +122,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Install ruff
@@ -137,7 +140,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.22'
       - name: gofmt check
@@ -170,6 +173,39 @@ jobs:
           if [ -f package.json ] && grep -q '"test"' package.json; then
             npm test 2>&1 || echo "::warning::test failures (advisory)"
           fi
+
+  # Hermetic eval reproducibility manifest wiring (C08 L79). The script's
+  # SelfCheck verifies this workflow anchor so the manifest cannot silently
+  # drift away from CI coverage.
+  eval-reproducibility-policy:
+    name: Eval Reproducibility SelfCheck
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: eval reproducibility SelfCheck
+        shell: pwsh
+        run: ./scripts/eval-repro-check.ps1 -SelfCheck
+
+  # Hard C04 L40 rootless / no-net CI evidence cross-reference. The blocking
+  # PR gate lives in `.github/workflows/rootless-nonet.yml`; this PR-only
+  # smoke re-runs the script's `-SelfCheck` mode so `ci.yml` retains its
+  # cross-reference anchor (per `scripts/rootless-nonet-check.ps1` and
+  # `docs/ops/sandbox-boundary.md` C04 L40 row). Does NOT enforce live
+  # rootless-only runners or blocking no-net on cargo-fetch jobs — those
+  # remain unpaid.
+  rootless-nonet-policy:
+    name: ci / rootless-nonet policy smoke
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: rootless / no-net SelfCheck
+        shell: pwsh
+        run: ./scripts/rootless-nonet-check.ps1 -SelfCheck
 
   security:
     name: Security Scan
@@ -209,6 +245,19 @@ jobs:
       - name: signing readiness SelfCheck
         shell: pwsh
         run: ./scripts/signing-readiness-check.ps1 -SelfCheck
+
+  # Blocking C04 L40 rootless-only OCI runner matrix scaffold — full PR gate in
+  # .github/workflows/rootless-matrix.yml; this job is a fast ci.yml anchor smoke.
+  rootless-matrix-policy:
+    name: rootless-only matrix policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: assert rootless-only OCI runner matrix scaffold anchors
+        shell: pwsh
+        run: ./scripts/rootless-matrix-check.ps1 -SelfCheck
 
   lint:
     name: ci / lint

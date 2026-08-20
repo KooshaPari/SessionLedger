@@ -28,7 +28,12 @@ mutants.out.old/
 **/mutants.out.old/
 
 # cargo-mutants test result dirs (regenerated on every run)
+# cargo-mutants test result dirs (regenerated on every run)
 mutants.out/
 **/mutants.out/
 mutants.out.*/
 **/mutants.out.*/
+
+# Build artifacts and output directories
+artifacts/
+target/

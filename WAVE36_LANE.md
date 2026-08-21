@@ -9,7 +9,7 @@
 ## Gap (audit-v38)
 
 Wave-29 #246 made OCI cosign verify **release-blocking when GHCR/OIDC credentials
-are present**. SCORECARD: *unconditional release-blocking OCI* on all canonical
+are present**. SCORECARD: _unconditional release-blocking OCI_ on all canonical
 releases remains unpaid (credential-absent matrix still best-effort).
 
 ## Acceptance criteria

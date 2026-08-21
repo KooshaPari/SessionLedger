@@ -28,7 +28,7 @@ groups:
           slo: availability
         annotations:
           summary: "SessionLedger daemon scrape target is missing"
-          description: "No up{job=\"sl-daemon\"} series exists. Check Prometheus scrape configuration before treating this as daemon downtime."
+          description: 'No up{job="sl-daemon"} series exists. Check Prometheus scrape configuration before treating this as daemon downtime.'
           runbook: "docs/ops/dashboards/README.md"
 
       - alert: SessionLedgerFastErrorBudgetBurn

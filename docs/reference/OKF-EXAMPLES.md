@@ -270,10 +270,7 @@ USER: Approved, ship it.
       "label": "existing billing tests pass",
       "properties": {
         "skipped_by": ["existing billing tests pass"],
-        "watch_files": [
-          "src/middleware/usage.rs",
-          "src/billing/"
-        ]
+        "watch_files": ["src/middleware/usage.rs", "src/billing/"]
       }
     },
     {
@@ -288,27 +285,48 @@ USER: Approved, ship it.
     }
   ],
   "relations": [
-    { "source": "intent-0", "target": "acceptance-0",
+    {
+      "source": "intent-0",
+      "target": "acceptance-0",
       "type": "verified_by",
-      "provenance": { "corpus": "codex", "source_id": "codex-session-003" } },
-    { "source": "intent-0", "target": "acceptance-1",
+      "provenance": { "corpus": "codex", "source_id": "codex-session-003" }
+    },
+    {
+      "source": "intent-0",
+      "target": "acceptance-1",
       "type": "verified_by",
-      "provenance": { "corpus": "codex", "source_id": "codex-session-003" } },
-    { "source": "intent-0", "target": "acceptance-2",
+      "provenance": { "corpus": "codex", "source_id": "codex-session-003" }
+    },
+    {
+      "source": "intent-0",
+      "target": "acceptance-2",
       "type": "verified_by",
-      "provenance": { "corpus": "codex", "source_id": "codex-session-003" } },
-    { "source": "intent-0", "target": "constraint-0",
+      "provenance": { "corpus": "codex", "source_id": "codex-session-003" }
+    },
+    {
+      "source": "intent-0",
+      "target": "constraint-0",
       "type": "bounded_by",
-      "provenance": { "corpus": "codex", "source_id": "codex-session-003" } },
-    { "source": "intent-0", "target": "constraint-1",
+      "provenance": { "corpus": "codex", "source_id": "codex-session-003" }
+    },
+    {
+      "source": "intent-0",
+      "target": "constraint-1",
       "type": "bounded_by",
-      "provenance": { "corpus": "codex", "source_id": "codex-session-003" } },
-    { "source": "intent-0", "target": "criteria-0",
+      "provenance": { "corpus": "codex", "source_id": "codex-session-003" }
+    },
+    {
+      "source": "intent-0",
+      "target": "criteria-0",
       "type": "requires",
-      "provenance": { "corpus": "codex", "source_id": "codex-session-003" } },
-    { "source": "intent-0", "target": "gate-0",
+      "provenance": { "corpus": "codex", "source_id": "codex-session-003" }
+    },
+    {
+      "source": "intent-0",
+      "target": "gate-0",
       "type": "asserts",
-      "provenance": { "corpus": "codex", "source_id": "codex-session-003" } }
+      "provenance": { "corpus": "codex", "source_id": "codex-session-003" }
+    }
   ],
   "provenance": { "corpus": "codex", "source_id": "codex-session-003" }
 }
@@ -402,24 +420,60 @@ USER: All good, thanks.
     }
   ],
   "relations": [
-    { "source": "intent-0", "target": "acceptance-0",
+    {
+      "source": "intent-0",
+      "target": "acceptance-0",
       "type": "verified_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "acceptance-1",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "acceptance-1",
       "type": "verified_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "acceptance-2",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "acceptance-2",
       "type": "verified_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "constraint-0",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "constraint-0",
       "type": "bounded_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "constraint-1",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "constraint-1",
       "type": "bounded_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "gate-0",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "gate-0",
       "type": "asserts",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } }
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    }
   ],
   "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" }
 }
@@ -526,12 +580,18 @@ USER: Tests pass, ship it.
     }
   ],
   "relations": [
-    { "source": "intent-0", "target": "acceptance-0",
+    {
+      "source": "intent-0",
+      "target": "acceptance-0",
       "type": "verified_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-multi-088" } },
-    { "source": "intent-1", "target": "constraint-0",
+      "provenance": { "corpus": "forge", "source_id": "forge-multi-088" }
+    },
+    {
+      "source": "intent-1",
+      "target": "constraint-0",
       "type": "bounded_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-multi-088" } }
+      "provenance": { "corpus": "forge", "source_id": "forge-multi-088" }
+    }
   ],
   "provenance": { "corpus": "forge", "source_id": "forge-multi-088" }
 }
@@ -566,16 +626,22 @@ rejected.
 ### 7.2 Relation with unknown source
 
 ```json
-{ "okf": "1.0",
+{
+  "okf": "1.0",
   "source_id": "x",
-  "entities": [{"id":"intent-0","type":"intent","label":"foo","properties":null}],
-  "relations": [{
-    "source":"ghost",
-    "target":"intent-0",
-    "type":"verified_by",
-    "provenance":{"corpus":"forge","source_id":"x"}
-  }],
-  "provenance":{"corpus":"forge","source_id":"x"}}
+  "entities": [
+    { "id": "intent-0", "type": "intent", "label": "foo", "properties": null }
+  ],
+  "relations": [
+    {
+      "source": "ghost",
+      "target": "intent-0",
+      "type": "verified_by",
+      "provenance": { "corpus": "forge", "source_id": "x" }
+    }
+  ],
+  "provenance": { "corpus": "forge", "source_id": "x" }
+}
 ```
 
 `source: "ghost"` does not exist in `entities[]`. Reject.
@@ -583,10 +649,19 @@ rejected.
 ### 7.3 Unknown entity type
 
 ```json
-{ "okf": "1.0",
+{
+  "okf": "1.0",
   "source_id": "x",
-  "entities": [{"id":"foo-0","type":"unknown_type","label":"foo","properties":null}],
-  "provenance":{"corpus":"forge","source_id":"x"}}
+  "entities": [
+    {
+      "id": "foo-0",
+      "type": "unknown_type",
+      "label": "foo",
+      "properties": null
+    }
+  ],
+  "provenance": { "corpus": "forge", "source_id": "x" }
+}
 ```
 
 `type: "unknown_type"` is not in the v1.0 entity-type table. A consumer
@@ -596,12 +671,14 @@ SHOULD flag this as a warning; a strict conformance harness rejects it.
 
 ```json
 {
-  "relations": [{
-    "source": "intent-0",
-    "target": "acceptance-0",
-    "type": "verified_by",
-    "provenance": { "corpus": "codex", "source_id": "WRONG_SESSION" }
-  }]
+  "relations": [
+    {
+      "source": "intent-0",
+      "target": "acceptance-0",
+      "type": "verified_by",
+      "provenance": { "corpus": "codex", "source_id": "WRONG_SESSION" }
+    }
+  ]
 }
 ```
 
@@ -637,4 +714,4 @@ There is no patch component in OKF versions. Reject.
 
 ---
 
-*End of OKF Worked Examples.*
+_End of OKF Worked Examples._

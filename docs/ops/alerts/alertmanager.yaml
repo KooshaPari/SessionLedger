@@ -49,8 +49,8 @@ receivers:
         channel: "#sessionledger-ops"
         # Documented channel ID stub (Alertmanager uses channel name above;
         # operators keep the ID in env for provisioning evidence).
-        title: 'SessionLedger {{ .Status | toUpper }}'
-        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        title: "SessionLedger {{ .Status | toUpper }}"
+        text: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
         send_resolved: true
 
   # Stub only — replace routing_key before go-live.
@@ -58,7 +58,7 @@ receivers:
   - name: sessionledger-pagerduty
     pagerduty_configs:
       - routing_key: REPLACE_ME_PAGERDUTY_ROUTING_KEY
-        description: '{{ .CommonAnnotations.summary }}'
+        description: "{{ .CommonAnnotations.summary }}"
         severity: warning
         send_resolved: true
 

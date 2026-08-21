@@ -445,7 +445,15 @@ jobs:
 
   release:
     name: create Release · attach assets
-    needs: [build, signing-readiness, smoke-windows, smoke-linux, smoke-macos-pkg, oci-image]
+    needs:
+      [
+        build,
+        signing-readiness,
+        smoke-windows,
+        smoke-linux,
+        smoke-macos-pkg,
+        oci-image,
+      ]
     runs-on: ubuntu-latest
     permissions:
       contents: write

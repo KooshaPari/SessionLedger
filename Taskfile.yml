@@ -9,13 +9,13 @@
 #   task dev
 # ------------------------------------------------------------------
 
-version: '3'
+version: "3"
 
 vars:
   DAEMON_MANIFEST: crates/sl-daemon/Cargo.toml
 
 env:
-  RUST_BACKTRACE: '1'
+  RUST_BACKTRACE: "1"
 
 tasks:
   default:

@@ -14,12 +14,12 @@ object to a cryptographic identity so reviewers can detect tampering after push.
 
 Today:
 
-| Signal | Status |
-|--------|--------|
-| DCO `Signed-off-by:` trailers | Required in `CONTRIBUTING.md` (legal attestation) |
-| GitHub merge-commit PGP signatures | Present on squash/merge commits via `noreply@github.com` |
-| Contributor GPG/SSH signatures on every commit | **Not enforced in-repo** |
-| Branch protection "Require signed commits" | **Not machine-verifiable without admin API access** |
+| Signal                                         | Status                                                   |
+| ---------------------------------------------- | -------------------------------------------------------- |
+| DCO `Signed-off-by:` trailers                  | Required in `CONTRIBUTING.md` (legal attestation)        |
+| GitHub merge-commit PGP signatures             | Present on squash/merge commits via `noreply@github.com` |
+| Contributor GPG/SSH signatures on every commit | **Not enforced in-repo**                                 |
+| Branch protection "Require signed commits"     | **Not machine-verifiable without admin API access**      |
 
 Maintainer **2FA** is an org/account control and is intentionally **out of scope**
 for this ADR (see `SECURITY.md` maintainer hygiene, recorded separately).
@@ -55,10 +55,10 @@ cryptographic signing — DCO is not a substitute for GPG/SSH.
 
 ### Accepted signature kinds
 
-| Kind | Detection | Notes |
-|------|-----------|-------|
-| GPG | `gpgsig` block containing `BEGIN PGP SIGNATURE` | GitHub merge bot uses PGP |
-| SSH | `gpgsig` block containing `BEGIN SSH SIGNATURE` | Git ≥ 2.34; no local gpg needed |
+| Kind | Detection                                       | Notes                           |
+| ---- | ----------------------------------------------- | ------------------------------- |
+| GPG  | `gpgsig` block containing `BEGIN PGP SIGNATURE` | GitHub merge bot uses PGP       |
+| SSH  | `gpgsig` block containing `BEGIN SSH SIGNATURE` | Git ≥ 2.34; no local gpg needed |
 
 ### Out of scope
 

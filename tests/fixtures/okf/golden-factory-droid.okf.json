@@ -54,9 +54,7 @@
       "label": "",
       "properties": {
         "constraints": [],
-        "do_not_touch": [
-          "Do-not-touch: 'preserve'"
-        ],
+        "do_not_touch": ["Do-not-touch: 'preserve'"],
         "success_criteria": [],
         "tests_or_verifications": [
           "Verification: 'cargo test'",

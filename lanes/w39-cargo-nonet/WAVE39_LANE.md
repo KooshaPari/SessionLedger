@@ -6,8 +6,8 @@
 
 ## Gap
 
-`rootless-nonet` hard evidence (#310) documents unpaid *blocking no-net for cargo-fetch
-security jobs*. Add explicit blocking policy for `cargo audit`/`cargo deny` fetch paths
+`rootless-nonet` hard evidence (#310) documents unpaid _blocking no-net for cargo-fetch
+security jobs_. Add explicit blocking policy for `cargo audit`/`cargo deny` fetch paths
 in `security.yml` where hermetic (document limits; no false live-runner claims).
 
 ## Acceptance criteria

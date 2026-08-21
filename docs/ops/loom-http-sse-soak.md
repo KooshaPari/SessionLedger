@@ -2,7 +2,7 @@
 
 **Wave-44 close-out lane B1.**  
 **Owner:** machine.  
-**Theme:** close C00 L7 *process-level HTTP SSE soak under loom* residual from
+**Theme:** close C00 L7 _process-level HTTP SSE soak under loom_ residual from
 Wave-43 SCORECARD.
 
 Companion: [`WAVE44_SCOPE.md`](../../WAVE44_SCOPE.md) (rank 1) and
@@ -10,7 +10,7 @@ Companion: [`WAVE44_SCOPE.md`](../../WAVE44_SCOPE.md) (rank 1) and
 
 ## Rubric anchor
 
-Pillar L7 — *Concurrency Safety & Races*. SCORECARD headline:
+Pillar L7 — _Concurrency Safety & Races_. SCORECARD headline:
 `C00 L7 | partial (deepened) | +1` (Wave-43 daemon-graph-hard). Wave-43 closed
 the **live tokio port** of the daemon-graph shape. Wave-44-B1 closes the
 **loom-modelled** counterpart that Wave-43 deferred as "process-level HTTP
@@ -44,11 +44,11 @@ C00 L7 — Concurrency Safety & Races
 live tokio tests in `tests/daemon_graph_tokio.rs`; this file exercises the
 channel-level multi-client race surface that the HTTP layer depends on):
 
-| Test | Models | Why |
-|------|--------|-----|
+| Test                                                 | Models                                                                                                                          | Why                                                                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `process_level_http_sse_soak_conserves_under_cancel` | N=3 client tasks each with a `broadcast::Receiver` (modelled as N outbound mpsc queues); a single publisher; cooperative cancel | Mirrors the daemon SSE fan-out: every published item reaches every connected client until cancel; clients never see more than publisher produced |
-| `http_sse_soak_lagged_recovery_no_panic` | 2 publishers racing 1 client with channel capacity 2 | Models the Lagged drop path; client must not panic, must observe a non-negative message count |
-| `http_sse_soak_shutdown_propagates_to_clients` | N=3 clients sharing a channel; close-publisher forces Disconnected; cancel flag forces exit | Asserts every connected client observes the shutdown signal |
+| `http_sse_soak_lagged_recovery_no_panic`             | 2 publishers racing 1 client with channel capacity 2                                                                            | Models the Lagged drop path; client must not panic, must observe a non-negative message count                                                    |
+| `http_sse_soak_shutdown_propagates_to_clients`       | N=3 clients sharing a channel; close-publisher forces Disconnected; cancel flag forces exit                                     | Asserts every connected client observes the shutdown signal                                                                                      |
 
 The `loom::sync::mpsc` primitives model the sl-daemon's
 `tokio::sync::{mpsc, broadcast}` fan-out shape. Loom explores all thread
@@ -80,11 +80,11 @@ The `loom-http-sse-soak-soft.yml` workflow runs the same suite under
 
 ## Risk register
 
-| Risk | Mitigation |
-|------|------------|
-| Loom model explodes combinatorially with N>4 clients | Tests cap N at 3; deeper coverage in nightly soft |
+| Risk                                                           | Mitigation                                                                       |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Loom model explodes combinatorially with N>4 clients           | Tests cap N at 3; deeper coverage in nightly soft                                |
 | Loom misses a real HTTP-layer race (TCP framing, axum handler) | Live tokio `daemon_graph_tokio.rs` covers the HTTP layer in real wall-clock time |
-| SelfCheck script diverges from the test it claims to verify | SelfCheck runs the actual test binary, not a textual grep |
+| SelfCheck script diverges from the test it claims to verify    | SelfCheck runs the actual test binary, not a textual grep                        |
 
 ## Carry-over to W45+ (if W44-B1 only partially closes)
 

@@ -14,25 +14,25 @@ jemalloc` path — the feature does not resolve on non-Unix targets.
 
 ## Contract
 
-| Knob | Value | Source |
-|------|-------|--------|
-| Feature | `jemalloc` (off by default) | [`crates/sl-daemon/Cargo.toml`](../../crates/sl-daemon/Cargo.toml) |
-| Crate | `tikv-jemallocator` (optional, `cfg(unix)`) | same |
-| Install site | `#[global_allocator]` behind `cfg(all(feature = "jemalloc", unix))` | [`crates/sl-daemon/src/main.rs`](../../crates/sl-daemon/src/main.rs) |
-| SelfCheck | docs + Cargo feature + cfg anchors (no jemalloc compile) | [`scripts/jemalloc-check.ps1`](../../scripts/jemalloc-check.ps1) |
-| Soft CI | Ubuntu build with `--features jemalloc`, `continue-on-error` | [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) job `jemalloc` |
-| Hard CI | Ubuntu SelfCheck + `--features jemalloc` build, blocking PR gate | [`.github/workflows/jemalloc-hard.yml`](../../.github/workflows/jemalloc-hard.yml) |
+| Knob         | Value                                                               | Source                                                                                  |
+| ------------ | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Feature      | `jemalloc` (off by default)                                         | [`crates/sl-daemon/Cargo.toml`](../../crates/sl-daemon/Cargo.toml)                      |
+| Crate        | `tikv-jemallocator` (optional, `cfg(unix)`)                         | same                                                                                    |
+| Install site | `#[global_allocator]` behind `cfg(all(feature = "jemalloc", unix))` | [`crates/sl-daemon/src/main.rs`](../../crates/sl-daemon/src/main.rs)                    |
+| SelfCheck    | docs + Cargo feature + cfg anchors (no jemalloc compile)            | [`scripts/jemalloc-check.ps1`](../../scripts/jemalloc-check.ps1)                        |
+| Soft CI      | Ubuntu build with `--features jemalloc`, `continue-on-error`        | [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) job `jemalloc` |
+| Hard CI      | Ubuntu SelfCheck + `--features jemalloc` build, blocking PR gate    | [`.github/workflows/jemalloc-hard.yml`](../../.github/workflows/jemalloc-hard.yml)      |
 
 ## Soft vs hard gates
 
-| Gate | Soft (scheduled) | Hard (PR blocking) |
-|------|------------------|-------------------|
-| SelfCheck (`jemalloc-check.ps1 -SelfCheck`) | `ops-load` job `jemalloc` (`continue-on-error: true`) | `jemalloc-hard.yml` SelfCheck job |
-| `cargo build --features jemalloc` | `ops-load` job (`continue-on-error: true`) | `jemalloc-hard.yml` build job |
-| Default / Windows builds unchanged (system allocator) | **done** | **done** |
-| Default-on Unix jemalloc / Windows mimalloc parity | see [`jemalloc-default-on.md`](jemalloc-default-on.md) | see [`jemalloc-default-on.md`](jemalloc-default-on.md) |
-| Continuous jemalloc profiling / production always-on jemalloc | **unpaid** | **unpaid** |
-| Windows mimalloc parity | **done** | **done** |
+| Gate                                                          | Soft (scheduled)                                       | Hard (PR blocking)                                     |
+| ------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------ |
+| SelfCheck (`jemalloc-check.ps1 -SelfCheck`)                   | `ops-load` job `jemalloc` (`continue-on-error: true`)  | `jemalloc-hard.yml` SelfCheck job                      |
+| `cargo build --features jemalloc`                             | `ops-load` job (`continue-on-error: true`)             | `jemalloc-hard.yml` build job                          |
+| Default / Windows builds unchanged (system allocator)         | **done**                                               | **done**                                               |
+| Default-on Unix jemalloc / Windows mimalloc parity            | see [`jemalloc-default-on.md`](jemalloc-default-on.md) | see [`jemalloc-default-on.md`](jemalloc-default-on.md) |
+| Continuous jemalloc profiling / production always-on jemalloc | **unpaid**                                             | **unpaid**                                             |
+| Windows mimalloc parity                                       | **done**                                               | **done**                                               |
 
 ## How to run
 
@@ -71,22 +71,22 @@ cargo test jemalloc --locked
 
 ## Gate status
 
-| Gate | Status |
-|------|--------|
-| Soft jemalloc SelfCheck | **done** |
-| Default / Windows builds unchanged (system allocator) | **done** |
-| Soft Ubuntu `--features jemalloc` CI (`continue-on-error`) | **done** |
-| Blocking jemalloc-hard CI workflow | **done** |
-| Default-on platform allocator policy | **done** — [`jemalloc-default-on.md`](jemalloc-default-on.md) |
-| Continuous jemalloc profiling / production always-on jemalloc | **unpaid** |
-| Windows mimalloc parity | **done** — [`jemalloc-default-on.md`](jemalloc-default-on.md) |
+| Gate                                                          | Status                                                        |
+| ------------------------------------------------------------- | ------------------------------------------------------------- |
+| Soft jemalloc SelfCheck                                       | **done**                                                      |
+| Default / Windows builds unchanged (system allocator)         | **done**                                                      |
+| Soft Ubuntu `--features jemalloc` CI (`continue-on-error`)    | **done**                                                      |
+| Blocking jemalloc-hard CI workflow                            | **done**                                                      |
+| Default-on platform allocator policy                          | **done** — [`jemalloc-default-on.md`](jemalloc-default-on.md) |
+| Continuous jemalloc profiling / production always-on jemalloc | **unpaid**                                                    |
+| Windows mimalloc parity                                       | **done** — [`jemalloc-default-on.md`](jemalloc-default-on.md) |
 
 ## CI / scheduling
 
-| Job | Workflow | Blocking? | Notes |
-|-----|----------|-----------|-------|
-| `jemalloc` | [`ops-load.yml`](../../.github/workflows/ops-load.yml) | **soft** (`continue-on-error: true`) | Scheduled SelfCheck + `--features jemalloc` build |
-| `jemalloc-hard-selfcheck` / `jemalloc-hard-build` | [`jemalloc-hard.yml`](../../.github/workflows/jemalloc-hard.yml) | **blocking** | PR SelfCheck + `--features jemalloc` build on Ubuntu |
+| Job                                               | Workflow                                                         | Blocking?                            | Notes                                                |
+| ------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------- |
+| `jemalloc`                                        | [`ops-load.yml`](../../.github/workflows/ops-load.yml)           | **soft** (`continue-on-error: true`) | Scheduled SelfCheck + `--features jemalloc` build    |
+| `jemalloc-hard-selfcheck` / `jemalloc-hard-build` | [`jemalloc-hard.yml`](../../.github/workflows/jemalloc-hard.yml) | **blocking**                         | PR SelfCheck + `--features jemalloc` build on Ubuntu |
 
 - **PR / push:** `cargo test --test jemalloc_soft` and `cargo test --test jemalloc_hard`
   exercise hermetic SelfCheck anchors (no jemalloc compile in the default test graph).

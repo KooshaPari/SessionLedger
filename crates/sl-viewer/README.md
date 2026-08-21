@@ -29,10 +29,10 @@ This compiles `sl-viewer` to WASM and serves it on `http://localhost:8080`.
 
 ## Cargo features
 
-| Feature    | Default | Enables                     |
-| ---------- | ------- | --------------------------- |
-| `desktop`  | yes     | `dioxus/desktop` — native   |
-| `web`      | no      | `dioxus/web` — WASM browser |
+| Feature   | Default | Enables                     |
+| --------- | ------- | --------------------------- |
+| `desktop` | yes     | `dioxus/desktop` — native   |
+| `web`     | no      | `dioxus/web` — WASM browser |
 
 The entry point in `src/main.rs` uses `#[cfg]` gates to select the correct
 renderer at compile time.

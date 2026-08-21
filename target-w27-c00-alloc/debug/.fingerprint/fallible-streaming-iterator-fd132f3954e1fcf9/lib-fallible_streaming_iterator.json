@@ -1,1 +1,20 @@
-{"rustc":1562763049001146449,"features":"[]","declared_features":"[\"std\"]","target":16001337131876932863,"profile":15657897354478470176,"path":6368215522351369416,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\fallible-streaming-iterator-fd132f3954e1fcf9\\dep-lib-fallible_streaming_iterator","checksum":false}}],"rustflags":["-D","warnings"],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 1562763049001146449,
+  "features": "[]",
+  "declared_features": "[\"std\"]",
+  "target": 16001337131876932863,
+  "profile": 15657897354478470176,
+  "path": 6368215522351369416,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\fallible-streaming-iterator-fd132f3954e1fcf9\\dep-lib-fallible_streaming_iterator",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": ["-D", "warnings"],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

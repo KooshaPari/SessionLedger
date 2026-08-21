@@ -17,30 +17,30 @@ Issue tracker: [#66](https://github.com/KooshaPari/SessionLedger/issues/66)
 
 ## Release channels (current)
 
-| Channel | Status | Notes |
-|---------|--------|-------|
-| GitHub Releases (`v*` tags) | **Active** | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing |
-| GHCR OCI (`sl-daemon`) | **Blocking on canonical `v*` tags (unconditional)** | Builds `crates/sl-daemon/Containerfile`, pushes `ghcr.io/kooshapari/sl-daemon`, keyless cosign + GitHub attestation + blocking `oci-cosign-verify` (`continue-on-error: false`); forks credential-gate OCI with an explicit reason |
-| Cargo source install | **Active for developers** | `cargo install --path crates/sl-daemon --locked` or `cargo install --git … --path crates/sl-daemon` |
-| curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` Release archives |
-| Local packaging scaffold | **Active** | `make -C packaging package-macos` / `package-linux` / `package-windows` |
-| Native installers (unsigned) | **Active, CI-smoked** | Release CI publishes unsigned MSI + macOS PKG, best-effort Linux `.deb`/AppImage, and portable viewer/daemon archives; Release smoke covers Windows ZIP + MSI silent install and macOS PKG expand; PR CI still runs unsigned portable clean-host smoke on `windows-latest` |
-| Homebrew / winget | **Manifests in-repo (not live)** | Formula + winget YAML templates; fill via `scripts/fill-packaging-checksums.ps1`, then [`brew-winget-publish.md`](brew-winget-publish.md) publish-readiness checklist + `scripts/brew-winget-publish-check.ps1 -SelfCheck` — live tap / winget-pkgs remain **unpaid** |
-| Scoop / crates.io / DMG | Deferred | Explicit placeholders only; no bucket, crate publication, DMG, or update automation exists yet |
-| Tray / menubar / auto-update | Soft / N-A | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md) |
-| User-initiated update check | **Active** | `sl-daemon check-update` compares installed version to GitHub latest release tag (no install); see [update-check.md](update-check.md) |
-| Mobile app presence | Soft / N-A | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md) |
+| Channel                      | Status                                              | Notes                                                                                                                                                                                                                                                                      |
+| ---------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Releases (`v*` tags)  | **Active**                                          | `release.yml` builds archives, publishes `SHA256SUMS` + a CycloneDX SBOM, and attempts GitHub provenance attestation and keyless cosign signing                                                                                                                            |
+| GHCR OCI (`sl-daemon`)       | **Blocking on canonical `v*` tags (unconditional)** | Builds `crates/sl-daemon/Containerfile`, pushes `ghcr.io/kooshapari/sl-daemon`, keyless cosign + GitHub attestation + blocking `oci-cosign-verify` (`continue-on-error: false`); forks credential-gate OCI with an explicit reason                                         |
+| Cargo source install         | **Active for developers**                           | `cargo install --path crates/sl-daemon --locked` or `cargo install --git … --path crates/sl-daemon`                                                                                                                                                                        |
+| curl / irm install scripts   | **Active**                                          | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` Release archives                                                                                                                                              |
+| Local packaging scaffold     | **Active**                                          | `make -C packaging package-macos` / `package-linux` / `package-windows`                                                                                                                                                                                                    |
+| Native installers (unsigned) | **Active, CI-smoked**                               | Release CI publishes unsigned MSI + macOS PKG, best-effort Linux `.deb`/AppImage, and portable viewer/daemon archives; Release smoke covers Windows ZIP + MSI silent install and macOS PKG expand; PR CI still runs unsigned portable clean-host smoke on `windows-latest` |
+| Homebrew / winget            | **Manifests in-repo (not live)**                    | Formula + winget YAML templates; fill via `scripts/fill-packaging-checksums.ps1`, then [`brew-winget-publish.md`](brew-winget-publish.md) publish-readiness checklist + `scripts/brew-winget-publish-check.ps1 -SelfCheck` — live tap / winget-pkgs remain **unpaid**      |
+| Scoop / crates.io / DMG      | Deferred                                            | Explicit placeholders only; no bucket, crate publication, DMG, or update automation exists yet                                                                                                                                                                             |
+| Tray / menubar / auto-update | Soft / N-A                                          | Deliberate daemon + foreground viewer scope; see [ADR 0001](../adr/0001-desktop-companion-scope.md)                                                                                                                                                                        |
+| User-initiated update check  | **Active**                                          | `sl-daemon check-update` compares installed version to GitHub latest release tag (no install); see [update-check.md](update-check.md)                                                                                                                                      |
+| Mobile app presence          | Soft / N-A                                          | Deliberate desktop + daemon scope; see [ADR 0002](../adr/0002-mobile-presence.md)                                                                                                                                                                                          |
 
 ### Release matrix (CI)
 
 From `.github/workflows/release.yml` (on `push` tags `v*`):
 
-| Target triple | Runner | Artifacts | Status |
-|---------------|--------|-----------|--------|
-| `x86_64-unknown-linux-gnu` | `ubuntu-latest` | viewer + daemon `.tar.gz`; best-effort `.deb` + AppImage | **Shipped + smoke-tested** |
-| `x86_64-apple-darwin` | `macos-latest` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz` | Shipped |
-| `aarch64-apple-darwin` | `macos-latest` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz` | **Shipped + PKG expand smoke** |
-| `x86_64-pc-windows-msvc` | `windows-latest` | viewer + daemon `.zip`; unsigned `SessionLedger-<ver>-x64.msi` | **Shipped + ZIP/MSI smoke** |
+| Target triple              | Runner           | Artifacts                                                      | Status                         |
+| -------------------------- | ---------------- | -------------------------------------------------------------- | ------------------------------ |
+| `x86_64-unknown-linux-gnu` | `ubuntu-latest`  | viewer + daemon `.tar.gz`; best-effort `.deb` + AppImage       | **Shipped + smoke-tested**     |
+| `x86_64-apple-darwin`      | `macos-latest`   | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz`     | Shipped                        |
+| `aarch64-apple-darwin`     | `macos-latest`   | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz`     | **Shipped + PKG expand smoke** |
+| `x86_64-pc-windows-msvc`   | `windows-latest` | viewer + daemon `.zip`; unsigned `SessionLedger-<ver>-x64.msi` | **Shipped + ZIP/MSI smoke**    |
 
 Asset names (representative):
 
@@ -75,12 +75,12 @@ MSI/PKG artifacts are **unsigned**.
 
 ### OCI cosign policy matrix (unconditional vs credential-gated)
 
-| Context | OCI build / sign / `oci-cosign-verify` | `continue-on-error` | Notes |
-|---------|----------------------------------------|---------------------|-------|
-| Canonical `KooshaPari/SessionLedger` `v*` tag | **Required, release-blocking** | **false** (implicit default; documented on verify step) | Unconditional on canonical tags — Release `needs: oci-image` |
-| Fork `v*` tag push | Skipped with explicit reason | n/a (job succeeds; OCI steps gated off) | Credential-gated — no GHCR `packages:write` or OIDC attestations |
-| Deploy-time (`scripts/oci-cosign-verify.ps1`) | Required when pulling a published digest | n/a (script fails closed) | Use `-AllowUnsigned` only for dry-runs |
-| `SHA256SUMS` cosign `sign-blob` | Best-effort | **true** on sign/publish steps | Unsigned archives remain valid without Sigstore bundle |
+| Context                                       | OCI build / sign / `oci-cosign-verify`   | `continue-on-error`                                     | Notes                                                            |
+| --------------------------------------------- | ---------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
+| Canonical `KooshaPari/SessionLedger` `v*` tag | **Required, release-blocking**           | **false** (implicit default; documented on verify step) | Unconditional on canonical tags — Release `needs: oci-image`     |
+| Fork `v*` tag push                            | Skipped with explicit reason             | n/a (job succeeds; OCI steps gated off)                 | Credential-gated — no GHCR `packages:write` or OIDC attestations |
+| Deploy-time (`scripts/oci-cosign-verify.ps1`) | Required when pulling a published digest | n/a (script fails closed)                               | Use `-AllowUnsigned` only for dry-runs                           |
+| `SHA256SUMS` cosign `sign-blob`               | Best-effort                              | **true** on sign/publish steps                          | Unsigned archives remain valid without Sigstore bundle           |
 
 Machine-check policy anchors (no registry, no cosign required):
 
@@ -97,13 +97,13 @@ remains explicitly deferred.
 
 ### Installer matrix
 
-| Platform / format | Status | Current capability |
-|-------------------|--------|--------------------|
-| Windows installable ZIP | **Partial, CI-smoked** | Portable release binary is download/extract/execute-smoked; local package adds per-user install scripts |
-| Windows MSI / WiX v4 | **Active (unsigned)** | Release CI builds and attaches `SessionLedger-<ver>-x64.msi`; silent install smoke; Authenticode deferred |
-| Linux AppImage | **Active (unsigned, best-effort)** | Release CI attaches when `packaging/linux/package-appimage.sh` succeeds |
-| Linux Debian package | **Active (unsigned, best-effort)** | Release CI attaches when `packaging/linux/package-deb.sh` succeeds |
-| macOS `.app` / `.pkg` | **Active (unsigned)** | Release CI builds via `packaging/macos/` + `productbuild`; notarization deferred |
+| Platform / format       | Status                             | Current capability                                                                                        |
+| ----------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Windows installable ZIP | **Partial, CI-smoked**             | Portable release binary is download/extract/execute-smoked; local package adds per-user install scripts   |
+| Windows MSI / WiX v4    | **Active (unsigned)**              | Release CI builds and attaches `SessionLedger-<ver>-x64.msi`; silent install smoke; Authenticode deferred |
+| Linux AppImage          | **Active (unsigned, best-effort)** | Release CI attaches when `packaging/linux/package-appimage.sh` succeeds                                   |
+| Linux Debian package    | **Active (unsigned, best-effort)** | Release CI attaches when `packaging/linux/package-deb.sh` succeeds                                        |
+| macOS `.app` / `.pkg`   | **Active (unsigned)**              | Release CI builds via `packaging/macos/` + `productbuild`; notarization deferred                          |
 
 These installers use the same existing
 [checksum, cosign, and GitHub attestation path](#release-integrity-signing-cosign)
@@ -122,10 +122,10 @@ a single tree.
 
 Root [`process-compose.yaml`](../../process-compose.yaml) sets:
 
-| Variable | Default | Role |
-|----------|---------|------|
+| Variable      | Default      | Role                                                                |
+| ------------- | ------------ | ------------------------------------------------------------------- |
 | `SL_DATA_DIR` | `./.sl-data` | Local data root for the compose stack (bundles / out dir readiness) |
-| `SL_PORT` | `8080` | Daemon HTTP bind port |
+| `SL_PORT`     | `8080`       | Daemon HTTP bind port                                               |
 
 Create the directory before readiness probes succeed:
 
@@ -141,11 +141,11 @@ export SL_DATA_DIR="${SL_DATA_DIR:-./.sl-data}"
 
 The daemon crate’s own compose file and CLI use explicit watch/out paths:
 
-| Variable / flag | Typical default | Role |
-|-----------------|-----------------|------|
-| `SL_WATCH_DIR` / `--watch` | `./sessions` or `~/.forge/sessions` | Incoming `*.jsonl` transcripts |
-| `SL_OUT_DIR` / `--out` | `./okf-out` | Written `<session-id>.okf.json` bundles |
-| `--data-dir` (archive / restore / validate) | `.` | Bundle + `archive/<year>/<month>/` tree |
+| Variable / flag                             | Typical default                     | Role                                    |
+| ------------------------------------------- | ----------------------------------- | --------------------------------------- |
+| `SL_WATCH_DIR` / `--watch`                  | `./sessions` or `~/.forge/sessions` | Incoming `*.jsonl` transcripts          |
+| `SL_OUT_DIR` / `--out`                      | `./okf-out`                         | Written `<session-id>.okf.json` bundles |
+| `--data-dir` (archive / restore / validate) | `.`                                 | Bundle + `archive/<year>/<month>/` tree |
 
 When aligning with `SL_DATA_DIR`, a common layout is:
 
@@ -171,10 +171,10 @@ mkdir -p "$SL_WATCH_DIR" "$SL_OUT_DIR"
 
 [`crates/sl-daemon/Containerfile`](../../crates/sl-daemon/Containerfile) mounts:
 
-| Path in image | Host mount example |
-|---------------|--------------------|
-| `/data/sessions` | `$HOME/.forge/sessions` (ro) |
-| `/data/out` | `$PWD/okf-out` or a named volume |
+| Path in image    | Host mount example               |
+| ---------------- | -------------------------------- |
+| `/data/sessions` | `$HOME/.forge/sessions` (ro)     |
+| `/data/out`      | `$PWD/okf-out` or a named volume |
 
 Volumes are owned by non-root user `sl` (uid `10001`). The canonical daemon
 image defines an OCI `HEALTHCHECK` that probes `GET /healthz` on
@@ -201,11 +201,11 @@ See [Verify an OCI image](#verify-an-oci-image-cosign) for deploy-time checks
 
 Documented intent only — no code yet:
 
-| OS | Config (future) | Data (future) |
-|----|-----------------|---------------|
-| Linux | `$XDG_CONFIG_HOME/sessionledger` | `$XDG_DATA_HOME/sessionledger` |
-| macOS | `~/Library/Application Support/SessionLedger` | same or `~/Library/Caches/SessionLedger` |
-| Windows | `%APPDATA%\SessionLedger` | `%LOCALAPPDATA%\SessionLedger` |
+| OS      | Config (future)                               | Data (future)                            |
+| ------- | --------------------------------------------- | ---------------------------------------- |
+| Linux   | `$XDG_CONFIG_HOME/sessionledger`              | `$XDG_DATA_HOME/sessionledger`           |
+| macOS   | `~/Library/Application Support/SessionLedger` | same or `~/Library/Caches/SessionLedger` |
+| Windows | `%APPDATA%\SessionLedger`                     | `%LOCALAPPDATA%\SessionLedger`           |
 
 Until then, treat `SL_DATA_DIR` (and `--out` / `--data-dir`) as the SSOT.
 
@@ -217,14 +217,14 @@ Until then, treat `SL_DATA_DIR` (and `--out` / `--data-dir`) as the SSOT.
 SessionLedger install. This lane covers **unsigned** portable ZIP and unsigned
 MSI paths. It does **not** use Authenticode or notarization.
 
-| Evidence type | Where | What it proves |
-|---------------|-------|----------------|
-| CI scaffold smoke | `ci.yml` job `installer-lifecycle-smoke` | Installer sources, uninstall docs, and clean-host checklist text are present |
-| CI Windows portable smoke | `ci.yml` job `clean-host-smoke-windows` | Unsigned ZIP → `Install.ps1` → `--version` → `Uninstall.ps1` on an ephemeral `windows-latest` runner with isolated paths |
-| Release Windows MSI smoke | `release.yml` job `smoke-windows` | Unsigned MSI silent install → `--version` → uninstall |
-| Release macOS PKG smoke | `release.yml` job `smoke-macos-pkg` | Unsigned aarch64 PKG expands with expected payload |
-| CI artifact | `clean-host-evidence.json` (uploaded per Windows smoke run) | Machine-readable step log with run metadata |
-| Manual checklist | Below | Human reruns on a VM or spare machine before release |
+| Evidence type             | Where                                                       | What it proves                                                                                                           |
+| ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| CI scaffold smoke         | `ci.yml` job `installer-lifecycle-smoke`                    | Installer sources, uninstall docs, and clean-host checklist text are present                                             |
+| CI Windows portable smoke | `ci.yml` job `clean-host-smoke-windows`                     | Unsigned ZIP → `Install.ps1` → `--version` → `Uninstall.ps1` on an ephemeral `windows-latest` runner with isolated paths |
+| Release Windows MSI smoke | `release.yml` job `smoke-windows`                           | Unsigned MSI silent install → `--version` → uninstall                                                                    |
+| Release macOS PKG smoke   | `release.yml` job `smoke-macos-pkg`                         | Unsigned aarch64 PKG expands with expected payload                                                                       |
+| CI artifact               | `clean-host-evidence.json` (uploaded per Windows smoke run) | Machine-readable step log with run metadata                                                                              |
+| Manual checklist          | Below                                                       | Human reruns on a VM or spare machine before release                                                                     |
 
 Authenticode / notarized clean-host evidence remains deferred under
 [ADR 0003](../adr/0003-platform-code-signing.md) and [#66](https://github.com/KooshaPari/SessionLedger/issues/66).
@@ -235,15 +235,15 @@ Run on a Windows host **without** an existing install at
 `%LOCALAPPDATA%\Programs\SessionLedger`, no Start Menu shortcut named
 `SessionLedger.lnk`, and no `HKCU\...\Uninstall\SessionLedger` key.
 
-| Step | Action | Pass criteria |
-|------|--------|---------------|
-| 1. Preflight | Confirm paths above are absent; close any `sl-viewer` process | No prior install artifacts |
-| 2. Obtain package | `make -C packaging package-windows` **or** download the Release `.zip` and extract | `sl-viewer.exe`, `Install.ps1`, `Uninstall.ps1` present |
-| 3. Install | `powershell -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` from the extracted folder | Exit code 0; binary under `%LOCALAPPDATA%\Programs\SessionLedger` |
-| 4. Register | Inspect Start Menu and Installed Apps | `SessionLedger.lnk` exists; uninstall entry present |
-| 5. Launch | `sl-viewer.exe --version` from the install dir | Prints expected `sl-viewer <version>` |
-| 6. Uninstall | `powershell -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` **or** Installed Apps → Uninstall | Exit code 0 |
-| 7. Cleanup verify | Wait a few seconds, then re-check install dir, shortcut, registry key | All removed; **user data dirs are intentionally preserved** (see [Uninstall / cleanliness](#uninstall--cleanliness)) |
+| Step              | Action                                                                                                  | Pass criteria                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1. Preflight      | Confirm paths above are absent; close any `sl-viewer` process                                           | No prior install artifacts                                                                                           |
+| 2. Obtain package | `make -C packaging package-windows` **or** download the Release `.zip` and extract                      | `sl-viewer.exe`, `Install.ps1`, `Uninstall.ps1` present                                                              |
+| 3. Install        | `powershell -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1` from the extracted folder           | Exit code 0; binary under `%LOCALAPPDATA%\Programs\SessionLedger`                                                    |
+| 4. Register       | Inspect Start Menu and Installed Apps                                                                   | `SessionLedger.lnk` exists; uninstall entry present                                                                  |
+| 5. Launch         | `sl-viewer.exe --version` from the install dir                                                          | Prints expected `sl-viewer <version>`                                                                                |
+| 6. Uninstall      | `powershell -NoProfile -ExecutionPolicy Bypass -File .\Uninstall.ps1` **or** Installed Apps → Uninstall | Exit code 0                                                                                                          |
+| 7. Cleanup verify | Wait a few seconds, then re-check install dir, shortcut, registry key                                   | All removed; **user data dirs are intentionally preserved** (see [Uninstall / cleanliness](#uninstall--cleanliness)) |
 
 Automated equivalent (writes `clean-host-evidence.json` when `-EvidencePath` is set):
 
@@ -415,10 +415,10 @@ installs it elsewhere. The service is configured with `Restart=on-failure`.
 Keep `SL_HTTP_BIND=127.0.0.1:8080` on the systemd unit so the daemon stays on
 loopback. Terminate TLS at the edge with either sample config:
 
-| Proxy | Sample config | Notes |
-|-------|---------------|-------|
-| Caddy | [`packaging/caddy/Caddyfile`](../../packaging/caddy/Caddyfile) | Automatic HTTPS via ACME when DNS points at the host; set `SESSIONLEDGER_HOST` or edit the site address |
-| nginx | [`packaging/nginx/sessionledger.conf`](../../packaging/nginx/sessionledger.conf) | HTTP→HTTPS redirect + `proxy_pass` to `127.0.0.1:8080`; supply your own cert paths |
+| Proxy | Sample config                                                                    | Notes                                                                                                   |
+| ----- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Caddy | [`packaging/caddy/Caddyfile`](../../packaging/caddy/Caddyfile)                   | Automatic HTTPS via ACME when DNS points at the host; set `SESSIONLEDGER_HOST` or edit the site address |
+| nginx | [`packaging/nginx/sessionledger.conf`](../../packaging/nginx/sessionledger.conf) | HTTP→HTTPS redirect + `proxy_pass` to `127.0.0.1:8080`; supply your own cert paths                      |
 
 Typical order: install and enable `sessionledger-daemon`, then install the
 chosen proxy config and reload Caddy/nginx. Do not bind the daemon publicly
@@ -573,12 +573,12 @@ interpret the absence as a successful provenance check.
 
 SessionLedger release and data-surface versioning follow distinct rules:
 
-| Surface | Policy | Source of truth |
-|---------|--------|-----------------|
-| **Git tags / desktop binaries** | [SemVer](https://semver.org/) on `v*` tags (`v0.1.0` → version `0.1.0`) | Root `Cargo.toml` `version` must match the tag body before tagging; [`CHANGELOG.md`](../../CHANGELOG.md) + [`versioning-policy.md`](versioning-policy.md) |
-| **Release asset names** | Tag-derived `VER` in CI (`sl-viewer-v<tag>-<target>`, `SessionLedger-<ver>-x64.msi`, `SessionLedger-<ver>-<arch>.pkg`) | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) `derive version` step |
-| **OKF export documents** | `[major].[minor]` tuple with major-bump rejection rules | [`docs/reference/OKF-SPEC.md`](../reference/OKF-SPEC.md#13-versioning--compatibility) |
-| **SQLite schema** | Forward-only migrations; consumers on older schema revisions upgrade via `sl-daemon` migrate | [`docs/ops/schema-migrations.md`](schema-migrations.md) |
+| Surface                         | Policy                                                                                                                 | Source of truth                                                                                                                                           |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Git tags / desktop binaries** | [SemVer](https://semver.org/) on `v*` tags (`v0.1.0` → version `0.1.0`)                                                | Root `Cargo.toml` `version` must match the tag body before tagging; [`CHANGELOG.md`](../../CHANGELOG.md) + [`versioning-policy.md`](versioning-policy.md) |
+| **Release asset names**         | Tag-derived `VER` in CI (`sl-viewer-v<tag>-<target>`, `SessionLedger-<ver>-x64.msi`, `SessionLedger-<ver>-<arch>.pkg`) | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) `derive version` step                                                              |
+| **OKF export documents**        | `[major].[minor]` tuple with major-bump rejection rules                                                                | [`docs/reference/OKF-SPEC.md`](../reference/OKF-SPEC.md#13-versioning--compatibility)                                                                     |
+| **SQLite schema**               | Forward-only migrations; consumers on older schema revisions upgrade via `sl-daemon` migrate                           | [`docs/ops/schema-migrations.md`](schema-migrations.md)                                                                                                   |
 
 **Compatibility expectations for installers and archives:**
 
@@ -624,11 +624,11 @@ The following platform trust paths remain deferred under #66:
 
 Until notarization lands, Gatekeeper will treat downloaded builds as untrusted:
 
-| Symptom | Mitigation (dev / internal only) |
-|---------|----------------------------------|
+| Symptom                                                                    | Mitigation (dev / internal only)                                          |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | “App can’t be opened because Apple cannot check it for malicious software” | System Settings → Privacy & Security → Open Anyway; or right-click → Open |
-| Quarantine attribute on download | `xattr -dr com.apple.quarantine /path/to/SessionLedger.app` |
-| `spctl --assess` fails | Expected for unsigned artifacts |
+| Quarantine attribute on download                                           | `xattr -dr com.apple.quarantine /path/to/SessionLedger.app`               |
+| `spctl --assess` fails                                                     | Expected for unsigned artifacts                                           |
 
 Do **not** instruct end users to disable Gatekeeper globally. Prefer waiting for
 signed+notarized Releases, or build from source (`cargo build -p sl-viewer`).
@@ -652,4 +652,3 @@ the production path (deferred).
 - [`observability.md`](observability.md) — `/healthz`, `/readyz`, metrics
 - [`SECURITY.md`](../../SECURITY.md) — supply chain / SBOM
 - Issue [#66](https://github.com/KooshaPari/SessionLedger/issues/66) — signing + installers
-

@@ -13,6 +13,7 @@
 > Capture, archive, and replay your AI sessions. OKF-native session compiler.
 
 ## Features
+
 - **sl-daemon**: HTTP API — bundle ingest, search, replay SSE, metrics
 - **sl-viewer**: Dioxus desktop app with Timeline, Search, Replay, LiveFeed tabs
 - **OKF validation**: POST /api/ingest validates bundle schema
@@ -49,6 +50,7 @@ and [`packaging/winget`](packaging/winget) (tap / winget-pkgs publish next). Cha
 status: [`packaging/channels.md`](packaging/channels.md).
 
 ## Quick Start
+
 ```
 just dev
 # or: task dev
@@ -59,9 +61,10 @@ cargo run -p sl-viewer
 ```
 
 ## API
-| Endpoint | Description |
-|----------|-------------|
-| GET /healthz | Liveness |
+
+| Endpoint     | Description |
+| ------------ | ----------- |
+| GET /healthz | Liveness    |
 
 Optional Langfuse-compatible OTLP tracing is disabled by default. See
 `crates/sl-daemon/README.md` for the opt-in environment contract and privacy
@@ -73,6 +76,7 @@ boundaries.
 | POST /api/ingest | Validate + ingest |
 
 ## Deploy
+
 ```
 podman build -t sl-daemon .
 podman run -v sl-data:/data -p 8080:8080 sl-daemon

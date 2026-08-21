@@ -1,7 +1,7 @@
 # OKF Roundtrip — sl-viewer Live Demo
 
 > **Purpose:** end-to-end verification of the OKF v1.0 pipeline — JSONL session
-> in, sl-daemon compiles, sl-viewer renders.  This document captures the
+> in, sl-daemon compiles, sl-viewer renders. This document captures the
 > architecture, the step-by-step reproduction, and the conformance assertions.
 > **Companion to:** [`OKF-SPEC.md`](./reference/OKF-SPEC.md) and
 > [`OKF-EXAMPLES.md`](./reference/OKF-EXAMPLES.md).
@@ -140,18 +140,18 @@ parses entities + relations, and renders the bundle in the
 The smoke test (`tests/okf_roundtrip.rs`) verifies the following contract
 between sl-daemon and sl-viewer:
 
-| # | Assertion                                                                | Spec ref |
-| - | ------------------------------------------------------------------------ | -------- |
-| 1 | `okf == "1.0"` on every emitted document                                  | §3       |
-| 2 | `provenance.source_id == source_id`                                       | §6.3     |
-| 3 | Every entity id is unique within a document                              | §4.1     |
-| 4 | Every relation's source + target ids exist in `entities[]`                | §5.1     |
-| 5 | Round-trip is byte-identical: `serde_json::to_string → from_str` == doc    | §11      |
-| 6 | `process_session` is idempotent over a single session                     | §11      |
-| 7 | Filename stem of `<id>.okf.json` equals document `source_id`              | §10.3    |
-| 8 | Conformance fixture `auth-fix-session-001.okf.json` validates against our parser | §14.2 |
+| #   | Assertion                                                                        | Spec ref |
+| --- | -------------------------------------------------------------------------------- | -------- |
+| 1   | `okf == "1.0"` on every emitted document                                         | §3       |
+| 2   | `provenance.source_id == source_id`                                              | §6.3     |
+| 3   | Every entity id is unique within a document                                      | §4.1     |
+| 4   | Every relation's source + target ids exist in `entities[]`                       | §5.1     |
+| 5   | Round-trip is byte-identical: `serde_json::to_string → from_str` == doc          | §11      |
+| 6   | `process_session` is idempotent over a single session                            | §11      |
+| 7   | Filename stem of `<id>.okf.json` equals document `source_id`                     | §10.3    |
+| 8   | Conformance fixture `auth-fix-session-001.okf.json` validates against our parser | §14.2    |
 
-All 8 assertions are encoded in the smoke test.  The conformance fixture is
+All 8 assertions are encoded in the smoke test. The conformance fixture is
 shipped in this branch at `tests/fixtures/okf/auth-fix-session-001.okf.json`
 (self-contained; once OKF spec PR #51 merges into main, the canonical path
 `docs/reference/conformance/fixtures/auth-fix-session-001.okf.json` will
@@ -169,14 +169,14 @@ provenance / worklog fields the OKF doesn't carry).
 
 The mapping in sl-viewer's bundle list (`crates/sl-viewer/src/bundle_list.rs`):
 
-| OKF entity          | Bundle surface                                      |
-| ------------------- | --------------------------------------------------- |
-| `intent` (label)    | `intent.bundles[].body.goal` → `BundleSummary.intent_goal` |
-| `acceptance`        | `BundleKind::Acceptance` flag                       |
-| `constraint`        | count of `BundleKind::Intent` with non-empty `constraints` |
-| `gate`              | `BundleKind::Acceptance.bundles[].body.ready`     |
-| `criteria`          | `BundleKind::Contract` flag                         |
-| `resource`/`state`  | `BundleKind::Context` properties                    |
+| OKF entity         | Bundle surface                                             |
+| ------------------ | ---------------------------------------------------------- |
+| `intent` (label)   | `intent.bundles[].body.goal` → `BundleSummary.intent_goal` |
+| `acceptance`       | `BundleKind::Acceptance` flag                              |
+| `constraint`       | count of `BundleKind::Intent` with non-empty `constraints` |
+| `gate`             | `BundleKind::Acceptance.bundles[].body.ready`              |
+| `criteria`         | `BundleKind::Contract` flag                                |
+| `resource`/`state` | `BundleKind::Context` properties                           |
 
 The smoke test verifies that the OKF surface contains the same information
 the viewer renders (`viewer_bundle_list_metadata_matches_okf`).
@@ -186,7 +186,7 @@ the viewer renders (`viewer_bundle_list_metadata_matches_okf`).
 ## Known limitations
 
 - **sl-viewer lib compile errors on origin/main** (`search_view.rs`,
-  `theme.rs`): out of scope for this roundtrip work.  Pre-existing.  When
+  `theme.rs`): out of scope for this roundtrip work. Pre-existing. When
   fixed (separate PR), the test can move into
   `crates/sl-viewer/tests/okf_roundtrip.rs` to validate the viewer's own
   API surface.
@@ -210,4 +210,4 @@ the viewer renders (`viewer_bundle_list_metadata_matches_okf`).
 
 ---
 
-*End of OKF Roundtrip document.*
+_End of OKF Roundtrip document._

@@ -16,7 +16,7 @@ This file documents how the SessionLedger repo adopts the shared
 Use the **Lab-Coat** family wrapper class (`.family-lab-coat`):
 
 ```css
-@import url("./tokens.css");  /* or via Dioxus asset pipeline */
+@import url("./tokens.css"); /* or via Dioxus asset pipeline */
 
 .app-root {
   composes: family-lab-coat;
@@ -25,19 +25,21 @@ Use the **Lab-Coat** family wrapper class (`.family-lab-coat`):
   --bg-panel: var(--lc-slate);
   --accent-primary: var(--lc-cobalt);
   --accent-secondary: var(--lc-teal);
-  --accent-warning: var(--lc-orange);  /* #f97316 — was #f59e0b, swapped 2026-07-06 */
+  --accent-warning: var(
+    --lc-orange
+  ); /* #f97316 — was #f59e0b, swapped 2026-07-06 */
 }
 ```
 
 ## Token quick-reference (Lab-Coat family, canonical as of commit 6afaac0)
 
-| Token | Hex | Role |
-|---|---|---|
-| `--lc-lab-white` | `#f6f8fa` | Background / panel base |
-| `--lc-slate` | `#1f2937` | Panel/text secondary |
-| `--lc-cobalt` | `#2563eb` | Primary accent — slide-stain blue |
-| `--lc-orange` | `#f97316` | Live-session indicator — lit Bunsen burner |
-| `--lc-teal` | `#14b8a6` | Secondary — growth-medium teal |
+| Token            | Hex       | Role                                       |
+| ---------------- | --------- | ------------------------------------------ |
+| `--lc-lab-white` | `#f6f8fa` | Background / panel base                    |
+| `--lc-slate`     | `#1f2937` | Panel/text secondary                       |
+| `--lc-cobalt`    | `#2563eb` | Primary accent — slide-stain blue          |
+| `--lc-orange`    | `#f97316` | Live-session indicator — lit Bunsen burner |
+| `--lc-teal`      | `#14b8a6` | Secondary — growth-medium teal             |
 
 ## Status
 
@@ -77,6 +79,7 @@ bash /Users/kooshapari/CodeProjects/Phenotype/repos/AgilePlus/.claude/worktrees/
 ```
 
 References:
+
 - Vision-pillar canonical: commit `5b95794` (tokens.css) + commit `5b01e1d` (amber-sync) + commit `04597ce` (overlap verifier)
 - SessionLedger: commit `915a408` (initial iconset) + commit `8e68296` (amber swap) + this commit
 - Lab-Coat palette decision: 2026-07-06, vision-pillar + melosviz-3d overlap check

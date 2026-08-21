@@ -49,22 +49,22 @@ make -C packaging package-all
 
 ## Output (local)
 
-| Platform | Output |
-|----------|--------|
-| macOS    | `packaging/dist/SessionLedger.app`, `SessionLedger-<ver>[-arch].pkg` |
-| Linux    | `packaging/dist/linux/SessionLedger`; optional `.deb` / AppImage |
+| Platform | Output                                                                                           |
+| -------- | ------------------------------------------------------------------------------------------------ |
+| macOS    | `packaging/dist/SessionLedger.app`, `SessionLedger-<ver>[-arch].pkg`                             |
+| Linux    | `packaging/dist/linux/SessionLedger`; optional `.deb` / AppImage                                 |
 | Windows  | `packaging/dist/sl-viewer-v<version>-x86_64-pc-windows-msvc.zip` + `SessionLedger-<ver>-x64.msi` |
 
 ## Release matrix (GitHub Actions)
 
 Tag push (`v*`) builds via [`.github/workflows/release.yml`](../.github/workflows/release.yml):
 
-| Target | Artifacts | CI validation |
-|--------|-----------|---------------|
-| Linux `x86_64-unknown-linux-gnu` | viewer + daemon `.tar.gz`; best-effort `.deb` + AppImage | Download, extract, binary `--version`; optional installer presence check |
-| macOS Intel `x86_64-apple-darwin` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz` | Build/archive |
-| macOS ARM `aarch64-apple-darwin` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz` | PKG expand smoke |
-| Windows `x86_64-pc-windows-msvc` | viewer + daemon `.zip`; unsigned `SessionLedger-<ver>-x64.msi` | ZIP `--version` + MSI silent install → `--version` → uninstall |
+| Target                            | Artifacts                                                      | CI validation                                                            |
+| --------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Linux `x86_64-unknown-linux-gnu`  | viewer + daemon `.tar.gz`; best-effort `.deb` + AppImage       | Download, extract, binary `--version`; optional installer presence check |
+| macOS Intel `x86_64-apple-darwin` | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz`     | Build/archive                                                            |
+| macOS ARM `aarch64-apple-darwin`  | viewer + daemon `.tar.gz`; unsigned `.pkg` + `.app.tar.gz`     | PKG expand smoke                                                         |
+| Windows `x86_64-pc-windows-msvc`  | viewer + daemon `.zip`; unsigned `SessionLedger-<ver>-x64.msi` | ZIP `--version` + MSI silent install → `--version` → uninstall           |
 
 ## Clean-host checklist (unsigned)
 
@@ -88,22 +88,22 @@ Release job `smoke-windows` silently installs the unsigned MSI, runs
 
 ### Linux / macOS (manual + Release PKG expand)
 
-| Platform | Package | Verify | Cleanup |
-|----------|---------|--------|---------|
-| Linux | Release `.tar.gz` / best-effort `.deb` / AppImage | `./sl-viewer --version` | Delete extract tree + configured data dirs |
-| macOS | Release `.pkg` / `.app.tar.gz` | expand PKG or open `.app` once | Remove test `.app`; Gatekeeper notes in distribution guide |
+| Platform | Package                                           | Verify                         | Cleanup                                                    |
+| -------- | ------------------------------------------------- | ------------------------------ | ---------------------------------------------------------- |
+| Linux    | Release `.tar.gz` / best-effort `.deb` / AppImage | `./sl-viewer --version`        | Delete extract tree + configured data dirs                 |
+| macOS    | Release `.pkg` / `.app.tar.gz`                    | expand PKG or open `.app` once | Remove test `.app`; Gatekeeper notes in distribution guide |
 
 Signed MSI / Authenticode evidence is explicitly out of scope for this checklist.
 
 ## Installer status matrix
 
-| Platform / format | Status | Scope |
-|-------------------|--------|-------|
-| Windows installable ZIP | **Partial, CI-smoked** | Release + PR clean-host portable install/uninstall |
-| Windows MSI (WiX v4) | **Active (unsigned)** | Release CI builds `SessionLedger-<ver>-x64.msi`; silent install smoke; Authenticode deferred |
-| Linux AppImage | **Active (unsigned, best-effort)** | Release CI attaches when `package-appimage.sh` succeeds |
-| Linux `.deb` | **Active (unsigned, best-effort)** | Release CI attaches when `package-deb.sh` succeeds |
-| macOS `.app` / `.pkg` | **Active (unsigned)** | Release CI builds via `productbuild`; notarization deferred |
+| Platform / format       | Status                             | Scope                                                                                        |
+| ----------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| Windows installable ZIP | **Partial, CI-smoked**             | Release + PR clean-host portable install/uninstall                                           |
+| Windows MSI (WiX v4)    | **Active (unsigned)**              | Release CI builds `SessionLedger-<ver>-x64.msi`; silent install smoke; Authenticode deferred |
+| Linux AppImage          | **Active (unsigned, best-effort)** | Release CI attaches when `package-appimage.sh` succeeds                                      |
+| Linux `.deb`            | **Active (unsigned, best-effort)** | Release CI attaches when `package-deb.sh` succeeds                                           |
+| macOS `.app` / `.pkg`   | **Active (unsigned)**              | Release CI builds via `productbuild`; notarization deferred                                  |
 
 Release CI publishes portable viewer and daemon archives, the unsigned Windows
 MSI, unsigned macOS PKGs, and best-effort Linux installers. Platform-native

@@ -2,7 +2,7 @@
 
 **Status:** Research / Recommendation  
 **Date:** 2026-07-03  
-**Scope:** Does an existing open standard cover the *raw* agent-session artifact/contract (the transcript itself), distinct from OKF which covers the *distilled* knowledge items?
+**Scope:** Does an existing open standard cover the _raw_ agent-session artifact/contract (the transcript itself), distinct from OKF which covers the _distilled_ knowledge items?
 
 ---
 
@@ -56,8 +56,9 @@ span-level attributes attached to OpenTelemetry traces.
 
 **Raw-session fit:** Partial. The semantic conventions can model individual
 LLM calls (prompt → completion) as spans with message/tool attributes,
-but they are designed for *observability of production AI systems*, not for
+but they are designed for _observability of production AI systems_, not for
 archival of agent sessions. Key gaps:
+
 - No notion of a "session" as a durable artifact with an id, corpus, cwd.
 - No support for file artifacts (patches, diffs) that agents produce.
 - No provenance chains linking multiple turns.
@@ -66,12 +67,12 @@ archival of agent sessions. Key gaps:
   modeled as first-class artifacts.
 
 **Distilled-knowledge fit:** Poor. OKF's entity/relation/provenance graph
-is a different data model from OTel's span tree. One could *map* OKF
+is a different data model from OTel's span tree. One could _map_ OKF
 entities into OTel span attributes, but there is no direct standard for
 distilled knowledge items.
 
 **Recommendation:** Do **not** adopt as the raw session contract. OTel
-semantic conventions are a good serialization target for *live monitoring*
+semantic conventions are a good serialization target for _live monitoring_
 (e.g., streaming spans to a tracing backend) but unsuitable as a durable,
 resumable session artifact format. SessionLedger's `TraceSink` port may
 emit OTel spans for observability, but the raw session contract should be
@@ -99,6 +100,7 @@ can model a multi-turn session as nested spans. OpenLLMetry (an
 OpenInference-compatible SDK) even has `llm.input_messages` and
 `llm.output_messages` arrays that loosely resemble a conversation log.
 However:
+
 - No canonical session ID / corpus / workspace concept.
 - No artifact storage (diffs, patches, file writes).
 - Designed for backends like Phoenix/Arize, not for session resume.
@@ -125,7 +127,7 @@ XML, JSON).
 
 **URL:** https://www.w3.org/TR/prov-overview/
 
-**Raw-session fit:** Poor. PROV models *provenance of things* — who did
+**Raw-session fit:** Poor. PROV models _provenance of things_ — who did
 what to produce a result. It does not model conversation turns, tool
 calls, or agent-level artifacts. A session transcript cannot be
 naturally expressed as PROV entities and activities.
@@ -152,7 +154,7 @@ It uses schema.org and JSON-LD.
 
 **URL:** https://github.com/mlcommons/croissant
 
-**Raw-session fit:** Marginal. Croissant describes *static datasets* (e.g.,
+**Raw-session fit:** Marginal. Croissant describes _static datasets_ (e.g.,
 "this Parquet file has columns 'prompt' and 'completion'"). A growing
 session transcript is not a static dataset. Croissant could wrap a
 frozen snapshot of sessions (e.g., "SessionLedger corpus v1") for ML
@@ -176,11 +178,12 @@ posted a photo", "Bob liked the photo". Core types: `Activity`, `Actor`,
 
 **URL:** https://www.w3.org/TR/activitystreams-core/
 
-**Raw-session fit:** Interesting, but indirect. An agent session *could* be
+**Raw-session fit:** Interesting, but indirect. An agent session _could_ be
 modeled as an ordered `Collection` of `Activities` (turns), where each
 turn's Actor is the User or Agent and the Object is the message content.
 Tool calls could be `Activities` with `type: "Apply"` or a custom extension.
 However:
+
 - No first-class support for tool calls, artifacts, or agent sessions.
 - No provenance or resume semantics.
 - Would require significant extension (AS2's extension mechanism is
@@ -218,17 +221,17 @@ no common structure with a firewall log or a file access audit.
 ### 2.7 Claude Code / Codex / Forge Session-JSONL Shapes
 
 **What it covers:**
-These are the *de facto* session formats produced by the major coding
+These are the _de facto_ session formats produced by the major coding
 agents. They are not standardized but share a common pattern. From
 SessionLedger's ingestion adapter analysis:
 
-| Agent | Format | Key fields |
-|-------|--------|------------|
-| **Claude Code** | JSONL per session | `{ "role": "...", "content": "...", "tool_use": {...}, "tool_result": {...}, "ts": ... }` |
-| **Codex** | JSONL per session | `{ "id": "...", "messages": [...], "model": "...", "timestamp": ... }` |
-| **Forge** | SQLite (`conversations` table) | zstd-compressed `context_zstd` → JSONL `{ "role", "content", "tool_calls", "results", "ts_ms" }` |
-| **Cursor** | JSONL per session | Similar to Claude Code structure |
-| **Factory Droid** | JSONL | Per-agent variant of the above |
+| Agent             | Format                         | Key fields                                                                                       |
+| ----------------- | ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| **Claude Code**   | JSONL per session              | `{ "role": "...", "content": "...", "tool_use": {...}, "tool_result": {...}, "ts": ... }`        |
+| **Codex**         | JSONL per session              | `{ "id": "...", "messages": [...], "model": "...", "timestamp": ... }`                           |
+| **Forge**         | SQLite (`conversations` table) | zstd-compressed `context_zstd` → JSONL `{ "role", "content", "tool_calls", "results", "ts_ms" }` |
+| **Cursor**        | JSONL per session              | Similar to Claude Code structure                                                                 |
+| **Factory Droid** | JSONL                          | Per-agent variant of the above                                                                   |
 
 The shared de facto shape is a **JSONL stream** where each line is a
 conversation turn with: role, content, optional tool_calls, optional
@@ -241,7 +244,7 @@ that exists today.
 
 **Raw-session fit:** Excellent for ingestion — this is what SessionLedger
 already consumes. The de facto JSONL-per-turn format is the raw session
-contract in practice. The problem is it is *implicit* and *ad-hoc*: each
+contract in practice. The problem is it is _implicit_ and _ad-hoc_: each
 agent has a slightly different JSONL shape, and there is no shared schema.
 
 **Distilled-knowledge fit:** N/A (these are raw formats, not distilled).
@@ -298,17 +301,17 @@ session contract need.
 
 ## 3. Candidate Summary Matrix
 
-| Standard | Raw-session fit | Distilled fit | Recommendation |
-|----------|----------------|---------------|----------------|
-| OpenTelemetry GenAI semantic conv. | Partial (span model ≠ session) | Poor | Skip. Use TraceSink port only. |
-| OpenInference / AI-SDK | Partial (message schema good, container wrong) | Poor | Borrow message schema ideas. |
-| W3C PROV | Poor (provenance-only) | **Excellent** (≈ OKF) | Adopt as OKF's semantic backbone. |
-| MLCommons/Croissant | Poor (static dataset) | Poor | Skip. |
-| ActivityStreams 2.0 | Weak (needs heavy extension) | Poor | Skip. |
-| OCSF | Very poor (security domain) | Poor | Skip. |
-| Claude/Codex/Forge JSONL | **Excellent** (de facto) | N/A | Formalize as session-contract. |
-| JSONL + JSON Schema | **Excellent** (container+validation) | OK | Adopt as the serialization. |
-| AI-SDK Telemetry | Weak (event ≠ turn) | Poor | Skip. |
+| Standard                           | Raw-session fit                                | Distilled fit         | Recommendation                    |
+| ---------------------------------- | ---------------------------------------------- | --------------------- | --------------------------------- |
+| OpenTelemetry GenAI semantic conv. | Partial (span model ≠ session)                 | Poor                  | Skip. Use TraceSink port only.    |
+| OpenInference / AI-SDK             | Partial (message schema good, container wrong) | Poor                  | Borrow message schema ideas.      |
+| W3C PROV                           | Poor (provenance-only)                         | **Excellent** (≈ OKF) | Adopt as OKF's semantic backbone. |
+| MLCommons/Croissant                | Poor (static dataset)                          | Poor                  | Skip.                             |
+| ActivityStreams 2.0                | Weak (needs heavy extension)                   | Poor                  | Skip.                             |
+| OCSF                               | Very poor (security domain)                    | Poor                  | Skip.                             |
+| Claude/Codex/Forge JSONL           | **Excellent** (de facto)                       | N/A                   | Formalize as session-contract.    |
+| JSONL + JSON Schema                | **Excellent** (container+validation)           | OK                    | Adopt as the serialization.       |
+| AI-SDK Telemetry                   | Weak (event ≠ turn)                            | Poor                  | Skip.                             |
 
 ---
 
@@ -321,7 +324,7 @@ This is the minimal, highest-value step: the raw format already exists
 in the wild; we write it down and validate it. It does not require
 coordination with upstream tool vendors (Claude Code, Codex, etc.),
 because SessionLedger already normalizes their divergent formats through
-its ingestion adapters. The schema describes the *output* of the
+its ingestion adapters. The schema describes the _output_ of the
 normalization pipeline — the `Session` domain model — which is the
 canonical raw contract that SessionLedger works with internally and that
 downstream consumers (the viewer, the bundle compiler, the OKF exporter)
@@ -339,62 +342,92 @@ depend on.
   "definitions": {
     "corpus": {
       "type": "string",
-      "enum": ["forge", "codex", "claude-code", "cursor", "factory-droid"]
+      "enum": ["forge", "codex", "claude-code", "cursor", "factory-droid"],
     },
     "role": {
       "type": "string",
-      "enum": ["user", "assistant", "subagent", "tool", "system"]
+      "enum": ["user", "assistant", "subagent", "tool", "system"],
     },
     "tool_call": {
       "type": "object",
       "required": ["id", "name", "arguments"],
       "properties": {
-        "id":   { "type": "string", "description": "Provider-assigned tool call id." },
+        "id": {
+          "type": "string",
+          "description": "Provider-assigned tool call id.",
+        },
         "name": { "type": "string", "description": "Tool/function name." },
-        "arguments": { "type": "object", "description": "Tool arguments as a JSON object." }
-      }
+        "arguments": {
+          "type": "object",
+          "description": "Tool arguments as a JSON object.",
+        },
+      },
     },
     "tool_result": {
       "type": "object",
       "required": ["id", "content"],
       "properties": {
-        "id":      { "type": "string" },
+        "id": { "type": "string" },
         "content": { "type": "string" },
-        "is_error": { "type": "boolean", "default": false }
-      }
+        "is_error": { "type": "boolean", "default": false },
+      },
     },
     "turn": {
       "type": "object",
       "required": ["role", "content"],
       "properties": {
-        "role":        { "$ref": "#/definitions/role" },
-        "content":     { "type": "string", "description": "Message body text." },
-        "ts_ms":       { "type": "integer", "description": "Unix millisecond timestamp." },
-        "model":       { "type": "string", "description": "Model id used for this turn (assistant-only)." },
-        "tool_calls":  { "type": "array", "items": { "$ref": "#/definitions/tool_call" } },
-        "tool_results": { "type": "array", "items": { "$ref": "#/definitions/tool_result" } },
-        "artifacts":   { "type": "array", "items": { "$ref": "#/definitions/artifact" } },
-        "provenance":  { "$ref": "#/definitions/provenance_ref" }
-      }
+        "role": { "$ref": "#/definitions/role" },
+        "content": { "type": "string", "description": "Message body text." },
+        "ts_ms": {
+          "type": "integer",
+          "description": "Unix millisecond timestamp.",
+        },
+        "model": {
+          "type": "string",
+          "description": "Model id used for this turn (assistant-only).",
+        },
+        "tool_calls": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/tool_call" },
+        },
+        "tool_results": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/tool_result" },
+        },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/artifact" },
+        },
+        "provenance": { "$ref": "#/definitions/provenance_ref" },
+      },
     },
     "artifact": {
       "type": "object",
       "required": ["path", "content"],
       "properties": {
-        "path":     { "type": "string", "description": "File path relative to session cwd." },
-        "content":  { "type": "string", "description": "Full content or diff." },
-        "action":   { "type": "string", "enum": ["create", "edit", "delete", "read"] },
-        "language": { "type": "string", "description": "Detected language for syntax highlight." }
-      }
+        "path": {
+          "type": "string",
+          "description": "File path relative to session cwd.",
+        },
+        "content": { "type": "string", "description": "Full content or diff." },
+        "action": {
+          "type": "string",
+          "enum": ["create", "edit", "delete", "read"],
+        },
+        "language": {
+          "type": "string",
+          "description": "Detected language for syntax highlight.",
+        },
+      },
     },
     "provenance_ref": {
       "type": "object",
       "properties": {
-        "corpus":    { "$ref": "#/definitions/corpus" },
+        "corpus": { "$ref": "#/definitions/corpus" },
         "session_id": { "type": "string" },
-        "turn_index": { "type": "integer" }
-      }
-    }
+        "turn_index": { "type": "integer" },
+      },
+    },
   },
 
   "type": "object",
@@ -403,54 +436,54 @@ depend on.
     "format": {
       "type": "string",
       "const": "sessionledger-session-contract",
-      "description": "Format identifier for future compatibility."
+      "description": "Format identifier for future compatibility.",
     },
     "version": {
       "type": "string",
-      "const": "1"
+      "const": "1",
     },
     "id": {
       "type": "string",
-      "description": "Unique session id (UUID or corpus-assigned)."
+      "description": "Unique session id (UUID or corpus-assigned).",
     },
     "corpus": {
       "$ref": "#/definitions/corpus",
-      "description": "Origin tool / corpus."
+      "description": "Origin tool / corpus.",
     },
     "agent": {
       "type": "string",
-      "description": "Agent tool name (e.g. 'claude-code', 'codex', 'forge')."
+      "description": "Agent tool name (e.g. 'claude-code', 'codex', 'forge').",
     },
     "model": {
       "type": "string",
-      "description": "Default model id for the session (overridable per turn)."
+      "description": "Default model id for the session (overridable per turn).",
     },
     "cwd": {
       "type": "string",
-      "description": "Working directory / project scope."
+      "description": "Working directory / project scope.",
     },
     "title": {
       "type": "string",
-      "description": "Session title or topic, when known."
+      "description": "Session title or topic, when known.",
     },
     "started_at": {
       "type": "integer",
-      "description": "Session start time (Unix millis)."
+      "description": "Session start time (Unix millis).",
     },
     "ended_at": {
       "type": "integer",
-      "description": "Session end time (Unix millis)."
+      "description": "Session end time (Unix millis).",
     },
     "metadata": {
       "type": "object",
-      "description": "Arbitrary key-value metadata from ingestion."
+      "description": "Arbitrary key-value metadata from ingestion.",
     },
     "turns": {
       "type": "array",
       "items": { "$ref": "#/definitions/turn" },
-      "description": "Ordered session turns. Each line in JSONL = 1 turn."
-    }
-  }
+      "description": "Ordered session turns. Each line in JSONL = 1 turn.",
+    },
+  },
 }
 ```
 
@@ -472,25 +505,25 @@ with `role: "system"` carrying the session metadata.
 
 ### 4.3 Relationship to OKF
 
-| Layer | Format | Schema | Consumer |
-|-------|--------|--------|----------|
-| **Raw** (this doc) | JSONL per session | `session-contract.json` (draft above) | `SessionLedger` ingest → normalize → `Session` domain model |
-| **Distilled** | JSON document (entities+relations+provenance) | `OkfDocument` per `ports/okf.rs` | Resume injection, memory store, wiki viewer |
+| Layer              | Format                                        | Schema                                | Consumer                                                    |
+| ------------------ | --------------------------------------------- | ------------------------------------- | ----------------------------------------------------------- |
+| **Raw** (this doc) | JSONL per session                             | `session-contract.json` (draft above) | `SessionLedger` ingest → normalize → `Session` domain model |
+| **Distilled**      | JSON document (entities+relations+provenance) | `OkfDocument` per `ports/okf.rs`      | Resume injection, memory store, wiki viewer                 |
 
-The raw layer is the *input* to distillation. SessionLedger ingests
+The raw layer is the _input_ to distillation. SessionLedger ingests
 raw session-contract JSONL, normalizes to `Session`, compiles into
 `ContinuationBundle`, and exports as OKF. The two schemas are versioned
 independently. A raw session-contract v1 can produce OKF v1 content.
 
 ### 4.4 Adoption Cost
 
-| Task | Effort | Notes |
-|------|--------|-------|
-| Add `session-contract.json` to `docs/` | Low | What this PR does |
-| Add JSON Schema validation to ingestion | Low-Medium | `jsonschema` crate or `serde_json::Value` + manual check |
-| Backfill ingestion adapters to emit schema-conformant JSONL | Medium | Each adapter normalizes to `Turn` struct; serialize as JSONL |
-| Add `--to-session-contract` CLI flag | Low | Reuse existing `Session` serialization |
-| Publish schema at `https://schema.phenotype.dev/session-contract/v1` | Low | GitHub Pages or Phenotype registry |
+| Task                                                                 | Effort     | Notes                                                        |
+| -------------------------------------------------------------------- | ---------- | ------------------------------------------------------------ |
+| Add `session-contract.json` to `docs/`                               | Low        | What this PR does                                            |
+| Add JSON Schema validation to ingestion                              | Low-Medium | `jsonschema` crate or `serde_json::Value` + manual check     |
+| Backfill ingestion adapters to emit schema-conformant JSONL          | Medium     | Each adapter normalizes to `Turn` struct; serialize as JSONL |
+| Add `--to-session-contract` CLI flag                                 | Low        | Reuse existing `Session` serialization                       |
+| Publish schema at `https://schema.phenotype.dev/session-contract/v1` | Low        | GitHub Pages or Phenotype registry                           |
 
 ---
 

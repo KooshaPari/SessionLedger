@@ -13,6 +13,7 @@
 ### Task 1: Define exporter configuration and privacy contract
 
 **Files:**
+
 - Modify: `crates/sl-daemon/Cargo.toml`
 - Modify: `crates/sl-daemon/src/otel.rs`
 - Test: `crates/sl-daemon/src/otel.rs`
@@ -25,6 +26,7 @@
 ### Task 2: Wire OTLP/HTTP exporter into daemon telemetry
 
 **Files:**
+
 - Modify: `crates/sl-daemon/src/otel.rs`
 - Modify: `crates/sl-daemon/src/main.rs`
 - Test: `crates/sl-daemon/tests/otel_langfuse.rs`
@@ -38,6 +40,7 @@
 ### Task 3: Document operation and verify
 
 **Files:**
+
 - Modify: `crates/sl-daemon/README.md`
 - Modify: `README.md`
 - Test: existing daemon feature/build suites

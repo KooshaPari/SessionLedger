@@ -188,4 +188,3 @@ jobs:
       - name: self-check pii_redact helper + ops doc anchors
         shell: pwsh
         run: ./scripts/pii-redact-check.ps1 -SelfCheck
-

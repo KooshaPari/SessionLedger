@@ -9,15 +9,15 @@ without requiring Windows CPU sampling.
 
 ## What exists today
 
-| Layer | Status | Evidence |
-|-------|--------|----------|
-| On-demand unix pprof | **landed** | `GET /debug/pprof/profile` protobuf via `pprof-rs` when gated (#232) |
-| Operator smoke | **landed** | [`scripts/pprof-smoke.ps1`](../../scripts/pprof-smoke.ps1) |
-| Scheduled pprof smoke | **landed** | `pprof-smoke` job in [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) |
-| Continuous agent sidecar | **stub** | [`scripts/continuous-profiling-agent.ps1`](../../scripts/continuous-profiling-agent.ps1) |
-| Soft HTTP profile push | **soft** | `push_backend: http_soft` + optional `SL_PROFILE_PUSH_URL` |
-| Pyroscope / OTLP push | **unpaid** | Full profiling exporters / auth wiring |
-| Windows CPU sampler | **unpaid** | `501` platform stub — SIGPROF sampler is unix-only |
+| Layer                    | Status     | Evidence                                                                                      |
+| ------------------------ | ---------- | --------------------------------------------------------------------------------------------- |
+| On-demand unix pprof     | **landed** | `GET /debug/pprof/profile` protobuf via `pprof-rs` when gated (#232)                          |
+| Operator smoke           | **landed** | [`scripts/pprof-smoke.ps1`](../../scripts/pprof-smoke.ps1)                                    |
+| Scheduled pprof smoke    | **landed** | `pprof-smoke` job in [`.github/workflows/ops-load.yml`](../../.github/workflows/ops-load.yml) |
+| Continuous agent sidecar | **stub**   | [`scripts/continuous-profiling-agent.ps1`](../../scripts/continuous-profiling-agent.ps1)      |
+| Soft HTTP profile push   | **soft**   | `push_backend: http_soft` + optional `SL_PROFILE_PUSH_URL`                                    |
+| Pyroscope / OTLP push    | **unpaid** | Full profiling exporters / auth wiring                                                        |
+| Windows CPU sampler      | **unpaid** | `501` platform stub — SIGPROF sampler is unix-only                                            |
 
 See also the gated operator contract in
 [`observability.md`](observability.md#local-pprof-style-profiling).
@@ -42,7 +42,7 @@ the same surface operators use manually:
 
 1. **Discover** — attach to `http://127.0.0.1:<port>` (daemon must be loopback-bound).
 2. **Sample** — `GET /debug/pprof/profile?seconds=N` on a fixed interval.
-3. **Retain** — keep the last *N* protobuf files locally (always).
+3. **Retain** — keep the last _N_ protobuf files locally (always).
 4. **Push** — optional soft HTTP upload when `push_backend` is `http_soft` and
    `SL_PROFILE_PUSH_URL` is set; otherwise retain-only.
 
@@ -54,20 +54,20 @@ rotation.
 
 [`continuous-profiling.json`](continuous-profiling.json) pins the agent knobs:
 
-| Field | Default | Meaning |
-|-------|---------|---------|
-| `sample_seconds` | `1` | CPU window per `GET /debug/pprof/profile` |
-| `poll_interval_seconds` | `30` | Intended spacing between agent polls (documented; stub runs once) |
-| `retain_samples` | `3` | Local rotation ceiling for retained `.pb` files |
-| `push_backend` | `http_soft` | `none` (no export) or `http_soft` (optional soft HTTP) |
+| Field                   | Default     | Meaning                                                           |
+| ----------------------- | ----------- | ----------------------------------------------------------------- |
+| `sample_seconds`        | `1`         | CPU window per `GET /debug/pprof/profile`                         |
+| `poll_interval_seconds` | `30`        | Intended spacing between agent polls (documented; stub runs once) |
+| `retain_samples`        | `3`         | Local rotation ceiling for retained `.pb` files                   |
+| `push_backend`          | `http_soft` | `none` (no export) or `http_soft` (optional soft HTTP)            |
 
 ### Soft HTTP push (`http_soft`)
 
-| Knob | Meaning |
-|------|---------|
-| `SL_PROFILE_PUSH_URL` | Optional absolute URL. When unset, RunOnce retains samples and **skips** network. |
-| `-DryRun` | Logs the intended POST (URL + byte length) without opening sockets. |
-| Push failures | Soft: warn and continue (local retain already succeeded); CI job uses `continue-on-error: true`. |
+| Knob                  | Meaning                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| `SL_PROFILE_PUSH_URL` | Optional absolute URL. When unset, RunOnce retains samples and **skips** network.                |
+| `-DryRun`             | Logs the intended POST (URL + byte length) without opening sockets.                              |
+| Push failures         | Soft: warn and continue (local retain already succeeded); CI job uses `continue-on-error: true`. |
 
 SelfCheck never reads `SL_PROFILE_PUSH_URL` for network I/O — it only proves
 doc/config anchors hermetically.
@@ -118,9 +118,9 @@ When the gate is off (`404`), attach mode exits `0` with `skip` — same as
 
 ## CI / scheduling
 
-| Job | Workflow | Blocking? | Platform |
-|-----|----------|-----------|----------|
-| `pprof-smoke` | [`ops-load.yml`](../../.github/workflows/ops-load.yml) | yes | `ubuntu-latest` |
+| Job                          | Workflow                                               | Blocking?                            | Platform        |
+| ---------------------------- | ------------------------------------------------------ | ------------------------------------ | --------------- |
+| `pprof-smoke`                | [`ops-load.yml`](../../.github/workflows/ops-load.yml) | yes                                  | `ubuntu-latest` |
 | `continuous-profiling-agent` | [`ops-load.yml`](../../.github/workflows/ops-load.yml) | **soft** (`continue-on-error: true`) | `ubuntu-latest` |
 
 The soft `continuous-profiling-agent` job runs weekly (same cadence as other

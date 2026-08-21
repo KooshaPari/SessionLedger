@@ -7,11 +7,11 @@
 
 ## Horizon summary
 
-| Window | Focus | Exit signal |
-|--------|-------|-------------|
-| Jul 18–20 | Wave-40 merge chain + red CI triage | #328 → #325 → #327 → reaudit PR green and mergeable |
-| Jul 20–22 | Wave-40 reaudit merge; score refresh | Reaudit merged at **≥396/402** (≥98% A) |
-| Jul 22–23 | Wave-41 scope lanes + org mirror | Org mirror unblocked; Wave-41 width-5 lanes advancing |
+| Window    | Focus                                | Exit signal                                           |
+| --------- | ------------------------------------ | ----------------------------------------------------- |
+| Jul 18–20 | Wave-40 merge chain + red CI triage  | #328 → #325 → #327 → reaudit PR green and mergeable   |
+| Jul 20–22 | Wave-40 reaudit merge; score refresh | Reaudit merged at **≥396/402** (≥98% A)               |
+| Jul 22–23 | Wave-41 scope lanes + org mirror     | Org mirror unblocked; Wave-41 width-5 lanes advancing |
 
 **Base score (Wave-39 closure):** 394/402 (98% A) per [`audit/SCORECARD.md`](../../audit/SCORECARD.md).
 
@@ -95,13 +95,13 @@ Create `WAVE41_SCOPE.md` at repo root with:
 
 ### Five lanes
 
-| Slot | Branch pattern | Worktree path | Lane doc |
-|------|----------------|---------------|----------|
-| L1 | `feat/sl-w41-<slug>` | `C:\Users\koosh\SessionLedger-wtrees\w41-<slug>` | `lanes/w41-<slug>/WAVE41_LANE.md` |
-| L2 | `feat/sl-w41-<slug>` | `...\w41-<slug>` | same |
-| L3 | `feat/sl-w41-<slug>` | `...\w41-<slug>` | same |
-| L4 | `feat/sl-w41-<slug>` | `...\w41-<slug>` | same |
-| L5 | `feat/sl-w41-<slug>` | `...\w41-<slug>` | same |
+| Slot | Branch pattern       | Worktree path                                    | Lane doc                          |
+| ---- | -------------------- | ------------------------------------------------ | --------------------------------- |
+| L1   | `feat/sl-w41-<slug>` | `C:\Users\koosh\SessionLedger-wtrees\w41-<slug>` | `lanes/w41-<slug>/WAVE41_LANE.md` |
+| L2   | `feat/sl-w41-<slug>` | `...\w41-<slug>`                                 | same                              |
+| L3   | `feat/sl-w41-<slug>` | `...\w41-<slug>`                                 | same                              |
+| L4   | `feat/sl-w41-<slug>` | `...\w41-<slug>`                                 | same                              |
+| L5   | `feat/sl-w41-<slug>` | `...\w41-<slug>`                                 | same                              |
 
 ### Lane bootstrap (per lane)
 
@@ -124,13 +124,13 @@ $env:CARGO_TARGET_DIR = "target-w41-$slug"
 
 Add `docs/ops/WAVE41_PERT.md`:
 
-| ID | Activity | Pred | Est (h) | Owner |
-|----|----------|------|---------|-------|
-| W41-A | Scope + WBS/DAG/PERT | — | 1 | machine |
-| W41-B1..B5 | Parallel impl (5 lanes) | W41-A | 2–4 each | machine |
-| W41-C | Sequential merge (5 PRs) | B1–B5 | 2 | machine |
-| W41-D | Reaudit + traceability | W41-C | 2 | machine |
-| W41-E | Org mirror | W41-D | 1 | human |
+| ID         | Activity                 | Pred  | Est (h)  | Owner   |
+| ---------- | ------------------------ | ----- | -------- | ------- |
+| W41-A      | Scope + WBS/DAG/PERT     | —     | 1        | machine |
+| W41-B1..B5 | Parallel impl (5 lanes)  | W41-A | 2–4 each | machine |
+| W41-C      | Sequential merge (5 PRs) | B1–B5 | 2        | machine |
+| W41-D      | Reaudit + traceability   | W41-C | 2        | machine |
+| W41-E      | Org mirror               | W41-D | 1        | human   |
 
 **Parallel width:** 5. **Critical path:** A → slowest B* → C → D.
 

@@ -16,11 +16,11 @@ Related: [`scripts/jemalloc-check.ps1`](../../scripts/jemalloc-check.ps1),
 
 ## Contract
 
-| Platform | Allocator | Feature | Source |
-|----------|-----------|---------|--------|
-| Unix | `tikv-jemallocator` | `platform-allocator` → `jemalloc` alias | [`main.rs`](../../crates/sl-daemon/src/main.rs) |
-| Windows | `mimalloc` | `platform-allocator` → `mimalloc-alloc` alias | same |
-| Opt-out | system allocator | `--no-default-features --features system-allocator` | `Cargo.toml` `default` |
+| Platform | Allocator           | Feature                                             | Source                                          |
+| -------- | ------------------- | --------------------------------------------------- | ----------------------------------------------- |
+| Unix     | `tikv-jemallocator` | `platform-allocator` → `jemalloc` alias             | [`main.rs`](../../crates/sl-daemon/src/main.rs) |
+| Windows  | `mimalloc`          | `platform-allocator` → `mimalloc-alloc` alias       | same                                            |
+| Opt-out  | system allocator    | `--no-default-features --features system-allocator` | `Cargo.toml` `default`                          |
 
 ## How to run
 
@@ -46,30 +46,30 @@ Hermetic wiring test: [`tests/jemalloc_default_on.rs`](../../tests/jemalloc_defa
 
 ## CI / scheduling
 
-| Gate | Workflow | Mode | Evidence |
-|------|----------|------|----------|
-| Soft/hard explicit `--features jemalloc` | `jemalloc-hard.yml` | **blocking** | Retained Unix feature-build proof |
-| Default-on SelfCheck | `jemalloc-default-on-hard.yml` | **blocking** | Docs + Cargo/default-feature anchors |
-| Unix default build | `jemalloc-default-on-hard.yml` | **blocking** | `cargo build --locked` (jemalloc in graph) |
-| Windows default build | `jemalloc-default-on-hard.yml` | **blocking** | `cargo build --locked` (mimalloc in graph) |
+| Gate                                     | Workflow                       | Mode         | Evidence                                   |
+| ---------------------------------------- | ------------------------------ | ------------ | ------------------------------------------ |
+| Soft/hard explicit `--features jemalloc` | `jemalloc-hard.yml`            | **blocking** | Retained Unix feature-build proof          |
+| Default-on SelfCheck                     | `jemalloc-default-on-hard.yml` | **blocking** | Docs + Cargo/default-feature anchors       |
+| Unix default build                       | `jemalloc-default-on-hard.yml` | **blocking** | `cargo build --locked` (jemalloc in graph) |
+| Windows default build                    | `jemalloc-default-on-hard.yml` | **blocking** | `cargo build --locked` (mimalloc in graph) |
 
 ### Soft vs hard gates
 
-| Gate | Status | Evidence |
-|------|--------|----------|
-| Default-on `platform-allocator` feature | **done** | `Cargo.toml` + `main.rs` |
-| Windows mimalloc parity | **done** | `mimalloc-alloc` on Windows |
-| Blocking jemalloc-default-on-hard CI workflow | **done** | PR SelfCheck + platform builds |
-| `tests/jemalloc_default_on.rs` cargo wrapper | **done** | Hermetic SelfCheck anchor smoke |
+| Gate                                                      | Status     | Evidence                           |
+| --------------------------------------------------------- | ---------- | ---------------------------------- |
+| Default-on `platform-allocator` feature                   | **done**   | `Cargo.toml` + `main.rs`           |
+| Windows mimalloc parity                                   | **done**   | `mimalloc-alloc` on Windows        |
+| Blocking jemalloc-default-on-hard CI workflow             | **done**   | PR SelfCheck + platform builds     |
+| `tests/jemalloc_default_on.rs` cargo wrapper              | **done**   | Hermetic SelfCheck anchor smoke    |
 | Continuous jemalloc profiling / production telemetry push | **unpaid** | Effort M; beyond allocator install |
 
 ## Done / unpaid
 
-| Item | Status |
-|------|--------|
-| Policy SSOT + JSON manifest | **done** |
-| Unix default jemalloc | **done** |
-| Windows mimalloc parity | **done** |
-| Blocking jemalloc-default-on-hard CI workflow | **done** |
-| `tests/jemalloc_default_on.rs` cargo wrapper | **done** |
+| Item                                             | Status     |
+| ------------------------------------------------ | ---------- |
+| Policy SSOT + JSON manifest                      | **done**   |
+| Unix default jemalloc                            | **done**   |
+| Windows mimalloc parity                          | **done**   |
+| Blocking jemalloc-default-on-hard CI workflow    | **done**   |
+| `tests/jemalloc_default_on.rs` cargo wrapper     | **done**   |
 | Continuous profiling push to production backends | **unpaid** | C00 L8 residual |

@@ -11,12 +11,12 @@ SessionLedger ships portable, unsigned desktop archives through GitHub Releases.
 Release CI already provides supply-chain evidence that does **not** require Apple
 or Microsoft signing credentials:
 
-| Trust path | What it proves | Status |
-|------------|----------------|--------|
-| `SHA256SUMS` | Per-asset digest list | Published on every `v*` tag |
-| Cosign keyless `SHA256SUMS.sigstore.json` | Checksums signed by the tag workflow identity | Best-effort (Sigstore availability) |
-| GitHub build provenance (`gh attestation`) | Artifact digest bound to repo/workflow/commit | **Blocking** on canonical releases |
-| CycloneDX SBOM | Dependency inventory | Published on every `v*` tag |
+| Trust path                                 | What it proves                                | Status                              |
+| ------------------------------------------ | --------------------------------------------- | ----------------------------------- |
+| `SHA256SUMS`                               | Per-asset digest list                         | Published on every `v*` tag         |
+| Cosign keyless `SHA256SUMS.sigstore.json`  | Checksums signed by the tag workflow identity | Best-effort (Sigstore availability) |
+| GitHub build provenance (`gh attestation`) | Artifact digest bound to repo/workflow/commit | **Blocking** on canonical releases  |
+| CycloneDX SBOM                             | Dependency inventory                          | Published on every `v*` tag         |
 
 Platform-native trust is separate:
 

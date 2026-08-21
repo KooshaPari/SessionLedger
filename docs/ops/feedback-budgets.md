@@ -11,11 +11,11 @@ generous threshold and opt-in enforcement.
 macOS can resolve without the viewer/webkit graph). Prefer the Makefile /
 manifest-path forms:
 
-| Intent | Command |
-|--------|---------|
-| Daemon typecheck | `cargo check --manifest-path crates/sl-daemon/Cargo.toml` |
-| Daemon tests | `cargo test --manifest-path crates/sl-daemon/Cargo.toml` |
-| CI-equivalent lint | `make lint` (fmt `--check` + clippy for root workspace + daemon) |
+| Intent                 | Command                                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------------------- |
+| Daemon typecheck       | `cargo check --manifest-path crates/sl-daemon/Cargo.toml`                                       |
+| Daemon tests           | `cargo test --manifest-path crates/sl-daemon/Cargo.toml`                                        |
+| CI-equivalent lint     | `make lint` (fmt `--check` + clippy for root workspace + daemon)                                |
 | Optional faster runner | `cargo nextest run --manifest-path crates/sl-daemon/Cargo.toml` (see [nextest](#cargo-nextest)) |
 
 `AGENTS.md` / `llms.txt` still mention `cargo test -p sl-daemon` as shorthand;
@@ -23,11 +23,11 @@ that only works if you `cd crates/sl-daemon` (or pass `--manifest-path`).
 
 ## Baseline table (warm incremental)
 
-| Command | Budget (advisory) | Measured mean | Host / date | method |
-|---------|-------------------|---------------|-------------|--------|
-| `cargo check --manifest-path crates/sl-daemon/Cargo.toml` | ≤ 15 s | ~1.7–4.3 s | Windows 10, cargo 1.96, warm target · 2026-07-14 | `cargo` / `Measure-Command` (hyperfine preferred when installed) |
-| `cargo test --manifest-path crates/sl-daemon/Cargo.toml` | ≤ 30 s | ~4.7 s (138+ unit/integration tests after warm build) | same | `cargo` / `Measure-Command` |
-| `make lint` | ≤ 180 s | partial: daemon `clippy --all-targets` ~27 s + `fmt --check` ~10 s (full `make lint` also runs root-workspace clippy) | same | `cargo` / `Measure-Command` |
+| Command                                                   | Budget (advisory) | Measured mean                                                                                                         | Host / date                                      | method                                                           |
+| --------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------- |
+| `cargo check --manifest-path crates/sl-daemon/Cargo.toml` | ≤ 15 s            | ~1.7–4.3 s                                                                                                            | Windows 10, cargo 1.96, warm target · 2026-07-14 | `cargo` / `Measure-Command` (hyperfine preferred when installed) |
+| `cargo test --manifest-path crates/sl-daemon/Cargo.toml`  | ≤ 30 s            | ~4.7 s (138+ unit/integration tests after warm build)                                                                 | same                                             | `cargo` / `Measure-Command`                                      |
+| `make lint`                                               | ≤ 180 s           | partial: daemon `clippy --all-targets` ~27 s + `fmt --check` ~10 s (full `make lint` also runs root-workspace clippy) | same                                             | `cargo` / `Measure-Command`                                      |
 
 Notes:
 

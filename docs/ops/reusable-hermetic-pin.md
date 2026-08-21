@@ -5,11 +5,11 @@ SessionLedger calls the in-repo reusable hermetic build slice from
 
 ## Current pin
 
-| Field | Value |
-|-------|-------|
-| Workflow | `KooshaPari/SessionLedger/.github/workflows/reusable-hermetic-build.yml` |
-| Commit SHA | `ec8916547e5678f72fe6894509249f9b23367b80` |
-| Caller job | `hermetic.yml` → `sl-daemon-offline-container` |
+| Field                        | Value                                                                                                                                   |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Workflow                     | `KooshaPari/SessionLedger/.github/workflows/reusable-hermetic-build.yml`                                                                |
+| Commit SHA                   | `ec8916547e5678f72fe6894509249f9b23367b80`                                                                                              |
+| Caller job                   | `hermetic.yml` → `sl-daemon-offline-container`                                                                                          |
 | `builder_image_digest` input | `sha256:16381cf25d89fd5dc8a904ff4a7b8d4660a856ed9738b8a7e879d816439ce2a5` (must match [`hermetic-builder.json`](hermetic-builder.json)) |
 
 The `uses: …@<sha>` ref must be a full 40-character commit SHA. Do not use

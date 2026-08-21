@@ -1,17 +1,21 @@
 # SessionLedger Contributing Guide
 
 ## Prerequisites
+
 - Rust stable toolchain (latest stable)
 - Cargo (bundled with Rust)
 - pre-commit for local repository hooks
 
 ## Build
+
 ```bash
 cargo build
 ```
 
 ## Testing
+
 **IMPORTANT**: sl-daemon must be tested in isolation because sl-viewer depends on webkit2gtk-sys which cannot resolve on macOS. Run:
+
 ```bash
 cargo test -p sl-daemon
 ```
@@ -142,11 +146,13 @@ Top-level and subcommand `--help` output includes richer examples (`serve`,
 `completions`). See [`crates/sl-daemon/README.md`](crates/sl-daemon/README.md#shell-completions).
 
 ## Branch Discipline
+
 - Always create feature branches off main
 - Never commit directly to main
 - Use conventional-commits style for commit messages
 
 ## PR Workflow
+
 - Create one focused PR per change
 - Ensure all tests pass (0-failed)
 - Verify no regressions
@@ -157,6 +163,7 @@ Top-level and subcommand `--help` output includes richer examples (`serve`,
   bumping the pin
 
 ## Developer Certificate of Origin (DCO)
+
 All contributions must be signed off under the [Developer Certificate of Origin](https://developercertificate.org/).
 Each commit must include a `Signed-off-by:` trailer matching the commit author:
 
@@ -230,4 +237,5 @@ pwsh -NoProfile -File scripts/maintainer-2fa-check.ps1 -SelfCheck
 ```
 
 ## Governance
+
 This repository follows governance guidelines defined in ~/.claude/CLAUDE.md at a high level.

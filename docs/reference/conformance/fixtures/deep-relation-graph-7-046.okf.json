@@ -43,9 +43,7 @@
       "type": "criteria",
       "label": "depth=7 chain resolves under 5ms p99",
       "properties": {
-        "watch_files": [
-          "src/domain/graph.rs"
-        ],
+        "watch_files": ["src/domain/graph.rs"],
         "skipped_by": []
       }
     },
@@ -54,9 +52,7 @@
       "type": "criteria",
       "label": "adjacency cache invalidates on insert only",
       "properties": {
-        "watch_files": [
-          "src/domain/graph.rs"
-        ],
+        "watch_files": ["src/domain/graph.rs"],
         "skipped_by": []
       }
     },

@@ -4,23 +4,23 @@ Source of truth: [`sessionledger-icon.svg`](sessionledger-icon.svg) (1024×1024,
 
 ## Palette (Lab-Coat, proposed 2026-07-06 by vision-pillar; amber hex revised 2026-07-06 per melosviz-3d overlap check)
 
-| Token | Hex | Role |
-|---|---|---|
-| lab-white | `#f6f8fa` | Background + panel (lab-coat) |
-| slate-900 | `#1f2937` | Panel/text base |
-| cobalt-blue | `#2563eb` | Primary accent — slide-stain blue, glassware blue |
-| orange-500 | `#f97316` | Live-session indicator — lit Bunsen burner (was `#f59e0b`; swapped to avoid MelosViz `--mv-warn` semantic divergence) |
-| teal-cool | `#14b8a6` | Secondary — growth-medium teal (bubbles) |
+| Token       | Hex       | Role                                                                                                                  |
+| ----------- | --------- | --------------------------------------------------------------------------------------------------------------------- |
+| lab-white   | `#f6f8fa` | Background + panel (lab-coat)                                                                                         |
+| slate-900   | `#1f2937` | Panel/text base                                                                                                       |
+| cobalt-blue | `#2563eb` | Primary accent — slide-stain blue, glassware blue                                                                     |
+| orange-500  | `#f97316` | Live-session indicator — lit Bunsen burner (was `#f59e0b`; swapped to avoid MelosViz `--mv-warn` semantic divergence) |
+| teal-cool   | `#14b8a6` | Secondary — growth-medium teal (bubbles)                                                                              |
 
 ## Files
 
-| Path | Format | Use |
-|---|---|---|
-| `assets/brand/sessionledger-icon.svg` | SVG 1024×1024 | Source of truth |
-| `assets/icons/sessionledger.iconset/` | PNG 16/32/48/64/128/256/512/1024 + @2x | macOS `.icns` source |
-| `assets/icons/sessionledger.ico` | ICO multi-res 16/32/48/64/128/256 | Windows app icon |
-| `assets/icons/sessionledger-256x256.png` | PNG 256×256 | Linux app icon |
-| `assets/brand/sessionledger-icon-animated.svg` | SVG 1024×1024 (SMIL) | L101 motion variant — cobalt bubbles rising + amber meniscus pulse (no JS) |
+| Path                                           | Format                                 | Use                                                                        |
+| ---------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------- |
+| `assets/brand/sessionledger-icon.svg`          | SVG 1024×1024                          | Source of truth                                                            |
+| `assets/icons/sessionledger.iconset/`          | PNG 16/32/48/64/128/256/512/1024 + @2x | macOS `.icns` source                                                       |
+| `assets/icons/sessionledger.ico`               | ICO multi-res 16/32/48/64/128/256      | Windows app icon                                                           |
+| `assets/icons/sessionledger-256x256.png`       | PNG 256×256                            | Linux app icon                                                             |
+| `assets/brand/sessionledger-icon-animated.svg` | SVG 1024×1024 (SMIL)                   | L101 motion variant — cobalt bubbles rising + amber meniscus pulse (no JS) |
 
 ## Mark
 

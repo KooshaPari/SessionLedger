@@ -7,7 +7,8 @@
 ## Gap
 
 Org 2FA cannot be proven from checkout. Add explicit maintainer 2FA policy SSOT
-+ SelfCheck with NOT_VERIFIABLE_IN_REPO human attestation row (no false claims).
+
+- SelfCheck with NOT_VERIFIABLE_IN_REPO human attestation row (no false claims).
 
 ## Acceptance criteria
 

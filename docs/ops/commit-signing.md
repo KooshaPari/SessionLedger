@@ -7,11 +7,11 @@ See [ADR 0004](../adr/0004-commit-signing-policy.md) for rationale and scope
 
 ## Policy summary
 
-| Layer | Requirement | Enforcement |
-|-------|-------------|-------------|
-| DCO | `Signed-off-by:` on each commit | PR template + review |
-| GPG / SSH | Signature block on each commit object | GitHub branch protection + CI tip check |
-| Merge commits | GitHub signs merges as `noreply@github.com` | Automatic on squash/merge |
+| Layer         | Requirement                                 | Enforcement                             |
+| ------------- | ------------------------------------------- | --------------------------------------- |
+| DCO           | `Signed-off-by:` on each commit             | PR template + review                    |
+| GPG / SSH     | Signature block on each commit object       | GitHub branch protection + CI tip check |
+| Merge commits | GitHub signs merges as `noreply@github.com` | Automatic on squash/merge               |
 
 ## Contributor setup
 
@@ -81,7 +81,7 @@ pwsh -NoProfile -File scripts/commit-signing-check.ps1 -Strict -Count 50
 ### What the script checks
 
 1. **`main` tip** — commit object contains a `gpgsig` block (GPG or SSH).
-2. **Recent history** — for each of the last *N* commits (default 30), classify
+2. **Recent history** — for each of the last _N_ commits (default 30), classify
    as `gpg`, `ssh`, or `unsigned`.
 3. **When signatures are present** — run `git verify-commit` when a verifier is
    available; malformed `gpgsig` blocks fail even in soft mode.

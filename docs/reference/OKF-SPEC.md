@@ -59,7 +59,7 @@ that travels between three stages of the pipeline:
    rather than parsing nested JSON.
 3. **Provenance first** — every entity and relation carries or inherits a
    provenance record. No anonymous nodes.
-4. **Lossy on purpose** — OKF is a *distilled* view. Raw transcripts, raw tool
+4. **Lossy on purpose** — OKF is a _distilled_ view. Raw transcripts, raw tool
    I/O, raw retry envelopes are intentionally absent; they live in the source
    session store, not in the OKF.
 5. **Round-trippable** — `serde::Serialize` / `Deserialize` produces a
@@ -71,7 +71,7 @@ that travels between three stages of the pipeline:
 ### Non-goals
 
 - **Not a transcript** — full message text is in the source corpus; OKF holds
-  extracted *facts*, not raw turns.
+  extracted _facts_, not raw turns.
 - **Not a vector store** — embedding indices live in Qdrant / OmniRoute memory,
   not in OKF.
 - **Not a query language** — OKF is data, not a DSL. Consumers may build
@@ -100,13 +100,13 @@ component: bugs are fixed by bumping minor and adding migration notes.
 A v1.x OKF document is a single JSON object with the following required and
 optional keys:
 
-| Key         | Type                       | Required | Notes                                    |
-| ----------- | -------------------------- | -------- | ---------------------------------------- |
-| `okf`       | string                     | yes      | Format version (e.g. `"1.0"`).           |
-| `source_id` | string                     | yes      | Session id this document was compiled from. |
-| `entities`  | `OkfEntity[]`              | yes      | Knowledge graph nodes. May be empty.     |
-| `relations` | `OkfRelation[]`            | no       | Typed edges. Omitted when empty.         |
-| `provenance`| `OkfProvenance`            | yes      | Document-level provenance.               |
+| Key          | Type            | Required | Notes                                       |
+| ------------ | --------------- | -------- | ------------------------------------------- |
+| `okf`        | string          | yes      | Format version (e.g. `"1.0"`).              |
+| `source_id`  | string          | yes      | Session id this document was compiled from. |
+| `entities`   | `OkfEntity[]`   | yes      | Knowledge graph nodes. May be empty.        |
+| `relations`  | `OkfRelation[]` | no       | Typed edges. Omitted when empty.            |
+| `provenance` | `OkfProvenance` | yes      | Document-level provenance.                  |
 
 `entities` MUST appear in the order they were emitted by the compiler (this
 matters for human readers and for replay determinism).
@@ -146,15 +146,15 @@ A short, lowercase string that classifies the node. The v1 dialect defines
 seven canonical types (see §7). Consumers SHOULD treat unknown types as opaque
 and render them generically ("{type}: {label}").
 
-| Type          | Source bundle | Meaning                                          |
-| ------------- | ------------- | ------------------------------------------------ |
-| `intent`      | Intent        | The user's stated goal.                          |
-| `acceptance`  | Intent        | An acceptance signal (a "looks good" criterion). |
-| `constraint`  | Intent        | A do-not-cross constraint string.                |
-| `resource`    | Context       | A working resource (cwd, file, URL).             |
-| `state`       | Context       | A named piece of session state (title, env var). |
-| `criteria`    | Contract      | A success criterion (test, watch-file, gate).    |
-| `gate`        | Acceptance    | The document-level resume gate (ready / scope).  |
+| Type         | Source bundle | Meaning                                          |
+| ------------ | ------------- | ------------------------------------------------ |
+| `intent`     | Intent        | The user's stated goal.                          |
+| `acceptance` | Intent        | An acceptance signal (a "looks good" criterion). |
+| `constraint` | Intent        | A do-not-cross constraint string.                |
+| `resource`   | Context       | A working resource (cwd, file, URL).             |
+| `state`      | Context       | A named piece of session state (title, env var). |
+| `criteria`   | Contract      | A success criterion (test, watch-file, gate).    |
+| `gate`       | Acceptance    | The document-level resume gate (ready / scope).  |
 
 ### 4.3 `label`
 
@@ -202,13 +202,13 @@ struct OkfRelation {
 
 ### 5.2 Relation types
 
-| Type           | Source            | Target            | Meaning                                     |
-| -------------- | ----------------- | ----------------- | ------------------------------------------- |
-| `verified_by`  | `intent`          | `acceptance`      | This intent is verified by this signal.     |
-| `bounded_by`   | `intent`          | `constraint`      | This intent is bounded by this constraint. |
-| `grounds`      | `intent`          | `resource`/`state`| This intent operates in this context.      |
-| `requires`     | `intent`          | `criteria`        | This intent requires this criterion.        |
-| `asserts`      | `intent`          | `gate`            | This intent asserts resume-gate readiness.  |
+| Type          | Source   | Target             | Meaning                                    |
+| ------------- | -------- | ------------------ | ------------------------------------------ |
+| `verified_by` | `intent` | `acceptance`       | This intent is verified by this signal.    |
+| `bounded_by`  | `intent` | `constraint`       | This intent is bounded by this constraint. |
+| `grounds`     | `intent` | `resource`/`state` | This intent operates in this context.      |
+| `requires`    | `intent` | `criteria`         | This intent requires this criterion.       |
+| `asserts`     | `intent` | `gate`             | This intent asserts resume-gate readiness. |
 
 These are the only five relation types in v1.0. Downstream tools SHOULD treat
 unknown relation types as edges but flag them for review.
@@ -237,13 +237,13 @@ struct OkfProvenance {
 
 A short lowercase identifier for the source agent corpus. Defined values in v1.0:
 
-| Corpus        | Meaning                                          |
-| ------------- | ------------------------------------------------ |
-| `forge`       | Forge session store (SQLite).                    |
-| `codex`       | Codex session store.                             |
-| `claude-code` | Claude Code session store.                       |
-| `cursor`      | Cursor session store.                            |
-| `factory-droid` | Factory Droid session store.                   |
+| Corpus          | Meaning                       |
+| --------------- | ----------------------------- |
+| `forge`         | Forge session store (SQLite). |
+| `codex`         | Codex session store.          |
+| `claude-code`   | Claude Code session store.    |
+| `cursor`        | Cursor session store.         |
+| `factory-droid` | Factory Droid session store.  |
 
 Consumers SHOULD treat unknown corpora as opaque strings and not crash.
 
@@ -255,7 +255,7 @@ canonical identity).
 
 ### 6.3 Inherited vs explicit provenance
 
-- **Document-level provenance** at the top of the document is the *default*.
+- **Document-level provenance** at the top of the document is the _default_.
 - **Relation provenance** is always explicit (the compiler clones the default
   per edge).
 - **Entity provenance** is INHERITED from the document level in v1.0 —
@@ -271,15 +271,15 @@ typed `Bundle` entries (Intent, Context, Contract, Acceptance, Provenance,
 Worklog, Dedup). OKF maps each bundle kind to entities and relations as
 follows.
 
-| Bundle kind   | OKF entity(ies) emitted                                 | Relations emitted                                  |
-| ------------- | ------------------------------------------------------- | -------------------------------------------------- |
-| `Intent`      | `intent` (1) + `acceptance*` (N) + `constraint*` (M)   | `verified_by` (intent → each acceptance) + `bounded_by` (intent → each constraint) |
-| `Context`     | `resource` (if `cwd`) + `state` (if `title`)           | `grounds` (intent → resource/state) [implicit; see §7.2] |
-| `Contract`    | `criteria` (1)                                          | `requires` (intent → criteria)                     |
-| `Acceptance`  | `gate` (1)                                              | `asserts` (intent → gate)                          |
-| `Provenance`  | — (folded into document / relation provenance)          | —                                                  |
-| `Worklog`     | — (not represented in OKF v1.0)                        | —                                                  |
-| `Dedup`       | — (not represented in OKF v1.0)                        | —                                                  |
+| Bundle kind  | OKF entity(ies) emitted                              | Relations emitted                                                                  |
+| ------------ | ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `Intent`     | `intent` (1) + `acceptance*` (N) + `constraint*` (M) | `verified_by` (intent → each acceptance) + `bounded_by` (intent → each constraint) |
+| `Context`    | `resource` (if `cwd`) + `state` (if `title`)         | `grounds` (intent → resource/state) [implicit; see §7.2]                           |
+| `Contract`   | `criteria` (1)                                       | `requires` (intent → criteria)                                                     |
+| `Acceptance` | `gate` (1)                                           | `asserts` (intent → gate)                                                          |
+| `Provenance` | — (folded into document / relation provenance)       | —                                                                                  |
+| `Worklog`    | — (not represented in OKF v1.0)                      | —                                                                                  |
+| `Dedup`      | — (not represented in OKF v1.0)                      | —                                                                                  |
 
 ### 7.1 Intent translation
 
@@ -296,14 +296,30 @@ becomes:
 
 ```json
 [
-  { "id": "intent-0", "type": "intent", "label": "ship the auth fix",
-    "properties": { "user_turn_count": 4 } },
-  { "id": "acceptance-0", "type": "acceptance", "label": "tests pass",
-    "properties": null },
-  { "id": "acceptance-1", "type": "acceptance", "label": "deploy succeeds",
-    "properties": null },
-  { "id": "constraint-0", "type": "constraint", "label": "no MFA removal",
-    "properties": null }
+  {
+    "id": "intent-0",
+    "type": "intent",
+    "label": "ship the auth fix",
+    "properties": { "user_turn_count": 4 }
+  },
+  {
+    "id": "acceptance-0",
+    "type": "acceptance",
+    "label": "tests pass",
+    "properties": null
+  },
+  {
+    "id": "acceptance-1",
+    "type": "acceptance",
+    "label": "deploy succeeds",
+    "properties": null
+  },
+  {
+    "id": "constraint-0",
+    "type": "constraint",
+    "label": "no MFA removal",
+    "properties": null
+  }
 ]
 ```
 
@@ -347,8 +363,12 @@ Acceptance body = { "ready": true, "scope_sized": true, "user_turns": 5 }
 becomes:
 
 ```json
-{ "id": "gate-0", "type": "gate", "label": "resume-gate",
-  "properties": { "ready": true, "scope_sized": true, "user_turns": 5 } }
+{
+  "id": "gate-0",
+  "type": "gate",
+  "label": "resume-gate",
+  "properties": { "ready": true, "scope_sized": true, "user_turns": 5 }
+}
 ```
 
 with an `asserts` relation from the intent to the gate.
@@ -367,13 +387,13 @@ v1.1.
 
 Session recognizes five `Role` values:
 
-| Role         | Glyph | Meaning                                          |
-| ------------ | ----- | ------------------------------------------------ |
-| `User`       | 🧑    | The human operator.                              |
-| `Assistant`  | 🤖    | The primary model under the user.                |
-| `Subagent`   | ⚙️    | A delegated sub-task (sub-agent, sub-process).   |
-| `Tool`       | 🔧    | A tool result / tool message.                    |
-| `System`     | 💻    | System / environment messages (rare).            |
+| Role        | Glyph | Meaning                                        |
+| ----------- | ----- | ---------------------------------------------- |
+| `User`      | 🧑    | The human operator.                            |
+| `Assistant` | 🤖    | The primary model under the user.              |
+| `Subagent`  | ⚙️    | A delegated sub-task (sub-agent, sub-process). |
+| `Tool`      | 🔧    | A tool result / tool message.                  |
+| `System`    | 💻    | System / environment messages (rare).          |
 
 ### 8.2 Where roles appear in OKF v1.0
 
@@ -482,7 +502,7 @@ Filenames MUST match the document's `source_id` (sanity check enforced by
 
 The compiler is **idempotent over a single session** — running it twice on the
 same input JSONL produces byte-identical OKF documents. Retries that occur at
-*runtime* (model calls that fail and re-issue) are NOT currently visible in
+_runtime_ (model calls that fail and re-issue) are NOT currently visible in
 OKF; the OKF describes the FINAL state of the session, not the path to it.
 
 ### 11.1 What OKF v1.0 carries about retries
@@ -566,16 +586,16 @@ content; the fallback chain is informational.
 
 ### 13.2 Compatibility rules
 
-| Change kind                                | Bump     | Consumer behavior                              |
-| ------------------------------------------ | -------- | ---------------------------------------------- |
-| Add new entity type                        | minor    | Existing consumers ignore; new consumers see.  |
-| Add new relation type                      | minor    | Existing consumers ignore; new consumers see.  |
-| Add optional top-level key                 | minor    | Existing consumers ignore; new consumers see.  |
-| Add optional field to entity/relation      | minor    | Existing consumers ignore; new consumers see.  |
-| Rename an entity or relation type          | major    | Existing consumers MUST reject.                |
-| Change semantic of an existing entity type | major    | Existing consumers MUST reject.                |
-| Change the meaning of `properties` keys    | major    | Existing consumers MUST reject.                |
-| Remove a type or relation                  | major    | Existing consumers MUST reject.                |
+| Change kind                                | Bump  | Consumer behavior                             |
+| ------------------------------------------ | ----- | --------------------------------------------- |
+| Add new entity type                        | minor | Existing consumers ignore; new consumers see. |
+| Add new relation type                      | minor | Existing consumers ignore; new consumers see. |
+| Add optional top-level key                 | minor | Existing consumers ignore; new consumers see. |
+| Add optional field to entity/relation      | minor | Existing consumers ignore; new consumers see. |
+| Rename an entity or relation type          | major | Existing consumers MUST reject.               |
+| Change semantic of an existing entity type | major | Existing consumers MUST reject.               |
+| Change the meaning of `properties` keys    | major | Existing consumers MUST reject.               |
+| Remove a type or relation                  | major | Existing consumers MUST reject.               |
 
 ### 13.3 Rejection policy
 
@@ -590,7 +610,7 @@ Any minor-version bump MUST be accompanied by a `CHANGELOG.md` entry in
 SessionLedger that lists:
 
 - The new types / fields added
-- Any *semantic* clarification of existing fields (clarifications are
+- Any _semantic_ clarification of existing fields (clarifications are
   minor-level; semantic changes are major-level and require a migration guide)
 
 ---
@@ -608,40 +628,74 @@ OKF:
   "okf": "1.0",
   "source_id": "forge-session-001",
   "entities": [
-    { "id": "intent-0", "type": "intent",
+    {
+      "id": "intent-0",
+      "type": "intent",
       "label": "Fix login timeout regression after auth refactor",
-      "properties": { "user_turn_count": 5 } },
-    { "id": "acceptance-0", "type": "acceptance",
+      "properties": { "user_turn_count": 5 }
+    },
+    {
+      "id": "acceptance-0",
+      "type": "acceptance",
       "label": "all existing auth tests pass",
-      "properties": null },
-    { "id": "acceptance-1", "type": "acceptance",
+      "properties": null
+    },
+    {
+      "id": "acceptance-1",
+      "type": "acceptance",
       "label": "session expiry extends beyond 30 min",
-      "properties": null },
-    { "id": "constraint-0", "type": "constraint",
+      "properties": null
+    },
+    {
+      "id": "constraint-0",
+      "type": "constraint",
       "label": "must not touch password reset flow",
-      "properties": null },
-    { "id": "resource-0", "type": "resource",
+      "properties": null
+    },
+    {
+      "id": "resource-0",
+      "type": "resource",
       "label": "working-directory",
-      "properties": { "cwd": "/home/dev/auth-service" } },
-    { "id": "state-0", "type": "state",
+      "properties": { "cwd": "/home/dev/auth-service" }
+    },
+    {
+      "id": "state-0",
+      "type": "state",
       "label": "session-title",
-      "properties": { "title": "Login timeout fix" } },
-    { "id": "gate-0", "type": "gate", "label": "resume-gate",
-      "properties": { "ready": true, "scope_sized": true, "user_turns": 5 } }
+      "properties": { "title": "Login timeout fix" }
+    },
+    {
+      "id": "gate-0",
+      "type": "gate",
+      "label": "resume-gate",
+      "properties": { "ready": true, "scope_sized": true, "user_turns": 5 }
+    }
   ],
   "relations": [
-    { "source": "intent-0", "target": "acceptance-0",
+    {
+      "source": "intent-0",
+      "target": "acceptance-0",
       "type": "verified_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-session-001" } },
-    { "source": "intent-0", "target": "acceptance-1",
+      "provenance": { "corpus": "forge", "source_id": "forge-session-001" }
+    },
+    {
+      "source": "intent-0",
+      "target": "acceptance-1",
       "type": "verified_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-session-001" } },
-    { "source": "intent-0", "target": "constraint-0",
+      "provenance": { "corpus": "forge", "source_id": "forge-session-001" }
+    },
+    {
+      "source": "intent-0",
+      "target": "constraint-0",
       "type": "bounded_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-session-001" } },
-    { "source": "intent-0", "target": "gate-0",
+      "provenance": { "corpus": "forge", "source_id": "forge-session-001" }
+    },
+    {
+      "source": "intent-0",
+      "target": "gate-0",
       "type": "asserts",
-      "provenance": { "corpus": "forge", "source_id": "forge-session-001" } }
+      "provenance": { "corpus": "forge", "source_id": "forge-session-001" }
+    }
   ],
   "provenance": { "corpus": "forge", "source_id": "forge-session-001" }
 }
@@ -656,8 +710,12 @@ A session with no detectable goal produces an empty `intent` entity:
   "okf": "1.0",
   "source_id": "forge-empty-002",
   "entities": [
-    { "id": "intent-0", "type": "intent", "label": "",
-      "properties": { "user_turn_count": 0 } }
+    {
+      "id": "intent-0",
+      "type": "intent",
+      "label": "",
+      "properties": { "user_turn_count": 0 }
+    }
   ],
   "provenance": { "corpus": "forge", "source_id": "forge-empty-002" }
 }
@@ -676,24 +734,44 @@ constraint satellites:
   "okf": "1.0",
   "source_id": "forge-multi-003",
   "entities": [
-    { "id": "intent-0", "type": "intent",
+    {
+      "id": "intent-0",
+      "type": "intent",
       "label": "Fix login timeout regression",
-      "properties": { "user_turn_count": 3 } },
-    { "id": "intent-1", "type": "intent",
+      "properties": { "user_turn_count": 3 }
+    },
+    {
+      "id": "intent-1",
+      "type": "intent",
       "label": "Update auth documentation",
-      "properties": { "user_turn_count": 2 } },
-    { "id": "acceptance-0", "type": "acceptance",
-      "label": "tests pass", "properties": null },
-    { "id": "constraint-0", "type": "constraint",
-      "label": "do not change public API", "properties": null }
+      "properties": { "user_turn_count": 2 }
+    },
+    {
+      "id": "acceptance-0",
+      "type": "acceptance",
+      "label": "tests pass",
+      "properties": null
+    },
+    {
+      "id": "constraint-0",
+      "type": "constraint",
+      "label": "do not change public API",
+      "properties": null
+    }
   ],
   "relations": [
-    { "source": "intent-0", "target": "acceptance-0",
+    {
+      "source": "intent-0",
+      "target": "acceptance-0",
       "type": "verified_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-multi-003" } },
-    { "source": "intent-1", "target": "constraint-0",
+      "provenance": { "corpus": "forge", "source_id": "forge-multi-003" }
+    },
+    {
+      "source": "intent-1",
+      "target": "constraint-0",
       "type": "bounded_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-multi-003" } }
+      "provenance": { "corpus": "forge", "source_id": "forge-multi-003" }
+    }
   ],
   "provenance": { "corpus": "forge", "source_id": "forge-multi-003" }
 }
@@ -829,4 +907,4 @@ VERSION:    "1.0"  (forward-compatible with 1.x)
 
 ---
 
-*End of OKF v1.0 specification.*
+_End of OKF v1.0 specification._

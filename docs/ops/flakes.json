@@ -69,7 +69,9 @@
       "owner": "qa",
       "opened": "2026-07-13",
       "deadline": "2026-07-27",
-      "evidence": ["https://github.com/KooshaPari/SessionLedger/actions/runs/123"],
+      "evidence": [
+        "https://github.com/KooshaPari/SessionLedger/actions/runs/123"
+      ],
       "quarantine": {
         "mechanism": "temporarily excluded from required CI job",
         "removal_plan": "commit minimized regression fixture and re-enable test"

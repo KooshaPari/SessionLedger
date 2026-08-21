@@ -8,15 +8,15 @@ Companion: [`status-regions-and-native-smoke.md`](status-regions-and-native-smok
 
 ## What CI already proves (axe / ARIA)
 
-| Check | Location | Screen-reader relevance |
-|-------|----------|-------------------------|
-| WCAG 2.A/2.AA axe scan per tab × 3 widths | `tests/visual/harness/a11y.spec.js` | No critical name/role/value or landmark regressions in the built web viewer |
-| Tablist keyboard pattern | same | Arrow/Home/End move selection; `aria-selected` tracks focus |
-| Primary control accessible names | same | Theme toggle, Help, search filter fields, Retry reachable by role + name |
-| Status / alert live regions | same + fixtures | `role=status` / `role=alert` with `aria-live` on loading, skeleton, error |
-| Landmarks | same | `navigation` (“Primary viewer navigation”) + `main` on every production tab |
-| Help dialog labelling | same | Dialog `aria-labelledby`, shortcut table columnheaders |
-| Inclusive language seed | `scripts/inclusive-language-check.ps1` | User-facing docs/strings avoid deny-list terms |
+| Check                                     | Location                               | Screen-reader relevance                                                     |
+| ----------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
+| WCAG 2.A/2.AA axe scan per tab × 3 widths | `tests/visual/harness/a11y.spec.js`    | No critical name/role/value or landmark regressions in the built web viewer |
+| Tablist keyboard pattern                  | same                                   | Arrow/Home/End move selection; `aria-selected` tracks focus                 |
+| Primary control accessible names          | same                                   | Theme toggle, Help, search filter fields, Retry reachable by role + name    |
+| Status / alert live regions               | same + fixtures                        | `role=status` / `role=alert` with `aria-live` on loading, skeleton, error   |
+| Landmarks                                 | same                                   | `navigation` (“Primary viewer navigation”) + `main` on every production tab |
+| Help dialog labelling                     | same                                   | Dialog `aria-labelledby`, shortcut table columnheaders                      |
+| Inclusive language seed                   | `scripts/inclusive-language-check.ps1` | User-facing docs/strings avoid deny-list terms                              |
 
 CI does **not** run a real screen reader. Treat axe/ARIA as a regression net; use
 the checklist below for announcement quality, verbosity, and OS chrome.

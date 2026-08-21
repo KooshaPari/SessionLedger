@@ -6,11 +6,11 @@ view uses progressive disclosure for advanced query parameters.
 
 ## Search advanced filters
 
-| Layer | Path | Role |
-|-------|------|------|
-| UI | [`crates/sl-viewer/src/search_view.rs`](../../crates/sl-viewer/src/search_view.rs) | Primary fields always visible; Min Tokens / Tags / Limit behind a disclosure control |
-| Chrome | [`crates/sl-viewer/src/app.rs`](../../crates/sl-viewer/src/app.rs) | Lab-Coat `--sl-*` styles for toggle, badge, and panel |
-| Harness | [`tests/visual/harness/a11y.spec.js`](../../tests/visual/harness/a11y.spec.js) | Expand/collapse, `aria-expanded`, badge recognition |
+| Layer   | Path                                                                               | Role                                                                                 |
+| ------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| UI      | [`crates/sl-viewer/src/search_view.rs`](../../crates/sl-viewer/src/search_view.rs) | Primary fields always visible; Min Tokens / Tags / Limit behind a disclosure control |
+| Chrome  | [`crates/sl-viewer/src/app.rs`](../../crates/sl-viewer/src/app.rs)                 | Lab-Coat `--sl-*` styles for toggle, badge, and panel                                |
+| Harness | [`tests/visual/harness/a11y.spec.js`](../../tests/visual/harness/a11y.spec.js)     | Expand/collapse, `aria-expanded`, badge recognition                                  |
 
 ### Default surface
 

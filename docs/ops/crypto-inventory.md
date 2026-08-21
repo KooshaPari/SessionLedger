@@ -12,15 +12,16 @@ Related: [`SECURITY.md`](../../SECURITY.md) (reporting + API-key rotation),
 
 ## Cryptography inventory
 
-| Use | Mechanism | Where | Notes |
-|-----|-----------|-------|-------|
-| Content dedup key | **SHA-256** (`sha2` crate) | [`src/domain/dedup.rs`](../../src/domain/dedup.rs) | Stable hash over normalized scope + topic slug; **hashing, not encryption** |
-| Archive transport | **gzip** (`flate2` / archive path) | `crates/sl-daemon` archive/restore | Compression only; archives are **not** encrypted at rest |
-| Ingest idempotency fingerprint | `std::collections::hash_map::DefaultHasher` | [`crates/sl-daemon/src/http.rs`](../../crates/sl-daemon/src/http.rs) | Process-local replay guard; **not** a cryptographic MAC |
-| Outbound HTTP (CLI / viewer) | **rustls** via `reqwest` | `crates/sl-daemon`, optional `sl-viewer` | TLS to remote HTTPS endpoints when configured; loopback daemon URL stays plain HTTP |
-| Release / supply-chain integrity | **SHA-256** checksums + optional **cosign** keyless signing | [`docs/ops/distribution.md`](distribution.md#release-integrity-signing-cosign) | Verifies downloaded binaries; separate from runtime app KMS |
-| Commit / branch governance | GPG or SSH commit signatures | [`docs/ops/commit-signing.md`](commit-signing.md) | Repository hygiene; not daemon data encryption |
-| Soft envelope (opt-in) | **SHA-256 keystream (soft)** (`sha2` keystream in `src/envelope.rs`) | [`src/envelope.rs`](../../src/envelope.rs) | `SL_ENVELOPE_KEY` 32-byte hex DEK; `v1:nonce:ct` blob; **not** wired into OKF/ETL paths |
+| Use                              | Mechanism                                                            | Where                                                                          | Notes                                                                                   |
+| -------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Content dedup key                | **SHA-256** (`sha2` crate)                                           | [`src/domain/dedup.rs`](../../src/domain/dedup.rs)                             | Stable hash over normalized scope + topic slug; **hashing, not encryption**             |
+| Archive transport                | **gzip** (`flate2` / archive path)                                   | `crates/sl-daemon` archive/restore                                             | Compression only; archives are **not** encrypted at rest                                |
+| Ingest idempotency fingerprint   | `std::collections::hash_map::DefaultHasher`                          | [`crates/sl-daemon/src/http.rs`](../../crates/sl-daemon/src/http.rs)           | Process-local replay guard; **not** a cryptographic MAC                                 |
+| Outbound HTTP (CLI / viewer)     | **rustls** via `reqwest`                                             | `crates/sl-daemon`, optional `sl-viewer`                                       | TLS to remote HTTPS endpoints when configured; loopback daemon URL stays plain HTTP     |
+| Release / supply-chain integrity | **SHA-256** checksums + optional **cosign** keyless signing          | [`docs/ops/distribution.md`](distribution.md#release-integrity-signing-cosign) | Verifies downloaded binaries; separate from runtime app KMS                             |
+| Commit / branch governance       | GPG or SSH commit signatures                                         | [`docs/ops/commit-signing.md`](commit-signing.md)                              | Repository hygiene; not daemon data encryption                                          |
+| Soft envelope (opt-in)           | **SHA-256 keystream (soft)** (`sha2` keystream in `src/envelope.rs`) | [`src/envelope.rs`](../../src/envelope.rs)                                     | `SL_ENVELOPE_KEY` 32-byte hex DEK; `v1:nonce:ct` blob; **not** wired into OKF/ETL paths |
+
 ### Explicit non-goals (today)
 
 - **No encryption-at-rest** for OKF bundles (`*.okf.json`), gzip archives, audit
@@ -45,13 +46,13 @@ A soft DEK helper lives in `src/envelope.rs` (feature-gated). There is still **n
 
 ### Phase-0 deferred vs recommended deploy patterns
 
-| Concern | Phase-0 posture | Recommended deploy pattern (operator-owned) |
-|---------|-----------------|-----------------------------------------------|
-| Application encryption-at-rest (OKF, gzip archives, audit JSONL/SQLite, episodic DB) | **Deferred** — plaintext files under the data directory | Enable **OS full-disk / volume encryption** (BitLocker, FileVault, LUKS); restrict directory ACLs to the daemon user |
-| Envelope encryption (DEK wrapped by KEK) | **Soft stub** — SHA-256 keystream DEK via `envelope-crypto` + `SL_ENVELOPE_KEY`; no KEK/KMS wrap | Prefer volume/backup encryption for production; wire ETL paths only after a dedicated ADR |
-| Cloud / hardware KMS (AWS KMS, GCP KMS, Azure Key Vault, PKCS#11 HSM) | **Deferred** — no SDK, IAM roles, or sealed-secret client in-tree | Keep `SL_API_KEY` (and any future secrets) in the host **service manager secret** or org vault; inject as env at start — do not commit keys |
-| In-process TLS for `sl-daemon` | **Deferred** — plain HTTP on bind address | Terminate TLS at Caddy/nginx in front of loopback (see [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge)) |
-| Backup / export confidentiality | **Operator-owned** | Encrypt backup media or use encrypted backup tools; redact before export leaves the host ([`privacy-hygiene.md`](privacy-hygiene.md)) |
+| Concern                                                                              | Phase-0 posture                                                                                  | Recommended deploy pattern (operator-owned)                                                                                                 |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application encryption-at-rest (OKF, gzip archives, audit JSONL/SQLite, episodic DB) | **Deferred** — plaintext files under the data directory                                          | Enable **OS full-disk / volume encryption** (BitLocker, FileVault, LUKS); restrict directory ACLs to the daemon user                        |
+| Envelope encryption (DEK wrapped by KEK)                                             | **Soft stub** — SHA-256 keystream DEK via `envelope-crypto` + `SL_ENVELOPE_KEY`; no KEK/KMS wrap | Prefer volume/backup encryption for production; wire ETL paths only after a dedicated ADR                                                   |
+| Cloud / hardware KMS (AWS KMS, GCP KMS, Azure Key Vault, PKCS#11 HSM)                | **Deferred** — no SDK, IAM roles, or sealed-secret client in-tree                                | Keep `SL_API_KEY` (and any future secrets) in the host **service manager secret** or org vault; inject as env at start — do not commit keys |
+| In-process TLS for `sl-daemon`                                                       | **Deferred** — plain HTTP on bind address                                                        | Terminate TLS at Caddy/nginx in front of loopback (see [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge))                       |
+| Backup / export confidentiality                                                      | **Operator-owned**                                                                               | Encrypt backup media or use encrypted backup tools; redact before export leaves the host ([`privacy-hygiene.md`](privacy-hygiene.md))       |
 
 ### Recommended host-side at-rest controls (today)
 
@@ -72,34 +73,34 @@ A soft DEK helper lives in `src/envelope.rs` (feature-gated). There is still **n
 Revisit in-tree KMS / envelope encryption only when **all** of the following are
 true (record an ADR before code):
 
-| Trigger | Why it matters |
-|---------|----------------|
-| Multi-user or multi-tenant hosted deploy is in scope | Host ACLs alone no longer match the threat model |
-| Compliance requires application-level ciphertext independent of OS FDE | Need audit evidence beyond BitLocker/FileVault/LUKS |
-| Maintainers commit to a KMS product + key-rotation runbook | Avoid half-integrated SDKs without rotation and disaster recovery |
-| Envelope format + migration for existing plaintext OKF/audit is designed | Prevent irreversible lock-in or silent data loss |
+| Trigger                                                                  | Why it matters                                                    |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Multi-user or multi-tenant hosted deploy is in scope                     | Host ACLs alone no longer match the threat model                  |
+| Compliance requires application-level ciphertext independent of OS FDE   | Need audit evidence beyond BitLocker/FileVault/LUKS               |
+| Maintainers commit to a KMS product + key-rotation runbook               | Avoid half-integrated SDKs without rotation and disaster recovery |
+| Envelope format + migration for existing plaintext OKF/audit is designed | Prevent irreversible lock-in or silent data loss                  |
 
 Until then, record KMS / app-level encryption-at-rest as **deferred / N/A** —
 not an open implementation gap without product scope.
 
 ### KMS / at-rest evidence checklist
 
-| Gate | Status | Evidence / prerequisite |
-|------|--------|-------------------------|
-| Crypto inventory + hashing vs encryption clarified | **done** | Inventory table above |
-| Explicit no in-tree KMS / envelope / app encryption-at-rest | **done** | Non-goals + this section |
-| Phase-0 deferred vs recommended deploy table | **done** | Table in this section |
-| Host FDE / ACL / secret-injection guidance | **done** | Recommended host-side controls |
-| TLS-at-edge samples (Caddy/nginx) | **done** | [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge) |
-| Crypto inventory SelfCheck | **done** | `scripts/crypto-inventory-check.ps1 -SelfCheck` |
-| Envelope-crypto SelfCheck | **done** | `scripts/envelope-crypto-check.ps1 -SelfCheck` (+ `tests/envelope_crypto.rs`) |
-| Blocking envelope-crypto CI workflow | **done** | `.github/workflows/envelope-crypto.yml` |
-| Soft envelope helper (`src/envelope.rs`) | **done** | SHA-256 keystream + `SL_ENVELOPE_KEY`; `envelope-crypto` marker feature |
-| In-tree KMS / sealed-secret / HSM client | **unpaid** | No SDK; reconsider triggers above |
-| KEK wrap / cloud KMS for envelope DEK | **unpaid** | Soft DEK only; host FDE / vault injection is the control |
-| AES-GCM envelope revision | **unpaid** | Keystream stub until dep graph + ADR accepted |
-| Application envelope encryption for OKF/audit | **deferred (Phase-0)** | No DEK/KEK format wired into ETL; host FDE is the control |
-| In-process daemon TLS | **deferred** | Proxy termination remains the deploy path |
+| Gate                                                        | Status                 | Evidence / prerequisite                                                       |
+| ----------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------- |
+| Crypto inventory + hashing vs encryption clarified          | **done**               | Inventory table above                                                         |
+| Explicit no in-tree KMS / envelope / app encryption-at-rest | **done**               | Non-goals + this section                                                      |
+| Phase-0 deferred vs recommended deploy table                | **done**               | Table in this section                                                         |
+| Host FDE / ACL / secret-injection guidance                  | **done**               | Recommended host-side controls                                                |
+| TLS-at-edge samples (Caddy/nginx)                           | **done**               | [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge)                 |
+| Crypto inventory SelfCheck                                  | **done**               | `scripts/crypto-inventory-check.ps1 -SelfCheck`                               |
+| Envelope-crypto SelfCheck                                   | **done**               | `scripts/envelope-crypto-check.ps1 -SelfCheck` (+ `tests/envelope_crypto.rs`) |
+| Blocking envelope-crypto CI workflow                        | **done**               | `.github/workflows/envelope-crypto.yml`                                       |
+| Soft envelope helper (`src/envelope.rs`)                    | **done**               | SHA-256 keystream + `SL_ENVELOPE_KEY`; `envelope-crypto` marker feature       |
+| In-tree KMS / sealed-secret / HSM client                    | **unpaid**             | No SDK; reconsider triggers above                                             |
+| KEK wrap / cloud KMS for envelope DEK                       | **unpaid**             | Soft DEK only; host FDE / vault injection is the control                      |
+| AES-GCM envelope revision                                   | **unpaid**             | Keystream stub until dep graph + ADR accepted                                 |
+| Application envelope encryption for OKF/audit               | **deferred (Phase-0)** | No DEK/KEK format wired into ETL; host FDE is the control                     |
+| In-process daemon TLS                                       | **deferred**           | Proxy termination remains the deploy path                                     |
 
 ## Remote daemon deploy: TLS at the edge
 
@@ -120,10 +121,10 @@ of a loopback-bound daemon.
    [API key and secret handling](#api-key-and-secret-handling) below.
 3. **Terminate TLS at the proxy** — use one of the in-repo samples:
 
-| Proxy | Sample config | Operator notes |
-|-------|---------------|----------------|
-| Caddy | [`packaging/caddy/Caddyfile`](../../packaging/caddy/Caddyfile) | Automatic HTTPS (ACME) when DNS points at the host; set `SESSIONLEDGER_HOST` or edit the site address |
-| nginx | [`packaging/nginx/sessionledger.conf`](../../packaging/nginx/sessionledger.conf) | HTTP→HTTPS redirect + `proxy_pass` to `127.0.0.1:8080`; supply cert paths |
+| Proxy | Sample config                                                                    | Operator notes                                                                                        |
+| ----- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Caddy | [`packaging/caddy/Caddyfile`](../../packaging/caddy/Caddyfile)                   | Automatic HTTPS (ACME) when DNS points at the host; set `SESSIONLEDGER_HOST` or edit the site address |
+| nginx | [`packaging/nginx/sessionledger.conf`](../../packaging/nginx/sessionledger.conf) | HTTP→HTTPS redirect + `proxy_pass` to `127.0.0.1:8080`; supply cert paths                             |
 
 4. **Enable and order services** — install `sessionledger-daemon`, then install
    and reload Caddy/nginx. Full walkthrough:
@@ -140,13 +141,13 @@ X-API-Key: <SL_API_KEY>
 
 ## API key and secret handling
 
-| Topic | Guidance |
-|-------|----------|
-| Generation | `openssl rand -hex 32` or equivalent CSPRNG output; never reuse release checksums or commit SHAs as keys |
-| Storage | Environment variable or service manager secret file **outside** the repo; see [`.env.example`](../../.env.example) placeholders only |
-| Rotation | Stop callers → replace `SL_API_KEY` → restart `sl-daemon` → update client headers; burn the old value ([`SECURITY.md` § API keys](../../SECURITY.md#api-keys-and-secret-rotation)) |
-| Repo hygiene | `scripts/env-example-check.ps1`, gitleaks, and TruffleHog in CI; do not commit live keys |
-| Threat model | Non-loopback without a key is a **startup deny**; with a key, all `/api/*` require it — details in [`local-trust-boundary.md`](local-trust-boundary.md) |
+| Topic        | Guidance                                                                                                                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generation   | `openssl rand -hex 32` or equivalent CSPRNG output; never reuse release checksums or commit SHAs as keys                                                                           |
+| Storage      | Environment variable or service manager secret file **outside** the repo; see [`.env.example`](../../.env.example) placeholders only                                               |
+| Rotation     | Stop callers → replace `SL_API_KEY` → restart `sl-daemon` → update client headers; burn the old value ([`SECURITY.md` § API keys](../../SECURITY.md#api-keys-and-secret-rotation)) |
+| Repo hygiene | `scripts/env-example-check.ps1`, gitleaks, and TruffleHog in CI; do not commit live keys                                                                                           |
+| Threat model | Non-loopback without a key is a **startup deny**; with a key, all `/api/*` require it — details in [`local-trust-boundary.md`](local-trust-boundary.md)                            |
 
 ## Soft envelope stub
 
@@ -170,15 +171,15 @@ and `security.yml` anchors only. This section is the operator SSOT for what is
 **done** vs **unpaid** on envelope crypto; it does **not** claim in-tree KMS,
 sealed secrets, KEK wrap, or production at-rest encryption.
 
-| Gate | Status | Evidence |
-|------|--------|----------|
-| Envelope-crypto SelfCheck | **done** | `scripts/envelope-crypto-check.ps1 -SelfCheck` (+ `tests/envelope_crypto.rs`) |
-| Blocking envelope-crypto CI workflow | **done** | `.github/workflows/envelope-crypto.yml` |
-| Soft envelope helper (`src/envelope.rs`) | **done** | SHA-256 keystream + `SL_ENVELOPE_KEY`; `envelope-crypto` marker feature |
-| In-tree KMS / sealed-secret client | **unpaid** | No cloud KMS SDK or sealed-secret client in-tree |
-| KEK wrap / cloud KMS for envelope DEK | **unpaid** | Soft hex DEK via env only; no KEK hierarchy |
-| AES-GCM envelope revision | **unpaid** | Keystream stub until dep graph + ADR accepted |
-| OKF/audit automatic envelope encryption | **unpaid** | Host FDE / ACLs remain the Phase-0 control |
+| Gate                                     | Status     | Evidence                                                                      |
+| ---------------------------------------- | ---------- | ----------------------------------------------------------------------------- |
+| Envelope-crypto SelfCheck                | **done**   | `scripts/envelope-crypto-check.ps1 -SelfCheck` (+ `tests/envelope_crypto.rs`) |
+| Blocking envelope-crypto CI workflow     | **done**   | `.github/workflows/envelope-crypto.yml`                                       |
+| Soft envelope helper (`src/envelope.rs`) | **done**   | SHA-256 keystream + `SL_ENVELOPE_KEY`; `envelope-crypto` marker feature       |
+| In-tree KMS / sealed-secret client       | **unpaid** | No cloud KMS SDK or sealed-secret client in-tree                              |
+| KEK wrap / cloud KMS for envelope DEK    | **unpaid** | Soft hex DEK via env only; no KEK hierarchy                                   |
+| AES-GCM envelope revision                | **unpaid** | Keystream stub until dep graph + ADR accepted                                 |
+| OKF/audit automatic envelope encryption  | **unpaid** | Host FDE / ACLs remain the Phase-0 control                                    |
 
 Cross-check: general crypto inventory rows live in [KMS / at-rest evidence checklist](#kms--at-rest-evidence-checklist) above; `scripts/crypto-inventory-check.ps1 -SelfCheck` covers inventory + Phase-0 deferral without duplicating this blocking gate.
 
@@ -194,5 +195,3 @@ pwsh ./scripts/crypto-inventory-check.ps1 -SelfCheck
 encryption-at-rest disclaimers, the **Phase-0 deferred vs recommended deploy**
 KMS/at-rest section, TLS sample paths, and cross-links to `SECURITY.md` /
 `local-trust-boundary.md`.
-
-

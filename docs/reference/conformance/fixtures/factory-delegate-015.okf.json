@@ -54,26 +54,41 @@
       "source": "intent-0",
       "target": "acceptance-0",
       "type": "verified_by",
-      "provenance": { "corpus": "factory-droid", "source_id": "factory-droid-session-015" }
+      "provenance": {
+        "corpus": "factory-droid",
+        "source_id": "factory-droid-session-015"
+      }
     },
     {
       "source": "intent-0",
       "target": "acceptance-1",
       "type": "verified_by",
-      "provenance": { "corpus": "factory-droid", "source_id": "factory-droid-session-015" }
+      "provenance": {
+        "corpus": "factory-droid",
+        "source_id": "factory-droid-session-015"
+      }
     },
     {
       "source": "intent-0",
       "target": "constraint-0",
       "type": "bounded_by",
-      "provenance": { "corpus": "factory-droid", "source_id": "factory-droid-session-015" }
+      "provenance": {
+        "corpus": "factory-droid",
+        "source_id": "factory-droid-session-015"
+      }
     },
     {
       "source": "intent-0",
       "target": "gate-0",
       "type": "asserts",
-      "provenance": { "corpus": "factory-droid", "source_id": "factory-droid-session-015" }
+      "provenance": {
+        "corpus": "factory-droid",
+        "source_id": "factory-droid-session-015"
+      }
     }
   ],
-  "provenance": { "corpus": "factory-droid", "source_id": "factory-droid-session-015" }
+  "provenance": {
+    "corpus": "factory-droid",
+    "source_id": "factory-droid-session-015"
+  }
 }

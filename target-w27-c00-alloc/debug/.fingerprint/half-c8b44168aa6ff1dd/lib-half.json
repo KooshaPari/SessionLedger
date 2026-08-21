@@ -1,1 +1,23 @@
-{"rustc":1562763049001146449,"features":"[]","declared_features":"[\"alloc\", \"arbitrary\", \"bytemuck\", \"default\", \"nightly\", \"num-traits\", \"rand_distr\", \"rkyv\", \"serde\", \"std\", \"use-intrinsics\", \"zerocopy\"]","target":5584728948347947946,"profile":15657897354478470176,"path":3700999822104722152,"deps":[[205223371168159621,"zerocopy",false,10049433438842393300],[7667230146095136825,"cfg_if",false,7597299462958569616]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\half-c8b44168aa6ff1dd\\dep-lib-half","checksum":false}}],"rustflags":["-D","warnings"],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 1562763049001146449,
+  "features": "[]",
+  "declared_features": "[\"alloc\", \"arbitrary\", \"bytemuck\", \"default\", \"nightly\", \"num-traits\", \"rand_distr\", \"rkyv\", \"serde\", \"std\", \"use-intrinsics\", \"zerocopy\"]",
+  "target": 5584728948347947946,
+  "profile": 15657897354478470176,
+  "path": 3700999822104722152,
+  "deps": [
+    [205223371168159621, "zerocopy", false, 10049433438842393300],
+    [7667230146095136825, "cfg_if", false, 7597299462958569616]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\half-c8b44168aa6ff1dd\\dep-lib-half",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": ["-D", "warnings"],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

@@ -7,12 +7,12 @@ Related: [`CHANGELOG.md`](../../CHANGELOG.md), [`docs/ops/distribution.md`](dist
 
 ## Rules
 
-| Surface | Policy |
-|---------|--------|
-| Git tags / crates | SemVer `vMAJOR.MINOR.PATCH`; root `Cargo.toml` `version` matches the tag body before tagging |
-| CHANGELOG | Keep a Changelog; every tagged release gets a `## [X.Y.Z] - YYYY-MM-DD` section (not only `[Unreleased]`) |
-| rust-version | Workspace `rust-version` (MSRV) is declared in root `Cargo.toml`; bump with a CHANGELOG note |
-| OKF documents | Separate `[major].[minor]` rules in OKF-SPEC — independent of crate SemVer |
+| Surface           | Policy                                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------------------------- |
+| Git tags / crates | SemVer `vMAJOR.MINOR.PATCH`; root `Cargo.toml` `version` matches the tag body before tagging              |
+| CHANGELOG         | Keep a Changelog; every tagged release gets a `## [X.Y.Z] - YYYY-MM-DD` section (not only `[Unreleased]`) |
+| rust-version      | Workspace `rust-version` (MSRV) is declared in root `Cargo.toml`; bump with a CHANGELOG note              |
+| OKF documents     | Separate `[major].[minor]` rules in OKF-SPEC — independent of crate SemVer                                |
 
 ## Cadence
 

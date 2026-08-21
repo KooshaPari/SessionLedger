@@ -30,10 +30,10 @@ make dev            # build, then process-compose up
 
 `process-compose.yaml` starts:
 
-| Process | Command | Notes |
-|---------|---------|-------|
-| `sl-daemon` | `cargo run -p sl-daemon -- serve` | `SL_PORT=8080`, `SL_DATA_DIR=./.sl-data` |
-| `sl-viewer` | `cargo run -p sl-viewer` | waits until daemon **readiness** probe passes |
+| Process     | Command                           | Notes                                         |
+| ----------- | --------------------------------- | --------------------------------------------- |
+| `sl-daemon` | `cargo run -p sl-daemon -- serve` | `SL_PORT=8080`, `SL_DATA_DIR=./.sl-data`      |
+| `sl-viewer` | `cargo run -p sl-viewer`          | waits until daemon **readiness** probe passes |
 
 Tear down:
 
@@ -52,15 +52,16 @@ cargo run -p sl-viewer
 Engine matrix, PhenoCompose/nvms delegation, Podman/`Containerfile`, WSL, and
 Apple Container: [`runtime-facade.md`](runtime-facade.md). ADR 0001 keeps this
 CLI/HTTP-only (no tray companion).
+
 ## Health check
 
 Two probes — do not conflate them. Full policy:
 [`observability.md`](observability.md#healthz-vs-readyz).
 
-| Probe | Meaning | Expect |
-|-------|---------|--------|
-| `GET /healthz` | **Liveness** — process accepts HTTP | `200`, body `ok` |
-| `GET /readyz` | **Readiness** — `out_dir` exists and is usable | `200`, body `ready`; else `503` |
+| Probe          | Meaning                                        | Expect                          |
+| -------------- | ---------------------------------------------- | ------------------------------- |
+| `GET /healthz` | **Liveness** — process accepts HTTP            | `200`, body `ok`                |
+| `GET /readyz`  | **Readiness** — `out_dir` exists and is usable | `200`, body `ready`; else `503` |
 
 ```bash
 curl -s -o /dev/null -w "%{http_code} " http://127.0.0.1:8080/healthz
@@ -231,18 +232,18 @@ against a scraped target and walk one row of the
 
 ## Common failures
 
-| Symptom | Likely cause | Fix |
-|---------|--------------|-----|
-| `process-compose: command not found` | CLI missing | Install process-compose; or `./scripts/runtime-up.sh` error text; or run crates manually |
-| `SL_RUNTIME=pheno` fails immediately | `pheno-compose` / `nvms` missing | Install per [`runtime-facade.md`](runtime-facade.md); or unset `SL_RUNTIME` for process-compose |
-| `SL_RUNTIME=podman` / `apple` fails | Engine or Containerfile missing | Install podman / Apple `container`; confirm root or `crates/sl-daemon` Containerfile |
-| Viewer never starts | Daemon not **ready** | Confirm `/readyz` returns `ready`; `/healthz` alone is insufficient; check port 8080 free; raise probe delay |
-| `/healthz` ok, `/readyz` 503 | Missing or non-dir `out_dir` | Ensure `SL_DATA_DIR` exists; mkdir if needed; restart serve |
-| `Address already in use` | Stale daemon | Kill process on 8080; `make dev-down` |
-| Empty metrics / bundles | Wrong data dir | Set `SL_DATA_DIR`; ensure `*.okf.json` / `*.json` under out dir |
-| `cargo` / MSRV errors | Wrong toolchain | `rustup show`; use repo `rust-toolchain.toml` |
-| Viewer build fails (webkit) | Platform GTK deps | Prefer `cargo test -p sl-daemon` isolation; see `crates/sl-daemon/README.md` |
-| Ingest 4xx | Invalid OKF payload | Run `sl validate`; see `validation.rs` / FR-002 |
+| Symptom                              | Likely cause                     | Fix                                                                                                          |
+| ------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `process-compose: command not found` | CLI missing                      | Install process-compose; or `./scripts/runtime-up.sh` error text; or run crates manually                     |
+| `SL_RUNTIME=pheno` fails immediately | `pheno-compose` / `nvms` missing | Install per [`runtime-facade.md`](runtime-facade.md); or unset `SL_RUNTIME` for process-compose              |
+| `SL_RUNTIME=podman` / `apple` fails  | Engine or Containerfile missing  | Install podman / Apple `container`; confirm root or `crates/sl-daemon` Containerfile                         |
+| Viewer never starts                  | Daemon not **ready**             | Confirm `/readyz` returns `ready`; `/healthz` alone is insufficient; check port 8080 free; raise probe delay |
+| `/healthz` ok, `/readyz` 503         | Missing or non-dir `out_dir`     | Ensure `SL_DATA_DIR` exists; mkdir if needed; restart serve                                                  |
+| `Address already in use`             | Stale daemon                     | Kill process on 8080; `make dev-down`                                                                        |
+| Empty metrics / bundles              | Wrong data dir                   | Set `SL_DATA_DIR`; ensure `*.okf.json` / `*.json` under out dir                                              |
+| `cargo` / MSRV errors                | Wrong toolchain                  | `rustup show`; use repo `rust-toolchain.toml`                                                                |
+| Viewer build fails (webkit)          | Platform GTK deps                | Prefer `cargo test -p sl-daemon` isolation; see `crates/sl-daemon/README.md`                                 |
+| Ingest 4xx                           | Invalid OKF payload              | Run `sl validate`; see `validation.rs` / FR-002                                                              |
 
 ## CI traceability
 

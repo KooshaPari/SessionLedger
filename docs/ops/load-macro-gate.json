@@ -2,17 +2,8 @@
   "schema_version": 1,
   "purpose": "Macro-tier HTTP load smoke PR gate (C08 L73 breadth beyond probe routes)",
   "route_tiers": {
-    "probe": [
-      "/healthz",
-      "/readyz",
-      "/api/metrics",
-      "/metrics"
-    ],
-    "macro": [
-      "/api/bundles",
-      "/api/search?limit=1",
-      "/api/stream"
-    ]
+    "probe": ["/healthz", "/readyz", "/api/metrics", "/metrics"],
+    "macro": ["/api/bundles", "/api/search?limit=1", "/api/stream"]
   },
   "write_route": {
     "method": "POST",

@@ -12,26 +12,26 @@ port of `tests/race_model.rs` / `tests/loom_model.rs`.
 
 ## What this soft gate proves
 
-| Artifact | Role |
-|----------|------|
-| [`scripts/shuttle-soft-check.ps1`](../../scripts/shuttle-soft-check.ps1) | Hermetic `-SelfCheck` for docs/workflow/test anchors |
-| [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs) | Default `cargo test` wrapper that runs SelfCheck |
-| [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml) | Soft CI SelfCheck (`continue-on-error: true`) |
-| [`scripts/shuttle-permutation-check.ps1`](../../scripts/shuttle-permutation-check.ps1) | Blocking permutation `-SelfCheck` for docs/workflow anchors |
-| [`tests/shuttle_permutation.rs`](../../tests/shuttle_permutation.rs) | Blocking `cargo test` wrapper that runs permutation SelfCheck |
-| [`.github/workflows/shuttle-permutation.yml`](../../.github/workflows/shuttle-permutation.yml) | Blocking permutation CI on `pull_request` |
+| Artifact                                                                                       | Role                                                          |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [`scripts/shuttle-soft-check.ps1`](../../scripts/shuttle-soft-check.ps1)                       | Hermetic `-SelfCheck` for docs/workflow/test anchors          |
+| [`tests/shuttle_soft.rs`](../../tests/shuttle_soft.rs)                                         | Default `cargo test` wrapper that runs SelfCheck              |
+| [`.github/workflows/shuttle-soft.yml`](../../.github/workflows/shuttle-soft.yml)               | Soft CI SelfCheck (`continue-on-error: true`)                 |
+| [`scripts/shuttle-permutation-check.ps1`](../../scripts/shuttle-permutation-check.ps1)         | Blocking permutation `-SelfCheck` for docs/workflow anchors   |
+| [`tests/shuttle_permutation.rs`](../../tests/shuttle_permutation.rs)                           | Blocking `cargo test` wrapper that runs permutation SelfCheck |
+| [`.github/workflows/shuttle-permutation.yml`](../../.github/workflows/shuttle-permutation.yml) | Blocking permutation CI on `pull_request`                     |
 
 No `[dependencies]` / `[dev-dependencies]` entry for `shuttle`. Prefer this
 SelfCheck over adding a heavy permutation checker until a paid follow-up lands.
 
 ## Gate status
 
-| Gate | Status | Evidence |
-|------|--------|----------|
-| Soft shuttle SelfCheck | **done** | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`) |
-| Soft shuttle CI job | **done** | `.github/workflows/shuttle-soft.yml` (`continue-on-error`) |
-| Shuttle permutation SelfCheck | **done** | `scripts/shuttle-permutation-check.ps1 -SelfCheck` (+ `tests/shuttle_permutation.rs`) |
-| Shuttle permutation suite CI | **done** | `.github/workflows/shuttle-permutation.yml` (blocking on PR) |
+| Gate                              | Status     | Evidence                                                                                 |
+| --------------------------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| Soft shuttle SelfCheck            | **done**   | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`)                  |
+| Soft shuttle CI job               | **done**   | `.github/workflows/shuttle-soft.yml` (`continue-on-error`)                               |
+| Shuttle permutation SelfCheck     | **done**   | `scripts/shuttle-permutation-check.ps1 -SelfCheck` (+ `tests/shuttle_permutation.rs`)    |
+| Shuttle permutation suite CI      | **done**   | `.github/workflows/shuttle-permutation.yml` (blocking on PR)                             |
 | Full shuttle permutation coverage | **unpaid** | Broad broadcast/SSE/daemon graph + shuttle crate exploration still outside hermetic lane |
 
 ## How to run locally

@@ -45,26 +45,26 @@ cargo test -p session-ledger --features compress --test compression_eval --locke
 
 ## Fixture ledger (pinned)
 
-| Fixture | Intent token estimates | Gate `total_token_estimate` |
-|---------|------------------------:|----------------------------:|
-| `task-family-token-budget-032.okf.json` | 210 + 160 | 370 |
-| `task-family-compress-resume-033.okf.json` | 240 + 120 | 360 |
-| `compress-token-proxy-034.okf.json` | 180 + 90 | 270 |
-| `token-slice-budget-035.okf.json` | 160 + 120 | 280 |
-| `archive-gzip-resume-036.okf.json` | 200 + 110 | 310 |
-| `auth-fix-session-001.okf.json` | *(compression only)* | — |
+| Fixture                                    | Intent token estimates | Gate `total_token_estimate` |
+| ------------------------------------------ | ---------------------: | --------------------------: |
+| `task-family-token-budget-032.okf.json`    |              210 + 160 |                         370 |
+| `task-family-compress-resume-033.okf.json` |              240 + 120 |                         360 |
+| `compress-token-proxy-034.okf.json`        |               180 + 90 |                         270 |
+| `token-slice-budget-035.okf.json`          |              160 + 120 |                         280 |
+| `archive-gzip-resume-036.okf.json`         |              200 + 110 |                         310 |
+| `auth-fix-session-001.okf.json`            |   _(compression only)_ |                           — |
 
 Update [`token-burn.json`](token-burn.json) and this table together when fixture
 token fields change.
 
 ## Ops metrics vs eval ledgers
 
-| Surface | Purpose | Harbor tie-in |
-|---------|---------|---------------|
-| `ContinuationBundle.token_estimate` / `total_token_estimate` | Planning proxy for inject slices | **N/A** |
-| `GET /api/metrics` → `total_tokens`, `avg_tokens` | Operator session aggregates | **N/A** |
-| `compression_eval` bytes_saved / 4 proxy | Coarse compression savings signal | **N/A** |
-| Harbor per-eval / per-route token-burn ledger | Agent-eval cost accounting | **N/A** (deferred) |
+| Surface                                                      | Purpose                           | Harbor tie-in      |
+| ------------------------------------------------------------ | --------------------------------- | ------------------ |
+| `ContinuationBundle.token_estimate` / `total_token_estimate` | Planning proxy for inject slices  | **N/A**            |
+| `GET /api/metrics` → `total_tokens`, `avg_tokens`            | Operator session aggregates       | **N/A**            |
+| `compression_eval` bytes_saved / 4 proxy                     | Coarse compression savings signal | **N/A**            |
+| Harbor per-eval / per-route token-burn ledger                | Agent-eval cost accounting        | **N/A** (deferred) |
 
 These ledgers are intentionally shallow evidence: they catch wiring regressions
 and document the boundary between ops metrics and eval-cost accounting.

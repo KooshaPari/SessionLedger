@@ -27,9 +27,7 @@
       "type": "criteria",
       "label": "pinning scan runs on PRs touching .github/workflows",
       "properties": {
-        "watch_files": [
-          ".github/workflows/"
-        ],
+        "watch_files": [".github/workflows/"],
         "skipped_by": []
       }
     }

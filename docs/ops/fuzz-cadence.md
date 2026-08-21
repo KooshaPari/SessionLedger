@@ -13,12 +13,12 @@ Related: [`test-pyramid.md`](test-pyramid.md) (pyramid layer),
 
 ## Cadence map (blocking vs soft)
 
-| Lane | Duration | When | Gate |
-|------|----------|------|------|
-| PR smoke | 10 s / target | every PR / push via `ci.yml` → `fuzz-smoke` | **blocking** |
-| PR sustained | 30 s / target | every PR via `fuzz-blocking.yml` | **blocking** |
-| Sustained soft | 120 s / target | nightly schedule + `workflow_dispatch` | **soft** (`continue-on-error`) |
-| Local campaign | operator-chosen | maintainer machine | manual |
+| Lane           | Duration        | When                                        | Gate                           |
+| -------------- | --------------- | ------------------------------------------- | ------------------------------ |
+| PR smoke       | 10 s / target   | every PR / push via `ci.yml` → `fuzz-smoke` | **blocking**                   |
+| PR sustained   | 30 s / target   | every PR via `fuzz-blocking.yml`            | **blocking**                   |
+| Sustained soft | 120 s / target  | nightly schedule + `workflow_dispatch`      | **soft** (`continue-on-error`) |
+| Local campaign | operator-chosen | maintainer machine                          | manual                         |
 
 PR smoke stays short on purpose. **Blocking** sustained fuzz (30 s / target)
 gates merges via `fuzz-blocking.yml` without claiming multi-hour corpus triage.
@@ -27,10 +27,10 @@ flaky libFuzzer nightly run cannot block merges.
 
 ## Targets and corpora
 
-| Target | Seed corpus | Exercises |
-|--------|-------------|-----------|
+| Target          | Seed corpus                  | Exercises                        |
+| --------------- | ---------------------------- | -------------------------------- |
 | `okf_roundtrip` | `fuzz/corpus/okf_roundtrip/` | OKF parse + roundtrip invariants |
-| `jsonl_ingest` | `fuzz/corpus/jsonl_ingest/` | JSONL ingest parse paths |
+| `jsonl_ingest`  | `fuzz/corpus/jsonl_ingest/`  | JSONL ingest parse paths         |
 
 ## Blocking sustained workflow
 
@@ -77,13 +77,13 @@ When a sustained (or local) run finds a crash, libFuzzer writes under
 
 ## Done gates
 
-| Gate | Status | Evidence |
-|------|--------|----------|
-| Fuzz cadence SelfCheck | **done** | `scripts/fuzz-cadence-check.ps1 -SelfCheck` (+ `tests/fuzz_cadence.rs`) |
-| Blocking sustained fuzz CI | **done** | `.github/workflows/fuzz-blocking.yml` (30 s / target on PR) |
-| Soft sustained fuzz CI | **done** | `.github/workflows/fuzz-cadence.yml` (`continue-on-error`, 120 s / target) |
-| PR `fuzz-smoke` (10 s) | **done** | `.github/workflows/ci.yml` (unchanged; stays blocking + short) |
-| Auto corpus promotion from CI crashes | **unpaid** | Triage remains maintainer-driven (see above) |
+| Gate                                  | Status     | Evidence                                                                   |
+| ------------------------------------- | ---------- | -------------------------------------------------------------------------- |
+| Fuzz cadence SelfCheck                | **done**   | `scripts/fuzz-cadence-check.ps1 -SelfCheck` (+ `tests/fuzz_cadence.rs`)    |
+| Blocking sustained fuzz CI            | **done**   | `.github/workflows/fuzz-blocking.yml` (30 s / target on PR)                |
+| Soft sustained fuzz CI                | **done**   | `.github/workflows/fuzz-cadence.yml` (`continue-on-error`, 120 s / target) |
+| PR `fuzz-smoke` (10 s)                | **done**   | `.github/workflows/ci.yml` (unchanged; stays blocking + short)             |
+| Auto corpus promotion from CI crashes | **unpaid** | Triage remains maintainer-driven (see above)                               |
 
 ## Machine verification (SelfCheck)
 

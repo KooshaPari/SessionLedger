@@ -14,10 +14,10 @@ Related: [`SECURITY.md`](../../SECURITY.md),
 
 ## Layered controls
 
-| Layer | Role | Evidence in this repo |
-|-------|------|------------------------|
-| **In-repo blocking** | Primary PR gate for Rust advisories + secrets | `cargo-deny`, `cargo-audit`, gitleaks, TruffleHog in `security.yml` |
-| **GHSA/OSV/NVD feeds** | Maintainer triage beyond a single bot | [`cve-feed-subscription.md`](cve-feed-subscription.md) |
+| Layer                         | Role                                                                  | Evidence in this repo                                                             |
+| ----------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **In-repo blocking**          | Primary PR gate for Rust advisories + secrets                         | `cargo-deny`, `cargo-audit`, gitleaks, TruffleHog in `security.yml`               |
+| **GHSA/OSV/NVD feeds**        | Maintainer triage beyond a single bot                                 | [`cve-feed-subscription.md`](cve-feed-subscription.md)                            |
 | **Socket.dev (optional org)** | Supply-chain behavior scoring on PRs when the GitHub App is installed | Expected check names in `socket-posture.json`; **not** enforced by this SelfCheck |
 
 SessionLedger does **not** embed a Socket API token or run Socket CLI in CI.
@@ -52,10 +52,10 @@ unless org policy adds them to required checks.
 
 ## SelfCheck gate
 
-| Check | Status |
-|-------|--------|
+| Check                                 | Status                                  |
+| ------------------------------------- | --------------------------------------- |
 | `socket-posture-check.ps1 -SelfCheck` | **done** — docs + `security.yml` anchor |
-| Live Socket API / org install | **NOT_VERIFIABLE_IN_REPO** |
+| Live Socket API / org install         | **NOT_VERIFIABLE_IN_REPO**              |
 
 Hermetic SelfCheck validates policy doc anchors, `SECURITY.md` cross-link,
 `security.yml` job wiring, and complementary scan evidence paths. No network,
@@ -63,10 +63,10 @@ no Socket API token, no false claim of live org install.
 
 ## Done / unpaid
 
-| Item | Status |
-|------|--------|
-| Policy SSOT + JSON manifest | **done** |
-| Blocking `security.yml` SelfCheck job | **done** |
-| `tests/socket_posture.rs` cargo wrapper | **done** |
-| Live Socket org API automation | **unpaid** — creds / org |
+| Item                                     | Status                      |
+| ---------------------------------------- | --------------------------- |
+| Policy SSOT + JSON manifest              | **done**                    |
+| Blocking `security.yml` SelfCheck job    | **done**                    |
+| `tests/socket_posture.rs` cargo wrapper  | **done**                    |
+| Live Socket org API automation           | **unpaid** — creds / org    |
 | Branch-protection required Socket checks | **unpaid** — human Settings |

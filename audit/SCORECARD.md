@@ -10,20 +10,20 @@
 
 ## Category Scores
 
-| Cluster | Category | Pillars | Score (sum/max) | Pct | Grade | Notes |
-|---------|----------|---------|:---------------:|:---:|:-----:|-------|
-| C00 | Architecture + Module | L0-L9 | 30/30 | 100% | A | see audit/.lane-c00 |
-| C01 | CI, DX, Observability | L10-L19 | 30/30 | 100% | A | see audit/.lane-c01 |
-| C02 | Error handling, API, Governance | L20-L29 | 30/30 | 100% | A | see audit/.lane-c02 |
-| C03 | Agent Readiness | L30 | 36/36 | 100% | A | see audit/.lane-c03 |
-| C04 | Security | L31-L40 | 27/30 | 90% | A | see audit/.lane-c04 |
-| C05 | Observability (deep) | L41-L50 | 30/30 | 100% | A | see audit/.lane-c05 |
-| C06 | Supply Chain | L51-L60 | 30/30 | 100% | A | see audit/.lane-c06 |
-| C07 | DX, QEng, Portability | L61-L70 | 30/30 | 100% | A | see audit/.lane-c07 |
-| C08 | Eval Coverage | L71-L80 | 29/30 | 97% | A | see audit/.lane-c08 |
-| C09 | Accessibility + UX | L81-L95 | 45/45 | 100% | A | see audit/.lane-c09 |
-| C10 | Visual Identity | L96-L107 | 36/36 | 100% | A | see audit/.lane-c10 |
-| C11 | Packaging + Distribution | L108-L122 | 43/45 | 96% | A | see audit/.lane-c11 |
+| Cluster | Category                        | Pillars   | Score (sum/max) | Pct  | Grade | Notes               |
+| ------- | ------------------------------- | --------- | :-------------: | :--: | :---: | ------------------- |
+| C00     | Architecture + Module           | L0-L9     |      30/30      | 100% |   A   | see audit/.lane-c00 |
+| C01     | CI, DX, Observability           | L10-L19   |      30/30      | 100% |   A   | see audit/.lane-c01 |
+| C02     | Error handling, API, Governance | L20-L29   |      30/30      | 100% |   A   | see audit/.lane-c02 |
+| C03     | Agent Readiness                 | L30       |      36/36      | 100% |   A   | see audit/.lane-c03 |
+| C04     | Security                        | L31-L40   |      27/30      | 90%  |   A   | see audit/.lane-c04 |
+| C05     | Observability (deep)            | L41-L50   |      30/30      | 100% |   A   | see audit/.lane-c05 |
+| C06     | Supply Chain                    | L51-L60   |      30/30      | 100% |   A   | see audit/.lane-c06 |
+| C07     | DX, QEng, Portability           | L61-L70   |      30/30      | 100% |   A   | see audit/.lane-c07 |
+| C08     | Eval Coverage                   | L71-L80   |      29/30      | 97%  |   A   | see audit/.lane-c08 |
+| C09     | Accessibility + UX              | L81-L95   |      45/45      | 100% |   A   | see audit/.lane-c09 |
+| C10     | Visual Identity                 | L96-L107  |      36/36      | 100% |   A   | see audit/.lane-c10 |
+| C11     | Packaging + Distribution        | L108-L122 |      43/45      | 96%  |   A   | see audit/.lane-c11 |
 
 ## Overall
 
@@ -33,34 +33,32 @@
 
 ## Wave-42 Delta
 
-| Cluster | Before | After | Raw delta | Evidence-backed movement |
-|---------|:------:|:-----:|:---------:|--------------------------|
-| — | 396/402 | 396/402 | 0 | All five impl lanes deepen evidence at pillar max; conservative hold |
-| **Overall** | **396/402 (98% A)** | **396/402 (98% A)** | **0** | Conservative; no raw score inflation |
+| Cluster     |       Before        |        After        | Raw delta | Evidence-backed movement                                             |
+| ----------- | :-----------------: | :-----------------: | :-------: | -------------------------------------------------------------------- |
+| —           |       396/402       |       396/402       |     0     | All five impl lanes deepen evidence at pillar max; conservative hold |
+| **Overall** | **396/402 (98% A)** | **396/402 (98% A)** |   **0**   | Conservative; no raw score inflation                                 |
 
 ## Wave-43 Delta
 
-| Cluster | Before | After | Raw delta | Evidence-backed movement |
-|---------|:------:|:-----:|:---------:|--------------------------|
-| C00 L7 | residual partial | residual partial (deepened) | 0 | Live tokio daemon-graph hard gate landed (#362): real mpsc/broadcast pipeline conservation, Lagged SSE recovery, shutdown stops enqueue; process-level HTTP SSE soak under loom remains unpaid |
-| C00 L8 | residual partial | residual partial (deepened) | 0 | Default-on platform allocators (#349) for non-Windows parity; Windows allocator parity + always-on production rollout remain unpaid |
-| C01 L16 | residual partial | residual partial (deepened) | 0 | sl-viewer CLI help expanded (#361): `corpus_cta.rs`, viewer help surface; full viewer/CLI Fluent `.ftl` migration remains unpaid |
-| C08 L73 | partial | partial (deepened) | 0 | Load-macro PR gate (#348): blocking `load-macro-gate-hard.yml`, `load-smoke.ps1 -RouteTier macro`; production-scale corpus breadth remains unpaid |
-| C06 L33 | partial | partial (deepened) | 0 | Socket.dev supply-chain posture (#344): `socket-posture.md`, blocking `security.yml` job; full SLSA Build L3 attestation remains unpaid |
-| **Overall** | **396/402 (98% A)** | **396/402 (98% A)** | **0** | Conservative hold; 5 WAVE43 impl lanes deepened residual evidence without fresh independent re-audit pillar lift |
-
+| Cluster     |       Before        |            After            | Raw delta | Evidence-backed movement                                                                                                                                                                       |
+| ----------- | :-----------------: | :-------------------------: | :-------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C00 L7      |  residual partial   | residual partial (deepened) |     0     | Live tokio daemon-graph hard gate landed (#362): real mpsc/broadcast pipeline conservation, Lagged SSE recovery, shutdown stops enqueue; process-level HTTP SSE soak under loom remains unpaid |
+| C00 L8      |  residual partial   | residual partial (deepened) |     0     | Default-on platform allocators (#349) for non-Windows parity; Windows allocator parity + always-on production rollout remain unpaid                                                            |
+| C01 L16     |  residual partial   | residual partial (deepened) |     0     | sl-viewer CLI help expanded (#361): `corpus_cta.rs`, viewer help surface; full viewer/CLI Fluent `.ftl` migration remains unpaid                                                               |
+| C08 L73     |       partial       |     partial (deepened)      |     0     | Load-macro PR gate (#348): blocking `load-macro-gate-hard.yml`, `load-smoke.ps1 -RouteTier macro`; production-scale corpus breadth remains unpaid                                              |
+| C06 L33     |       partial       |     partial (deepened)      |     0     | Socket.dev supply-chain posture (#344): `socket-posture.md`, blocking `security.yml` job; full SLSA Build L3 attestation remains unpaid                                                        |
+| **Overall** | **396/402 (98% A)** |     **396/402 (98% A)**     |   **0**   | Conservative hold; 5 WAVE43 impl lanes deepened residual evidence without fresh independent re-audit pillar lift                                                                               |
 
 ## Wave-44 Delta
 
-| Cluster | Before | After | Raw delta | Evidence-backed movement |
-|---------|:------:|:-----:|:---------:|--------------------------|
-| C00 L7 | residual partial (deepened) | residual partial (deepened) | 0 | Loom HTTP SSE soak (#372): `tests/loom_http_sse_soak.rs` (3 loom tests: process-level multi-client fanout, Lagged recovery, shutdown propagation) + SelfCheck + soft-nightly. L7 was already pillar max; deeper evidence only. |
-| C08 L73 | partial (deepened) | partial (deepened) | 0 | Production-scale corpus breadth (#368): `scripts/corpus-generate.py` (deterministic generator; OKF_VERSION-keyed), 13 new accepted fixtures (5 new sources + 2 new languages + 3 stress shapes + 3 edge cases), `docs/ops/corpus-breadth.md`, `tests/replay_breadth.rs` (5 hermetic pinning tests). L73 was already pillar max; corpus grew 20 -> 33 (65% increase). |
-| (PERT correction) | (R-5 factual error) | R-5 withdrawn | 0 | (#373): corrected WAVE44_SCOPE.md + WAVE44_PERT.md; original R-5 (C01 L16 Fluent migration) was factually wrong (L16 closed in Wave-38 #312, pillar max since). |
-| **Overall** | **396/402 (98% A)** | **396/402 (98% A)** | **0** | Conservative hold; 2 of 3 machine lanes shipped (W44-B1 #372, W44-B6 #368); PERT correction (#373). W44-B2/B3/B4 deferred to W45 or remain human-gated. No fresh independent re-audit pillar lift. |
+| Cluster           |           Before            |            After            | Raw delta | Evidence-backed movement                                                                                                                                                                                                                                                                                                                                             |
+| ----------------- | :-------------------------: | :-------------------------: | :-------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C00 L7            | residual partial (deepened) | residual partial (deepened) |     0     | Loom HTTP SSE soak (#372): `tests/loom_http_sse_soak.rs` (3 loom tests: process-level multi-client fanout, Lagged recovery, shutdown propagation) + SelfCheck + soft-nightly. L7 was already pillar max; deeper evidence only.                                                                                                                                       |
+| C08 L73           |     partial (deepened)      |     partial (deepened)      |     0     | Production-scale corpus breadth (#368): `scripts/corpus-generate.py` (deterministic generator; OKF_VERSION-keyed), 13 new accepted fixtures (5 new sources + 2 new languages + 3 stress shapes + 3 edge cases), `docs/ops/corpus-breadth.md`, `tests/replay_breadth.rs` (5 hermetic pinning tests). L73 was already pillar max; corpus grew 20 -> 33 (65% increase). |
+| (PERT correction) |     (R-5 factual error)     |        R-5 withdrawn        |     0     | (#373): corrected WAVE44_SCOPE.md + WAVE44_PERT.md; original R-5 (C01 L16 Fluent migration) was factually wrong (L16 closed in Wave-38 #312, pillar max since).                                                                                                                                                                                                      |
+| **Overall**       |     **396/402 (98% A)**     |     **396/402 (98% A)**     |   **0**   | Conservative hold; 2 of 3 machine lanes shipped (W44-B1 #372, W44-B6 #368); PERT correction (#373). W44-B2/B3/B4 deferred to W45 or remain human-gated. No fresh independent re-audit pillar lift.                                                                                                                                                                   |
 
 - **Wave-43 → Wave-44:** 98% A (396/402) → 98% A (396/402), held (2 of 3 machine lanes shipped; deep-evidence only)
-
 
 ## Headline Findings
 

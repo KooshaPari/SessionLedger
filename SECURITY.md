@@ -27,12 +27,12 @@ Include:
 
 ## Disclosure Timeline
 
-| Stage                         | Target                          |
-| ----------------------------- | ------------------------------- |
-| Initial acknowledgement       | within **3 business days**      |
-| Triage / severity assessment  | within **7 days** of report     |
-| Fix or mitigation plan        | within **30 days** (typical)    |
-| Public disclosure / advisory  | coordinated after a fix ships   |
+| Stage                        | Target                        |
+| ---------------------------- | ----------------------------- |
+| Initial acknowledgement      | within **3 business days**    |
+| Triage / severity assessment | within **7 days** of report   |
+| Fix or mitigation plan       | within **30 days** (typical)  |
+| Public disclosure / advisory | coordinated after a fix ships |
 
 We follow coordinated disclosure. If a fix cannot ship within 90 days, we will discuss interim guidance with the reporter before any public write-up.
 
@@ -87,12 +87,12 @@ STRIDE-lite context: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 
 SessionLedger is a single-user local companion. Do not commit real secrets.
 
-| Surface | Guidance |
-| ------- | -------- |
-| Local env sample | Copy [`.env.example`](.env.example) into your shell or local env manager. Keep `SL_API_KEY` unset for default loopback trust, or set a local-only value outside the repo. |
-| Optional write gate | When `SL_API_KEY` is set, mutating HTTP routes require `Authorization: Bearer …` or `X-API-Key: …`. Details: [`docs/ops/local-trust-boundary.md`](docs/ops/local-trust-boundary.md). |
-| Rotation | Stop callers using the old key → replace `SL_API_KEY` in the daemon environment → restart `sl-daemon` → update automation headers. Treat the previous key as burned; do not reuse it. |
-| Repo hygiene | Never put live keys in `.env.example`, docs, fixtures, or commits. CI runs [`scripts/env-example-check.ps1`](scripts/env-example-check.ps1) (required keys + no high-entropy secret patterns) and gitleaks/TruffleHog on the tree. |
+| Surface             | Guidance                                                                                                                                                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local env sample    | Copy [`.env.example`](.env.example) into your shell or local env manager. Keep `SL_API_KEY` unset for default loopback trust, or set a local-only value outside the repo.                                                          |
+| Optional write gate | When `SL_API_KEY` is set, mutating HTTP routes require `Authorization: Bearer …` or `X-API-Key: …`. Details: [`docs/ops/local-trust-boundary.md`](docs/ops/local-trust-boundary.md).                                               |
+| Rotation            | Stop callers using the old key → replace `SL_API_KEY` in the daemon environment → restart `sl-daemon` → update automation headers. Treat the previous key as burned; do not reuse it.                                              |
+| Repo hygiene        | Never put live keys in `.env.example`, docs, fixtures, or commits. CI runs [`scripts/env-example-check.ps1`](scripts/env-example-check.ps1) (required keys + no high-entropy secret patterns) and gitleaks/TruffleHog on the tree. |
 
 ## Privacy hygiene (single-tenant)
 
@@ -110,4 +110,3 @@ pwsh -NoProfile -File scripts/env-example-check.ps1
 pwsh -NoProfile -File scripts/privacy-hygiene-check.ps1 -SelfCheck
 pre-commit run gitleaks
 ```
-

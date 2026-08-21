@@ -36,29 +36,29 @@ GitHub API access.
 
 ## What this repository can verify
 
-| Control | Verifiable in-tree? | Evidence |
-|---------|---------------------|----------|
-| Protected-environment policy SSOT | **Yes** | This page |
-| Hermetic / isolation checklist cross-link | **Yes** | [`hermetic-builds.md`](hermetic-builds.md) |
-| Branch protection expectations | Partial | [`branch-protection.md`](branch-protection.md) |
-| Release workflow + blocking OCI gate documented | **Yes** | `release.yml` header + `oci-image` job |
-| GitHub Environment `release` wired in CI | **No** | Operator Settings + `environment:` YAML |
-| Full SLSA Build L3 protected-environment attestation | **No** | Requires Environment + hardened runners + two-builder proof |
+| Control                                              | Verifiable in-tree? | Evidence                                                    |
+| ---------------------------------------------------- | ------------------- | ----------------------------------------------------------- |
+| Protected-environment policy SSOT                    | **Yes**             | This page                                                   |
+| Hermetic / isolation checklist cross-link            | **Yes**             | [`hermetic-builds.md`](hermetic-builds.md)                  |
+| Branch protection expectations                       | Partial             | [`branch-protection.md`](branch-protection.md)              |
+| Release workflow + blocking OCI gate documented      | **Yes**             | `release.yml` header + `oci-image` job                      |
+| GitHub Environment `release` wired in CI             | **No**              | Operator Settings + `environment:` YAML                     |
+| Full SLSA Build L3 protected-environment attestation | **No**              | Requires Environment + hardened runners + two-builder proof |
 
 ## Evidence checklist
 
-| Gate | Status | Evidence / prerequisite |
-|------|--------|-------------------------|
-| Protected-environment policy documented | **done** | This page |
-| Protected-environment SelfCheck | **done** | `scripts/slsa-protected-env-check.ps1 -SelfCheck` |
-| `hermetic-builds.md` cross-link | **done** | [Environment isolation checklist](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps) |
-| `branch-protection.md` cross-link | **done** | [`branch-protection.md`](branch-protection.md) |
-| Release workflow + blocking `oci-image` documented | **done** | `.github/workflows/release.yml` |
-| GitHub Environment `release` with required reviewers | unpaid | Settings → Environments → create `release`; add reviewers |
-| `environment: release` on publish jobs | unpaid | Bind `oci-image` / aggregate `release` jobs in `release.yml` |
-| Environment deployment branch / tag rules | unpaid | Limit Environment deployments to `v*` tags on canonical repo |
-| Live Environment protection via GitHub API | NOT_VERIFIABLE_IN_REPO | Admin-scope `gh api` or human attestation — not asserted in soft CI |
-| Full SLSA Build L3 protected-environment attestation | unpaid | Requires Environment wiring + hardened runners + independent rebuild proof |
+| Gate                                                 | Status                 | Evidence / prerequisite                                                                            |
+| ---------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
+| Protected-environment policy documented              | **done**               | This page                                                                                          |
+| Protected-environment SelfCheck                      | **done**               | `scripts/slsa-protected-env-check.ps1 -SelfCheck`                                                  |
+| `hermetic-builds.md` cross-link                      | **done**               | [Environment isolation checklist](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps) |
+| `branch-protection.md` cross-link                    | **done**               | [`branch-protection.md`](branch-protection.md)                                                     |
+| Release workflow + blocking `oci-image` documented   | **done**               | `.github/workflows/release.yml`                                                                    |
+| GitHub Environment `release` with required reviewers | unpaid                 | Settings → Environments → create `release`; add reviewers                                          |
+| `environment: release` on publish jobs               | unpaid                 | Bind `oci-image` / aggregate `release` jobs in `release.yml`                                       |
+| Environment deployment branch / tag rules            | unpaid                 | Limit Environment deployments to `v*` tags on canonical repo                                       |
+| Live Environment protection via GitHub API           | NOT_VERIFIABLE_IN_REPO | Admin-scope `gh api` or human attestation — not asserted in soft CI                                |
+| Full SLSA Build L3 protected-environment attestation | unpaid                 | Requires Environment wiring + hardened runners + independent rebuild proof                         |
 
 **Policy:** Blocking CI runs the SelfCheck from `security.yml` (no
 `continue-on-error`). Passing SelfCheck means docs + evidence paths stay honest —

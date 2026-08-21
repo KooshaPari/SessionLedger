@@ -3,7 +3,8 @@ import { createServer } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
 
 const root = resolve(
-  process.env.A11Y_VIEWER_DIR ?? "../../../target/dx/sl-viewer/release/web/public",
+  process.env.A11Y_VIEWER_DIR ??
+    "../../../target/dx/sl-viewer/release/web/public",
 );
 const port = Number(process.env.A11Y_VIEWER_PORT ?? 4173);
 const types = {
@@ -19,7 +20,9 @@ if (!existsSync(join(root, "index.html"))) {
 }
 
 createServer((request, response) => {
-  const pathname = decodeURIComponent(new URL(request.url, `http://${request.headers.host}`).pathname);
+  const pathname = decodeURIComponent(
+    new URL(request.url, `http://${request.headers.host}`).pathname,
+  );
   const requested = resolve(root, `.${normalize(pathname)}`);
   if (requested !== root && !requested.startsWith(`${root}${sep}`)) {
     response.writeHead(403).end("Forbidden");

@@ -8,9 +8,9 @@ reads or writes.
 
 ## Manifest
 
-| Version | Name | SQL |
-|---------|------|-----|
-| 1 | `initial_memory_facts` | [`src/schema/migrations/001_initial.sql`](../../src/schema/migrations/001_initial.sql) |
+| Version | Name                   | SQL                                                                                    |
+| ------- | ---------------------- | -------------------------------------------------------------------------------------- |
+| 1       | `initial_memory_facts` | [`src/schema/migrations/001_initial.sql`](../../src/schema/migrations/001_initial.sql) |
 
 The ordered manifest lives in [`src/schema/mod.rs`](../../src/schema/mod.rs).
 Add new migrations by appending a file under `src/schema/migrations/` and

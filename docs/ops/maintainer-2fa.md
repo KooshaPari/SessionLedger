@@ -25,11 +25,11 @@ expose per-maintainer 2FA status to unprivileged API callers.
 
 ## What this repository can verify
 
-| Control | Verifiable in-tree? | Evidence |
-|---------|---------------------|----------|
-| Signed commits on `main` | Partial (tip + history) | `scripts/commit-signing-check.ps1` |
-| Branch protection | Partial (best-effort `gh api`) | `scripts/branch-protection-check.ps1` |
-| Maintainer 2FA / org hardware-key | **No** | Human attestation only |
+| Control                           | Verifiable in-tree?            | Evidence                              |
+| --------------------------------- | ------------------------------ | ------------------------------------- |
+| Signed commits on `main`          | Partial (tip + history)        | `scripts/commit-signing-check.ps1`    |
+| Branch protection                 | Partial (best-effort `gh api`) | `scripts/branch-protection-check.ps1` |
+| Maintainer 2FA / org hardware-key | **No**                         | Human attestation only                |
 
 ## Human attestation process
 
@@ -46,14 +46,14 @@ Do **not** commit screenshots of 2FA settings or hardware-key serial numbers.
 
 ## Evidence checklist
 
-| Gate | Status | Evidence / prerequisite |
-|------|--------|-------------------------|
-| Maintainer 2FA policy documented | **done** | This page |
-| Maintainer 2FA SelfCheck | **done** | `scripts/maintainer-2fa-check.ps1 -SelfCheck` |
-| SECURITY.md cross-link | **done** | [`SECURITY.md`](../../SECURITY.md) § Commit signing |
-| CONTRIBUTING.md cross-link | **done** | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) § Maintainer 2FA |
-| Org 2FA + hardware-key enforcement | **NOT_VERIFIABLE_IN_REPO** | Human attestation row — GitHub org/account 2FA cannot be confirmed from checkout; maintainer records attestation out-of-band |
-| GitHub org "Require 2FA" toggle proof in CI | **unpaid** | No GitHub API exposes per-user 2FA to this repo's tokens |
+| Gate                                        | Status                     | Evidence / prerequisite                                                                                                      |
+| ------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Maintainer 2FA policy documented            | **done**                   | This page                                                                                                                    |
+| Maintainer 2FA SelfCheck                    | **done**                   | `scripts/maintainer-2fa-check.ps1 -SelfCheck`                                                                                |
+| SECURITY.md cross-link                      | **done**                   | [`SECURITY.md`](../../SECURITY.md) § Commit signing                                                                          |
+| CONTRIBUTING.md cross-link                  | **done**                   | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) § Maintainer 2FA                                                                  |
+| Org 2FA + hardware-key enforcement          | **NOT_VERIFIABLE_IN_REPO** | Human attestation row — GitHub org/account 2FA cannot be confirmed from checkout; maintainer records attestation out-of-band |
+| GitHub org "Require 2FA" toggle proof in CI | **unpaid**                 | No GitHub API exposes per-user 2FA to this repo's tokens                                                                     |
 
 ## SelfCheck (machine proof)
 

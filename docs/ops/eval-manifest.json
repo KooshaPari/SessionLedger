@@ -1,9 +1,6 @@
 {
   "schema_version": 1,
-  "eval_surfaces": [
-    "okf_conformance",
-    "pipeline_bench"
-  ],
+  "eval_surfaces": ["okf_conformance", "pipeline_bench"],
   "fixture_seed": "sessionledger-okf-v1",
   "fixture_glob": "docs/reference/conformance/fixtures/*.okf.json",
   "fixture_count": 33,

@@ -12,11 +12,11 @@ A cheap counting-allocator companion lives in
 
 ## Ceiling
 
-| Knob | Value | Source |
-|------|-------|--------|
-| Default ingest RSS ceiling | **512 MiB** (`536870912` bytes) | [`memory-budget.json`](memory-budget.json) `ingest_rss_ceiling_bytes` |
-| Metric sampled | Resident set / working set | Linux: `/proc/<pid>/status` `VmRSS`; Windows/other: PowerShell `Process.WorkingSet64` |
-| Failure rule | Exit non-zero only if peak RSS **exceeds** the ceiling, or if RSS sampling / daemon readiness / ingest unexpectedly fails | [`scripts/rss-budget-check.ps1`](../../scripts/rss-budget-check.ps1) |
+| Knob                       | Value                                                                                                                     | Source                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Default ingest RSS ceiling | **512 MiB** (`536870912` bytes)                                                                                           | [`memory-budget.json`](memory-budget.json) `ingest_rss_ceiling_bytes`                 |
+| Metric sampled             | Resident set / working set                                                                                                | Linux: `/proc/<pid>/status` `VmRSS`; Windows/other: PowerShell `Process.WorkingSet64` |
+| Failure rule               | Exit non-zero only if peak RSS **exceeds** the ceiling, or if RSS sampling / daemon readiness / ingest unexpectedly fails | [`scripts/rss-budget-check.ps1`](../../scripts/rss-budget-check.ps1)                  |
 
 The ceiling is intentionally loose for a short debug-build ingest burst. Tighten
 it after allocator profiling lands — do not treat 512 MiB as a production SLA.
@@ -77,11 +77,11 @@ wait + small ingest burst + a few RSS samples).
 
 ## Platform notes
 
-| Platform | RSS source | Notes |
-|----------|------------|-------|
-| Linux (pwsh 7+) | `VmRSS` from `/proc/<pid>/status` | Preferred when `/proc` is available. |
-| Windows (pwsh 7+) | `Get-Process … WorkingSet64` | Working set, not private bytes; still suitable for a generous regression ceiling. |
-| macOS (pwsh 7+) | `WorkingSet64` | No `/proc`; treat as best-effort working-set proxy. |
+| Platform          | RSS source                        | Notes                                                                             |
+| ----------------- | --------------------------------- | --------------------------------------------------------------------------------- |
+| Linux (pwsh 7+)   | `VmRSS` from `/proc/<pid>/status` | Preferred when `/proc` is available.                                              |
+| Windows (pwsh 7+) | `Get-Process … WorkingSet64`      | Working set, not private bytes; still suitable for a generous regression ceiling. |
+| macOS (pwsh 7+)   | `WorkingSet64`                    | No `/proc`; treat as best-effort working-set proxy.                               |
 
 Requires **PowerShell 7+**. The smoke is hermetic: temp watch/out dirs under
 `$RUNNER_TEMP` or the system temp path; no external network.

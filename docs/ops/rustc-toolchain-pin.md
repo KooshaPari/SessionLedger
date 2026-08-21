@@ -15,11 +15,11 @@ keeps local + CI compilers bit-identical until maintainers bump deliberately.
 
 ## Identity / SHA verify
 
-| Field | Role |
-|-------|------|
-| `channel` / `rustc_release` | Exact rustup channel (semver) |
-| `rustc_commit_hash` | Content-addressed rustc identity from `rustc -vV` |
-| rustup download digests | rustup verifies channel artifacts when installing |
+| Field                       | Role                                              |
+| --------------------------- | ------------------------------------------------- |
+| `channel` / `rustc_release` | Exact rustup channel (semver)                     |
+| `rustc_commit_hash`         | Content-addressed rustc identity from `rustc -vV` |
+| rustup download digests     | rustup verifies channel artifacts when installing |
 
 This pin does **not** claim SLSA L3 hermetic OS packages; see
 [`hermetic-builds.md`](hermetic-builds.md).
@@ -54,8 +54,8 @@ pwsh ./scripts/rustc-toolchain-check.ps1 -SelfCheck
 primary CI workflows install via `dtolnay/rust-toolchain` without overriding the
 pin with `toolchain: stable`.
 
-| Gate | Status |
-|------|--------|
+| Gate                                | Status   |
+| ----------------------------------- | -------- |
 | Exact rustc toolchain pin SelfCheck | **done** |
 
 Soft CI (non-blocking): `.github/workflows/hermetic.yml` job

@@ -38,12 +38,12 @@ merge.
 
 ## When to update the manifest
 
-| Change | Action |
-|--------|--------|
-| `Cargo.lock` updated | Recompute SHA-256 and bump `cargo_lock_sha256` |
-| Fixture added/removed | Bump `fixture_count`, update `fixture_anchors`, and bump `fixture_seed` only if corpus identity changes |
-| MSRV raised in workspace `Cargo.toml` | Bump `rust_msrv` |
-| Bench policy path changes | Update `bench_policy_path` / `bench_gate_script` |
+| Change                                | Action                                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `Cargo.lock` updated                  | Recompute SHA-256 and bump `cargo_lock_sha256`                                                          |
+| Fixture added/removed                 | Bump `fixture_count`, update `fixture_anchors`, and bump `fixture_seed` only if corpus identity changes |
+| MSRV raised in workspace `Cargo.toml` | Bump `rust_msrv`                                                                                        |
+| Bench policy path changes             | Update `bench_policy_path` / `bench_gate_script`                                                        |
 
 ## CI
 

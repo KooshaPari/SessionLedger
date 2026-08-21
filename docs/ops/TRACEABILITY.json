@@ -1,13 +1,7 @@
 {
   "schema": "sessionledger.traceability/v1",
   "updated": "2026-07-24",
-  "status_vocabulary": [
-    "done",
-    "partial",
-    "todo",
-    "blocked",
-    "na"
-  ],
+  "status_vocabulary": ["done", "partial", "todo", "blocked", "na"],
   "overall_audit": {
     "score": "396/402",
     "pct": 98,
@@ -20,10 +14,7 @@
     {
       "id": "FR-001",
       "status": "done",
-      "evidence": [
-        "crates/sl-daemon/src/etl.rs",
-        "src/ingestion/"
-      ]
+      "evidence": ["crates/sl-daemon/src/etl.rs", "src/ingestion/"]
     },
     {
       "id": "FR-002",
@@ -52,45 +43,32 @@
     {
       "id": "FR-005",
       "status": "done",
-      "evidence": [
-        "crates/sl-daemon/src/metrics.rs"
-      ]
+      "evidence": ["crates/sl-daemon/src/metrics.rs"]
     },
     {
       "id": "FR-006",
       "status": "done",
-      "evidence": [
-        "crates/sl-daemon/src/archive.rs"
-      ]
+      "evidence": ["crates/sl-daemon/src/archive.rs"]
     },
     {
       "id": "FR-007",
       "status": "done",
-      "evidence": [
-        "crates/sl-viewer/src/timeline.rs"
-      ]
+      "evidence": ["crates/sl-viewer/src/timeline.rs"]
     },
     {
       "id": "FR-008",
       "status": "done",
-      "evidence": [
-        "crates/sl-viewer/src/search_view.rs"
-      ]
+      "evidence": ["crates/sl-viewer/src/search_view.rs"]
     },
     {
       "id": "FR-009",
       "status": "done",
-      "evidence": [
-        "crates/sl-viewer/src/replay_view.rs"
-      ]
+      "evidence": ["crates/sl-viewer/src/replay_view.rs"]
     },
     {
       "id": "FR-010",
       "status": "done",
-      "evidence": [
-        "crates/sl-viewer/src/live_feed.rs",
-        "docs/OKF-ROUNDTRIP.md"
-      ]
+      "evidence": ["crates/sl-viewer/src/live_feed.rs", "docs/OKF-ROUNDTRIP.md"]
     },
     {
       "id": "FR-011",
@@ -104,11 +82,7 @@
     {
       "id": "FR-012",
       "status": "done",
-      "evidence": [
-        "src/domain/bundle.rs",
-        "src/distill/",
-        "src/inject.rs"
-      ]
+      "evidence": ["src/domain/bundle.rs", "src/distill/", "src/inject.rs"]
     },
     {
       "id": "FR-013",
@@ -395,9 +369,7 @@
     {
       "id": "WBS-8.5",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-9.1",
@@ -425,9 +397,7 @@
     {
       "id": "WBS-8.7",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.8",
@@ -442,9 +412,7 @@
     {
       "id": "WBS-8.9",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.10",
@@ -459,9 +427,7 @@
     {
       "id": "WBS-8.11",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.12",
@@ -476,9 +442,7 @@
     {
       "id": "WBS-8.13",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.14",
@@ -493,9 +457,7 @@
     {
       "id": "WBS-8.15",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.16",
@@ -511,9 +473,7 @@
     {
       "id": "WBS-8.17",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.18",
@@ -530,9 +490,7 @@
     {
       "id": "WBS-8.19",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.20",
@@ -548,9 +506,7 @@
     {
       "id": "WBS-8.21",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.22",
@@ -566,9 +522,7 @@
     {
       "id": "WBS-8.23",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.24",
@@ -585,9 +539,7 @@
     {
       "id": "WBS-8.25",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.26",
@@ -606,9 +558,7 @@
     {
       "id": "WBS-8.27",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.28",
@@ -627,9 +577,7 @@
     {
       "id": "WBS-8.29",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.30",
@@ -646,9 +594,7 @@
     {
       "id": "WBS-8.31",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.32",
@@ -665,9 +611,7 @@
     {
       "id": "WBS-8.33",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.34",
@@ -684,9 +628,7 @@
     {
       "id": "WBS-8.35",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.36",
@@ -709,9 +651,7 @@
     {
       "id": "WBS-8.37",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.38",
@@ -731,9 +671,7 @@
     {
       "id": "WBS-8.39",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.40",
@@ -751,9 +689,7 @@
     {
       "id": "WBS-8.41",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.42",
@@ -774,9 +710,7 @@
     {
       "id": "WBS-8.43",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.44",
@@ -797,9 +731,7 @@
     {
       "id": "WBS-8.45",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.46",
@@ -819,9 +751,7 @@
     {
       "id": "WBS-8.47",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md"
-      ]
+      "evidence": ["audit/SCORECARD.md"]
     },
     {
       "id": "WBS-8.48",
@@ -841,10 +771,7 @@
     {
       "id": "WBS-8.49",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     },
     {
       "id": "WBS-8.50",
@@ -867,10 +794,7 @@
     {
       "id": "WBS-8.51",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     },
     {
       "id": "WBS-8.52",
@@ -893,10 +817,7 @@
     {
       "id": "WBS-8.53",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     },
     {
       "id": "WBS-8.54",
@@ -920,10 +841,7 @@
     {
       "id": "WBS-8.55",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     },
     {
       "id": "WBS-8.56",
@@ -950,10 +868,7 @@
     {
       "id": "WBS-8.57",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     },
     {
       "id": "WBS-8.58",
@@ -977,10 +892,7 @@
     {
       "id": "WBS-8.59",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     },
     {
       "id": "WBS-8.60",
@@ -1004,10 +916,7 @@
     {
       "id": "WBS-8.61",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     },
     {
       "id": "WBS-8.62",
@@ -1027,10 +936,7 @@
     {
       "id": "WBS-8.63",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     },
     {
       "id": "WBS-8.64",
@@ -1051,10 +957,7 @@
     {
       "id": "WBS-8.65",
       "status": "done",
-      "evidence": [
-        "audit/SCORECARD.md",
-        "docs/ops/WBS.md"
-      ]
+      "evidence": ["audit/SCORECARD.md", "docs/ops/WBS.md"]
     }
   ],
   "clusters": [

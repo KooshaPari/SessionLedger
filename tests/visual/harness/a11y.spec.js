@@ -1,7 +1,16 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-const tabs = ["Bundles", "History", "Unfinished", "Memory", "Live Feed", "Search", "Timeline", "Replay"];
+const tabs = [
+  "Bundles",
+  "History",
+  "Unfinished",
+  "Memory",
+  "Live Feed",
+  "Search",
+  "Timeline",
+  "Replay",
+];
 
 const viewports = [
   { width: 375, height: 812 },
@@ -10,7 +19,10 @@ const viewports = [
 ];
 
 async function waitForViewerHotkeys(page) {
-  await expect(page.locator("html")).toHaveAttribute("data-sl-hotkeys-ready", "true");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-sl-hotkeys-ready",
+    "true",
+  );
 }
 
 for (const viewport of viewports) {
@@ -38,7 +50,9 @@ for (const viewport of viewports) {
   });
 }
 
-test("ARIA tabs expose state and support the standard keyboard pattern", async ({ page }) => {
+test("ARIA tabs expose state and support the standard keyboard pattern", async ({
+  page,
+}) => {
   await page.goto("/");
   const tablist = page.getByRole("tablist", { name: "SessionLedger views" });
   const bundles = tablist.getByRole("tab", { name: "Bundles" });
@@ -57,13 +71,17 @@ test("ARIA tabs expose state and support the standard keyboard pattern", async (
   await expect(bundles).toBeFocused();
 });
 
-test("Tab order reaches active tab then active-panel controls", async ({ page }) => {
+test("Tab order reaches active tab then active-panel controls", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.getByRole("tab", { name: "Search" }).click();
 
   await expect(page.getByRole("tab", { name: "Search" })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeFocused();
+  await expect(
+    page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" }),
+  ).toBeFocused();
 });
 
 test("Escape clears the search without moving focus", async ({ page }) => {
@@ -76,7 +94,9 @@ test("Escape clears the search without moving focus", async ({ page }) => {
   await expect(since).toBeFocused();
 });
 
-test("Help control opens keyboard help and Escape closes it", async ({ page }) => {
+test("Help control opens keyboard help and Escape closes it", async ({
+  page,
+}) => {
   await page.goto("/");
   const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
   const helpButton = page.getByRole("button", { name: "Help (?)" });
@@ -88,7 +108,9 @@ test("Help control opens keyboard help and Escape closes it", async ({ page }) =
   await helpButton.click();
   await expect(helpDialog).toHaveCount(1);
   await expect(helpButton).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("heading", { name: "Keyboard shortcuts" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Keyboard shortcuts" }),
+  ).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(helpDialog).toHaveCount(0);
@@ -96,7 +118,9 @@ test("Help control opens keyboard help and Escape closes it", async ({ page }) =
   await expect(helpButton).toHaveAttribute("aria-expanded", "false");
 });
 
-test("Escape closes help overlay even when focus is in a search field", async ({ page }) => {
+test("Escape closes help overlay even when focus is in a search field", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.getByRole("tab", { name: "Search", exact: true }).click();
   const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
@@ -123,14 +147,30 @@ test("Ctrl+K opens command palette and Escape closes it", async ({ page }) => {
   await expect(palette).toHaveCount(1);
   await expect(palette).toHaveAttribute("role", "dialog");
   await expect(palette).toHaveAttribute("aria-modal", "true");
-  await expect(page.getByRole("heading", { name: "Command palette" })).toBeVisible();
-  await expect(page.getByRole("listbox", { name: "Viewer commands" })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Focus search/ })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Open keyboard help/ })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Next view tab/ })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Previous view tab/ })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Clear search/ })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Toggle theme/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Command palette" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("listbox", { name: "Viewer commands" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: /Focus search/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: /Open keyboard help/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: /Next view tab/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: /Previous view tab/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: /Clear search/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: /Toggle theme/ }),
+  ).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(palette).toHaveCount(0);
@@ -151,10 +191,14 @@ test("command palette Focus search switches to Search and focuses the filter", a
     "aria-selected",
     "true",
   );
-  await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeFocused();
+  await expect(
+    page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" }),
+  ).toBeFocused();
 });
 
-test("command palette Open keyboard help opens the help overlay", async ({ page }) => {
+test("command palette Open keyboard help opens the help overlay", async ({
+  page,
+}) => {
   await page.goto("/");
   await waitForViewerHotkeys(page);
   const helpDialog = page.locator('[data-testid="keyboard-help-dialog"]');
@@ -165,10 +209,14 @@ test("command palette Open keyboard help opens the help overlay", async ({ page 
   await expect(openHelp).toBeVisible();
   await openHelp.click();
   await expect(helpDialog).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "Keyboard shortcuts" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Keyboard shortcuts" }),
+  ).toBeVisible();
 });
 
-test("command palette Next view tab advances the active tab", async ({ page }) => {
+test("command palette Next view tab advances the active tab", async ({
+  page,
+}) => {
   await page.goto("/");
   await waitForViewerHotkeys(page);
   await expect(page.getByRole("tab", { name: "Bundles" })).toHaveAttribute(
@@ -188,7 +236,9 @@ test("command palette Next view tab advances the active tab", async ({ page }) =
   await expect(page.getByRole("tab", { name: "History" })).toBeFocused();
 });
 
-test("command palette Clear search resets filters on the Search tab", async ({ page }) => {
+test("command palette Clear search resets filters on the Search tab", async ({
+  page,
+}) => {
   await page.goto("/");
   await waitForViewerHotkeys(page);
   await page.getByRole("tab", { name: "Search", exact: true }).click();
@@ -211,7 +261,9 @@ test("command palette Clear search resets filters on the Search tab", async ({ p
 test("primary controls expose stable accessible names", async ({ page }) => {
   await page.goto("/");
 
-  const theme = page.getByRole("button", { name: "Toggle light and dark theme" });
+  const theme = page.getByRole("button", {
+    name: "Toggle light and dark theme",
+  });
   await expect(theme).toBeVisible();
   await expect(theme).toBeEnabled();
 
@@ -225,11 +277,21 @@ test("primary controls expose stable accessible names", async ({ page }) => {
   await expect(filter).toHaveAttribute("placeholder", "Filter sessions...");
 
   await page.getByRole("tab", { name: "Search", exact: true }).click();
-  await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Model (substring)" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Show advanced filters" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Search", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Clear", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Model (substring)" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Show advanced filters" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Search", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Clear", exact: true }),
+  ).toBeVisible();
 });
 
 test("Search advanced filters disclose on demand with recognition badge", async ({
@@ -242,25 +304,38 @@ test("Search advanced filters disclose on demand with recognition badge", async 
   const panel = page.getByTestId("search-advanced-panel");
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await expect(toggle).toHaveAttribute("aria-controls", "search-advanced-filters");
+  await expect(toggle).toHaveAttribute(
+    "aria-controls",
+    "search-advanced-filters",
+  );
   await expect(panel).toBeHidden();
-  await expect(page.getByRole("spinbutton", { name: "Min Tokens" })).toBeHidden();
+  await expect(
+    page.getByRole("spinbutton", { name: "Min Tokens" }),
+  ).toBeHidden();
 
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("button", { name: "Hide advanced filters" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Hide advanced filters" }),
+  ).toBeVisible();
   await expect(panel).toBeVisible();
-  await expect(page.getByRole("group", { name: "Advanced search filters" })).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Advanced search filters" }),
+  ).toBeVisible();
 
   const minTokens = page.getByRole("spinbutton", { name: "Min Tokens" });
   await expect(minTokens).toBeVisible();
   await minTokens.fill("1000");
-  await expect(page.getByTestId("search-advanced-badge")).toContainText("1 active");
+  await expect(page.getByTestId("search-advanced-badge")).toContainText(
+    "1 active",
+  );
 
   await page.getByRole("button", { name: "Hide advanced filters" }).click();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(panel).toBeHidden();
-  await expect(page.getByTestId("search-advanced-badge")).toContainText("1 active");
+  await expect(page.getByTestId("search-advanced-badge")).toContainText(
+    "1 active",
+  );
 
   await page.getByRole("button", { name: "Clear", exact: true }).click();
   await page.getByRole("button", { name: "Confirm clear" }).click();
@@ -279,17 +354,23 @@ test.describe("status regions and cognitive fixtures", () => {
     await expect(skeleton).toHaveAttribute("aria-label", /loading/i);
   });
 
-  test("long loading fixture exposes patience hint on status region", async ({ page }) => {
+  test("long loading fixture exposes patience hint on status region", async ({
+    page,
+  }) => {
     await page.goto("/?fixture=loading-long");
     const loading = page.getByTestId("loading-state");
     await expect(loading).toBeVisible();
     await expect(loading).toHaveAttribute("role", "status");
     await expect(loading).toHaveAttribute("aria-live", "polite");
     await expect(loading).toHaveAttribute("aria-busy", "true");
-    await expect(page.getByTestId("loading-patience-hint")).toContainText(/minute/i);
+    await expect(page.getByTestId("loading-patience-hint")).toContainText(
+      /minute/i,
+    );
   });
 
-  test("search error fixture exposes assertive alert with retry", async ({ page }) => {
+  test("search error fixture exposes assertive alert with retry", async ({
+    page,
+  }) => {
     await page.goto("/?fixture=search-error");
     const error = page.getByRole("alert");
     await expect(error).toBeVisible();
@@ -299,9 +380,14 @@ test.describe("status regions and cognitive fixtures", () => {
     const retry = page.getByRole("button", { name: "Retry" });
     await expect(retry).toBeVisible();
     await expect(retry).toBeEnabled();
-    await expect(retry).toHaveAttribute("aria-describedby", "search-error-message-detail");
+    await expect(retry).toHaveAttribute(
+      "aria-describedby",
+      "search-error-message-detail",
+    );
     await expect(page.getByTestId("error-state-retry")).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" })).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" }),
+    ).toBeVisible();
   });
 
   test("search error fixture associates fields via aria-invalid and aria-errormessage", async ({
@@ -314,15 +400,23 @@ test.describe("status regions and cognitive fixtures", () => {
     for (const name of ["Since (YYYY-MM-DD)", "Model (substring)"]) {
       const field = page.getByRole("textbox", { name });
       await expect(field).toHaveAttribute("aria-invalid", "true");
-      await expect(field).toHaveAttribute("aria-errormessage", "search-error-message");
+      await expect(field).toHaveAttribute(
+        "aria-errormessage",
+        "search-error-message",
+      );
     }
 
     const retry = page.getByRole("button", { name: "Retry" });
     await expect(retry).toBeVisible();
-    await expect(retry).toHaveAttribute("aria-describedby", "search-error-message-detail");
+    await expect(retry).toHaveAttribute(
+      "aria-describedby",
+      "search-error-message-detail",
+    );
   });
 
-  test("Clear asks for confirmation before wiping search filters", async ({ page }) => {
+  test("Clear asks for confirmation before wiping search filters", async ({
+    page,
+  }) => {
     await page.goto("/");
     await page.getByRole("tab", { name: "Search", exact: true }).click();
     const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
@@ -350,7 +444,9 @@ test.describe("status regions and cognitive fixtures", () => {
     await expect(since).toHaveValue("");
   });
 
-  test("search error fixture dismisses on Escape without moving focus", async ({ page }) => {
+  test("search error fixture dismisses on Escape without moving focus", async ({
+    page,
+  }) => {
     await page.goto("/?fixture=search-error");
     const since = page.getByRole("textbox", { name: "Since (YYYY-MM-DD)" });
     const error = page.getByRole("alert");
@@ -364,7 +460,9 @@ test.describe("status regions and cognitive fixtures", () => {
     await expect(since).toBeFocused();
   });
 
-  test("stream skeleton fixture exposes labelled feed status and stream skeleton", async ({ page }) => {
+  test("stream skeleton fixture exposes labelled feed status and stream skeleton", async ({
+    page,
+  }) => {
     await page.goto("/?fixture=stream-skeleton");
     const status = page.getByTestId("live-feed-status");
     await expect(status).toBeVisible();
@@ -378,21 +476,27 @@ test.describe("status regions and cognitive fixtures", () => {
 test.describe("landmarks and reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 
-  test("landmarks stay visible under reduced motion on default tab", async ({ page }) => {
+  test("landmarks stay visible under reduced motion on default tab", async ({
+    page,
+  }) => {
     await page.goto("/");
     await expect(
       page.getByRole("navigation", { name: "Primary viewer navigation" }),
     ).toBeVisible();
     await expect(page.getByRole("main")).toBeVisible();
-    await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();
+    await expect(
+      page.getByRole("tablist", { name: "SessionLedger views" }),
+    ).toBeVisible();
   });
 
-  test("loading spinner animation is flattened under reduced motion", async ({ page }) => {
+  test("loading spinner animation is flattened under reduced motion", async ({
+    page,
+  }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/?fixture=loading-long");
     await expect(page.getByTestId("loading-state")).toBeVisible();
-    const reduced = await page.evaluate(() =>
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    const reduced = await page.evaluate(
+      () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     );
     expect(reduced).toBe(true);
     const info = await page.evaluate(() => {
@@ -416,13 +520,24 @@ test.describe("landmarks and reduced motion", () => {
   });
 });
 
-test("help overlay lists every shortcut row for keyboard efficiency", async ({ page }) => {
+test("help overlay lists every shortcut row for keyboard efficiency", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Help (?)" }).click();
   const rows = page.locator(".help-overlay-table tbody tr");
   await expect(rows).toHaveCount(12);
-  await expect(page.getByRole("dialog")).toHaveAttribute("aria-labelledby", "help-overlay-title");
-  await expect(page.getByRole("columnheader", { name: "Shortcut" })).toBeVisible();
-  await expect(page.getByRole("columnheader", { name: "Action" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close keyboard help" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveAttribute(
+    "aria-labelledby",
+    "help-overlay-title",
+  );
+  await expect(
+    page.getByRole("columnheader", { name: "Shortcut" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Action" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Close keyboard help" }),
+  ).toBeVisible();
 });

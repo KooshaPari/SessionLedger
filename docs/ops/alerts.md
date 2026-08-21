@@ -22,15 +22,15 @@ adds `job="sl-daemon"` at scrape time — include that label in deployed queries
 These aggregate queries work even when no per-route series exist yet. They use
 `rate`, which safely handles counter resets.
 
-| Signal | PromQL |
-|--------|--------|
-| Request rate (completed) | `sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m]))` |
-| Error rate | `sum(rate(sl_http_errors_total{job="sl-daemon"}[5m]))` |
-| Error ratio | `sum(rate(sl_http_errors_total{job="sl-daemon"}[5m])) / clamp_min(sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m])), 1e-9)` |
-| Mean duration | `sum(rate(sl_http_request_duration_seconds_sum{job="sl-daemon"}[5m])) / clamp_min(sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m])), 1e-9)` |
-| Started requests | `sum(rate(sl_http_requests_total{job="sl-daemon"}[5m]))` |
-| Scrape up | `max(up{job="sl-daemon"})` |
-| RED series present | `count(sl_http_requests_total{job="sl-daemon"})` |
+| Signal                   | PromQL                                                                                                                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Request rate (completed) | `sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m]))`                                                                                         |
+| Error rate               | `sum(rate(sl_http_errors_total{job="sl-daemon"}[5m]))`                                                                                                           |
+| Error ratio              | `sum(rate(sl_http_errors_total{job="sl-daemon"}[5m])) / clamp_min(sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m])), 1e-9)`                 |
+| Mean duration            | `sum(rate(sl_http_request_duration_seconds_sum{job="sl-daemon"}[5m])) / clamp_min(sum(rate(sl_http_request_duration_seconds_count{job="sl-daemon"}[5m])), 1e-9)` |
+| Started requests         | `sum(rate(sl_http_requests_total{job="sl-daemon"}[5m]))`                                                                                                         |
+| Scrape up                | `max(up{job="sl-daemon"})`                                                                                                                                       |
+| RED series present       | `count(sl_http_requests_total{job="sl-daemon"})`                                                                                                                 |
 
 `sl_http_requests_total` increments when a request starts, while
 `sl_http_request_duration_seconds_count` increments when it completes. Use the
@@ -41,11 +41,11 @@ completed count as the denominator for both error ratio and mean duration.
 Per-route series appear only after requests hit labeled paths. Use these in
 Grafana or game-day PromQL drills once load smoke has run:
 
-| Signal | PromQL |
-|--------|--------|
-| Route request rate | `sum by (route) (rate(sl_http_requests_total{job="sl-daemon",route!=""}[5m]))` |
-| Route error ratio | `sum by (route) (rate(sl_http_errors_total{job="sl-daemon",route!=""}[5m])) / clamp_min(sum by (route) (rate(sl_http_request_duration_seconds_count{job="sl-daemon",route!=""}[5m])), 1e-9)` |
-| Route p95 latency | `histogram_quantile(0.95, sum by (route, le) (rate(sl_http_request_duration_seconds_bucket{job="sl-daemon",route!=""}[5m])))` |
+| Signal             | PromQL                                                                                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route request rate | `sum by (route) (rate(sl_http_requests_total{job="sl-daemon",route!=""}[5m]))`                                                                                                               |
+| Route error ratio  | `sum by (route) (rate(sl_http_errors_total{job="sl-daemon",route!=""}[5m])) / clamp_min(sum by (route) (rate(sl_http_request_duration_seconds_count{job="sl-daemon",route!=""}[5m])), 1e-9)` |
+| Route p95 latency  | `histogram_quantile(0.95, sum by (route, le) (rate(sl_http_request_duration_seconds_bucket{job="sl-daemon",route!=""}[5m])))`                                                                |
 
 Aggregate `_sum` / `_count` without `route` remain valid for service-wide SLO
 alerts. Do **not** run `histogram_quantile` on the unlabeled aggregate summary
@@ -56,15 +56,15 @@ lines — only on `route`-labeled `_bucket` series.
 Maps promoted alerts to runnable PromQL, Alertmanager intent, and load status.
 Replace webhook URL and receiver names before paging.
 
-| Alert | PromQL / expr (runnable) | `severity` label | Intended route | Loaded |
-|-------|--------------------------|------------------|----------------|--------|
-| `SessionLedgerDaemonScrapeDown` | `up{job="sl-daemon"} == 0` | `warning` (P1 intent) | PagerDuty / on-call (TBD) via placeholder | [`sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) |
-| `SessionLedgerDaemonScrapeMissing` | `absent(up{job="sl-daemon"})` | `warning` | Slack `#sessionledger-ops` (TBD) | `sessionledger-slo.yaml` |
-| `SessionLedgerFastErrorBudgetBurn` | error ratio &gt; 5% over 5m (see rule file) | `warning` | Slack `#sessionledger-ops` (TBD) | `sessionledger-slo.yaml` |
-| `SessionLedgerSlowErrorBudgetBurn` | error ratio &gt; 1% over 1h | `info` | friction-log only | `sessionledger-slo.yaml` |
-| `SessionLedgerHighMeanLatency` | mean latency &gt; 1s over 10m | `info` | friction-log | `sessionledger-slo.yaml` |
-| `SessionLedgerRedMetricsMissing` | `up == 1 unless sl_http_requests_total` | `warning` | Slack (TBD) | `sessionledger-slo.yaml` |
-| `SL-METRICS-STALE` | `max(up{job="sl-daemon"}) == 0 or absent(up{job="sl-daemon"})` | `info` | Slack (TBD) | docs (overlaps scrape-down) |
+| Alert                              | PromQL / expr (runnable)                                       | `severity` label      | Intended route                            | Loaded                                                    |
+| ---------------------------------- | -------------------------------------------------------------- | --------------------- | ----------------------------------------- | --------------------------------------------------------- |
+| `SessionLedgerDaemonScrapeDown`    | `up{job="sl-daemon"} == 0`                                     | `warning` (P1 intent) | PagerDuty / on-call (TBD) via placeholder | [`sessionledger-slo.yaml`](alerts/sessionledger-slo.yaml) |
+| `SessionLedgerDaemonScrapeMissing` | `absent(up{job="sl-daemon"})`                                  | `warning`             | Slack `#sessionledger-ops` (TBD)          | `sessionledger-slo.yaml`                                  |
+| `SessionLedgerFastErrorBudgetBurn` | error ratio &gt; 5% over 5m (see rule file)                    | `warning`             | Slack `#sessionledger-ops` (TBD)          | `sessionledger-slo.yaml`                                  |
+| `SessionLedgerSlowErrorBudgetBurn` | error ratio &gt; 1% over 1h                                    | `info`                | friction-log only                         | `sessionledger-slo.yaml`                                  |
+| `SessionLedgerHighMeanLatency`     | mean latency &gt; 1s over 10m                                  | `info`                | friction-log                              | `sessionledger-slo.yaml`                                  |
+| `SessionLedgerRedMetricsMissing`   | `up == 1 unless sl_http_requests_total`                        | `warning`             | Slack (TBD)                               | `sessionledger-slo.yaml`                                  |
+| `SL-METRICS-STALE`                 | `max(up{job="sl-daemon"}) == 0 or absent(up{job="sl-daemon"})` | `info`                | Slack (TBD)                               | docs (overlaps scrape-down)                               |
 
 Alertmanager config ([`alertmanager.yaml`](alerts/alertmanager.yaml)):
 
@@ -72,18 +72,18 @@ Alertmanager config ([`alertmanager.yaml`](alerts/alertmanager.yaml)):
 route:
   receiver: sessionledger-webhook-placeholder
   routes:
-    - receiver: sessionledger-pagerduty   # severity=warning + page=true
-    - receiver: sessionledger-slack-ops   # severity=warning
+    - receiver: sessionledger-pagerduty # severity=warning + page=true
+    - receiver: sessionledger-slack-ops # severity=warning
     - receiver: sessionledger-webhook-placeholder
 ```
 
 Production mapping (stubs checked in; live IDs via env — never commit secrets):
 
-| `severity` / intent | Receiver | Route ID stub / env |
-|---------------------|----------|---------------------|
-| `warning` + `page=true` (P1) | `sessionledger-pagerduty` | `SL_ALERT_PAGERDUTY_ROUTING_KEY` ← `REPLACE_ME_PAGERDUTY_ROUTING_KEY` |
-| `warning` (P2) | `sessionledger-slack-ops` | `SL_ALERT_SLACK_CHANNEL_ID` + `SL_ALERT_SLACK_WEBHOOK_URL` |
-| default / `info` | `sessionledger-webhook-placeholder` | loopback webhook (local only) |
+| `severity` / intent          | Receiver                            | Route ID stub / env                                                   |
+| ---------------------------- | ----------------------------------- | --------------------------------------------------------------------- |
+| `warning` + `page=true` (P1) | `sessionledger-pagerduty`           | `SL_ALERT_PAGERDUTY_ROUTING_KEY` ← `REPLACE_ME_PAGERDUTY_ROUTING_KEY` |
+| `warning` (P2)               | `sessionledger-slack-ops`           | `SL_ALERT_SLACK_CHANNEL_ID` + `SL_ALERT_SLACK_WEBHOOK_URL`            |
+| default / `info`             | `sessionledger-webhook-placeholder` | loopback webhook (local only)                                         |
 
 Stub env file: [`route-ids.stub.env`](alerts/route-ids.stub.env). Soft validation
 always accepts placeholders; `-Strict` requires live env:

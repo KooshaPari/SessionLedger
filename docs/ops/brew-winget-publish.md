@@ -15,16 +15,16 @@ Supported user install today remains GitHub Release archives plus
 Machine-checkable posture for C11 brew/winget. This document does **not** claim
 that `brew install …` or `winget install KooshaPari.SessionLedger` works today.
 
-| Gate | Status | Evidence / prerequisite |
-|------|--------|-------------------------|
-| In-repo Homebrew formula template | **done** | [`packaging/homebrew/sessionledger.rb`](../../packaging/homebrew/sessionledger.rb) |
-| In-repo winget manifest templates (3 YAML) | **done** | [`packaging/winget/`](../../packaging/winget/) |
-| Checksum fill script from Release `SHA256SUMS` | **done** | [`scripts/fill-packaging-checksums.ps1`](../../scripts/fill-packaging-checksums.ps1) |
-| Channels + distribution document “not live” | **done** | [`packaging/channels.md`](../../packaging/channels.md), [`distribution.md`](distribution.md) |
-| Brew/winget publish readiness SelfCheck | **done** | `scripts/brew-winget-publish-check.ps1 -SelfCheck` |
-| Public Homebrew tap (`homebrew-sessionledger`) + filled digests | **unpaid** | Live tap / `brew install koosha/sessionledger/sessionledger` not claimed |
-| Merged `microsoft/winget-pkgs` PR | **unpaid** | `winget install KooshaPari.SessionLedger` not claimed |
-| Channel table flipped to Active with real install commands | **unpaid** | Update [`channels.md`](../../packaging/channels.md) only after external publish lands |
+| Gate                                                            | Status     | Evidence / prerequisite                                                                      |
+| --------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------- |
+| In-repo Homebrew formula template                               | **done**   | [`packaging/homebrew/sessionledger.rb`](../../packaging/homebrew/sessionledger.rb)           |
+| In-repo winget manifest templates (3 YAML)                      | **done**   | [`packaging/winget/`](../../packaging/winget/)                                               |
+| Checksum fill script from Release `SHA256SUMS`                  | **done**   | [`scripts/fill-packaging-checksums.ps1`](../../scripts/fill-packaging-checksums.ps1)         |
+| Channels + distribution document “not live”                     | **done**   | [`packaging/channels.md`](../../packaging/channels.md), [`distribution.md`](distribution.md) |
+| Brew/winget publish readiness SelfCheck                         | **done**   | `scripts/brew-winget-publish-check.ps1 -SelfCheck`                                           |
+| Public Homebrew tap (`homebrew-sessionledger`) + filled digests | **unpaid** | Live tap / `brew install koosha/sessionledger/sessionledger` not claimed                     |
+| Merged `microsoft/winget-pkgs` PR                               | **unpaid** | `winget install KooshaPari.SessionLedger` not claimed                                        |
+| Channel table flipped to Active with real install commands      | **unpaid** | Update [`channels.md`](../../packaging/channels.md) only after external publish lands        |
 
 ### What “done” vs “unpaid” means
 
@@ -69,12 +69,12 @@ pwsh ./scripts/fill-packaging-checksums.ps1 `
 
 The script updates:
 
-| Path | Fields |
-|------|--------|
-| `packaging/homebrew/sessionledger.rb` | per-arch `url` / `sha256` for macOS arm/intel + Linux x86_64 |
-| `packaging/winget/KooshaPari.SessionLedger.installer.yaml` | `InstallerUrl`, `InstallerSha256`, nested path, `PackageVersion` |
-| `packaging/winget/KooshaPari.SessionLedger.yaml` | `PackageVersion` |
-| `packaging/winget/KooshaPari.SessionLedger.locale.en-US.yaml` | `PackageVersion`, `ReleaseNotesUrl` |
+| Path                                                          | Fields                                                           |
+| ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `packaging/homebrew/sessionledger.rb`                         | per-arch `url` / `sha256` for macOS arm/intel + Linux x86_64     |
+| `packaging/winget/KooshaPari.SessionLedger.installer.yaml`    | `InstallerUrl`, `InstallerSha256`, nested path, `PackageVersion` |
+| `packaging/winget/KooshaPari.SessionLedger.yaml`              | `PackageVersion`                                                 |
+| `packaging/winget/KooshaPari.SessionLedger.locale.en-US.yaml` | `PackageVersion`, `ReleaseNotesUrl`                              |
 
 Commit the filled templates in this repo if you want the hashes checked in,
 or keep them local only until the external publish PRs land.
@@ -155,7 +155,7 @@ The script asserts:
 Soft CI may run the same SelfCheck with `continue-on-error: true` until a
 dedicated workflow job is added.
 
-## What this does *not* do
+## What this does _not_ do
 
 - Does not create or host a Homebrew tap.
 - Does not submit winget-pkgs automatically.

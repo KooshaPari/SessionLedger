@@ -8,15 +8,15 @@ on:
   push:
     branches: [main]
     paths:
-      - '**'
-      - '!**/*.md'
-      - '!docs/**'
+      - "**"
+      - "!**/*.md"
+      - "!docs/**"
   pull_request:
     branches: [main]
     paths:
-      - '**'
-      - '!**/*.md'
-      - '!docs/**'
+      - "**"
+      - "!**/*.md"
+      - "!docs/**"
 
 permissions:
   contents: read
@@ -30,7 +30,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for secret scanning
+          fetch-depth: 0 # Full history for secret scanning
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2

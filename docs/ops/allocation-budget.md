@@ -11,13 +11,13 @@ evidence lives in [`alloc-profile.md`](alloc-profile.md).
 
 ## Ceiling
 
-| Knob | Value | Source |
-|------|-------|--------|
-| Workload | 8-message Forge session → `process_session` | [`allocation-budget.json`](allocation-budget.json) `workload` |
-| Bytes allocated ceiling | **1 MiB** (`1048576`) | `bytes_allocated_ceiling` |
-| Allocations ceiling | **5 000** | `allocations_ceiling` |
-| Metric | `stats_alloc` `Region` delta (bytes + allocation count) | [`tests/allocation_budget.rs`](../../tests/allocation_budget.rs) |
-| Failure rule | Exit non-zero if either ceiling is exceeded, or if config / self-check fails | [`scripts/allocation-budget-check.ps1`](../../scripts/allocation-budget-check.ps1) |
+| Knob                    | Value                                                                        | Source                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Workload                | 8-message Forge session → `process_session`                                  | [`allocation-budget.json`](allocation-budget.json) `workload`                      |
+| Bytes allocated ceiling | **1 MiB** (`1048576`)                                                        | `bytes_allocated_ceiling`                                                          |
+| Allocations ceiling     | **5 000**                                                                    | `allocations_ceiling`                                                              |
+| Metric                  | `stats_alloc` `Region` delta (bytes + allocation count)                      | [`tests/allocation_budget.rs`](../../tests/allocation_budget.rs)                   |
+| Failure rule            | Exit non-zero if either ceiling is exceeded, or if config / self-check fails | [`scripts/allocation-budget-check.ps1`](../../scripts/allocation-budget-check.ps1) |
 
 Ceilings are intentionally loose for debug builds. Tighten after real allocator
 profiling lands — do not treat these numbers as a production SLA.

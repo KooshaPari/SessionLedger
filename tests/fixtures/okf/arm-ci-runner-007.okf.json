@@ -62,24 +62,60 @@
     }
   ],
   "relations": [
-    { "source": "intent-0", "target": "acceptance-0",
+    {
+      "source": "intent-0",
+      "target": "acceptance-0",
       "type": "verified_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "acceptance-1",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "acceptance-1",
       "type": "verified_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "acceptance-2",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "acceptance-2",
       "type": "verified_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "constraint-0",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "constraint-0",
       "type": "bounded_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "constraint-1",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "constraint-1",
       "type": "bounded_by",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } },
-    { "source": "intent-0", "target": "gate-0",
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    },
+    {
+      "source": "intent-0",
+      "target": "gate-0",
       "type": "asserts",
-      "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" } }
+      "provenance": {
+        "corpus": "claude-code",
+        "source_id": "claude-session-007"
+      }
+    }
   ],
   "provenance": { "corpus": "claude-code", "source_id": "claude-session-007" }
 }

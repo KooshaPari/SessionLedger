@@ -3,29 +3,29 @@
 **Wave-44 close-out lane B6.**  
 **Owner:** machine.  
 **Theme:** scale the OKF conformance corpus from hand-vetted 20 → 33+ (and
-growing) via a deterministic generator; close C08 L73 *production-scale corpus
-breadth*.
+growing) via a deterministic generator; close C08 L73 _production-scale corpus
+breadth_.
 
 Companion: [`WAVE44_SCOPE.md`](../../WAVE44_SCOPE.md) (rank 6) and
 [`WAVE44_PERT.md`](WAVE44_PERT.md) (lane B6).
 
 ## Rubric anchor
 
-Pillar L73 — *Microbench + Macrobench + Load Test*. SCORECARD headline:
+Pillar L73 — _Microbench + Macrobench + Load Test_. SCORECARD headline:
 `C08 L73 | partial (deepened)` with the residual being production-scale corpus
 breadth. Wave-43 added the load-macro PR gate (`load-macro-gate-hard.yml`,
-`load-smoke.ps1 -RouteTier macro`); Wave-44 grows the *input* corpus so the
+`load-smoke.ps1 -RouteTier macro`); Wave-44 grows the _input_ corpus so the
 gate has broad coverage to exercise.
 
 ## Strategy
 
 The corpus must grow along three orthogonal axes:
 
-| Axis | Why |
-|------|-----|
-| **Source agent** | Each agent (forge, codex, claude-code, cursor, aider, opencode, continue, kiro, factory-droid) emits different shapes — round-trip must hold across all |
-| **Shape (entities / relations / depth)** | Stress the parser, the indexer, and the distiller at realistic and adversarial sizes |
-| **Edge / failure modes** | Verify the parser **rejects** malformed input rather than silently accepting it |
+| Axis                                     | Why                                                                                                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Source agent**                         | Each agent (forge, codex, claude-code, cursor, aider, opencode, continue, kiro, factory-droid) emits different shapes — round-trip must hold across all |
+| **Shape (entities / relations / depth)** | Stress the parser, the indexer, and the distiller at realistic and adversarial sizes                                                                    |
+| **Edge / failure modes**                 | Verify the parser **rejects** malformed input rather than silently accepting it                                                                         |
 
 Generator ([`scripts/corpus-generate.py`](../../scripts/corpus-generate.py))
 produces one fixture per (source × shape × edge) cell. Hand-vetted fixtures
@@ -103,12 +103,12 @@ via a **negative** test that asserts the harness rejects them.
 
 ## Risk register
 
-| Risk | Mitigation |
-|------|------------|
-| Generator emits a malformed OKF that round-trip accepts by accident | Strict shape assertions in test; CI red on any shape break |
-| Corpus file count bloats PR diff | New fixtures land in a single batched PR; subsequent additions are small |
-| Generator script breaks when OKF spec evolves (e.g. v1.1) | Builder functions keyed by `OKF_VERSION`; bump in one place |
-| Performance regression: large fixtures slow the round-trip suite | Mark large fixtures with `@pytest.mark.slow` / `#[ignore]` and run in nightly |
+| Risk                                                                | Mitigation                                                                    |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Generator emits a malformed OKF that round-trip accepts by accident | Strict shape assertions in test; CI red on any shape break                    |
+| Corpus file count bloats PR diff                                    | New fixtures land in a single batched PR; subsequent additions are small      |
+| Generator script breaks when OKF spec evolves (e.g. v1.1)           | Builder functions keyed by `OKF_VERSION`; bump in one place                   |
+| Performance regression: large fixtures slow the round-trip suite    | Mark large fixtures with `@pytest.mark.slow` / `#[ignore]` and run in nightly |
 
 ## Carry-over to W45+ (if W44-B6 only partially closes L73)
 
@@ -116,4 +116,3 @@ via a **negative** test that asserts the harness rejects them.
 - Stress: 500-entity fixture, 50-deep relation chain, 100-intent rapid-fire
 - Edge: emoji label, RTL label, base64 attachment, deeply nested `properties`
 - Adversarial: cyclic relation graph (currently illegal per spec — confirm), contradictory `verified_by`/`bounded_by`
-

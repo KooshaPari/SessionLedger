@@ -14,36 +14,36 @@ Policy lives in `docs/ops/perf-baseline.json`:
 
 ### Blocking mean budgets (`policy.enforced=true`)
 
-| Field | Value | Meaning |
-|---|---|---|
-| `threshold_percent` | **25%** | Max allowed slowdown vs checked-in `mean_ns` |
-| `sample_size` | 10 | Criterion samples per benchmark (CI-fast) |
-| `warm_up_seconds` | 1.0 | Criterion warm-up |
-| `measurement_seconds` | 2.0 | Criterion measurement window |
+| Field                 | Value   | Meaning                                      |
+| --------------------- | ------- | -------------------------------------------- |
+| `threshold_percent`   | **25%** | Max allowed slowdown vs checked-in `mean_ns` |
+| `sample_size`         | 10      | Criterion samples per benchmark (CI-fast)    |
+| `warm_up_seconds`     | 1.0     | Criterion warm-up                            |
+| `measurement_seconds` | 2.0     | Criterion measurement window                 |
 
 Per-benchmark absolute ceilings (`budget_mean_ns` = `mean_ns × (1 + threshold_percent/100)`):
 
-| Benchmark | Baseline `mean_ns` | Enforced `budget_mean_ns` |
-|---|---:|---:|
-| `pipeline/distill_compile_200_messages` | 1,081,439.870 | 1,351,799.838 |
-| `pipeline/okf_export_200_messages` | 6,607.678 | 8,259.598 |
-| `pipeline/inject_render_200_messages` | 13,362.599 | 16,703.249 |
+| Benchmark                               | Baseline `mean_ns` | Enforced `budget_mean_ns` |
+| --------------------------------------- | -----------------: | ------------------------: |
+| `pipeline/distill_compile_200_messages` |      1,081,439.870 |             1,351,799.838 |
+| `pipeline/okf_export_200_messages`      |          6,607.678 |                 8,259.598 |
+| `pipeline/inject_render_200_messages`   |         13,362.599 |                16,703.249 |
 
 ### Enforced p95 latency budgets (`latency.enforced=true`)
 
-| Field | Value | Meaning |
-|---|---|---|
-| `latency.threshold_percent` | **25%** | Max allowed slowdown vs checked-in `p95_ns` |
-| `latency.metric` | `criterion_sample_p95` | p95 of per-iteration times from Criterion `sample.json` |
-| `latency.http_load_smoke.max_p95_ms` | **500** | Aligns with `scripts/load-smoke.ps1 -MaxP95Ms` |
+| Field                                | Value                  | Meaning                                                 |
+| ------------------------------------ | ---------------------- | ------------------------------------------------------- |
+| `latency.threshold_percent`          | **25%**                | Max allowed slowdown vs checked-in `p95_ns`             |
+| `latency.metric`                     | `criterion_sample_p95` | p95 of per-iteration times from Criterion `sample.json` |
+| `latency.http_load_smoke.max_p95_ms` | **500**                | Aligns with `scripts/load-smoke.ps1 -MaxP95Ms`          |
 
 Per-benchmark enforced ceilings (`budget_p95_ns` = `p95_ns × (1 + latency.threshold_percent/100)`):
 
-| Benchmark | Baseline `p95_ns` | Enforced `budget_p95_ns` |
-|---|---:|---:|
-| `pipeline/distill_compile_200_messages` | 1,243,655.851 | 1,554,569.814 |
-| `pipeline/okf_export_200_messages` | 7,598.830 | 9,498.538 |
-| `pipeline/inject_render_200_messages` | 15,366.989 | 19,208.737 |
+| Benchmark                               | Baseline `p95_ns` | Enforced `budget_p95_ns` |
+| --------------------------------------- | ----------------: | -----------------------: |
+| `pipeline/distill_compile_200_messages` |     1,243,655.851 |            1,554,569.814 |
+| `pipeline/okf_export_200_messages`      |         7,598.830 |                9,498.538 |
+| `pipeline/inject_render_200_messages`   |        15,366.989 |               19,208.737 |
 
 Provisional `p95_ns` values start at ≈ `mean_ns × 1.15` until refreshed with
 `-UpdateBaseline`. p95 overruns **fail** the blocking pipeline perf gate when

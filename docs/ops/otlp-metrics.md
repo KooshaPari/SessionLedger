@@ -8,14 +8,14 @@ Prometheus scrape path.
 
 ## What exists today
 
-| Layer | Status | Evidence |
-|-------|--------|----------|
-| Prometheus HTTP RED (`/metrics`) | **landed** | `crates/sl-daemon/src/metrics.rs`; per-route labels + histogram buckets |
-| App JSON aggregates | **landed** | `GET /api/metrics` (product summary; parallel to RED) |
-| Feature-gated OTLP **traces** | **landed** | `otel` feature + `SL_OTLP_ENDPOINT` ([`observability.md`](observability.md#opentelemetry-feature-gated-sketch--issue-65)) |
-| OTLP **metrics** push | **landed** | `otel-metrics` + `SL_OTLP_METRICS_ENDPOINT`; `otlp_metrics_export: otlp-grpc` |
-| Labeled RED → OTLP bridge | **unpaid** | Future: counters/histograms mirrored as OTLP instruments |
-| Process USE gauges | **unpaid** | Soft goal alongside OTLP metrics |
+| Layer                            | Status     | Evidence                                                                                                                  |
+| -------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Prometheus HTTP RED (`/metrics`) | **landed** | `crates/sl-daemon/src/metrics.rs`; per-route labels + histogram buckets                                                   |
+| App JSON aggregates              | **landed** | `GET /api/metrics` (product summary; parallel to RED)                                                                     |
+| Feature-gated OTLP **traces**    | **landed** | `otel` feature + `SL_OTLP_ENDPOINT` ([`observability.md`](observability.md#opentelemetry-feature-gated-sketch--issue-65)) |
+| OTLP **metrics** push            | **landed** | `otel-metrics` + `SL_OTLP_METRICS_ENDPOINT`; `otlp_metrics_export: otlp-grpc`                                             |
+| Labeled RED → OTLP bridge        | **unpaid** | Future: counters/histograms mirrored as OTLP instruments                                                                  |
+| Process USE gauges               | **unpaid** | Soft goal alongside OTLP metrics                                                                                          |
 
 See also the RED mapping table in
 [`observability.md`](observability.md#red-metrics-mapping).
@@ -52,13 +52,13 @@ See also the RED mapping table in
 
 [`otlp-metrics.json`](otlp-metrics.json) pins the export knobs:
 
-| Field | Default | Meaning |
-|-------|---------|---------|
-| `prometheus_http` | `/metrics` | Default RED scrape path (must remain) |
-| `otlp_metrics_export` | `otlp-grpc` | Push transport when endpoint is set |
-| `cargo_feature` | `otel-metrics` | Compile-time OTLP metrics flag |
-| `endpoint_env` | `SL_OTLP_METRICS_ENDPOINT` | Primary collector endpoint |
-| `ack_env` | `SL_OTLP_METRICS` | Legacy stub acknowledgment (no endpoint) |
+| Field                 | Default                    | Meaning                                  |
+| --------------------- | -------------------------- | ---------------------------------------- |
+| `prometheus_http`     | `/metrics`                 | Default RED scrape path (must remain)    |
+| `otlp_metrics_export` | `otlp-grpc`                | Push transport when endpoint is set      |
+| `cargo_feature`       | `otel-metrics`             | Compile-time OTLP metrics flag           |
+| `endpoint_env`        | `SL_OTLP_METRICS_ENDPOINT` | Primary collector endpoint               |
+| `ack_env`             | `SL_OTLP_METRICS`          | Legacy stub acknowledgment (no endpoint) |
 
 ## How to run
 
@@ -83,8 +83,8 @@ SL_OTLP_METRICS_ENDPOINT=http://localhost:4317 \
 
 ## CI / scheduling
 
-| Job | Workflow | Blocking? | Notes |
-|-----|----------|-----------|-------|
+| Job                   | Workflow                                               | Blocking?    | Notes                                                                |
+| --------------------- | ------------------------------------------------------ | ------------ | -------------------------------------------------------------------- |
 | `otlp-metrics-export` | [`ops-load.yml`](../../.github/workflows/ops-load.yml) | **blocking** | SelfCheck + `cargo test -p sl-daemon otlp_metrics` + feature compile |
 
 ## Unpaid gaps (explicit)

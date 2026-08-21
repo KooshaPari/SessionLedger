@@ -6,8 +6,8 @@
 
 ## Gap
 
-Loom permutation covers bounded models but documents *full tokio broadcast / daemon SSE
-graph* as unpaid. Expand `tests/loom_model.rs` + docs toward watcher→broadcast→SSE path
+Loom permutation covers bounded models but documents _full tokio broadcast / daemon SSE
+graph_ as unpaid. Expand `tests/loom_model.rs` + docs toward watcher→broadcast→SSE path
 without claiming live `sl-daemon` integration under loom.
 
 ## Acceptance criteria

@@ -42,8 +42,8 @@ Absence of `wrangler.toml`, `vercel.json`, or Workers/Pages project files is
 
 ## Revisit triggers
 
-| Trigger | Why |
-|---------|-----|
-| Multi-tenant hosted SessionLedger is in charter | Edge/CDN fronting becomes relevant |
-| Daemon data plane moves off host filesystem watches | Edge isolates could host API edges |
-| Explicit customer requirement for Workers/Vercel | Record a superseding ADR before adding configs |
+| Trigger                                             | Why                                            |
+| --------------------------------------------------- | ---------------------------------------------- |
+| Multi-tenant hosted SessionLedger is in charter     | Edge/CDN fronting becomes relevant             |
+| Daemon data plane moves off host filesystem watches | Edge isolates could host API edges             |
+| Explicit customer requirement for Workers/Vercel    | Record a superseding ADR before adding configs |

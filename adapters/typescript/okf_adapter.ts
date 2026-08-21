@@ -117,7 +117,9 @@ function validate(doc: JsonObject, stem?: string): void {
     types.add(etype);
   }
 
-  const missing = [...REQUIRED_SHARED_ENTITY_TYPES].filter((t) => !types.has(t));
+  const missing = [...REQUIRED_SHARED_ENTITY_TYPES].filter(
+    (t) => !types.has(t),
+  );
   if (missing.length > 0) {
     throw new Error(
       `missing required shared entity types: ${missing.sort().join(", ")}`,
@@ -148,10 +150,14 @@ function validate(doc: JsonObject, stem?: string): void {
       throw new Error(`relation target ${JSON.stringify(tgt)} not in entities`);
     }
     if (typeof rtype !== "string" || !ALLOWED_RELATION_TYPES.has(rtype)) {
-      throw new Error(`relation type ${JSON.stringify(rtype)} not in OKF v1.0 set`);
+      throw new Error(
+        `relation type ${JSON.stringify(rtype)} not in OKF v1.0 set`,
+      );
     }
     if (!rprov || rprov.source_id !== sourceId) {
-      throw new Error("relation provenance.source_id must equal top-level source_id");
+      throw new Error(
+        "relation provenance.source_id must equal top-level source_id",
+      );
     }
   }
 }

@@ -12,14 +12,14 @@ Related: [`commit-signing.md`](commit-signing.md), [`branch-protection.md`](bran
 
 ## Policy layers
 
-| Layer | Requirement | In-repo evidence |
-|-------|-------------|------------------|
-| DCO | `Signed-off-by:` on each commit | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
-| GPG / SSH | Cryptographic signature on each commit reaching `main` | [`commit-signing.md`](commit-signing.md), ADR 0004 |
-| CODEOWNERS | Review from listed owners on owned paths | [`CODEOWNERS`](../../CODEOWNERS) |
-| Branch discipline | Feature branches + PRs; no direct push to `main` | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) |
-| Branch protection | Require signed commits + PR before merge on `main` | Human org gate (see below) |
-| Maintainer 2FA | Org/account 2FA for Settings / merge access | Human org gate (see below) |
+| Layer             | Requirement                                            | In-repo evidence                                   |
+| ----------------- | ------------------------------------------------------ | -------------------------------------------------- |
+| DCO               | `Signed-off-by:` on each commit                        | [`CONTRIBUTING.md`](../../CONTRIBUTING.md)         |
+| GPG / SSH         | Cryptographic signature on each commit reaching `main` | [`commit-signing.md`](commit-signing.md), ADR 0004 |
+| CODEOWNERS        | Review from listed owners on owned paths               | [`CODEOWNERS`](../../CODEOWNERS)                   |
+| Branch discipline | Feature branches + PRs; no direct push to `main`       | [`CONTRIBUTING.md`](../../CONTRIBUTING.md)         |
+| Branch protection | Require signed commits + PR before merge on `main`     | Human org gate (see below)                         |
+| Maintainer 2FA    | Org/account 2FA for Settings / merge access            | Human org gate (see below)                         |
 
 Contributors must configure `commit.gpgsign` (GPG or SSH) **before** pushing.
 DCO sign-off is complementary — it is **not** a substitute for GPG/SSH signatures.
@@ -53,38 +53,38 @@ scope): [`branch-protection.md`](branch-protection.md) +
 These controls are **required policy** but **not** machine-verifiable from
 repository contents:
 
-| Control | Why not in-tree? | Maintainer action |
-|---------|------------------|-------------------|
-| **Require signed commits** on `main` | GitHub branch protection API needs admin scope | Settings → Branches → `main` |
-| **Require a pull request before merging** | Same | Same |
-| **Require review from Code Owners** | Same | Same (when CODEOWNERS is active) |
-| **Maintainer 2FA / hardware keys** | GitHub does not expose per-user 2FA to this repo | Org/account Settings (human attestation) |
+| Control                                   | Why not in-tree?                                 | Maintainer action                        |
+| ----------------------------------------- | ------------------------------------------------ | ---------------------------------------- |
+| **Require signed commits** on `main`      | GitHub branch protection API needs admin scope   | Settings → Branches → `main`             |
+| **Require a pull request before merging** | Same                                             | Same                                     |
+| **Require review from Code Owners**       | Same                                             | Same (when CODEOWNERS is active)         |
+| **Maintainer 2FA / hardware keys**        | GitHub does not expose per-user 2FA to this repo | Org/account Settings (human attestation) |
 
 Record the date branch protection was enabled in an internal ops note. Do **not**
 commit screenshots of GitHub Settings or 2FA enrollment.
 
 ## What this repository can verify
 
-| Control | Verifiable in-tree? | Evidence |
-|---------|---------------------|----------|
-| Signed-commit policy SSOT | **Yes** | This page + ADR 0004 |
-| CODEOWNERS file present | **Yes** | [`CODEOWNERS`](../../CODEOWNERS) |
-| Recent `main` tip signature | Partial | `scripts/commit-signing-check.ps1` |
-| Branch protection doc anchors | **Yes** | `scripts/branch-protection-check.ps1 -PolicyOnly` |
+| Control                             | Verifiable in-tree?       | Evidence                                                 |
+| ----------------------------------- | ------------------------- | -------------------------------------------------------- |
+| Signed-commit policy SSOT           | **Yes**                   | This page + ADR 0004                                     |
+| CODEOWNERS file present             | **Yes**                   | [`CODEOWNERS`](../../CODEOWNERS)                         |
+| Recent `main` tip signature         | Partial                   | `scripts/commit-signing-check.ps1`                       |
+| Branch protection doc anchors       | **Yes**                   | `scripts/branch-protection-check.ps1 -PolicyOnly`        |
 | GitHub branch protection live state | Partial (best-effort API) | `scripts/branch-protection-check.ps1` (no `-PolicyOnly`) |
-| Org 2FA / hardware-key enrollment | **No** | Human attestation only |
+| Org 2FA / hardware-key enrollment   | **No**                    | Human attestation only                                   |
 
 ## Evidence checklist
 
-| Gate | Status | Evidence / prerequisite |
-|------|--------|-------------------------|
-| Source provenance policy documented | **done** | This page |
-| Source provenance SelfCheck | **done** | `scripts/source-provenance-check.ps1 -SelfCheck` |
-| Branch protection PolicyOnly hook | **done** | `scripts/branch-protection-check.ps1 -PolicyOnly` |
-| CONTRIBUTING.md cross-link | **done** | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) § Source provenance |
-| CODEOWNERS present | **done** | [`CODEOWNERS`](../../CODEOWNERS) |
+| Gate                                         | Status                     | Evidence / prerequisite                                                                                  |
+| -------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Source provenance policy documented          | **done**                   | This page                                                                                                |
+| Source provenance SelfCheck                  | **done**                   | `scripts/source-provenance-check.ps1 -SelfCheck`                                                         |
+| Branch protection PolicyOnly hook            | **done**                   | `scripts/branch-protection-check.ps1 -PolicyOnly`                                                        |
+| CONTRIBUTING.md cross-link                   | **done**                   | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) § Source provenance                                           |
+| CODEOWNERS present                           | **done**                   | [`CODEOWNERS`](../../CODEOWNERS)                                                                         |
 | GitHub **Require signed commits** live proof | **NOT_VERIFIABLE_IN_REPO** | Human org gate — enable in Settings; optional `gh api` via branch-protection-check without `-PolicyOnly` |
-| Maintainer 2FA live proof | **NOT_VERIFIABLE_IN_REPO** | Human org gate — org/account 2FA attestation out-of-band |
+| Maintainer 2FA live proof                    | **NOT_VERIFIABLE_IN_REPO** | Human org gate — org/account 2FA attestation out-of-band                                                 |
 
 ## SelfCheck (machine proof)
 

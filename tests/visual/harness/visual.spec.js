@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 
 test("E1 bundle detail empty state matches its golden", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();
+  await expect(
+    page.getByRole("tablist", { name: "SessionLedger views" }),
+  ).toBeVisible();
   // Cross-platform font AA routinely differs ~1-2% of pixels between Windows
   // baseline authors and Linux CI Chromium; keep structural contract tight but
   // tolerate that AA noise.
@@ -14,17 +16,25 @@ test("E1 bundle detail empty state matches its golden", async ({ page }) => {
 
 test("E2 history detail empty state matches its golden", async ({ page }) => {
   await page.goto("/?fixture=history-empty");
-  await expect(page.getByRole("tab", { name: "History", selected: true })).toBeVisible();
-  await expect(page.getByText("Select a session from the timeline to inspect")).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "History", selected: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Select a session from the timeline to inspect"),
+  ).toBeVisible();
   await expect(page).toHaveScreenshot("e2-history-empty.png", {
     animations: "disabled",
     maxDiffPixelRatio: 0.03,
   });
 });
 
-test("E4 search zero-match empty state matches its golden", async ({ page }) => {
+test("E4 search zero-match empty state matches its golden", async ({
+  page,
+}) => {
   await page.goto("/?fixture=search-empty");
-  await expect(page.getByRole("tab", { name: "Search", selected: true })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Search", selected: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("search-zero-match")).toBeVisible();
   await expect(page).toHaveScreenshot("e4-search-empty.png", {
     animations: "disabled",
@@ -34,7 +44,9 @@ test("E4 search zero-match empty state matches its golden", async ({ page }) => 
 
 test("E5 first-run empty state matches its golden", async ({ page }) => {
   await page.goto("/?fixture=first-run");
-  await expect(page.getByRole("tab", { name: "Bundles", selected: true })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Bundles", selected: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("first-run-empty")).toBeVisible();
   await expect(page.getByTestId("first-run-cta")).toBeVisible();
   await expect(page).toHaveScreenshot("e5-first-run-empty.png", {
@@ -45,7 +57,9 @@ test("E5 first-run empty state matches its golden", async ({ page }) => {
 
 test("R1 search error state matches its golden", async ({ page }) => {
   await page.goto("/?fixture=search-error");
-  await expect(page.getByRole("tab", { name: "Search", selected: true })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Search", selected: true }),
+  ).toBeVisible();
   await expect(page.getByText("daemon not reachable")).toBeVisible();
   await expect(page).toHaveScreenshot("r1-search-error.png", {
     animations: "disabled",
@@ -55,7 +69,9 @@ test("R1 search error state matches its golden", async ({ page }) => {
 
 test("R2 replay stream error state matches its golden", async ({ page }) => {
   await page.goto("/?fixture=replay-error");
-  await expect(page.getByRole("tab", { name: "Replay", selected: true })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Replay", selected: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("replay-status-error")).toBeVisible();
   await expect(page.getByTestId("error-state-retry")).toBeVisible();
   await expect(page).toHaveScreenshot("r2-replay-error.png", {
@@ -66,7 +82,9 @@ test("R2 replay stream error state matches its golden", async ({ page }) => {
 
 test("R3 error color contract matches its golden", async ({ page }) => {
   await page.goto("/?fixture=error-color");
-  await expect(page.getByRole("tab", { name: "Bundles", selected: true })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Bundles", selected: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("error-color-panel")).toBeVisible();
   await expect(page.getByTestId("error-color-live-badge")).toBeVisible();
   await expect(page).toHaveScreenshot("r3-error-color.png", {
@@ -75,10 +93,16 @@ test("R3 error color contract matches its golden", async ({ page }) => {
   });
 });
 
-test("viewer exposes type tokens and persists theme preference", async ({ page }) => {
+test("viewer exposes type tokens and persists theme preference", async ({
+  page,
+}) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Toggle light and dark theme" })).toBeVisible();
-  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  await expect(
+    page.getByRole("button", { name: "Toggle light and dark theme" }),
+  ).toBeVisible();
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === "dark",
+  );
 
   const tokens = await page.evaluate(() => {
     const styles = getComputedStyle(document.documentElement);
@@ -99,18 +123,25 @@ test("viewer exposes type tokens and persists theme preference", async ({ page }
   expect(tokens.ui).toContain("system-ui");
   expect(tokens.accent.toLowerCase()).toBe("#93c5fd");
 
-  await page.getByRole("button", { name: "Toggle light and dark theme" }).click();
+  await page
+    .getByRole("button", { name: "Toggle light and dark theme" })
+    .click();
   await expect
     .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
     .toBe("light");
   await expect
-    .poll(() => page.evaluate(() => window.localStorage.getItem("sl-viewer-theme")))
+    .poll(() =>
+      page.evaluate(() => window.localStorage.getItem("sl-viewer-theme")),
+    )
     .toBe("light");
   await expect
     .poll(() =>
       page.evaluate(() =>
-        getComputedStyle(document.documentElement).getPropertyValue("--sl-accent").trim().toLowerCase()
-      )
+        getComputedStyle(document.documentElement)
+          .getPropertyValue("--sl-accent")
+          .trim()
+          .toLowerCase(),
+      ),
     )
     .toBe("#2563eb");
 
@@ -120,13 +151,17 @@ test("viewer exposes type tokens and persists theme preference", async ({ page }
     .toBe("light");
 });
 
-test("prefers-reduced-motion flattens transition durations", async ({ page }) => {
+test("prefers-reduced-motion flattens transition durations", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();
+  await expect(
+    page.getByRole("tablist", { name: "SessionLedger views" }),
+  ).toBeVisible();
 
-  const reduced = await page.evaluate(() =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  const reduced = await page.evaluate(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   expect(reduced).toBe(true);
 
@@ -142,9 +177,13 @@ test("prefers-reduced-motion flattens transition durations", async ({ page }) =>
   expect(duration).toMatch(/^0(\.0\d*)?ms$|^0s$|^1e-0[45]s$/);
 });
 
-test("viewer exposes caption and measure typography tokens", async ({ page }) => {
+test("viewer exposes caption and measure typography tokens", async ({
+  page,
+}) => {
   await page.goto("/");
-  await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();
+  await expect(
+    page.getByRole("tablist", { name: "SessionLedger views" }),
+  ).toBeVisible();
 
   const tokens = await page.evaluate(() => {
     const styles = getComputedStyle(document.documentElement);
@@ -178,7 +217,9 @@ test("S1 launch splash matches its golden", async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
     .toBe("dark");
-  await expect(page.getByText("SessionLedger", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("SessionLedger", { exact: true }).first(),
+  ).toBeVisible();
   await expect(page.getByText("Viewer", { exact: true }).first()).toBeVisible();
   await expect(page).toHaveScreenshot("s1-launch-splash.png", {
     animations: "disabled",
@@ -198,7 +239,9 @@ test("S1 launch splash light theme matches its golden", async ({ page }) => {
   });
 });
 
-test("content skeleton fixture exposes tokens and stable layout", async ({ page }) => {
+test("content skeleton fixture exposes tokens and stable layout", async ({
+  page,
+}) => {
   await page.goto("/?fixture=skeleton");
   await expect(page.getByTestId("content-skeleton")).toBeVisible();
 
@@ -206,7 +249,9 @@ test("content skeleton fixture exposes tokens and stable layout", async ({ page 
     const styles = getComputedStyle(document.documentElement);
     return {
       skeletonBase: styles.getPropertyValue("--sl-skeleton-base").trim(),
-      skeletonHighlight: styles.getPropertyValue("--sl-skeleton-highlight").trim(),
+      skeletonHighlight: styles
+        .getPropertyValue("--sl-skeleton-highlight")
+        .trim(),
     };
   });
 
@@ -221,7 +266,9 @@ test("content skeleton fixture exposes tokens and stable layout", async ({ page 
 
 test("viewer exposes spacing and motion tokens", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("tablist", { name: "SessionLedger views" })).toBeVisible();
+  await expect(
+    page.getByRole("tablist", { name: "SessionLedger views" }),
+  ).toBeVisible();
 
   const tokens = await page.evaluate(() => {
     const styles = getComputedStyle(document.documentElement);

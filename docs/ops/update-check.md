@@ -7,12 +7,12 @@ binaries. Automatic background updates remain out of scope per
 
 ## Posture (ADR 0001)
 
-| Capability | Status |
-|------------|--------|
-| Auto-update / silent binary replacement | **Out of scope** |
-| In-app update prompts | **Out of scope** |
-| User-initiated release availability check | **Active** |
-| Manual install from GitHub Releases + checksum verification | **Active** |
+| Capability                                                  | Status           |
+| ----------------------------------------------------------- | ---------------- |
+| Auto-update / silent binary replacement                     | **Out of scope** |
+| In-app update prompts                                       | **Out of scope** |
+| User-initiated release availability check                   | **Active**       |
+| Manual install from GitHub Releases + checksum verification | **Active**       |
 
 When an update is available, operators still follow the manual path:
 
@@ -38,11 +38,11 @@ sl-daemon check-update --repo KooshaPari/SessionLedger
 
 ### Exit codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | Installed version is at or above the latest published release |
-| `1` | A newer release tag exists on GitHub |
-| `2` | Network, parse, or usage error |
+| Code | Meaning                                                       |
+| ---- | ------------------------------------------------------------- |
+| `0`  | Installed version is at or above the latest published release |
+| `1`  | A newer release tag exists on GitHub                          |
+| `2`  | Network, parse, or usage error                                |
 
 ### Output
 

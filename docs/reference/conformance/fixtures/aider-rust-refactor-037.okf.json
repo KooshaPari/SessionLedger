@@ -41,9 +41,7 @@
       "type": "criteria",
       "label": "trait-object removal must be measurable",
       "properties": {
-        "watch_files": [
-          "crates/sl-daemon/src/ledger.rs"
-        ],
+        "watch_files": ["crates/sl-daemon/src/ledger.rs"],
         "skipped_by": []
       }
     },

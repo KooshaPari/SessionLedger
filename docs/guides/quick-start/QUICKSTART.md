@@ -50,11 +50,11 @@ just dev
 This builds then brings up the local stack (`scripts/runtime-up.*` if present, otherwise
 `process-compose up`). You should see three services appear in the process-compose TUI:
 
-| Service | Role |
-|---|---|
-| `sl-daemon` | Watches `$SL_WATCH_DIR`, compiles each JSONL session, writes OKF docs |
-| `sl-viewer` | Dioxus desktop window — opens automatically once the daemon starts |
-| `sl-cli-check` | One-shot probe that logs the daemon binary version then exits |
+| Service        | Role                                                                  |
+| -------------- | --------------------------------------------------------------------- |
+| `sl-daemon`    | Watches `$SL_WATCH_DIR`, compiles each JSONL session, writes OKF docs |
+| `sl-viewer`    | Dioxus desktop window — opens automatically once the daemon starts    |
+| `sl-cli-check` | One-shot probe that logs the daemon binary version then exits         |
 
 ### 5. Verify
 

@@ -9,12 +9,12 @@ or production paging.
 
 ## Contract
 
-| Knob | Value | Source |
-|------|-------|--------|
-| Packaging sample | loopback `sessionledger-webhook-placeholder` only | [`packaging/alertmanager/alertmanager.yml.sample`](../../packaging/alertmanager/alertmanager.yml.sample) |
-| Docs-tree routing (stubs) | Slack / PagerDuty `REPLACE_ME_*` + loopback default | [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml) |
-| SelfCheck | sample + docs anchors; no Alertmanager process; no network | [`scripts/alertmanager-soft-check.ps1`](../../scripts/alertmanager-soft-check.ps1) |
-| Live webhook / paging IDs | **unpaid** | Operators export `SL_ALERT_*` outside the repo |
+| Knob                      | Value                                                      | Source                                                                                                   |
+| ------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Packaging sample          | loopback `sessionledger-webhook-placeholder` only          | [`packaging/alertmanager/alertmanager.yml.sample`](../../packaging/alertmanager/alertmanager.yml.sample) |
+| Docs-tree routing (stubs) | Slack / PagerDuty `REPLACE_ME_*` + loopback default        | [`alerts/alertmanager.yaml`](alerts/alertmanager.yaml)                                                   |
+| SelfCheck                 | sample + docs anchors; no Alertmanager process; no network | [`scripts/alertmanager-soft-check.ps1`](../../scripts/alertmanager-soft-check.ps1)                       |
+| Live webhook / paging IDs | **unpaid**                                                 | Operators export `SL_ALERT_*` outside the repo                                                           |
 
 ## What this proves
 
@@ -61,11 +61,11 @@ alertmanager --config.file=packaging/alertmanager/alertmanager.yml.sample
 
 ## Soft Alertmanager SelfCheck
 
-| Gate | Status |
-|------|--------|
-| Soft Alertmanager SelfCheck | **done** |
-| Packaging sample (placeholder receiver, no secrets) | **done** |
-| Live webhook / production paging | **unpaid** |
+| Gate                                                | Status     |
+| --------------------------------------------------- | ---------- |
+| Soft Alertmanager SelfCheck                         | **done**   |
+| Packaging sample (placeholder receiver, no secrets) | **done**   |
+| Live webhook / production paging                    | **unpaid** |
 
 ## Related
 

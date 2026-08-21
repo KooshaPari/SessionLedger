@@ -39,11 +39,11 @@ Parity does **not** require:
 
 ## Parity matrix
 
-| Language | Tag (in `source_id`) | Anchor fixture | Corpus | Notes |
-|----------|----------------------|----------------|--------|-------|
-| Python | `python` | [`cursor-python-029.okf.json`](../reference/conformance/fixtures/cursor-python-029.okf.json) | cursor | pytest / mypy acceptance labels |
-| TypeScript | `typescript` | [`codex-typescript-023.okf.json`](../reference/conformance/fixtures/codex-typescript-023.okf.json) | codex | npm / eslint acceptance labels |
-| Go | `go` | [`forge-go-module-026.okf.json`](../reference/conformance/fixtures/forge-go-module-026.okf.json) | forge | `go test` / gRPC health acceptance |
+| Language   | Tag (in `source_id`) | Anchor fixture                                                                                     | Corpus | Notes                              |
+| ---------- | -------------------- | -------------------------------------------------------------------------------------------------- | ------ | ---------------------------------- |
+| Python     | `python`             | [`cursor-python-029.okf.json`](../reference/conformance/fixtures/cursor-python-029.okf.json)       | cursor | pytest / mypy acceptance labels    |
+| TypeScript | `typescript`         | [`codex-typescript-023.okf.json`](../reference/conformance/fixtures/codex-typescript-023.okf.json) | codex  | npm / eslint acceptance labels     |
+| Go         | `go`                 | [`forge-go-module-026.okf.json`](../reference/conformance/fixtures/forge-go-module-026.okf.json)   | forge  | `go test` / gRPC health acceptance |
 
 These three fixtures are also pinned in [`eval-manifest.json`](eval-manifest.json)
 `fixture_anchors`. Additional languages may be appended later; do not remove
@@ -65,14 +65,14 @@ For every matrix row:
 `scripts/cross-language-parity-check.ps1` compares OKF structural invariants
 across the matrix fixtures (hermetic JSON parse; no language runtimes):
 
-| Invariant | Rule |
-|-----------|------|
-| Dialect | Top-level `okf` is `"1.0"` on every row |
-| Identity | `source_id` equals filename stem; `provenance.source_id` matches |
-| Entities | Non-empty; unique `id`; each entity has `type` + non-empty `label` |
-| Shared core types | Every row includes `intent`, `acceptance`, `constraint`, `resource`, `state`, `gate` |
-| Relations | Non-empty; `source`/`target` resolve to entity ids; type ∈ v1.0 set; relation `provenance.source_id` matches |
-| Cross-lang fingerprint | Sorted shared-core type set is identical across Python / TypeScript / Go |
+| Invariant              | Rule                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Dialect                | Top-level `okf` is `"1.0"` on every row                                                                      |
+| Identity               | `source_id` equals filename stem; `provenance.source_id` matches                                             |
+| Entities               | Non-empty; unique `id`; each entity has `type` + non-empty `label`                                           |
+| Shared core types      | Every row includes `intent`, `acceptance`, `constraint`, `resource`, `state`, `gate`                         |
+| Relations              | Non-empty; `source`/`target` resolve to entity ids; type ∈ v1.0 set; relation `provenance.source_id` matches |
+| Cross-lang fingerprint | Sorted shared-core type set is identical across Python / TypeScript / Go                                     |
 
 Optional entity types (e.g. TypeScript `criteria`) may differ per language row;
 only the shared core fingerprint must match. This harness is the Wave-32
@@ -82,19 +82,19 @@ expansion beyond fixture-tag SSOT toward consumer-facing structural parity.
 
 Language-agnostic contract (see [`adapters/README.md`](../../adapters/README.md)):
 
-| Operation | Role |
-|-----------|------|
-| `load(path)` | Read UTF-8 OKF JSON |
+| Operation       | Role                                                  |
+| --------------- | ----------------------------------------------------- |
+| `load(path)`    | Read UTF-8 OKF JSON                                   |
 | `validate(doc)` | Enforce the same v1.0 structural rules as the harness |
-| `emit(doc)` | Pretty-print validated OKF JSON |
+| `emit(doc)`     | Pretty-print validated OKF JSON                       |
 
 Reference implementations (stdlib only):
 
-| Path | CLI |
-|------|-----|
-| [`adapters/python/okf_adapter.py`](../../adapters/python/okf_adapter.py) | `validate` / `emit` against a fixture path |
+| Path                                                                             | CLI                                                       |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [`adapters/python/okf_adapter.py`](../../adapters/python/okf_adapter.py)         | `validate` / `emit` against a fixture path                |
 | [`adapters/typescript/okf_adapter.ts`](../../adapters/typescript/okf_adapter.ts) | `validate` / `emit` via `node --experimental-strip-types` |
-| [`adapters/go/main.go`](../../adapters/go/main.go) | `validate` / `emit` against a fixture path (`go run .`) |
+| [`adapters/go/main.go`](../../adapters/go/main.go)                               | `validate` / `emit` against a fixture path (`go run .`)   |
 
 SelfCheck always verifies Python, TypeScript, and Go adapter sources and runs the
 Python adapter against `cursor-python-029.okf.json`. When Node ≥22 is installed
@@ -105,16 +105,16 @@ anchors still pass.
 
 ## Explicit non-goals
 
-| Item | Status | Rationale |
-|------|--------|-----------|
-| Harbor / Portage / Terminal-Bench | **N/A** | Product boundary — see [`EVAL_SCOPE.md`](../EVAL_SCOPE.md) |
-| Multi-env agent scoring | **N/A** | SessionLedger is ingest → distill → OKF → view |
-| Shipping language SDKs / package releases | **out of scope** | Adapter stub + fixture/SSOT evidence only |
+| Item                                      | Status           | Rationale                                                  |
+| ----------------------------------------- | ---------------- | ---------------------------------------------------------- |
+| Harbor / Portage / Terminal-Bench         | **N/A**          | Product boundary — see [`EVAL_SCOPE.md`](../EVAL_SCOPE.md) |
+| Multi-env agent scoring                   | **N/A**          | SessionLedger is ingest → distill → OKF → view             |
+| Shipping language SDKs / package releases | **out of scope** | Adapter stub + fixture/SSOT evidence only                  |
 
 ## Done gates
 
-| Gate | Status | Command |
-|------|--------|---------|
+| Gate                            | Status   | Command                                              |
+| ------------------------------- | -------- | ---------------------------------------------------- |
 | Cross-language parity SelfCheck | **done** | `scripts/cross-language-parity-check.ps1 -SelfCheck` |
 
 ## Machine verification (SelfCheck)

@@ -16,12 +16,12 @@ Related: [`tests/daemon_graph_tokio.rs`](../../tests/daemon_graph_tokio.rs),
 
 ## Contract
 
-| Stage | Tokio primitive | Production mirror |
-|-------|-----------------|-------------------|
-| Watcher enqueue | `mpsc::channel` | `CHANNEL_CAPACITY` in `sl-daemon` |
-| SSE fan-out | `broadcast::channel` | `BROADCAST_CAPACITY` in `sl-daemon` |
-| Lag | `RecvError::Lagged` / `TryRecvError::Lagged` | axum SSE subscribers |
-| Shutdown | cooperative `AtomicBool` cancel | daemon shutdown token |
+| Stage           | Tokio primitive                              | Production mirror                   |
+| --------------- | -------------------------------------------- | ----------------------------------- |
+| Watcher enqueue | `mpsc::channel`                              | `CHANNEL_CAPACITY` in `sl-daemon`   |
+| SSE fan-out     | `broadcast::channel`                         | `BROADCAST_CAPACITY` in `sl-daemon` |
+| Lag             | `RecvError::Lagged` / `TryRecvError::Lagged` | axum SSE subscribers                |
+| Shutdown        | cooperative `AtomicBool` cancel              | daemon shutdown token               |
 
 ## How to run
 
@@ -41,29 +41,29 @@ Hermetic wrapper: [`tests/daemon_graph_hard.rs`](../../tests/daemon_graph_hard.r
 
 ## CI / scheduling
 
-| Gate | Workflow | Mode | Evidence |
-|------|----------|------|----------|
-| Loom-shaped daemon graph | `loom-permutation.yml` | **blocking** | Retained loom models |
-| Daemon-graph SelfCheck | `daemon-graph-hard.yml` | **blocking** | Docs + tokio test anchors |
-| Live tokio graph suite | `daemon-graph-hard.yml` | **blocking** | `cargo test --test daemon_graph_tokio` |
+| Gate                     | Workflow                | Mode         | Evidence                               |
+| ------------------------ | ----------------------- | ------------ | -------------------------------------- |
+| Loom-shaped daemon graph | `loom-permutation.yml`  | **blocking** | Retained loom models                   |
+| Daemon-graph SelfCheck   | `daemon-graph-hard.yml` | **blocking** | Docs + tokio test anchors              |
+| Live tokio graph suite   | `daemon-graph-hard.yml` | **blocking** | `cargo test --test daemon_graph_tokio` |
 
 ### Soft vs hard gates
 
-| Gate | Status | Evidence |
-|------|--------|----------|
-| Live tokio mpsc/broadcast/SSE daemon graph ports | **done** | `tests/daemon_graph_tokio.rs` |
-| Blocking daemon-graph-hard CI workflow | **done** | `.github/workflows/daemon-graph-hard.yml` |
-| `tests/daemon_graph_hard.rs` cargo wrapper | **done** | Hermetic SelfCheck anchor smoke |
-| Process-level HTTP SSE soak under loom | **unpaid** | Effort M; beyond unit graph ports |
-| Shuttle crate in default Cargo graph | **unpaid** | C00 L7 residual |
+| Gate                                             | Status     | Evidence                                  |
+| ------------------------------------------------ | ---------- | ----------------------------------------- |
+| Live tokio mpsc/broadcast/SSE daemon graph ports | **done**   | `tests/daemon_graph_tokio.rs`             |
+| Blocking daemon-graph-hard CI workflow           | **done**   | `.github/workflows/daemon-graph-hard.yml` |
+| `tests/daemon_graph_hard.rs` cargo wrapper       | **done**   | Hermetic SelfCheck anchor smoke           |
+| Process-level HTTP SSE soak under loom           | **unpaid** | Effort M; beyond unit graph ports         |
+| Shuttle crate in default Cargo graph             | **unpaid** | C00 L7 residual                           |
 
 ## Done / unpaid
 
-| Item | Status |
-|------|--------|
-| Policy SSOT + JSON manifest | **done** |
-| Live tokio pipeline conservation | **done** |
-| Lagged SSE subscriber recovery | **done** |
-| Shutdown stops mpsc enqueue | **done** |
-| Blocking `daemon-graph-hard.yml` | **done** |
+| Item                                   | Status                       |
+| -------------------------------------- | ---------------------------- |
+| Policy SSOT + JSON manifest            | **done**                     |
+| Live tokio pipeline conservation       | **done**                     |
+| Lagged SSE subscriber recovery         | **done**                     |
+| Shutdown stops mpsc enqueue            | **done**                     |
+| Blocking `daemon-graph-hard.yml`       | **done**                     |
 | Process-level HTTP SSE soak under loom | **unpaid** — C00 L7 residual |

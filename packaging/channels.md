@@ -7,17 +7,17 @@ SessionLedger artifacts. It complements the local packaging targets in
 
 ## Channel Status
 
-| Channel | Status | Artifact / command |
-|---------|--------|--------------------|
-| Cargo from source | **Active for developers** | `cargo install --path crates/sl-daemon --locked`; or `cargo install --git https://github.com/KooshaPari/SessionLedger --locked --path crates/sl-daemon` |
-| GitHub Releases archives | **Active** | Tagged `v*` releases publish `sl-viewer-<tag>-<target>.tar.gz` / `.zip`, checksums, SBOM, and best-effort provenance |
-| curl / irm install scripts | **Active** | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` archives from GitHub Releases |
-| Homebrew formula | **Manifests in-repo (not a live tap)** | Template at [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb); fill digests with [`scripts/fill-packaging-checksums.ps1`](../scripts/fill-packaging-checksums.ps1), then follow [`docs/ops/brew-winget-publish.md`](../docs/ops/brew-winget-publish.md) |
-| winget manifests | **Manifests in-repo (not on winget yet)** | Templates under [`packaging/winget/`](winget/); same fill script + publish doc before opening a `microsoft/winget-pkgs` PR |
-| Windows installable ZIP | **Partial, CI-smoked** | Release ZIP is smoke-tested; local package adds PowerShell install/uninstall scripts |
-| Linux AppImage / `.deb` | **Partial local scaffolds** | Developer-only scripts under `packaging/linux/`; not release channels |
-| Scoop bucket | **Future placeholder** | No manifest, bucket, or update automation exists yet |
-| crates.io | **Future placeholder** | No crates are published to crates.io yet |
+| Channel                    | Status                                    | Artifact / command                                                                                                                                                                                                                                                       |
+| -------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cargo from source          | **Active for developers**                 | `cargo install --path crates/sl-daemon --locked`; or `cargo install --git https://github.com/KooshaPari/SessionLedger --locked --path crates/sl-daemon`                                                                                                                  |
+| GitHub Releases archives   | **Active**                                | Tagged `v*` releases publish `sl-viewer-<tag>-<target>.tar.gz` / `.zip`, checksums, SBOM, and best-effort provenance                                                                                                                                                     |
+| curl / irm install scripts | **Active**                                | `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1` (Windows) install checksum-verified `sl-viewer` archives from GitHub Releases                                                                                                                               |
+| Homebrew formula           | **Manifests in-repo (not a live tap)**    | Template at [`packaging/homebrew/sessionledger.rb`](homebrew/sessionledger.rb); fill digests with [`scripts/fill-packaging-checksums.ps1`](../scripts/fill-packaging-checksums.ps1), then follow [`docs/ops/brew-winget-publish.md`](../docs/ops/brew-winget-publish.md) |
+| winget manifests           | **Manifests in-repo (not on winget yet)** | Templates under [`packaging/winget/`](winget/); same fill script + publish doc before opening a `microsoft/winget-pkgs` PR                                                                                                                                               |
+| Windows installable ZIP    | **Partial, CI-smoked**                    | Release ZIP is smoke-tested; local package adds PowerShell install/uninstall scripts                                                                                                                                                                                     |
+| Linux AppImage / `.deb`    | **Partial local scaffolds**               | Developer-only scripts under `packaging/linux/`; not release channels                                                                                                                                                                                                    |
+| Scoop bucket               | **Future placeholder**                    | No manifest, bucket, or update automation exists yet                                                                                                                                                                                                                     |
+| crates.io                  | **Future placeholder**                    | No crates are published to crates.io yet                                                                                                                                                                                                                                 |
 
 Native MSI / PKG installer lanes (when concurrent) live under `packaging/windows`
 and `packaging/macos` — see [`packaging/README.md`](README.md). The curl/irm

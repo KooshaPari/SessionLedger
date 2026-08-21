@@ -4,10 +4,10 @@ Animated SVG + MP4 showcasing the [Lab-Coat palette](../../../assets/tokens.css)
 
 ## Files
 
-| File | Purpose |
-|---|---|
+| File       | Purpose                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- |
 | `demo.svg` | 480×270 animated SVG — Erlenmeyer flask + bubbles + Bunsen burner + session-bundle bars (looped CSS animation, ~5s) |
-| `demo.mp4` | H.264/MP4 rendered from `demo.svg` via playwright + ffmpeg (24fps, 5s loop) |
+| `demo.mp4` | H.264/MP4 rendered from `demo.svg` via playwright + ffmpeg (24fps, 5s loop)                                         |
 
 ## Palette (Lab-Coat — cobalt + orange-500)
 

@@ -25,5 +25,6 @@ body:
     validations: { required: false }
   - type: input
     id: surface
-    attributes: { label: Surface, description: "sl-viewer / sl-daemon / CLI / docs" }
+    attributes:
+      { label: Surface, description: "sl-viewer / sl-daemon / CLI / docs" }
     validations: { required: false }

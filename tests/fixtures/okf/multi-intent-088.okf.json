@@ -28,12 +28,18 @@
     }
   ],
   "relations": [
-    { "source": "intent-0", "target": "acceptance-0",
+    {
+      "source": "intent-0",
+      "target": "acceptance-0",
       "type": "verified_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-multi-088" } },
-    { "source": "intent-1", "target": "constraint-0",
+      "provenance": { "corpus": "forge", "source_id": "forge-multi-088" }
+    },
+    {
+      "source": "intent-1",
+      "target": "constraint-0",
       "type": "bounded_by",
-      "provenance": { "corpus": "forge", "source_id": "forge-multi-088" } }
+      "provenance": { "corpus": "forge", "source_id": "forge-multi-088" }
+    }
   ],
   "provenance": { "corpus": "forge", "source_id": "forge-multi-088" }
 }

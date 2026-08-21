@@ -28,18 +28,18 @@ Fast inner loop: `cargo test --manifest-path crates/sl-daemon/Cargo.toml` /
 
 ## Key files
 
-| Path | What |
-|------|------|
-| `crates/sl-daemon` | watch → compile session bundles (the compiler daemon) |
-| `crates/sl-viewer` | Dioxus 0.6 desktop viewer (bundle/history/memory tabs) |
-| `docs/functional_requirements.md` | FR-NNN catalog + acceptance refs |
-| `docs/USER_JOURNEYS.md` | Named user journeys mapped to FRs and existing tests |
-| `PLAN.md` / `WORK_DAG.md` | claimable tasks + dependency graph |
-| `llms.txt` | LLM-friendly repo map + build/test commands |
-| `docs/ops/runbook.md` | `make dev`, healthz :8080, common failures |
-| `docs/ops/feedback-budgets.md` | measured check/test/`make lint` loop budgets + nextest |
-| `README.md` | overview + Releases link | `.github/workflows/release.yml` | per-OS viewer build |
-| `docs/adr/0006-no-mcp-server.md` | Explicit N/A: not an MCP host/server; no MCP pin list (C06 L57) |
+| Path                              | What                                                            |
+| --------------------------------- | --------------------------------------------------------------- |
+| `crates/sl-daemon`                | watch → compile session bundles (the compiler daemon)           |
+| `crates/sl-viewer`                | Dioxus 0.6 desktop viewer (bundle/history/memory tabs)          |
+| `docs/functional_requirements.md` | FR-NNN catalog + acceptance refs                                |
+| `docs/USER_JOURNEYS.md`           | Named user journeys mapped to FRs and existing tests            |
+| `PLAN.md` / `WORK_DAG.md`         | claimable tasks + dependency graph                              |
+| `llms.txt`                        | LLM-friendly repo map + build/test commands                     |
+| `docs/ops/runbook.md`             | `make dev`, healthz :8080, common failures                      |
+| `docs/ops/feedback-budgets.md`    | measured check/test/`make lint` loop budgets + nextest          |
+| `README.md`                       | overview + Releases link                                        | `.github/workflows/release.yml` | per-OS viewer build |
+| `docs/adr/0006-no-mcp-server.md`  | Explicit N/A: not an MCP host/server; no MCP pin list (C06 L57) |
 
 ## Forbidden
 

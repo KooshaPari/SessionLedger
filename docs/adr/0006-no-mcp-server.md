@@ -41,8 +41,8 @@ explicit decision), not an MCP scaffold.
 
 ## Revisit triggers
 
-| Trigger | Why |
-|---------|-----|
-| SessionLedger hosts or exposes MCP tools | Pin list + provenance become required |
-| Product ships an MCP server crate or binary | Superseding ADR before adding manifests |
-| Explicit customer requirement for MCP integration | Record scope and pin policy first |
+| Trigger                                           | Why                                     |
+| ------------------------------------------------- | --------------------------------------- |
+| SessionLedger hosts or exposes MCP tools          | Pin list + provenance become required   |
+| Product ships an MCP server crate or binary       | Superseding ADR before adding manifests |
+| Explicit customer requirement for MCP integration | Record scope and pin policy first       |

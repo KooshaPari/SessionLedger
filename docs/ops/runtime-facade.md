@@ -17,26 +17,26 @@ Equivalent to `process-compose -f process-compose.yaml up` (daemon + viewer with
 `/readyz` readiness). Install
 [process-compose](https://github.com/F1bonacc1/process-compose) if missing.
 
-| Env | Effect |
-|-----|--------|
-| `SL_RUNTIME` unset / `process-compose` / `pc` / `default` | Root `process-compose.yaml` |
-| `SL_RUNTIME=pheno` (`pheno-compose`, `nvms`) | Delegate to `pheno-compose` or `nvms` CLI |
-| `SL_RUNTIME=podman` | `podman-compose` if present, else `podman build` + `run` from `Containerfile` |
-| `SL_RUNTIME=wsl` | Re-enter WSL and run the shell facade with process-compose |
-| `SL_RUNTIME=apple` / `container` | Apple `container` build/run (`crates/sl-daemon/Containerfile`) |
+| Env                                                       | Effect                                                                        |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `SL_RUNTIME` unset / `process-compose` / `pc` / `default` | Root `process-compose.yaml`                                                   |
+| `SL_RUNTIME=pheno` (`pheno-compose`, `nvms`)              | Delegate to `pheno-compose` or `nvms` CLI                                     |
+| `SL_RUNTIME=podman`                                       | `podman-compose` if present, else `podman build` + `run` from `Containerfile` |
+| `SL_RUNTIME=wsl`                                          | Re-enter WSL and run the shell facade with process-compose                    |
+| `SL_RUNTIME=apple` / `container`                          | Apple `container` build/run (`crates/sl-daemon/Containerfile`)                |
 
 Extra args after the script are forwarded to the selected engine (`up`,
 `podman run`, etc.).
 
 ## Engine matrix
 
-| Engine | Host | Starts | Hard dependency | Notes |
-|--------|------|--------|-----------------|-------|
-| **process-compose** | Win / macOS / Linux | `sl-daemon` + `sl-viewer` | `process-compose` on `PATH` | **Default.** Native cargo processes; no OCI. |
-| **PhenoCompose / nvms** | Win / macOS / Linux | Via external CLI | `pheno-compose` or `nvms` | Not vendored. Stub: [`compose/pheno-compose.yaml`](../../compose/pheno-compose.yaml). Clear error + install URLs if missing. |
-| **Podman** | Win / macOS / Linux | `sl-daemon` image | `podman` | Uses root or `crates/sl-daemon` `Containerfile`. Optional `compose/podman-compose.yaml` if you add one. |
-| **WSL** | Windows + WSL2 | Same as Linux path inside distro | `wsl.exe` | Guidance + re-exec; install process-compose/podman **inside** the distro. |
-| **Apple Container** | macOS | `sl-daemon` image | `container` CLI | Workspace-preferred OCI on Apple Silicon; see daemon README. |
+| Engine                  | Host                | Starts                           | Hard dependency             | Notes                                                                                                                        |
+| ----------------------- | ------------------- | -------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **process-compose**     | Win / macOS / Linux | `sl-daemon` + `sl-viewer`        | `process-compose` on `PATH` | **Default.** Native cargo processes; no OCI.                                                                                 |
+| **PhenoCompose / nvms** | Win / macOS / Linux | Via external CLI                 | `pheno-compose` or `nvms`   | Not vendored. Stub: [`compose/pheno-compose.yaml`](../../compose/pheno-compose.yaml). Clear error + install URLs if missing. |
+| **Podman**              | Win / macOS / Linux | `sl-daemon` image                | `podman`                    | Uses root or `crates/sl-daemon` `Containerfile`. Optional `compose/podman-compose.yaml` if you add one.                      |
+| **WSL**                 | Windows + WSL2      | Same as Linux path inside distro | `wsl.exe`                   | Guidance + re-exec; install process-compose/podman **inside** the distro.                                                    |
+| **Apple Container**     | macOS               | `sl-daemon` image                | `container` CLI             | Workspace-preferred OCI on Apple Silicon; see daemon README.                                                                 |
 
 On every run the scripts print an **engine probe** (what is / is not on `PATH`)
 so operators can see optional modes without enabling them.

@@ -4,21 +4,21 @@ Short reference for the in-viewer keyboard help overlay, command palette, and re
 
 ## Open help in the viewer
 
-| Action | Result |
-|--------|--------|
-| Press `?` | Toggle the keyboard help overlay (ignored while focus is in a text field). |
-| Click **Help (?)** | Open or close the same overlay from the sidebar. |
-| Press `Escape` | Close the overlay and return focus to the Help control. |
+| Action             | Result                                                                     |
+| ------------------ | -------------------------------------------------------------------------- |
+| Press `?`          | Toggle the keyboard help overlay (ignored while focus is in a text field). |
+| Click **Help (?)** | Open or close the same overlay from the sidebar.                           |
+| Press `Escape`     | Close the overlay and return focus to the Help control.                    |
 
 The overlay is an accessible dialog (`role="dialog"`, `aria-modal="true"`) listing the
 current viewer shortcuts. It is implemented in `crates/sl-viewer/src/help_overlay.rs`.
 
 ## Command palette
 
-| Action | Result |
-|--------|--------|
+| Action                   | Result                                                 |
+| ------------------------ | ------------------------------------------------------ |
 | Press `Cmd+K` / `Ctrl+K` | Toggle the command palette (works in text fields too). |
-| Press `Escape` | Close the palette. |
+| Press `Escape`           | Close the palette.                                     |
 
 The palette ships six commands — focus search, open keyboard help, next/previous
 view tab, clear search, and toggle theme — in

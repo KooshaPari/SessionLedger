@@ -67,12 +67,12 @@ stable requirement ID. Keep the ID at the beginning of the story title and
 copy its acceptance references from
 [`docs/functional_requirements.md`](../functional_requirements.md).
 
-| AgilePlus epic | FR stories | Companion NFR stories |
-|---|---|---|
-| Ingest and contracts | FR-001, FR-002, FR-013 | Lossless capture; schema compatibility and validation safety |
-| Browse and understand | FR-003, FR-005, FR-007, FR-008, FR-010 | Bounded query latency; accessible and responsive desktop UI |
-| Replay and continue | FR-004, FR-011, FR-012 | Deterministic replay; crash-safe continuation and data integrity |
-| Lifecycle and operations | FR-006, FR-014, FR-015 | Archive durability; service availability; telemetry and secret hygiene |
+| AgilePlus epic           | FR stories                             | Companion NFR stories                                                  |
+| ------------------------ | -------------------------------------- | ---------------------------------------------------------------------- |
+| Ingest and contracts     | FR-001, FR-002, FR-013                 | Lossless capture; schema compatibility and validation safety           |
+| Browse and understand    | FR-003, FR-005, FR-007, FR-008, FR-010 | Bounded query latency; accessible and responsive desktop UI            |
+| Replay and continue      | FR-004, FR-011, FR-012                 | Deterministic replay; crash-safe continuation and data integrity       |
+| Lifecycle and operations | FR-006, FR-014, FR-015                 | Archive durability; service availability; telemetry and secret hygiene |
 
 FR status maps to AgilePlus status as follows: `done` to `done`, `partial` to
 `in_progress`, and `todo` to `todo`. NFR stories should cite measurable

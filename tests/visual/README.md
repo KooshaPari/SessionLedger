@@ -21,32 +21,32 @@ The contract validator is CI-safe and the Playwright screenshot comparison asser
 
 Capture or eyeball each surface (store approved PNGs under `tests/visual/golden/`):
 
-| ID | Surface | Expect |
-|----|---------|--------|
-| E1 | Bundle detail, nothing selected | Muted “Select a bundle…” empty-state; not error styling |
-| E2 | History detail, nothing selected | Muted “Select a session…” empty-state |
-| E3 | Timeline / list with zero rows | “No bundles…” (or equivalent); calm, not red |
-| E4 | Search with no matches | Zero-match copy + clear path; not `.search-error` |
-| E5 | First-run, no corpus ingested | Short why + cobalt CTA; not error styling or live orange |
+| ID  | Surface                          | Expect                                                   |
+| --- | -------------------------------- | -------------------------------------------------------- |
+| E1  | Bundle detail, nothing selected  | Muted “Select a bundle…” empty-state; not error styling  |
+| E2  | History detail, nothing selected | Muted “Select a session…” empty-state                    |
+| E3  | Timeline / list with zero rows   | “No bundles…” (or equivalent); calm, not red             |
+| E4  | Search with no matches           | Zero-match copy + clear path; not `.search-error`        |
+| E5  | First-run, no corpus ingested    | Short why + cobalt CTA; not error styling or live orange |
 
 - [ ] E1–E5 pass copy + color rules in VISUAL_SPEC §2.
 
 ## Loading states
 
-| ID | Surface | Expect |
-|----|---------|--------|
-| L1 | Search in flight | “Searching…” / “Loading…”; control not layout-shifting wildly |
-| L2 | List/detail skeleton (when implemented) | Content-shaped placeholders; cobalt-neutral shimmer, not orange/red |
+| ID  | Surface                                 | Expect                                                              |
+| --- | --------------------------------------- | ------------------------------------------------------------------- |
+| L1  | Search in flight                        | “Searching…” / “Loading…”; control not layout-shifting wildly       |
+| L2  | List/detail skeleton (when implemented) | Content-shaped placeholders; cobalt-neutral shimmer, not orange/red |
 
 - [ ] L1 pass; L2 pass or N/A if skeletons not yet shipped.
 
 ## Error states
 
-| ID | Surface | Expect |
-|----|---------|--------|
-| R1 | Search fetch failure | Error region + readable message; Retry or recoverable path |
-| R2 | Replay / stream failure | `.status-error` (or equivalent) + Retry |
-| R3 | Error color | Warm red on panel — **not** live orange alone |
+| ID  | Surface                 | Expect                                                     |
+| --- | ----------------------- | ---------------------------------------------------------- |
+| R1  | Search fetch failure    | Error region + readable message; Retry or recoverable path |
+| R2  | Replay / stream failure | `.status-error` (or equivalent) + Retry                    |
+| R3  | Error color             | Warm red on panel — **not** live orange alone              |
 
 - [ ] R1–R3 pass VISUAL_SPEC §4.
 

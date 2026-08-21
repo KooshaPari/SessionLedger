@@ -12,15 +12,15 @@ corpus depth).
 SessionLedger is a **session ingest → distill → OKF → view** pipeline. Eval
 work that belongs here is limited to:
 
-| Surface | What we maintain | Where |
-|---------|------------------|-------|
-| OKF conformance corpus | Hand-vetted `.okf.json` fixtures for parsers / validators / renderers | [`docs/reference/conformance/fixtures/`](reference/conformance/fixtures/) |
-| Spec + examples | Structural rules and worked shapes | [`OKF-SPEC.md`](reference/OKF-SPEC.md), [`OKF-EXAMPLES.md`](reference/OKF-EXAMPLES.md) |
-| Round-trip / unit tests | Compile and parse assertions against fixtures | `tests/`, crate unit tests |
-| Pipeline performance | Criterion measurements for distill compile, OKF export, and injection rendering | `benches/pipeline.rs` |
-| Eval reproducibility | Lockfile SHA, fixture count, MSRV, and bench policy anchors | `docs/ops/eval-manifest.json`; `scripts/eval-repro-check.ps1` |
+| Surface                       | What we maintain                                                                       | Where                                                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| OKF conformance corpus        | Hand-vetted `.okf.json` fixtures for parsers / validators / renderers                  | [`docs/reference/conformance/fixtures/`](reference/conformance/fixtures/)                                      |
+| Spec + examples               | Structural rules and worked shapes                                                     | [`OKF-SPEC.md`](reference/OKF-SPEC.md), [`OKF-EXAMPLES.md`](reference/OKF-EXAMPLES.md)                         |
+| Round-trip / unit tests       | Compile and parse assertions against fixtures                                          | `tests/`, crate unit tests                                                                                     |
+| Pipeline performance          | Criterion measurements for distill compile, OKF export, and injection rendering        | `benches/pipeline.rs`                                                                                          |
+| Eval reproducibility          | Lockfile SHA, fixture count, MSRV, and bench policy anchors                            | `docs/ops/eval-manifest.json`; `scripts/eval-repro-check.ps1`                                                  |
 | Cross-language fixture parity | Python / TypeScript / Go OKF shapes + structural invariant harness over those fixtures | [`docs/ops/cross-language-parity.md`](ops/cross-language-parity.md); `scripts/cross-language-parity-check.ps1` |
-| Quality gates | Coverage / lint / mutation as configured | `.qgate.toml`, CI |
+| Quality gates                 | Coverage / lint / mutation as configured                                               | `.qgate.toml`, CI                                                                                              |
 
 These surfaces verify that SessionLedger emits and consumes valid OKF. They
 are **not** multi-environment agent benchmarks.
@@ -54,12 +54,12 @@ Harbor and multi-environment agent evaluation remain **N/A**.
 
 ## Intentional N/A — Harbor / agent-eval pipeline
 
-| Item | Status | Rationale |
-|------|--------|-----------|
-| Harbor env providers | **N/A** | SessionLedger is not an agent-eval harness. |
-| Portage / Terminal-Bench (or similar 2+/6-env agent-eval pipelines) | **N/A** | Product roadmap is ingest→distill→view ([`DESIGN.md`](DESIGN.md)); multi-env agent scoring is a different product class. |
-| Per-eval / per-route token-burn ledgers tied to Harbor runs | **N/A** | Token fields on bundles and `/api/metrics` serve ops, not eval-cost accounting. |
-| Org-wide “which agent-eval runs when” ADRs | **N/A** (deferred) | OKF fixture governance is enough for this repo; org-wide eval policy is out of tree. |
+| Item                                                                | Status             | Rationale                                                                                                                |
+| ------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Harbor env providers                                                | **N/A**            | SessionLedger is not an agent-eval harness.                                                                              |
+| Portage / Terminal-Bench (or similar 2+/6-env agent-eval pipelines) | **N/A**            | Product roadmap is ingest→distill→view ([`DESIGN.md`](DESIGN.md)); multi-env agent scoring is a different product class. |
+| Per-eval / per-route token-burn ledgers tied to Harbor runs         | **N/A**            | Token fields on bundles and `/api/metrics` serve ops, not eval-cost accounting.                                          |
+| Org-wide “which agent-eval runs when” ADRs                          | **N/A** (deferred) | OKF fixture governance is enough for this repo; org-wide eval policy is out of tree.                                     |
 
 Audit cluster C08 (L76 Agent-Eval Pipeline) correctly notes the absence of
 Harbor/portage/Terminal-Bench paths. That absence is a **documented product

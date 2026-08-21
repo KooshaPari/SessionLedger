@@ -119,21 +119,21 @@ protected-environment SelfCheck from `security.yml`:
 pwsh ./scripts/slsa-protected-env-check.ps1 -SelfCheck
 ```
 
-| Gate | Status | Evidence / next step |
-|------|--------|----------------------|
-| Offline `sl-daemon` fetch+build | **done** | `scripts/hermetic-check.ps1` + `hermetic.yml` |
-| Repository-maintained digest-pinned builder image | **done** | `ci/hermetic-builder/Containerfile` + `hermetic-builder.json` + container job |
-| `SOURCE_DATE_EPOCH` release wiring | **done** | `repro-check.ps1 -PolicyOnly` |
-| GHCR build + keyless cosign + attest + release verify | **done** | `release.yml` `oci-image` (blocking on canonical repo; explicit skip on forks) |
-| Verify-on-deploy (cosign / attestation) | **done (deploy-time)** | `scripts/oci-cosign-verify.ps1` + [distribution.md](distribution.md#verify-an-oci-image-cosign) |
-| Isolated container rebuild evidence | **done** | `reusable-hermetic-build.yml` + `hermetic.yml` `sl-daemon-offline-container` caller (digest-pinned GHCR image; **single builder** — not two-independent-builder L3) |
-| Reusable-workflow caller SHA pin | **done** | `reusable-hermetic-build.yml` + [`reusable-hermetic-pin.md`](reusable-hermetic-pin.md) + `scripts/reusable-provenance-check.ps1 -SelfCheck` |
-| Protected GitHub Environment for releases | unpaid | [`slsa-protected-environment.md`](slsa-protected-environment.md) SSOT — create `release` Environment with required reviewers; bind `oci-image` / publish jobs with `environment:` |
-| Immutable / ephemeral runners for release | unpaid | Pin self-hosted or hardened runners; avoid mutable `ubuntu-latest` as sole L3 claim |
-| Vendored deps + two-builder rebuild | unpaid | Vendor or remote-cache proof; rebuild on a second independent builder |
-| System package / linker snapshot | unpaid | Lock OS packages inside the builder image beyond the Rust toolchain pin |
-| SLSA L3 isolation SelfCheck | **done** | `scripts/slsa-isolation-check.ps1 -SelfCheck` (+ soft CI job; `hermetic-isolation-check.ps1` delegates) |
-| SLSA protected-environment SelfCheck | **done** | [`slsa-protected-environment.md`](slsa-protected-environment.md) + `scripts/slsa-protected-env-check.ps1 -SelfCheck` (+ blocking `security.yml` job) |
+| Gate                                                  | Status                 | Evidence / next step                                                                                                                                                              |
+| ----------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Offline `sl-daemon` fetch+build                       | **done**               | `scripts/hermetic-check.ps1` + `hermetic.yml`                                                                                                                                     |
+| Repository-maintained digest-pinned builder image     | **done**               | `ci/hermetic-builder/Containerfile` + `hermetic-builder.json` + container job                                                                                                     |
+| `SOURCE_DATE_EPOCH` release wiring                    | **done**               | `repro-check.ps1 -PolicyOnly`                                                                                                                                                     |
+| GHCR build + keyless cosign + attest + release verify | **done**               | `release.yml` `oci-image` (blocking on canonical repo; explicit skip on forks)                                                                                                    |
+| Verify-on-deploy (cosign / attestation)               | **done (deploy-time)** | `scripts/oci-cosign-verify.ps1` + [distribution.md](distribution.md#verify-an-oci-image-cosign)                                                                                   |
+| Isolated container rebuild evidence                   | **done**               | `reusable-hermetic-build.yml` + `hermetic.yml` `sl-daemon-offline-container` caller (digest-pinned GHCR image; **single builder** — not two-independent-builder L3)               |
+| Reusable-workflow caller SHA pin                      | **done**               | `reusable-hermetic-build.yml` + [`reusable-hermetic-pin.md`](reusable-hermetic-pin.md) + `scripts/reusable-provenance-check.ps1 -SelfCheck`                                       |
+| Protected GitHub Environment for releases             | unpaid                 | [`slsa-protected-environment.md`](slsa-protected-environment.md) SSOT — create `release` Environment with required reviewers; bind `oci-image` / publish jobs with `environment:` |
+| Immutable / ephemeral runners for release             | unpaid                 | Pin self-hosted or hardened runners; avoid mutable `ubuntu-latest` as sole L3 claim                                                                                               |
+| Vendored deps + two-builder rebuild                   | unpaid                 | Vendor or remote-cache proof; rebuild on a second independent builder                                                                                                             |
+| System package / linker snapshot                      | unpaid                 | Lock OS packages inside the builder image beyond the Rust toolchain pin                                                                                                           |
+| SLSA L3 isolation SelfCheck                           | **done**               | `scripts/slsa-isolation-check.ps1 -SelfCheck` (+ soft CI job; `hermetic-isolation-check.ps1` delegates)                                                                           |
+| SLSA protected-environment SelfCheck                  | **done**               | [`slsa-protected-environment.md`](slsa-protected-environment.md) + `scripts/slsa-protected-env-check.ps1 -SelfCheck` (+ blocking `security.yml` job)                              |
 
 **Policy:** On the canonical repository, `oci-image` is release-blocking when
 `packages:write` and OIDC are available. Forks skip OCI with an explicit reason

@@ -1,1 +1,20 @@
-{"rustc":1562763049001146449,"features":"[\"std\"]","declared_features":"[\"std\", \"sys_rng\", \"wasm_js\"]","target":2835126046236718539,"profile":14646319430865968450,"path":9363142959194921271,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\getrandom-82c392a0eb2f89e9\\dep-build-script-build-script-build","checksum":false}}],"rustflags":["-D","warnings"],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 1562763049001146449,
+  "features": "[\"std\"]",
+  "declared_features": "[\"std\", \"sys_rng\", \"wasm_js\"]",
+  "target": 2835126046236718539,
+  "profile": 14646319430865968450,
+  "path": 9363142959194921271,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\getrandom-82c392a0eb2f89e9\\dep-build-script-build-script-build",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": ["-D", "warnings"],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

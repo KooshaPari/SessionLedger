@@ -38,14 +38,14 @@ pwsh -NoProfile -File scripts/branch-protection-check.ps1 -Strict
 
 ### Soft-fail behavior
 
-| Condition | Default exit | Notes |
-|-----------|--------------|-------|
-| `gh` missing | 0 (SKIP) | Install GitHub CLI or use CI job |
-| No `GH_TOKEN` / `GITHUB_TOKEN` and `gh auth` missing | 0 (SKIP) | Export a token with admin read on protection |
-| HTTP 401/403 (insufficient scope) | 0 (SKIP) | Classic protection API needs admin |
-| HTTP 404 "Branch not protected" | 0 (SKIP) | Enable protection; `-Strict` exits 1 |
-| API OK, core controls present | 0 (PASS) | Signatures + PR reviews required |
-| API OK, core controls missing | 0 soft / 1 with `-Strict` | Docs-only soft path for OSS CI |
+| Condition                                            | Default exit              | Notes                                        |
+| ---------------------------------------------------- | ------------------------- | -------------------------------------------- |
+| `gh` missing                                         | 0 (SKIP)                  | Install GitHub CLI or use CI job             |
+| No `GH_TOKEN` / `GITHUB_TOKEN` and `gh auth` missing | 0 (SKIP)                  | Export a token with admin read on protection |
+| HTTP 401/403 (insufficient scope)                    | 0 (SKIP)                  | Classic protection API needs admin           |
+| HTTP 404 "Branch not protected"                      | 0 (SKIP)                  | Enable protection; `-Strict` exits 1         |
+| API OK, core controls present                        | 0 (PASS)                  | Signatures + PR reviews required             |
+| API OK, core controls missing                        | 0 soft / 1 with `-Strict` | Docs-only soft path for OSS CI               |
 
 Core controls for PASS: **required signatures** and **required pull request
 reviews**. `enforce_admins` and required status checks are reported but not

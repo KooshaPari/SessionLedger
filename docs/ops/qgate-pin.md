@@ -6,12 +6,12 @@ SessionLedger calls the shared Phenotype quality gate from
 
 ## Current pin
 
-| Field | Value |
-|-------|-------|
-| Workflow | `KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml` |
-| Commit SHA | `c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad` |
-| Recorded tip | phenotype-tooling `main` as of 2026-07-13 |
-| `qgate-ref` input | same SHA (builds the `qgate` binary from that commit) |
+| Field             | Value                                                                      |
+| ----------------- | -------------------------------------------------------------------------- |
+| Workflow          | `KooshaPari/phenotype-tooling/.github/workflows/reusable/quality-gate.yml` |
+| Commit SHA        | `c43cc4af2cbcc2bb2df37f3e4ab78cc5d8c1b3ad`                                 |
+| Recorded tip      | phenotype-tooling `main` as of 2026-07-13                                  |
+| `qgate-ref` input | same SHA (builds the `qgate` binary from that commit)                      |
 
 Both the `uses: …@<sha>` ref and the `qgate-ref` workflow input must be full
 40-character commit SHAs. Do not use `@main`, branch names, or moving tags.

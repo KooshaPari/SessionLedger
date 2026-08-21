@@ -6,23 +6,23 @@
 
 ## What's done (machine-resolvable portion)
 
-| Artifact | Path | Status |
-|----------|------|--------|
-| Platform allocator feature flags | `crates/sl-daemon/Cargo.toml:18-32` | ✅ on `main` |
-| SelfCheck hermetic validator | `scripts/jemalloc-default-on-check.ps1` | ✅ on `main` |
-| Hard evidence runs | `.github/workflows/jemalloc-hard.yml`, `jemalloc-default-on-hard.yml` | ✅ on `main` |
-| Policy manifest | `docs/ops/jemalloc-default-on.json` | ✅ on `main` |
-| Runbook (this doc) | `docs/ops/w44-b2-windows-allocator-prod.md` | ✅ this commit |
+| Artifact                         | Path                                                                  | Status         |
+| -------------------------------- | --------------------------------------------------------------------- | -------------- |
+| Platform allocator feature flags | `crates/sl-daemon/Cargo.toml:18-32`                                   | ✅ on `main`   |
+| SelfCheck hermetic validator     | `scripts/jemalloc-default-on-check.ps1`                               | ✅ on `main`   |
+| Hard evidence runs               | `.github/workflows/jemalloc-hard.yml`, `jemalloc-default-on-hard.yml` | ✅ on `main`   |
+| Policy manifest                  | `docs/ops/jemalloc-default-on.json`                                   | ✅ on `main`   |
+| Runbook (this doc)               | `docs/ops/w44-b2-windows-allocator-prod.md`                           | ✅ this commit |
 
 ## What remains (human-gated)
 
-| Step | Owner | Gating reason |
-|------|-------|---------------|
-| 1. Pick the rollout window (low-traffic + on-call coverage) | human | business calendar |
-| 2. Stage prod-canary to 10% of Windows fleet | human + automated canary | infra SRE |
-| 3. Run the rollback drill (kill binary mid-alloc, verify process exits cleanly under mimalloc) | human | requires prod-like load |
-| 4. Review SLO drift report (p99 latency, RSS, allocations/sec) | human | requires prod telemetry |
-| 5. Promote to 100% Windows fleet | human | requires clean canary |
+| Step                                                                                           | Owner                    | Gating reason           |
+| ---------------------------------------------------------------------------------------------- | ------------------------ | ----------------------- |
+| 1. Pick the rollout window (low-traffic + on-call coverage)                                    | human                    | business calendar       |
+| 2. Stage prod-canary to 10% of Windows fleet                                                   | human + automated canary | infra SRE               |
+| 3. Run the rollback drill (kill binary mid-alloc, verify process exits cleanly under mimalloc) | human                    | requires prod-like load |
+| 4. Review SLO drift report (p99 latency, RSS, allocations/sec)                                 | human                    | requires prod telemetry |
+| 5. Promote to 100% Windows fleet                                                               | human                    | requires clean canary   |
 
 ## Machine verifier
 

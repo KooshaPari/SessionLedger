@@ -5,14 +5,14 @@ Implementation of viewer CSS/components is owned by other lanes (`crates/sl-view
 
 ## Sources of truth
 
-| Asset | Role |
-|-------|------|
-| [`assets/tokens.css`](../assets/tokens.css) | Canonical Lab-Coat hex tokens + `.family-lab-coat` aliases |
-| [`assets/README-tokens.md`](../assets/README-tokens.md) | Adoption / re-sync notes |
-| [`docs/a11y/design-tokens.md`](a11y/design-tokens.md) | Viewer token SSOT wiring (Rust + CSS) |
-| [`assets/brand/README.md`](../assets/brand/README.md) | Mark rationale + family differentiation |
-| [`docs/assets/identity/README.md`](assets/identity/README.md) | Identity demo motion (SVG/MP4) |
-| [`tests/visual/README.md`](../tests/visual/README.md) | Manual golden checklist |
+| Asset                                                         | Role                                                       |
+| ------------------------------------------------------------- | ---------------------------------------------------------- |
+| [`assets/tokens.css`](../assets/tokens.css)                   | Canonical Lab-Coat hex tokens + `.family-lab-coat` aliases |
+| [`assets/README-tokens.md`](../assets/README-tokens.md)       | Adoption / re-sync notes                                   |
+| [`docs/a11y/design-tokens.md`](a11y/design-tokens.md)         | Viewer token SSOT wiring (Rust + CSS)                      |
+| [`assets/brand/README.md`](../assets/brand/README.md)         | Mark rationale + family differentiation                    |
+| [`docs/assets/identity/README.md`](assets/identity/README.md) | Identity demo motion (SVG/MP4)                             |
+| [`tests/visual/README.md`](../tests/visual/README.md)         | Manual golden checklist                                    |
 
 Forbidden drift: MelosViz warn `#f59e0b`, Backbone-2 graphite/panel/violet/green, Tracera midnight/teal/indigo, and purple accent `#7c3aed` (legacy dark theme) must not appear as Lab-Coat brand colors.
 
@@ -24,48 +24,48 @@ Family: **Lab-Coat** (R&D). Light lab-bench base; cool cobalt primary; orange li
 
 ### Core tokens
 
-| Token | Hex | Semantic role |
-|-------|-----|---------------|
-| `--lc-lab-white` | `#f6f8fa` | App / page background (lab coat) |
-| `--lc-slate` | `#1f2937` | Primary text, dark panels, bench grid |
-| `--lc-cobalt` | `#2563eb` | Primary accent (light) — focus, links, selected, fills |
+| Token                 | Hex       | Semantic role                                             |
+| --------------------- | --------- | --------------------------------------------------------- |
+| `--lc-lab-white`      | `#f6f8fa` | App / page background (lab coat)                          |
+| `--lc-slate`          | `#1f2937` | Primary text, dark panels, bench grid                     |
+| `--lc-cobalt`         | `#2563eb` | Primary accent (light) — focus, links, selected, fills    |
 | `--lc-cobalt-on-dark` | `#93c5fd` | Dark-mode text/chrome accent — AA on slate + accent mixes |
-| `--lc-orange` | `#f97316` | Live / in-progress — Bunsen burner |
-| `--lc-teal` | `#14b8a6` | Secondary accent — success-adjacent, growth medium |
+| `--lc-orange`         | `#f97316` | Live / in-progress — Bunsen burner                        |
+| `--lc-teal`           | `#14b8a6` | Secondary accent — success-adjacent, growth medium        |
 
 ### Semantic aliases (required mapping)
 
-| Alias | Maps to | Use |
-|-------|---------|-----|
-| `--bg-primary` | `--lc-lab-white` | Shell background |
-| `--bg-panel` | `--lc-slate` | Inset panels (or slate-tinted surfaces) |
-| `--accent-primary` | `--lc-cobalt` | CTAs, selection, focus ring |
-| `--accent-secondary` | `--lc-teal` | Secondary actions, positive secondary |
-| `--accent-warning` / live | `--lc-orange` | Live session, warning-adjacent live state |
-| `--text-muted` | slate @ ~60% or `#5c5f6e` | Empty-state / helper copy (must remain ≥ 4.5:1 on lab-white) |
-| `--status-error` | see §4 | Failure text/surfaces — **not** cobalt |
+| Alias                     | Maps to                   | Use                                                          |
+| ------------------------- | ------------------------- | ------------------------------------------------------------ |
+| `--bg-primary`            | `--lc-lab-white`          | Shell background                                             |
+| `--bg-panel`              | `--lc-slate`              | Inset panels (or slate-tinted surfaces)                      |
+| `--accent-primary`        | `--lc-cobalt`             | CTAs, selection, focus ring                                  |
+| `--accent-secondary`      | `--lc-teal`               | Secondary actions, positive secondary                        |
+| `--accent-warning` / live | `--lc-orange`             | Live session, warning-adjacent live state                    |
+| `--text-muted`            | slate @ ~60% or `#5c5f6e` | Empty-state / helper copy (must remain ≥ 4.5:1 on lab-white) |
+| `--status-error`          | see §4                    | Failure text/surfaces — **not** cobalt                       |
 
 ### Light vs dark
 
 - **Brand default:** light Lab-Coat (`lab-white` canvas).
-- **Dark panel mode** (viewer chrome): inverted slate canvas; use `--lc-cobalt-on-dark` for accent *text/chrome* so WCAG AA holds on slate. Brand cobalt `#2563eb` remains for light mode and solid fills. Do not invent a non–Lab-Coat brand palette.
+- **Dark panel mode** (viewer chrome): inverted slate canvas; use `--lc-cobalt-on-dark` for accent _text/chrome_ so WCAG AA holds on slate. Brand cobalt `#2563eb` remains for light mode and solid fills. Do not invent a non–Lab-Coat brand palette.
 - Theme API (`Theme::{Dark,Light}`) and web `data-theme="light|dark"` must resolve to these tokens — no purple primary.
 - Web preference persistence uses `localStorage["sl-viewer-theme"]` with values `light` or `dark`; absence falls back to OS preference.
 
 ### Theme contract tokens
 
-| Token | Light role | Dark role |
-|-------|------------|-----------|
-| `--sl-bg` | Lab-white app canvas | Inverted slate canvas |
-| `--sl-surface` | White panel surface | Slate panel surface |
-| `--sl-surface-muted` | Muted lab bench tint | Muted slate tint |
-| `--sl-border` | Subtle neutral divider | Slate divider |
-| `--sl-text` | Slate primary text | Near-white primary text |
-| `--sl-text-muted` | Muted helper text | Muted helper text |
-| `--sl-accent` | Lab-Coat cobalt `#2563eb` | Lab-Coat on-dark cobalt `#93c5fd` |
-| `--sl-accent-secondary` | Lab-Coat teal `#14b8a6` | Lab-Coat on-dark teal `#2dd4bf` |
-| `--sl-accent-warning` | Lab-Coat orange | Lab-Coat orange |
-| `--sl-danger` / `--sl-danger-surface` | Error foreground/surface | Error foreground/surface |
+| Token                                 | Light role                | Dark role                         |
+| ------------------------------------- | ------------------------- | --------------------------------- |
+| `--sl-bg`                             | Lab-white app canvas      | Inverted slate canvas             |
+| `--sl-surface`                        | White panel surface       | Slate panel surface               |
+| `--sl-surface-muted`                  | Muted lab bench tint      | Muted slate tint                  |
+| `--sl-border`                         | Subtle neutral divider    | Slate divider                     |
+| `--sl-text`                           | Slate primary text        | Near-white primary text           |
+| `--sl-text-muted`                     | Muted helper text         | Muted helper text                 |
+| `--sl-accent`                         | Lab-Coat cobalt `#2563eb` | Lab-Coat on-dark cobalt `#93c5fd` |
+| `--sl-accent-secondary`               | Lab-Coat teal `#14b8a6`   | Lab-Coat on-dark teal `#2dd4bf`   |
+| `--sl-accent-warning`                 | Lab-Coat orange           | Lab-Coat orange                   |
+| `--sl-danger` / `--sl-danger-surface` | Error foreground/surface  | Error foreground/surface          |
 
 ### Contrast floor
 
@@ -78,14 +78,14 @@ Family: **Lab-Coat** (R&D). Light lab-bench base; cool cobalt primary; orange li
 
 `assets/tokens.css` defines named type-role tokens so viewer CSS and docs demos can share intent without repeating raw stacks:
 
-| Token | Role |
-|-------|------|
-| `--font-display` | Product/hero display headings; use sparingly |
-| `--font-body` | Reading text and prose content |
-| `--font-mono` | Code, paths, timestamps, replay terminal output |
-| `--font-ui` | Buttons, tabs, labels, controls, dense app chrome |
-| `--font-caption` | Captions, badges, metadata, helper copy below 14px body |
-| `--sl-measure-max` | Maximum line length for prose blocks (65ch) |
+| Token              | Role                                                    |
+| ------------------ | ------------------------------------------------------- |
+| `--font-display`   | Product/hero display headings; use sparingly            |
+| `--font-body`      | Reading text and prose content                          |
+| `--font-mono`      | Code, paths, timestamps, replay terminal output         |
+| `--font-ui`        | Buttons, tabs, labels, controls, dense app chrome       |
+| `--font-caption`   | Captions, badges, metadata, helper copy below 14px body |
+| `--sl-measure-max` | Maximum line length for prose blocks (65ch)             |
 
 ---
 
@@ -95,12 +95,12 @@ Empty ≠ error. Empty is calm, instructional, and non-alarming.
 
 ### Variants
 
-| Variant | When | Copy pattern | Visual |
-|---------|------|--------------|--------|
-| **Unselected** | Pane open, no row chosen | “Select a … to …” | Centered muted text; no icon required |
-| **Zero data** | List/query returned nothing | “No bundles to display” / equivalent | Optional low-contrast flask/eyepiece mark at ≤ 64px, muted |
-| **First-run** | No corpus / never ingested | Short why + one primary CTA (“Open corpus…” / “Start daemon”) | Cobalt CTA; no orange (not “live”) |
-| **Filtered empty** | Filters hide all rows | “No matches” + clear-filters control | Teal or cobalt text link; never error red |
+| Variant            | When                        | Copy pattern                                                  | Visual                                                     |
+| ------------------ | --------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Unselected**     | Pane open, no row chosen    | “Select a … to …”                                             | Centered muted text; no icon required                      |
+| **Zero data**      | List/query returned nothing | “No bundles to display” / equivalent                          | Optional low-contrast flask/eyepiece mark at ≤ 64px, muted |
+| **First-run**      | No corpus / never ingested  | Short why + one primary CTA (“Open corpus…” / “Start daemon”) | Cobalt CTA; no orange (not “live”)                         |
+| **Filtered empty** | Filters hide all rows       | “No matches” + clear-filters control                          | Teal or cobalt text link; never error red                  |
 
 ### Rules
 
@@ -110,12 +110,12 @@ Empty ≠ error. Empty is calm, instructional, and non-alarming.
 
 ### Surfaces (viewer)
 
-| Surface | Expected empty |
-|---------|----------------|
-| Bundle detail | Unselected: select from list |
-| History / timeline detail | Unselected session |
-| Timeline / list | Zero data or filtered empty |
-| Search results | Zero matches (filtered empty) |
+| Surface                   | Expected empty                |
+| ------------------------- | ----------------------------- |
+| Bundle detail             | Unselected: select from list  |
+| History / timeline detail | Unselected session            |
+| Timeline / list           | Zero data or filtered empty   |
+| Search results            | Zero matches (filtered empty) |
 
 ---
 
@@ -125,20 +125,20 @@ Loading is temporary; it must not shift layout when content arrives (minimize CL
 
 ### Levels
 
-| Level | Use | Spec |
-|-------|-----|------|
-| **Inline copy** | Short fetches (&lt; ~300ms typical) | “Loading…” / “Searching…” adjacent to control; muted text |
-| **Busy control** | Button during request | Disable + label swap; keep width stable |
-| **Content skeleton** | List / detail panes | Shimmer blocks matching final content shape (rows ≈ list row height; detail ≈ title + 3 lines) |
+| Level                | Use                                 | Spec                                                                                           |
+| -------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Inline copy**      | Short fetches (&lt; ~300ms typical) | “Loading…” / “Searching…” adjacent to control; muted text                                      |
+| **Busy control**     | Button during request               | Disable + label swap; keep width stable                                                        |
+| **Content skeleton** | List / detail panes                 | Shimmer blocks matching final content shape (rows ≈ list row height; detail ≈ title + 3 lines) |
 
 ### Skeleton tokens (target)
 
-| Token | Value | Notes |
-|-------|-------|-------|
-| `--lc-skeleton-base` | slate @ 8–12% on lab-white | Or `#e5e7eb`-class neutral on brand |
-| `--lc-skeleton-highlight` | lab-white → translucent cobalt wash | Shimmer peak |
-| Duration | `--lc-motion-slow` (see §5) | Looping gradient or opacity pulse |
-| Shape | 4–6px radius | Match list/detail radii; no pills |
+| Token                     | Value                               | Notes                               |
+| ------------------------- | ----------------------------------- | ----------------------------------- |
+| `--lc-skeleton-base`      | slate @ 8–12% on lab-white          | Or `#e5e7eb`-class neutral on brand |
+| `--lc-skeleton-highlight` | lab-white → translucent cobalt wash | Shimmer peak                        |
+| Duration                  | `--lc-motion-slow` (see §5)         | Looping gradient or opacity pulse   |
+| Shape                     | 4–6px radius                        | Match list/detail radii; no pills   |
 
 ### Rules
 
@@ -160,11 +160,11 @@ Errors are recoverable by default; show message + path forward.
 
 ### Color
 
-| Role | Spec |
-|------|------|
-| Error foreground | Warm red that contrasts on panel, e.g. `#b91c1c` on lab-white or `#f87171` on dark slate panels |
-| Error surface (optional) | Tinted wash (`#fef2f2` light / `#2a1a1a` dark) — not full-bleed alarm |
-| Border | Subtle related red, 1px |
+| Role                     | Spec                                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| Error foreground         | Warm red that contrasts on panel, e.g. `#b91c1c` on lab-white or `#f87171` on dark slate panels |
+| Error surface (optional) | Tinted wash (`#fef2f2` light / `#2a1a1a` dark) — not full-bleed alarm                           |
+| Border                   | Subtle related red, 1px                                                                         |
 
 Do **not** use `--lc-orange` as the sole error signal (orange = live). Do **not** use cobalt for failure text.
 
@@ -172,11 +172,11 @@ Do **not** use `--lc-orange` as the sole error signal (orange = live). Do **not*
 
 ### Surfaces
 
-| Surface | Behavior |
-|---------|----------|
-| Search fetch failure | Inline `.search-error` region; clear on next successful search |
-| Replay / SSE failure | `.status-error` + Retry |
-| Corpus open failure | Blocking message + fallback to mock only in dev; production shows Retry |
+| Surface              | Behavior                                                                |
+| -------------------- | ----------------------------------------------------------------------- |
+| Search fetch failure | Inline `.search-error` region; clear on next successful search          |
+| Replay / SSE failure | `.status-error` + Retry                                                 |
+| Corpus open failure  | Blocking message + fallback to mock only in dev; production shows Retry |
 
 ---
 
@@ -184,20 +184,20 @@ Do **not** use `--lc-orange` as the sole error signal (orange = live). Do **not*
 
 ### Motion tokens (target; may live in `tokens.css` later)
 
-| Token | Duration | Easing | Use |
-|-------|----------|--------|-----|
-| `--lc-motion-fast` | 120–150ms | `ease-out` | Hover, tab underline, focus ring |
-| `--lc-motion-medium` | 200–250ms | `ease-in-out` | Panel fade, skeleton pulse half-cycle |
-| `--lc-motion-slow` | 1.5–2s | `ease-in-out` | Brand breathing (bundle bars, meniscus) |
-| `--lc-motion-rise` | ~3.2s | `ease-in` | Identity bubble rise (demo / mark only) |
+| Token                | Duration  | Easing        | Use                                     |
+| -------------------- | --------- | ------------- | --------------------------------------- |
+| `--lc-motion-fast`   | 120–150ms | `ease-out`    | Hover, tab underline, focus ring        |
+| `--lc-motion-medium` | 200–250ms | `ease-in-out` | Panel fade, skeleton pulse half-cycle   |
+| `--lc-motion-slow`   | 1.5–2s    | `ease-in-out` | Brand breathing (bundle bars, meniscus) |
+| `--lc-motion-rise`   | ~3.2s     | `ease-in`     | Identity bubble rise (demo / mark only) |
 
 ### Brand motion (reference)
 
 Documented in identity demo / animated mark:
 
-- Bubbles: ~3.2s rise, stagger ~0.4s  
-- Bunsen / meniscus: ~1.8–4s opacity/scale breathe  
-- Bundle bars: ~2s opacity breathe  
+- Bubbles: ~3.2s rise, stagger ~0.4s
+- Bunsen / meniscus: ~1.8–4s opacity/scale breathe
+- Bundle bars: ~2s opacity breathe
 
 App chrome should stay at `--lc-motion-fast` / `--lc-motion-medium`; reserve slow loops for brand/live indicators.
 
@@ -205,20 +205,22 @@ App chrome should stay at `--lc-motion-fast` / `--lc-motion-medium`; reserve slo
 
 When the user (or OS) requests reduced motion:
 
-| Element | Behavior |
-|---------|----------|
-| CSS transitions | Duration → `0.01ms` or `none` |
-| Skeleton shimmer | Static base fill; no gradient animation |
-| Spinners | Static or replace with “Loading…” text |
-| Live orange pulse | Solid `--lc-orange`; no opacity loop |
+| Element                    | Behavior                                |
+| -------------------------- | --------------------------------------- |
+| CSS transitions            | Duration → `0.01ms` or `none`           |
+| Skeleton shimmer           | Static base fill; no gradient animation |
+| Spinners                   | Static or replace with “Loading…” text  |
+| Live orange pulse          | Solid `--lc-orange`; no opacity loop    |
 | Identity SMIL / demo loops | Pause on first frame or show static SVG |
-| Scroll / route | No parallax; no entrance choreography |
+| Scroll / route             | No parallax; no entrance choreography   |
 
 Implement with a global guard:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -244,12 +246,12 @@ Implement with a global guard:
 
 The primary view selector follows the ARIA tabs keyboard pattern:
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `Shift+Tab` | Move focus into or out of the active tab and through controls in the current panel |
-| `Left Arrow` / `Right Arrow` | Select the previous / next primary view, wrapping at either end |
-| `Home` / `End` | Select the first / last primary view |
-| `Enter` / `Space` | Activate the focused tab or focused button |
+| Key                          | Action                                                                             |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| `Tab` / `Shift+Tab`          | Move focus into or out of the active tab and through controls in the current panel |
+| `Left Arrow` / `Right Arrow` | Select the previous / next primary view, wrapping at either end                    |
+| `Home` / `End`               | Select the first / last primary view                                               |
+| `Enter` / `Space`            | Activate the focused tab or focused button                                         |
 
 ---
 

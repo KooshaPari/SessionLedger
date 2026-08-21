@@ -23,11 +23,16 @@
 
 :root {
   /* Type-role tokens shared by viewer chrome and docs demos. */
-  --font-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", sans-serif;
-  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display",
+    sans-serif;
+  --font-body:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-caption: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-caption:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* Lab-Coat caption scale and prose measure (VISUAL_SPEC §1). */
   --lc-font-size-caption: 0.75rem;
@@ -39,11 +44,11 @@
    * Decision: substrate-mesh, 2026-07-06
    * Domain: process control + dispatch mesh
    * ──────────────────────────────────────────────────────────── */
-  --bb2-graphite:        #0a0d12;  /* outer background */
-  --bb2-panel:           #161b22;  /* inset panel base (SHARED across family) */
-  --bb2-pulse-green:     #3fb950;  /* sharecli dominant — process heartbeat */
-  --bb2-sync-violet:     #a371f7;  /* substrate dominant — dispatch mesh */
-  --bb2-warm-amber:      #d29922;  /* cooldown/warning — single hot pixel */
+  --bb2-graphite: #0a0d12; /* outer background */
+  --bb2-panel: #161b22; /* inset panel base (SHARED across family) */
+  --bb2-pulse-green: #3fb950; /* sharecli dominant — process heartbeat */
+  --bb2-sync-violet: #a371f7; /* substrate dominant — dispatch mesh */
+  --bb2-warm-amber: #d29922; /* cooldown/warning — single hot pixel */
 
   /* ────────────────────────────────────────────────────────────
    * LAB-COAT — SessionLedger (R&D family)
@@ -52,43 +57,43 @@
    * Hex revision: amber-orange #f59e0b → orange-500 #f97316 on 2026-07-06
    *   to avoid MelosViz --mv-warn hex collision (different semantics).
    * ──────────────────────────────────────────────────────────── */
-  --lc-lab-white:        #f6f8fa;  /* primary background (lab-coat) */
-  --lc-slate:            #1f2937;  /* panel/text base */
-  --lc-cobalt:           #2563eb;  /* primary accent — slide-stain blue (light / solid fills) */
-  --lc-cobalt-on-dark:   #93c5fd;  /* text/chrome accent on slate + mixes — WCAG AA ≥4.5:1 */
-  --lc-orange:           #f97316;  /* live-session — lit Bunsen burner */
-  --lc-teal:             #14b8a6;  /* secondary — growth-medium teal (light) */
-  --lc-teal-on-dark:     #2dd4bf;  /* secondary text/chrome on dark mixes — WCAG AA */
+  --lc-lab-white: #f6f8fa; /* primary background (lab-coat) */
+  --lc-slate: #1f2937; /* panel/text base */
+  --lc-cobalt: #2563eb; /* primary accent — slide-stain blue (light / solid fills) */
+  --lc-cobalt-on-dark: #93c5fd; /* text/chrome accent on slate + mixes — WCAG AA ≥4.5:1 */
+  --lc-orange: #f97316; /* live-session — lit Bunsen burner */
+  --lc-teal: #14b8a6; /* secondary — growth-medium teal (light) */
+  --lc-teal-on-dark: #2dd4bf; /* secondary text/chrome on dark mixes — WCAG AA */
 
   /* Lab-Coat spacing scale (4px base grid). */
-  --lc-space-1:          4px;
-  --lc-space-2:          6px;
-  --lc-space-3:          8px;
-  --lc-space-4:          10px;
-  --lc-space-5:          12px;
-  --lc-space-6:          16px;
-  --lc-space-7:          20px;
-  --lc-space-8:          24px;
-  --lc-space-9:          32px;
-  --lc-space-10:         40px;
+  --lc-space-1: 4px;
+  --lc-space-2: 6px;
+  --lc-space-3: 8px;
+  --lc-space-4: 10px;
+  --lc-space-5: 12px;
+  --lc-space-6: 16px;
+  --lc-space-7: 20px;
+  --lc-space-8: 24px;
+  --lc-space-9: 32px;
+  --lc-space-10: 40px;
 
   /* Lab-Coat corner radii. */
-  --lc-radius-sm:        4px;
-  --lc-radius-md:        6px;
-  --lc-radius-lg:        8px;
-  --lc-radius-pill:      10px;
+  --lc-radius-sm: 4px;
+  --lc-radius-md: 6px;
+  --lc-radius-lg: 8px;
+  --lc-radius-pill: 10px;
 
   /* Lab-Coat motion (VISUAL_SPEC §5). */
-  --lc-motion-fast:      150ms;
-  --lc-motion-medium:    220ms;
-  --lc-motion-slow:      1.8s;
-  --lc-motion-rise:      3.2s;
-  --lc-ease-out:         ease-out;
-  --lc-ease-in-out:      ease-in-out;
-  --lc-ease-in:          ease-in;
+  --lc-motion-fast: 150ms;
+  --lc-motion-medium: 220ms;
+  --lc-motion-slow: 1.8s;
+  --lc-motion-rise: 3.2s;
+  --lc-ease-out: ease-out;
+  --lc-ease-in-out: ease-in-out;
+  --lc-ease-in: ease-in;
 
   /* Lab-Coat content skeleton shimmer (VISUAL_SPEC §3). */
-  --lc-skeleton-base:      #e5e7eb;
+  --lc-skeleton-base: #e5e7eb;
   --lc-skeleton-highlight: rgba(37, 99, 235, 0.12);
 
   /* ────────────────────────────────────────────────────────────
@@ -97,34 +102,34 @@
    * Domain: agentic coding CLI/TUI
    * Note: marked Phenotype-org addition per fork CLAUDE.md
    * ──────────────────────────────────────────────────────────── */
-  --tf-deep-charcoal:    #0e0e10;  /* background */
-  --tf-deep-charcoal-2:  #1c1c1f;  /* window frame / panel secondary */
-  --tf-amber-crt:        #f5a623;  /* primary — CRT phosphor (F> prompt) */
-  --tf-synthwave:        #d946a8;  /* secondary — AI glow / spark */
-  --tf-mint-prompt:      #6ee7b7;  /* tertiary — CLI success / echo */
+  --tf-deep-charcoal: #0e0e10; /* background */
+  --tf-deep-charcoal-2: #1c1c1f; /* window frame / panel secondary */
+  --tf-amber-crt: #f5a623; /* primary — CRT phosphor (F> prompt) */
+  --tf-synthwave: #d946a8; /* secondary — AI glow / spark */
+  --tf-mint-prompt: #6ee7b7; /* tertiary — CLI success / echo */
 
   /* ────────────────────────────────────────────────────────────
    * TRACERA — Tracera (trace family, pre-existing in repo brand)
    * Source: assets/brand/icon.svg (Tracera repo)
    * Domain: traceability analysis
    * ──────────────────────────────────────────────────────────── */
-  --tr-midnight:         #090a0c;  /* outer background */
-  --tr-teal:             #7ebab5;  /* primary accent */
-  --tr-teal-dark:        #5a9aa6;  /* gradient mid */
-  --tr-indigo:           #6366f1;  /* gradient end / accent */
-  --tr-accent-light:     #a5b4fc;  /* diamond stroke */
-  --tr-grid:             #c7d2fe;  /* secondary glass */
-  --tr-glow:             #ffffff;  /* center dot */
+  --tr-midnight: #090a0c; /* outer background */
+  --tr-teal: #7ebab5; /* primary accent */
+  --tr-teal-dark: #5a9aa6; /* gradient mid */
+  --tr-indigo: #6366f1; /* gradient end / accent */
+  --tr-accent-light: #a5b4fc; /* diamond stroke */
+  --tr-grid: #c7d2fe; /* secondary glass */
+  --tr-glow: #ffffff; /* center dot */
 
   /* ────────────────────────────────────────────────────────────
    * MELOSVIZ — melosviz (festival family, pre-existing in repo brand)
    * Source: melosviz/desktop/assets/brand/tokens.css
    * Domain: festival visualizer
    * ──────────────────────────────────────────────────────────── */
-  --mv-violet:           #a855f7;  /* primary accent — neon spectrum */
-  --mv-pink:             #ec4899;  /* gradient end */
-  --mv-amber:            #f59e0b;  /* spectral hue shift */
-  --mv-mint:             #10b981;  /* beat pulse */
+  --mv-violet: #a855f7; /* primary accent — neon spectrum */
+  --mv-pink: #ec4899; /* gradient end */
+  --mv-amber: #f59e0b; /* spectral hue shift */
+  --mv-mint: #10b981; /* beat pulse */
 }
 
 /**

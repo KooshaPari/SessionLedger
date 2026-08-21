@@ -18,12 +18,12 @@ before export, loopback trust summary):
 
 ## Bind modes and API-key gate
 
-| Bind | `SL_API_KEY` | Behavior |
-|---|---|---|
-| Loopback (`127.0.0.0/8`, `::1`) | unset | Local trust model: mutating and read `/api/*` routes are open to the host |
-| Loopback | set | Mutating routes (`POST /api/ingest`) require the key; read `/api/*` stay open |
-| Non-loopback (`0.0.0.0`, LAN IP, `::`, …) | unset | **Startup deny** — configure `SL_API_KEY` or bind loopback |
-| Non-loopback | set | All `/api/*` routes require the key; `/healthz` and `/readyz` stay open for probes |
+| Bind                                      | `SL_API_KEY` | Behavior                                                                           |
+| ----------------------------------------- | ------------ | ---------------------------------------------------------------------------------- |
+| Loopback (`127.0.0.0/8`, `::1`)           | unset        | Local trust model: mutating and read `/api/*` routes are open to the host          |
+| Loopback                                  | set          | Mutating routes (`POST /api/ingest`) require the key; read `/api/*` stay open      |
+| Non-loopback (`0.0.0.0`, LAN IP, `::`, …) | unset        | **Startup deny** — configure `SL_API_KEY` or bind loopback                         |
+| Non-loopback                              | set          | All `/api/*` routes require the key; `/healthz` and `/readyz` stay open for probes |
 
 Accepted credential headers when a key is required:
 
@@ -49,10 +49,10 @@ curl -H "Authorization: Bearer $SL_API_KEY" http://127.0.0.1:8080/api/bundles
 
 `POST /api/ingest` has process-local body-size and concurrency (bulkhead) limits:
 
-| Environment variable | Default | Meaning |
-|---|---:|---|
-| `SL_INGEST_MAX_BODY_BYTES` | `1048576` (1 MiB) | Maximum HTTP request-body bytes |
-| `SL_INGEST_MAX_CONCURRENCY` | `8` | Maximum in-flight ingest handlers |
+| Environment variable        |           Default | Meaning                           |
+| --------------------------- | ----------------: | --------------------------------- |
+| `SL_INGEST_MAX_BODY_BYTES`  | `1048576` (1 MiB) | Maximum HTTP request-body bytes   |
+| `SL_INGEST_MAX_CONCURRENCY` |               `8` | Maximum in-flight ingest handlers |
 
 Both values must be positive integers; invalid values stop server startup.
 Requests above the body limit return `413`. Requests arriving while all ingest
@@ -68,10 +68,10 @@ throttle to every `/api/*` route. The budget is shared across connections (an
 `Arc`-backed counter), which is the workable substitute for tower
 `RateLimitLayer` under axum's per-connection service clone model.
 
-| Environment variable | Default | Meaning |
-|---|---:|---|
-| `SL_API_RATE_LIMIT` | unset → **off** on open loopback; **`60`** when `SL_API_KEY` is set or bind is non-loopback | Max `/api/*` requests accepted per window (`0` / `off` disables) |
-| `SL_API_RATE_WINDOW_MS` | `1000` | Window length in milliseconds (must be > 0) |
+| Environment variable    |                                                                                     Default | Meaning                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------: | ---------------------------------------------------------------- |
+| `SL_API_RATE_LIMIT`     | unset → **off** on open loopback; **`60`** when `SL_API_KEY` is set or bind is non-loopback | Max `/api/*` requests accepted per window (`0` / `off` disables) |
+| `SL_API_RATE_WINDOW_MS` |                                                                                      `1000` | Window length in milliseconds (must be > 0)                      |
 
 Loopback without a shared key keeps local DX: the throttle stays off unless you
 set `SL_API_RATE_LIMIT` yourself. Shared-key and non-loopback paths enable the
@@ -88,11 +88,11 @@ breaker; while open, further `/api/*` calls return `503` with
 one half-open probe is allowed; success closes the breaker, failure re-opens it.
 Client `4xx` responses do not trip the breaker. Probes and `/metrics` stay open.
 
-| Environment variable | Default | Meaning |
-|---|---:|---|
-| `SL_API_CIRCUIT_BREAKER` | unset → **off** on open loopback; **on** when `SL_API_KEY` is set or bind is non-loopback | `on`/`1` enables; `off`/`0` disables |
-| `SL_API_CIRCUIT_FAILURE_THRESHOLD` | `5` | Consecutive `/api/*` 5xx before opening |
-| `SL_API_CIRCUIT_OPEN_MS` | `30000` | Open duration before a half-open probe |
+| Environment variable               |                                                                                   Default | Meaning                                 |
+| ---------------------------------- | ----------------------------------------------------------------------------------------: | --------------------------------------- |
+| `SL_API_CIRCUIT_BREAKER`           | unset → **off** on open loopback; **on** when `SL_API_KEY` is set or bind is non-loopback | `on`/`1` enables; `off`/`0` disables    |
+| `SL_API_CIRCUIT_FAILURE_THRESHOLD` |                                                                                       `5` | Consecutive `/api/*` 5xx before opening |
+| `SL_API_CIRCUIT_OPEN_MS`           |                                                                                   `30000` | Open duration before a half-open probe  |
 
 ## Outbound CLI retry policy
 
@@ -101,10 +101,10 @@ apply a bounded exponential-backoff retry on transient `reqwest` failures
 (connect/timeout/request). Connection-refused for `status` still maps to
 "daemon not running" without spinning retries.
 
-| Environment variable | Default | Meaning |
-|---|---:|---|
-| `SL_HTTP_RETRY_MAX` | `2` | Extra attempts after the first (`0` / `off` disables) |
-| `SL_HTTP_RETRY_BASE_MS` | `50` | Base backoff; doubles each attempt (capped shift) |
+| Environment variable    | Default | Meaning                                               |
+| ----------------------- | ------: | ----------------------------------------------------- |
+| `SL_HTTP_RETRY_MAX`     |     `2` | Extra attempts after the first (`0` / `off` disables) |
+| `SL_HTTP_RETRY_BASE_MS` |    `50` | Base backoff; doubles each attempt (capped shift)     |
 
 Clients may send `Idempotency-Key` on `POST /api/ingest` to safely retry a
 successful request while the daemon process is still running. The daemon stores
@@ -117,7 +117,12 @@ API transport errors use this small JSON envelope where the endpoint can adopt
 it without changing successful response contracts:
 
 ```json
-{"error":{"code":"payload_too_large","message":"ingest payload exceeds 1048576 bytes"}}
+{
+  "error": {
+    "code": "payload_too_large",
+    "message": "ingest payload exceeds 1048576 bytes"
+  }
+}
 ```
 
 Validation failures remain `422` with the existing validation-result JSON so
@@ -131,9 +136,9 @@ the daemon never truncates, updates, or deletes historical records.
 
 ### Backend selection
 
-| Environment variable | Default | Meaning |
-|---|---|---|
-| `SL_AUDIT_BACKEND` | `jsonl` | `jsonl` writes newline-delimited JSON; `sqlite` uses an append-only SQLite table (requires `sl-daemon` built with `--features sqlite`) |
+| Environment variable | Default | Meaning                                                                                                                                |
+| -------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `SL_AUDIT_BACKEND`   | `jsonl` | `jsonl` writes newline-delimited JSON; `sqlite` uses an append-only SQLite table (requires `sl-daemon` built with `--features sqlite`) |
 
 ### Storage paths
 
@@ -141,10 +146,10 @@ When `SL_DATA_DIR` is set, audit files live under that directory. Otherwise path
 are relative to the command output directory (`serve --out`, archive/restore
 `--data-dir`, etc.).
 
-| Backend | Path |
-|---|---|
+| Backend           | Path                            |
+| ----------------- | ------------------------------- |
 | `jsonl` (default) | `<data_dir>/audit/events.jsonl` |
-| `sqlite` | `<data_dir>/audit/events.db` |
+| `sqlite`          | `<data_dir>/audit/events.db`    |
 
 Concrete examples:
 
@@ -176,11 +181,11 @@ contents.
 The sink grows until an operator rotates or archives it. That is intentional:
 the daemon stays append-only and never rewrites historical audit rows.
 
-| Knob | Default | Effect on audit retention |
-|---|---|---|
-| `SL_DATA_DIR` | unset (command-specific) | When set, pins `<SL_DATA_DIR>/audit/*` across `serve`, archive, and restore |
-| `SL_AUDIT_BACKEND` | `jsonl` | Selects `events.jsonl` vs `events.db`; does not change retention duration |
-| `serve --out` / `--data-dir` | command default | Audit path root when `SL_DATA_DIR` is unset |
+| Knob                         | Default                  | Effect on audit retention                                                   |
+| ---------------------------- | ------------------------ | --------------------------------------------------------------------------- |
+| `SL_DATA_DIR`                | unset (command-specific) | When set, pins `<SL_DATA_DIR>/audit/*` across `serve`, archive, and restore |
+| `SL_AUDIT_BACKEND`           | `jsonl`                  | Selects `events.jsonl` vs `events.db`; does not change retention duration   |
+| `serve --out` / `--data-dir` | command default          | Audit path root when `SL_DATA_DIR` is unset                                 |
 
 Recommended operator policy for a single-user desktop install:
 
@@ -223,9 +228,9 @@ pwsh ./scripts/audit-review.ps1 -DataDir ./.sl-data -Since "2026-07-01" `
 
 Equivalent manual paths:
 
-| Backend | Tail / inspect | Export for review |
-|---|---|---|
-| `jsonl` | `Get-Content -Tail 20 $env:SL_DATA_DIR/audit/events.jsonl` | Copy or `audit-review.ps1 -Export <path>` |
+| Backend  | Tail / inspect                                                                                     | Export for review                                                                      |
+| -------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `jsonl`  | `Get-Content -Tail 20 $env:SL_DATA_DIR/audit/events.jsonl`                                         | Copy or `audit-review.ps1 -Export <path>`                                              |
 | `sqlite` | `sqlite3 $env:SL_DATA_DIR/audit/events.db "SELECT * FROM audit_events ORDER BY id DESC LIMIT 20;"` | `audit-review.ps1 -Backend sqlite -Export <path>.jsonl` (requires `sqlite3` on `PATH`) |
 
 Review checklist:

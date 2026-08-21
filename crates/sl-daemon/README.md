@@ -49,7 +49,7 @@ See [`docs/ops/jemalloc.md`](../../docs/ops/jemalloc.md) and
 
 ### 1. Native process-compose (preferred for local dev — no container)
 
-```bash
+````bash
 SL_WATCH_DIR=~/.forge/sessions SL_OUT_DIR=./okf-out SL_HTTP_BIND=127.0.0.1:8080 \
   process-compose -f crates/sl-daemon/process-compose.yaml up
 
@@ -64,14 +64,15 @@ export SL_LANGFUSE_ENABLED=1
 export SL_LANGFUSE_OTLP_ENDPOINT=https://cloud.langfuse.com/api/public/otel/v1/traces
 export SL_LANGFUSE_PUBLIC_KEY=pk-lf-...
 export SL_LANGFUSE_SECRET_KEY=sk-lf-...
-```
+````
 
 Only route, operation, outcome, duration, and correlation metadata are exported.
 Session prompts, responses, file contents, paths, and credentials are excluded.
 The exporter is fail-open: invalid configuration or a remote outage leaves local
 ingestion and replay running and emits a warning. Keep keys in the environment or
 your secret manager; they are never logged.
-```
+
+````
 
 ### 2. Apple `container` (default OCI runtime — OSS, per-container VM)
 
@@ -84,15 +85,15 @@ container run --rm \
   -v "$HOME/.forge/sessions:/data/sessions:ro" \
   -v "$PWD/okf-out:/data/out" \
   sl-daemon:latest serve --watch /data/sessions --out /data/out
-```
+````
 
 ## Flags
 
-| Flag | Meaning |
-|------|---------|
+| Flag            | Meaning                                                |
+| --------------- | ------------------------------------------------------ |
 | `--watch <dir>` | Directory of `*.jsonl` transcripts to watch (required) |
 | `--out <dir>`   | Where `<id>.okf.json` files are written (auto-created) |
-| `--once`        | Single deterministic sweep, then exit (CI / cron) |
+| `--once`        | Single deterministic sweep, then exit (CI / cron)      |
 
 The HTTP listener defaults to loopback (`127.0.0.0/8` or `::1`) with optional
 `SL_API_KEY` on mutating routes. Non-loopback `--http-bind` requires a non-empty

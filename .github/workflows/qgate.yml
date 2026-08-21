@@ -18,7 +18,7 @@ name: qgate
 on:
   pull_request:
   push:
-    branches: ['**']
+    branches: ["**"]
   workflow_dispatch:
 
 concurrency:
@@ -32,7 +32,7 @@ jobs:
   # Local coverage + SBOM evidence (artifacts for review). The reusable gate
   # job below is the immutable phenotype-tooling entrypoint.
   prepare:
-    runs-on: ubuntu-latest   # Linux standard only — no billed runners
+    runs-on: ubuntu-latest # Linux standard only — no billed runners
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

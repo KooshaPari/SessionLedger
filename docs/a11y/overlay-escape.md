@@ -18,14 +18,14 @@ the backdrop.
 
 ## Implementation map
 
-| Surface | Handler | Test |
-|---------|---------|------|
-| Command palette | `command_palette.rs` `onkeydown` + `app.rs` capture bridge | `a11y.spec.js` Ctrl+K / Escape |
-| Keyboard help | `help_overlay.rs` `onkeydown` + `app.rs` capture bridge | `a11y.spec.js` Help / Escape; Escape with focus in Search field |
-| Search clear confirm | `search_view.rs` `onkeydown` + `app.rs` capture bridge (Cancel click) | `a11y.spec.js` Clear confirm Escape |
-| Search error | `search_view.rs` `onkeydown` (live + `/?fixture=search-error`) | `a11y.spec.js` search-error Escape |
-| Replay idle reset | `replay_view.rs` `onkeydown` | documented in `viewer-hotkeys.md` |
-| Bundle compare | `app.rs` Bundles tab `onkeydown` | documented in `viewer-hotkeys.md` |
+| Surface              | Handler                                                               | Test                                                            |
+| -------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Command palette      | `command_palette.rs` `onkeydown` + `app.rs` capture bridge            | `a11y.spec.js` Ctrl+K / Escape                                  |
+| Keyboard help        | `help_overlay.rs` `onkeydown` + `app.rs` capture bridge               | `a11y.spec.js` Help / Escape; Escape with focus in Search field |
+| Search clear confirm | `search_view.rs` `onkeydown` + `app.rs` capture bridge (Cancel click) | `a11y.spec.js` Clear confirm Escape                             |
+| Search error         | `search_view.rs` `onkeydown` (live + `/?fixture=search-error`)        | `a11y.spec.js` search-error Escape                              |
+| Replay idle reset    | `replay_view.rs` `onkeydown`                                          | documented in `viewer-hotkeys.md`                               |
+| Bundle compare       | `app.rs` Bundles tab `onkeydown`                                      | documented in `viewer-hotkeys.md`                               |
 
 The global bridge clicks existing close buttons so Dioxus `onclick` handlers own
 state — see the comment above `use_effect` in `app.rs`.

@@ -14,14 +14,14 @@
 
 **Rationale** (smaller blast radius):
 
-| Dimension | L22 (KMS) | L23 (PII redaction) |
-|-----------|-----------|---------------------|
-| Surface area | One new crate (`sl-kms`), bounded to auth path | Touches every ingress endpoint |
-| Failure mode | Single key not found → auth fails → user knows | Missed PII → silent leak → user doesn't know |
-| Compliance | OS-blessed credential storage (Keychain, Cred Mgr) | Pattern-based scrubbing is **never** authoritative for compliance |
-| Operational cost | One-time setup + rotation | Ongoing redaction-rule maintenance, false positives |
-| Threat model | Stolen laptop = attacker can't move key (Keychain ACL) | Stolen laptop = full local DB if attacker can auth |
-| Latency | One Keychain fetch at boot | Per-request regex+NER overhead |
+| Dimension        | L22 (KMS)                                              | L23 (PII redaction)                                               |
+| ---------------- | ------------------------------------------------------ | ----------------------------------------------------------------- |
+| Surface area     | One new crate (`sl-kms`), bounded to auth path         | Touches every ingress endpoint                                    |
+| Failure mode     | Single key not found → auth fails → user knows         | Missed PII → silent leak → user doesn't know                      |
+| Compliance       | OS-blessed credential storage (Keychain, Cred Mgr)     | Pattern-based scrubbing is **never** authoritative for compliance |
+| Operational cost | One-time setup + rotation                              | Ongoing redaction-rule maintenance, false positives               |
+| Threat model     | Stolen laptop = attacker can't move key (Keychain ACL) | Stolen laptop = full local DB if attacker can auth                |
+| Latency          | One Keychain fetch at boot                             | Per-request regex+NER overhead                                    |
 
 L23's blast radius is large because redaction is **permissive** by nature (you scrub what you recognize, leave what you don't). L22's blast radius is bounded to the credential path.
 

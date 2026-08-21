@@ -295,7 +295,16 @@ components:
               type: string
     BundleMeta:
       type: object
-      required: [session_id, created_at, model, token_count, message_count, duration_ms, tags]
+      required:
+        [
+          session_id,
+          created_at,
+          model,
+          token_count,
+          message_count,
+          duration_ms,
+          tags,
+        ]
       properties:
         session_id:
           type: string
@@ -318,7 +327,8 @@ components:
             type: string
     MetricsSummary:
       type: object
-      required: [total_bundles, total_tokens, avg_tokens, model_counts, daily_counts]
+      required:
+        [total_bundles, total_tokens, avg_tokens, model_counts, daily_counts]
       properties:
         total_bundles:
           type: integer

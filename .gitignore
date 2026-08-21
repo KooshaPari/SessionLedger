@@ -6,7 +6,8 @@
 /agileplus.db
 /dhat-heap.json
 
-target-w34-*/
+# Cargo variant build dirs (all numbered variants)
+target-w*/
 
 
 # All nested cargo build dirs (sub-crates' target/)

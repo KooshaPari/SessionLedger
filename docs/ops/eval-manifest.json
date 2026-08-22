@@ -41,7 +41,7 @@
   ],
   "rust_msrv": "1.85",
   "toolchain_channel": "stable",
-  "cargo_lock_sha256": "366d2a1af396459be5383d7ca2e807086ed476e56c54e9b9510db51670278492",
+  "cargo_lock_sha256": "17ea1b60c59af0d596c887ad923b445032bee752337d885cf39c2a3240043577",
   "bench_policy_path": "docs/ops/perf-baseline.json",
   "bench_gate_script": "scripts/bench-gate.ps1",
   "verify_command": "./scripts/eval-repro-check.ps1"

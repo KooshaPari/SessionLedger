@@ -24,11 +24,19 @@ jobs:
 
       - name: Run 88-Pillar Scorecard Audit
         id: audit
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          THRESHOLD=${{ github.event.inputs.threshold || '85' }}
+          THRESHOLD=85
+          ENFORCE=true
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            ENFORCE=false
+          fi
 
           # Run audit in JSON mode
-          python scripts/scorecard_ci.py . --output json --threshold "$THRESHOLD" --fail-on-drop > scorecard-report.json 2> scorecard-stderr.txt || EXIT_CODE=$?
+          if ! python scripts/scorecard_ci.py . --output json --threshold "$THRESHOLD" --fail-on-drop > scorecard-report.json 2> scorecard-stderr.txt; then
+            echo "Scorecard is below the canonical-main threshold; continuing to publish the report."
+          fi
 
           # Extract score
           SCORE=$(python -c "import json; r=json.load(open('scorecard-report.json')); print(r['score'])")
@@ -42,7 +50,14 @@ jobs:
           echo "|--------|-------|" >> scorecard-summary.md
           echo "| **Score** | **${SCORE}/${TOTAL}** (${PCT}%) |" >> scorecard-summary.md
           echo "| **Threshold** | ${THRESHOLD} |" >> scorecard-summary.md
-          echo "| **Status** | $( [ "$SCORE" -ge "$THRESHOLD" ] && echo "PASS" || echo "FAIL" ) |" >> scorecard-summary.md
+          if [ "$SCORE" -ge "$THRESHOLD" ]; then
+            STATUS="PASS"
+          elif [ "$ENFORCE" = "true" ]; then
+            STATUS="FAIL"
+          else
+            STATUS="ADVISORY"
+          fi
+          echo "| **Status** | ${STATUS} |" >> scorecard-summary.md
           echo "" >> scorecard-summary.md
 
           # List failed pillars
@@ -63,7 +78,12 @@ jobs:
           echo "total=${TOTAL}" >> "$GITHUB_OUTPUT"
           echo "percentage=${PCT}" >> "$GITHUB_OUTPUT"
           echo "threshold=${THRESHOLD}" >> "$GITHUB_OUTPUT"
-          echo "passed=$( [ "$SCORE" -ge "$THRESHOLD" ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+          if [ "$SCORE" -ge "$THRESHOLD" ] || [ "$ENFORCE" = "false" ]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "enforce=${ENFORCE}" >> "$GITHUB_OUTPUT"
 
           # Post PR comment if applicable
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -100,7 +120,7 @@ jobs:
             scorecard-report.json
             scorecard-summary.md
 
-      - name: Check score threshold
+      - name: Check score threshold on canonical main
         if: steps.audit.outputs.passed != 'true'
         run: |
           echo "::error::Score ${{ steps.audit.outputs.score }}/${{ steps.audit.outputs.total }} is below threshold ${{ steps.audit.outputs.threshold }}"

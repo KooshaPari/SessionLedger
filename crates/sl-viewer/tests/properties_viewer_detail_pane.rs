@@ -58,7 +58,7 @@ proptest! {
     #[test]
     fn extract_detail_is_callable(_unused in 0u8..1u8) {
         // Construct an empty bundle and verify the function is callable.
-        use session_ledger::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
+        use session_ledger::domain::bundle::ContinuationBundle;
         let cb = ContinuationBundle {
             source_id: "test-source-id".into(),
             bundles: vec![Bundle::new(BundleKind::Context, serde_json::json!({}))],

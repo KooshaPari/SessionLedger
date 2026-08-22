@@ -9,7 +9,7 @@
 use proptest::prelude::*;
 use session_ledger::distill::dedup_compiler::{DedupCompileError, DedupCompiler};
 use session_ledger::distill::token_estimator::CharCountTokenEstimator;
-use session_ledger::domain::bundle::{Bundle, BundleKind};
+use session_ledger::domain::bundle::BundleKind;
 use session_ledger::domain::dedup::DedupManifest;
 use session_ledger::domain::session::{Corpus, Session};
 
@@ -203,7 +203,7 @@ proptest! {
         ids in proptest::collection::hash_set("[a-z]{1,3}", 2..5),
         topic in "[a-z][a-z0-9-]{0,10}",
     ) {
-        let mut ids: Vec<String> = ids.into_iter().collect();
+        let ids: Vec<String> = ids.into_iter().collect();
         let sessions: Vec<Session> = ids
             .iter()
             .map(|i| make_session(i.as_str(), Some("/repo"), Corpus::Forge))

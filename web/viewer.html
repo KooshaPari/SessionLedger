@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SessionLedger — Viewer</title>
+  <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html">SessionLedger</a></h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Overview</a></li>
+        <li><a href="viewer.html">Session Viewer</a></li>
+        <li><a href="dashboard.html">Dashboard</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main>
+    <section class="hero">
+      <h2>Session Viewer</h2>
+      <p>Browse OKF bundles and JSONL session files. Click a row to expand the event timeline.</p>
+    </section>
+
+    <section class="filter-bar">
+      <label for="search">Filter by tool:</label>
+      <select id="search">
+        <option value="">All tools</option>
+        <option value="claude_code">claude_code</option>
+        <option value="codex">codex</option>
+        <option value="cursor">cursor</option>
+        <option value="forge">forge</option>
+        <option value="json_source">json_source</option>
+        <option value="web">web</option>
+      </select>
+    </section>
+
+    <section>
+      <table class="data" id="sessions">
+        <thead>
+          <tr>
+            <th>Session ID</th>
+            <th>Tool</th>
+            <th>Started</th>
+            <th>Tokens</th>
+            <th>Events</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>s_001</td><td>claude_code</td><td>2026-08-19 14:22</td><td>1,247</td><td>34</td></tr>
+          <tr><td>s_002</td><td>codex</td><td>2026-08-19 14:30</td><td>3,891</td><td>71</td></tr>
+          <tr><td>s_003</td><td>cursor</td><td>2026-08-19 14:35</td><td>512</td><td>18</td></tr>
+          <tr><td>s_004</td><td>forge</td><td>2026-08-19 14:42</td><td>8,205</td><td>127</td></tr>
+          <tr><td>s_005</td><td>json_source</td><td>2026-08-19 14:55</td><td>2,041</td><td>52</td></tr>
+          <tr><td>s_006</td><td>web</td><td>2026-08-19 15:01</td><td>456</td><td>11</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="detail" hidden>
+      <h2>Session Detail</h2>
+      <pre><code id="detail-content">// Select a session to view its events</code></pre>
+    </section>
+  </main>
+  <footer>
+    <p>© 2026 ParetoOptimal. Apache-2.0 OR MIT.</p>
+  </footer>
+  <script src="js/viewer.js"></script>
+</body>
+</html>

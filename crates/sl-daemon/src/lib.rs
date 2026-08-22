@@ -47,6 +47,7 @@ pub mod traceparent;
 pub mod watcher;
 pub mod worker;
 pub mod resolver;
+pub mod plugin;
 
 pub use shutdown::ServeShutdown;
 pub use traceparent::{TraceParent, HEADER as TRACEPARENT_HEADER};

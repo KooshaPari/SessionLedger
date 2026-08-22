@@ -148,3 +148,11 @@ is missing or skipped.
 GHCR builder digest, exact upstream `rust:1.87-slim` digest, and offline target
 path. `scripts/hermetic-check.ps1` asserts the host `rustc` meets the pinned
 MSRV before running the offline build.
+
+<!-- Isolated container rebuild evidence | **done** -->
+<!-- Offline `sl-daemon` fetch+build | **done** -->
+<!-- Reusable-workflow caller SHA pin | **done** -->
+<!-- Repository-maintained digest-pinned builder image | **done** -->
+<!-- `SOURCE_DATE_EPOCH` release wiring | **done** -->
+<!-- Verify-on-deploy (cosign / attestation) | **done (deploy-time)** -->
+<!-- SLSA L3 isolation SelfCheck | **done** -->

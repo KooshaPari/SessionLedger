@@ -236,7 +236,7 @@ if ($SelfCheck) {
     }
     [void](Write-Check -Label "oci-cosign-verify continue-on-error: false" -Ok $true)
 
-    if ($release -notmatch 'needs:.*oci-image') {
+    if ($release -notmatch '(?s)needs:.*?\boci-image\b') {
         throw "release.yml release job should depend on oci-image."
     }
     [void](Write-Check -Label "release job needs oci-image" -Ok $true)

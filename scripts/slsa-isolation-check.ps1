@@ -289,7 +289,7 @@ if ($rel -notmatch 'detect OCI release gate') {
 if ($rel -notmatch 'oci-cosign-verify\.ps1') {
     throw "release.yml should reference scripts/oci-cosign-verify.ps1 for deploy-time verify guidance."
 }
-if ($rel -notmatch 'needs:.*oci-image') {
+if ($rel -notmatch '(?s)needs:.*?\boci-image\b') {
     throw "release.yml release job should depend on oci-image for blocking publication."
 }
 [void](Write-Check -Label "release.yml oci-image blocking gate + verify-on-deploy pointer" -Ok $true)

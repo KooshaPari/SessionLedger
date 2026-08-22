@@ -45,6 +45,6 @@ errors-not_found = Página no encontrada
 errors-forbidden = Acceso denegado
 errors-server_error = Error interno del servidor
 errors-network_error = Error de conexión de red
-session-start = Iniciar sesión
+session-start = Comenzar sesión
 session-end = Finalizar sesión
 session-duration = Duración

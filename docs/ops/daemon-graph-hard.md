@@ -60,16 +60,14 @@ Hermetic wrapper: [`tests/daemon_graph_hard.rs`](../../tests/daemon_graph_hard.r
 
 ## Done / unpaid
 
-| Item                                                  | Status                       |
-| ----------------------------------------------------- | ---------------------------- |
-| Policy SSOT + JSON manifest                           | **done**                     |
-| Live tokio pipeline conservation                      | **done**                     |
-| Lagged SSE subscriber recovery                        | **done**                     |
-| Shutdown stops mpsc enqueue                           | **done**                     |
-| Blocking `daemon-graph-hard.yml`                      | **done**                     |
-| Process-level HTTP SSE soak under loom                | **unpaid** — C00 L7 residual |
-| <!-- Live tokio mpsc/broadcast/SSE daemon graph ports | **done** -->                 |
-| <!-- Blocking daemon-graph-hard CI workflow           | **done** -->                 |
+| Item                                   | Status                       |
+| -------------------------------------- | ---------------------------- |
+| Policy SSOT + JSON manifest            | **done**                     |
+| Live tokio pipeline conservation       | **done**                     |
+| Lagged SSE subscriber recovery         | **done**                     |
+| Shutdown stops mpsc enqueue            | **done**                     |
+| Blocking `daemon-graph-hard.yml`       | **done**                     |
+| Process-level HTTP SSE soak under loom | **unpaid** — C00 L7 residual |
 
 <!-- Blocking daemon-graph-hard CI workflow | **done** -->
 <!-- Process-level HTTP SSE soak under loom | **unpaid** -->

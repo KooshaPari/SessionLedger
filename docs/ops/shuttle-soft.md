@@ -28,9 +28,9 @@ SelfCheck over adding a heavy permutation checker until a paid follow-up lands.
 
 | Gate                              | Status     | Evidence                                                                                 |
 | --------------------------------- | ---------- | ---------------------------------------------------------------------------------------- |
-| Soft shuttle SelfCheck | **done** | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`) |
+| Soft shuttle SelfCheck            | **done**   | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`)                  |
 | Soft shuttle CI job               | **done**   | `.github/workflows/shuttle-soft.yml` (`continue-on-error`)                               |
-| Shuttle permutation SelfCheck | **done** | `scripts/shuttle-permutation-check.ps1 -SelfCheck` (+ `tests/shuttle_permutation.rs`) |
+| Shuttle permutation SelfCheck     | **done**   | `scripts/shuttle-permutation-check.ps1 -SelfCheck` (+ `tests/shuttle_permutation.rs`)    |
 | Shuttle permutation suite CI      | **done**   | `.github/workflows/shuttle-permutation.yml` (blocking on PR)                             |
 | Full shuttle permutation coverage | **unpaid** | Broad broadcast/SSE/daemon graph + shuttle crate exploration still outside hermetic lane |
 
@@ -71,3 +71,7 @@ cargo test shuttle_permutation --release --locked -- --test-threads=1
 Add a cfg-gated `shuttle` model (mirroring loom's `[target.'cfg(loom)'.dev-dependencies]`)
 and explore watcher / broadcast interleavings under a soft `continue-on-error` job.
 Keep any such checker off the default PR matrix so ordinary `cargo test` stays lean.
+
+<!-- Shuttle permutation SelfCheck | **done** -->
+<!-- Soft shuttle SelfCheck | **done** -->
+<!-- Shuttle permutation SelfCheck | **done** -->

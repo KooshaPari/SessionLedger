@@ -58,11 +58,13 @@ Unit tests: `cargo test -p sl-viewer cli_help --locked`.
 
 ### Done / unpaid
 
-| Item                                     | Status                        |
-| ---------------------------------------- | ----------------------------- |
-| Policy SSOT + JSON manifest              | **done**                      |
-| Expanded `--help` / `--version`          | **done**                      |
-| `SL_DAEMON_URL` + `FORGE_DB` documented  | **done**                      |
-| Blocking sl-viewer-help-hard CI workflow | **done** |
-| `tests/sl_viewer_help.rs` cargo wrapper | **done** |
-| Fluent i18n migration for help text | **unpaid** — C01 L16 residual |
+| Item                                          | Status                        |
+| --------------------------------------------- | ----------------------------- |
+| Policy SSOT + JSON manifest                   | **done**                      |
+| Expanded `--help` / `--version`               | **done**                      |
+| `SL_DAEMON_URL` + `FORGE_DB` documented       | **done**                      |
+| Blocking sl-viewer-help-hard CI workflow      | **done**                      |
+| `tests/sl_viewer_help.rs` cargo wrapper       | **done**                      |
+| Fluent i18n migration for help text           | **unpaid** — C01 L16 residual |
+| <!-- Blocking sl-viewer-help-hard CI workflow | **done** -->                  |
+| <!-- Fluent i18n migration for help text      | **unpaid** -->                |

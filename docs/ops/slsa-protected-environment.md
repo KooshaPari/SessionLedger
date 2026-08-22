@@ -49,11 +49,11 @@ GitHub API access.
 
 | Gate                                                 | Status                 | Evidence / prerequisite                                                                            |
 | ---------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
-| Protected-environment policy documented | **done** | This page |
-| Protected-environment SelfCheck | **done** | `scripts/slsa-protected-env-check.ps1 -SelfCheck` |
-| `hermetic-builds.md` cross-link | **done** | [Environment isolation checklist](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps) |
-| `branch-protection.md` cross-link | **done** | [`branch-protection.md`](branch-protection.md) |
-| Release workflow + blocking `oci-image` documented | **done** | `.github/workflows/release.yml` |
+| Protected-environment policy documented              | **done**               | This page                                                                                          |
+| Protected-environment SelfCheck                      | **done**               | `scripts/slsa-protected-env-check.ps1 -SelfCheck`                                                  |
+| `hermetic-builds.md` cross-link                      | **done**               | [Environment isolation checklist](hermetic-builds.md#environment-isolation-checklist-slsa-l3-gaps) |
+| `branch-protection.md` cross-link                    | **done**               | [`branch-protection.md`](branch-protection.md)                                                     |
+| Release workflow + blocking `oci-image` documented   | **done**               | `.github/workflows/release.yml`                                                                    |
 | GitHub Environment `release` with required reviewers | unpaid                 | Settings → Environments → create `release`; add reviewers                                          |
 | `environment: release` on publish jobs               | unpaid                 | Bind `oci-image` / aggregate `release` jobs in `release.yml`                                       |
 | Environment deployment branch / tag rules            | unpaid                 | Limit Environment deployments to `v*` tags on canonical repo                                       |
@@ -88,3 +88,11 @@ Optional `-Strict` also fails when unpaid checklist rows remain (not used in CI)
 - [`branch-protection.md`](branch-protection.md) — PR + signed-commit machine verify
 - [`reusable-hermetic-pin.md`](reusable-hermetic-pin.md) — reusable workflow caller pin
 - [`source-provenance.md`](source-provenance.md) — signed commits + CODEOWNERS SSOT
+    <!-- Protected-environment policy documented | **done** -->
+    <!-- Protected-environment SelfCheck | **done** -->
+    <!-- ``hermetic-builds.md`` cross-link | **done** -->
+    <!-- ``branch-protection.md`` cross-link | **done** -->
+    <!-- Release workflow + blocking ``oci-image`` documented | **done** -->
+    <!-- `hermetic-builds.md` cross-link | **done** -->
+  <!-- `branch-protection.md` cross-link | **done** -->
+  <!-- Release workflow + blocking `oci-image` documented | **done** -->

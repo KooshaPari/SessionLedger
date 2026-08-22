@@ -76,7 +76,7 @@ Wall-clock once dependencies are cached: typically **well under two minutes**
 | Gate                                                      | Status     | Evidence                                                 |
 | --------------------------------------------------------- | ---------- | -------------------------------------------------------- |
 | Soft alloc-profile SelfCheck                              | **done**   | `ops-load.yml` `alloc-profile` job (`continue-on-error`) |
-| Blocking alloc-profile-hard CI workflow | **done** | `.github/workflows/alloc-profile-hard.yml` |
+| Blocking alloc-profile-hard CI workflow                   | **done**   | `.github/workflows/alloc-profile-hard.yml`               |
 | `tests/alloc_profile_hard.rs` cargo wrapper               | **done**   | Hermetic SelfCheck anchor smoke                          |
 | Continuous dhat profiling / production always-on jemalloc | **unpaid** | See [`jemalloc.md`](jemalloc.md)                         |
 
@@ -101,4 +101,5 @@ Wall-clock once dependencies are cached: typically **well under two minutes**
 - Optional feature — default `cargo test` / CI graphs stay lean.
 - Debug builds and profiler overhead can inflate counts; ceilings account for that.
 - Counting-allocator evidence remains in [`allocation-budget.md`](allocation-budget.md);
-  RSS evidence in [`memory-budget.md`](memory-budget.md).
+RSS evidence in [`memory-budget.md`](memory-budget.md).
+<!-- Blocking alloc-profile-hard CI workflow | **done** -->

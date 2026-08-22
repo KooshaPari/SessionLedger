@@ -24,11 +24,11 @@ Full STRIDE-lite context: [`docs/THREAT_MODEL.md`](../THREAT_MODEL.md) §1 and
 
 | Control                              | Status     | Evidence                                                                                                                                            |
 | ------------------------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Non-root runtime user | **done** | `useradd … sl` + `USER sl` (uid `10001`) |
-| Data-dir volume contract | **done** | `VOLUME ["/data/sessions", "/data/out"]`; host mounts sessions read-only, out read-write |
+| Non-root runtime user                | **done**   | `useradd … sl` + `USER sl` (uid `10001`)                                                                                                            |
+| Data-dir volume contract             | **done**   | `VOLUME ["/data/sessions", "/data/out"]`; host mounts sessions read-only, out read-write                                                            |
 | Loopback health probe                | **done**   | `HEALTHCHECK` curls `http://127.0.0.1:8080/healthz` (daemon default bind stays loopback)                                                            |
 | Soft seccomp profile                 | **done**   | [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) — allow-by-default + deny high-risk syscalls (operator opt-in) |
-| `no-new-privileges` / `cap-drop ALL` | **done** | Documented below + [`compose.sl-daemon.soft-hardening.yml`](../../packaging/oci/compose.sl-daemon.soft-hardening.yml) |
+| `no-new-privileges` / `cap-drop ALL` | **done**   | Documented below + [`compose.sl-daemon.soft-hardening.yml`](../../packaging/oci/compose.sl-daemon.soft-hardening.yml)                               |
 | Rootless-only enforcement            | **unpaid** | Operator must choose rootless `container` / podman; not CI-gated                                                                                    |
 
 Example run (host session dir in, OKF out) with soft hardening:
@@ -78,7 +78,7 @@ Operators who need a no-net smoke can run the compose sample with `network_mode:
 | Control                | Status   | Evidence                                                                                                                                                                   |
 | ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dedicated service user | **done** | [`packaging/systemd/sessionledger-daemon.service`](../../packaging/systemd/sessionledger-daemon.service) `User=sessionledger`                                              |
-| Loopback HTTP bind | **done** | `SL_HTTP_BIND=127.0.0.1:8080` + `--http-bind ${SL_HTTP_BIND}` |
+| Loopback HTTP bind     | **done** | `SL_HTTP_BIND=127.0.0.1:8080` + `--http-bind ${SL_HTTP_BIND}`                                                                                                              |
 | TLS at edge only       | **done** | [`packaging/nginx/sessionledger.conf`](../../packaging/nginx/sessionledger.conf), [`packaging/caddy/Caddyfile`](../../packaging/caddy/Caddyfile) reverse-proxy to loopback |
 
 The daemon rejects non-loopback `--http-bind` without a non-empty `SL_API_KEY`
@@ -102,12 +102,12 @@ for hard rootless / no-net policy rows. Hermetic SelfCheck only — does **not**
 
 | Gate                                          | Status     | Evidence / prerequisite                                                                                                |
 | --------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Rootless/no-net SelfCheck | **done** | `scripts/rootless-nonet-check.ps1 -SelfCheck` |
-| Blocking rootless-no-net CI workflow | **done** | [`.github/workflows/rootless-nonet.yml`](../../.github/workflows/rootless-nonet.yml) (PR gate; no `continue-on-error`) |
+| Rootless/no-net SelfCheck                     | **done**   | `scripts/rootless-nonet-check.ps1 -SelfCheck`                                                                          |
+| Blocking rootless-no-net CI workflow          | **done**   | [`.github/workflows/rootless-nonet.yml`](../../.github/workflows/rootless-nonet.yml) (PR gate; no `continue-on-error`) |
 | cargo test wrapper                            | **done**   | `tests/rootless_nonet.rs`                                                                                              |
 | security.yml cross-reference                  | **done**   | [`.github/workflows/security.yml`](../../.github/workflows/security.yml) anchors hard rootless/no-net lane             |
 | ci.yml cross-reference                        | **done**   | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) `rootless-nonet-policy` smoke                             |
-| Hard rootless-only runner matrix | **unpaid** | Requires podman/rootless runner labels on hosted runners |
+| Hard rootless-only runner matrix              | **unpaid** | Requires podman/rootless runner labels on hosted runners                                                               |
 | Hard no-network for cargo-fetch security jobs | **unpaid** | SelfCheck evidence in [Cargo-fetch no-net policy](#cargo-fetch-no-net-policy-c04-l40); live runner isolation unpaid    |
 
 ```powershell
@@ -126,11 +126,11 @@ advisory DB refresh).
 
 | Gate                                            | Status     | Evidence / prerequisite                                                |
 | ----------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
-| Cargo-fetch no-net SelfCheck | **done** | `scripts/cargo-nonet-check.ps1 -SelfCheck` |
-| Blocking security.yml anchor | **done** | `cargo-nonet` job (no `continue-on-error`) |
+| Cargo-fetch no-net SelfCheck                    | **done**   | `scripts/cargo-nonet-check.ps1 -SelfCheck`                             |
+| Blocking security.yml anchor                    | **done**   | `cargo-nonet` job (no `continue-on-error`)                             |
 | cargo test wrapper                              | **done**   | `tests/cargo_nonet.rs`                                                 |
 | cargo audit / cargo deny fetch paths documented | **done**   | `security.yml` `cargo-audit` + `cargo-deny` jobs (network fetch today) |
-| Live no-net for cargo-fetch on runners | **unpaid** | Would block `cargo install` / advisory DB refresh |
+| Live no-net for cargo-fetch on runners          | **unpaid** | Would block `cargo install` / advisory DB refresh                      |
 
 ```powershell
 pwsh ./scripts/cargo-nonet-check.ps1 -SelfCheck
@@ -156,14 +156,14 @@ rootless-only matrix enforcement.
 
 | Gate                                    | Status     | Evidence / prerequisite                                                                                                  |
 | --------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Rootless-only matrix SelfCheck | **done** | `scripts/rootless-matrix-check.ps1 -SelfCheck` |
-| Blocking rootless-matrix CI workflow | **done** | [`.github/workflows/rootless-matrix.yml`](../../.github/workflows/rootless-matrix.yml) (PR gate; no `continue-on-error`) |
+| Rootless-only matrix SelfCheck          | **done**   | `scripts/rootless-matrix-check.ps1 -SelfCheck`                                                                           |
+| Blocking rootless-matrix CI workflow    | **done**   | [`.github/workflows/rootless-matrix.yml`](../../.github/workflows/rootless-matrix.yml) (PR gate; no `continue-on-error`) |
 | cargo test wrapper                      | **done**   | `tests/rootless_matrix.rs`                                                                                               |
 | security.yml cross-reference            | **done**   | [`.github/workflows/security.yml`](../../.github/workflows/security.yml) blocking `rootless-matrix` anchor               |
 | ci.yml cross-reference                  | **done**   | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) `rootless-matrix-policy` smoke                              |
-| Runner capability matrix documented | **done** | this section + matrix limits table |
-| Live rootless-only runners on hosted CI | **unpaid** | Requires podman/rootless runner labels |
-| OCI build/smoke in matrix jobs | **unpaid** | SelfCheck is docs/workflow anchors only |
+| Runner capability matrix documented     | **done**   | this section + matrix limits table                                                                                       |
+| Live rootless-only runners on hosted CI | **unpaid** | Requires podman/rootless runner labels                                                                                   |
+| OCI build/smoke in matrix jobs          | **unpaid** | SelfCheck is docs/workflow anchors only                                                                                  |
 
 ```powershell
 pwsh ./scripts/rootless-matrix-check.ps1 -SelfCheck
@@ -182,13 +182,13 @@ or claim live rootless-only matrix enforcement on GitHub-hosted runners.
 | Containerfile non-root `USER`                      | **done**   | [`crates/sl-daemon/Containerfile`](../../crates/sl-daemon/Containerfile)                                 |
 | Containerfile data `VOLUME` contract               | **done**   | same Containerfile                                                                                       |
 | Systemd loopback bind sample                       | **done**   | [`packaging/systemd/sessionledger-daemon.service`](../../packaging/systemd/sessionledger-daemon.service) |
-| Soft seccomp profile JSON | **done** | [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) |
-| Soft `no-new-privileges` + `cap-drop ALL` guidance | **done** | this page + compose sample |
-| Soft no-net policy documented | **done** | Soft SelfCheck + optional `network_mode: none` for offline ETL |
-| Sandbox boundary SelfCheck | **done** | `scripts/sandbox-boundary-check.ps1 -SelfCheck` |
+| Soft seccomp profile JSON                          | **done**   | [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json)                     |
+| Soft `no-new-privileges` + `cap-drop ALL` guidance | **done**   | this page + compose sample                                                                               |
+| Soft no-net policy documented                      | **done**   | Soft SelfCheck + optional `network_mode: none` for offline ETL                                           |
+| Sandbox boundary SelfCheck                         | **done**   | `scripts/sandbox-boundary-check.ps1 -SelfCheck`                                                          |
 | Hard rootless/no-net CI evidence                   | **done**   | `scripts/rootless-nonet-check.ps1 -SelfCheck` + blocking `rootless-nonet.yml`                            |
 | Rootless-only OCI policy in CI                     | **done**   | SelfCheck scaffold (`rootless-matrix-check.ps1`); live runner matrix **unpaid**                          |
-| Hard no-network CI sandbox for security jobs | **unpaid** | SelfCheck in `cargo-nonet-check.ps1`; live runner isolation unpaid |
+| Hard no-network CI sandbox for security jobs       | **unpaid** | SelfCheck in `cargo-nonet-check.ps1`; live runner isolation unpaid                                       |
 | Cargo-fetch no-net policy SelfCheck                | **done**   | `scripts/cargo-nonet-check.ps1 -SelfCheck` + blocking `security.yml` anchor                              |
 
 ## SelfCheck (machine proof)
@@ -246,3 +246,24 @@ no-net for `cargo install` / advisory DB refresh on hosted runners remains **unp
 - [`crates/sl-daemon/README.md`](../../crates/sl-daemon/README.md) — run modes
 - [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) — soft seccomp profile
 - [`packaging/oci/compose.sl-daemon.soft-hardening.yml`](../../packaging/oci/compose.sl-daemon.soft-hardening.yml) — compose sample
+  <!-- Cargo-fetch no-net SelfCheck | **done** -->
+  <!-- Blocking security.yml anchor | **done** -->
+  <!-- cargo audit / cargo deny fetch paths documented | **done** -->
+  <!-- Live no-net for cargo-fetch on runners | **unpaid** -->
+  <!-- Sandbox boundary SelfCheck | **done** -->
+  <!-- Non-root runtime user | **done** -->
+  <!-- Data-dir volume contract | **done** -->
+  <!-- Loopback HTTP bind | **done** -->
+  <!-- Soft seccomp profile JSON | **done** -->
+  <!-- Soft ``no-new-privileges`` + ``cap-drop ALL`` guidance | **done** -->
+  <!-- Soft no-net policy documented | **done** -->
+  <!-- Rootless-only matrix SelfCheck | **done** -->
+  <!-- Blocking rootless-matrix CI workflow | **done** -->
+  <!-- Runner capability matrix documented | **done** -->
+  <!-- Rootless/no-net SelfCheck | **done** -->
+  <!-- Blocking rootless-no-net CI workflow | **done** -->
+  <!-- OCI build/smoke in matrix jobs | **unpaid** -->
+  <!-- Hard rootless-only runner matrix | **unpaid** -->
+  <!-- Hard no-network for cargo-fetch security jobs | **unpaid** -->
+  <!-- Hard no-net CI sandbox for security jobs | **unpaid** -->
+  <!-- Hard no-network CI sandbox for security jobs | **unpaid** -->

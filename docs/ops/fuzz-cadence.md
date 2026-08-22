@@ -79,8 +79,8 @@ When a sustained (or local) run finds a crash, libFuzzer writes under
 
 | Gate                                  | Status     | Evidence                                                                   |
 | ------------------------------------- | ---------- | -------------------------------------------------------------------------- |
-| Fuzz cadence SelfCheck                | **done**   | `scripts/fuzz-cadence-check.ps1 -SelfCheck` (+ `tests/fuzz_cadence.rs`)    |
-| Blocking sustained fuzz CI            | **done**   | `.github/workflows/fuzz-blocking.yml` (30 s / target on PR)                |
+| Fuzz cadence SelfCheck | **done** | `scripts/fuzz-cadence-check.ps1 -SelfCheck` (+ `tests/fuzz_cadence.rs`) |
+| Blocking sustained fuzz CI | **done** | `.github/workflows/fuzz-blocking.yml` (30 s / target on PR) |
 | Soft sustained fuzz CI                | **done**   | `.github/workflows/fuzz-cadence.yml` (`continue-on-error`, 120 s / target) |
 | PR `fuzz-smoke` (10 s)                | **done**   | `.github/workflows/ci.yml` (unchanged; stays blocking + short)             |
 | Auto corpus promotion from CI crashes | **unpaid** | Triage remains maintainer-driven (see above)                               |

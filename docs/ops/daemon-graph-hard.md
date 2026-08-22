@@ -49,22 +49,24 @@ Hermetic wrapper: [`tests/daemon_graph_hard.rs`](../../tests/daemon_graph_hard.r
 
 ### Soft vs hard gates
 
-| Gate                                             | Status     | Evidence                                  |
-| ------------------------------------------------ | ---------- | ----------------------------------------- |
-| Live tokio mpsc/broadcast/SSE daemon graph ports | **done** | `tests/daemon_graph_tokio.rs` |
-| Blocking daemon-graph-hard CI workflow | **done** | `.github/workflows/daemon-graph-hard.yml` |
-| Daemon-graph SelfCheck | **done** | `scripts/daemon-graph-hard-check.ps1 -SelfCheck` |
-| `tests/daemon_graph_hard.rs` cargo wrapper       | **done**   | Hermetic SelfCheck anchor smoke           |
-| Process-level HTTP SSE soak under loom           | **unpaid** | Effort M; beyond unit graph ports         |
-| Shuttle crate in default Cargo graph             | **unpaid** | C00 L7 residual                           |
+| Gate                                             | Status     | Evidence                                         |
+| ------------------------------------------------ | ---------- | ------------------------------------------------ |
+| Live tokio mpsc/broadcast/SSE daemon graph ports | **done**   | `tests/daemon_graph_tokio.rs`                    |
+| Blocking daemon-graph-hard CI workflow           | **done**   | `.github/workflows/daemon-graph-hard.yml`        |
+| Daemon-graph SelfCheck                           | **done**   | `scripts/daemon-graph-hard-check.ps1 -SelfCheck` |
+| `tests/daemon_graph_hard.rs` cargo wrapper       | **done**   | Hermetic SelfCheck anchor smoke                  |
+| Process-level HTTP SSE soak under loom           | **unpaid** | Effort M; beyond unit graph ports                |
+| Shuttle crate in default Cargo graph             | **unpaid** | C00 L7 residual                                  |
 
 ## Done / unpaid
 
-| Item                                   | Status                       |
-| -------------------------------------- | ---------------------------- |
-| Policy SSOT + JSON manifest            | **done**                     |
-| Live tokio pipeline conservation       | **done**                     |
-| Lagged SSE subscriber recovery         | **done**                     |
-| Shutdown stops mpsc enqueue            | **done**                     |
-| Blocking `daemon-graph-hard.yml`       | **done**                     |
-| Process-level HTTP SSE soak under loom | **unpaid** — C00 L7 residual |
+| Item                                                  | Status                       |
+| ----------------------------------------------------- | ---------------------------- |
+| Policy SSOT + JSON manifest                           | **done**                     |
+| Live tokio pipeline conservation                      | **done**                     |
+| Lagged SSE subscriber recovery                        | **done**                     |
+| Shutdown stops mpsc enqueue                           | **done**                     |
+| Blocking `daemon-graph-hard.yml`                      | **done**                     |
+| Process-level HTTP SSE soak under loom                | **unpaid** — C00 L7 residual |
+| <!-- Live tokio mpsc/broadcast/SSE daemon graph ports | **done** -->                 |
+| <!-- Blocking daemon-graph-hard CI workflow           | **done** -->                 |

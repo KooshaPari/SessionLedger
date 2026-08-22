@@ -68,16 +68,17 @@ pwsh ./scripts/load-smoke.ps1 -BaseUrl http://127.0.0.1:8080 -RouteTier macro
 | Gate                                              | Status     | Evidence                                     |
 | ------------------------------------------------- | ---------- | -------------------------------------------- |
 | Soft probe-tier `ops-load.yml`                    | **done**   | Unchanged weekly schedule                    |
-| Blocking load-macro-gate-hard CI workflow | **done** | `.github/workflows/load-macro-gate-hard.yml` |
+| Blocking load-macro-gate-hard CI workflow         | **done**   | `.github/workflows/load-macro-gate-hard.yml` |
 | `tests/load_macro_gate.rs` cargo wrapper          | **done**   | Hermetic SelfCheck anchor smoke              |
 | Full write/search/stream soak at production scale | **unpaid** | Effort M; beyond PR smoke breadth            |
 
 ## Done / unpaid
 
-| Item                                          | Status                        |
-| --------------------------------------------- | ----------------------------- |
-| Policy SSOT + JSON manifest                   | **done**                      |
-| `load-smoke.ps1 -RouteTier macro`             | **done**                      |
-| Blocking `load-macro-gate-hard.yml`           | **done**                      |
-| `tests/load_macro_gate.rs` cargo wrapper      | **done**                      |
-| Trend publication / stable-hardware baselines | **unpaid** — C08 L73 residual |
+| Item                                           | Status                        |
+| ---------------------------------------------- | ----------------------------- |
+| Policy SSOT + JSON manifest                    | **done**                      |
+| `load-smoke.ps1 -RouteTier macro`              | **done**                      |
+| Blocking `load-macro-gate-hard.yml`            | **done**                      |
+| `tests/load_macro_gate.rs` cargo wrapper       | **done**                      |
+| Trend publication / stable-hardware baselines  | **unpaid** — C08 L73 residual |
+| <!-- Blocking load-macro-gate-hard CI workflow | **done** -->                  |

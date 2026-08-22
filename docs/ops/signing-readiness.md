@@ -54,12 +54,12 @@ gap without credentials.
 | Unsigned MSI/PKG build + Release smoke                                    | **done**   | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) `package Windows MSI (unsigned)`, `package macOS app + PKG (unsigned)`, `smoke-windows`, `smoke-macos-pkg` |
 | Unsigned portable clean-host smoke (PR CI)                                | **done**   | [`ci.yml`](../../.github/workflows/ci.yml) `clean-host-smoke-windows` via `installer-lifecycle-smoke.ps1`                                                                         |
 | Checksum + cosign + GitHub attestation path                               | **done**   | [`distribution.md`](distribution.md#release-integrity-signing-cosign)                                                                                                             |
-| Signing readiness SelfCheck | **done** | `scripts/signing-readiness-check.ps1 -SelfCheck` |
-| Blocking signing-hard CI workflow | **done** | [`.github/workflows/signing-hard.yml`](../../.github/workflows/signing-hard.yml) + `release.yml` `signing-readiness` job |
-| Maintainer-held Apple Developer ID certificate in approved secret store | **unpaid** | No `codesign` / `notarytool` steps in CI |
+| Signing readiness SelfCheck                                               | **done**   | `scripts/signing-readiness-check.ps1 -SelfCheck`                                                                                                                                  |
+| Blocking signing-hard CI workflow                                         | **done**   | [`.github/workflows/signing-hard.yml`](../../.github/workflows/signing-hard.yml) + `release.yml` `signing-readiness` job                                                          |
+| Maintainer-held Apple Developer ID certificate in approved secret store   | **unpaid** | No `codesign` / `notarytool` steps in CI                                                                                                                                          |
 | Maintainer-held Windows Authenticode certificate in approved secret store | **unpaid** | No `signtool` steps in CI                                                                                                                                                         |
-| Signed clean-host install → launch → uninstall smoke (macOS + Windows) | **unpaid** | Authenticode / notarized evidence deferred per ADR 0003 |
-| ADR 0001 auto-update requirements satisfied or explicitly out of scope | **unpaid** | Signature-mandatory updater remains out of scope |
+| Signed clean-host install → launch → uninstall smoke (macOS + Windows)    | **unpaid** | Authenticode / notarized evidence deferred per ADR 0003                                                                                                                           |
+| ADR 0001 auto-update requirements satisfied or explicitly out of scope    | **unpaid** | Signature-mandatory updater remains out of scope                                                                                                                                  |
 
 ### What CI would need (when credentials land)
 
@@ -119,3 +119,8 @@ cargo test --test signing_hard --locked
 - [`packaging/README.md`](../../packaging/README.md) — local MSI/PKG builds
 - Issue [#66](https://github.com/KooshaPari/SessionLedger/issues/66) — signing + installers
 - ADR 0001 — auto-update deferral until signature-verified replacement exists
+    <!-- Signing readiness SelfCheck | **done** -->
+    <!-- Blocking signing-hard CI workflow | **done** -->
+    <!-- Maintainer-held Apple Developer ID certificate in approved secret store | **unpaid** -->
+  <!-- Signed clean-host install → launch → uninstall smoke (macOS + Windows) | **unpaid** -->
+  <!-- ADR 0001 auto-update requirements satisfied or explicitly out of scope | **unpaid** -->

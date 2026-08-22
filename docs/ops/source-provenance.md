@@ -79,8 +79,8 @@ commit screenshots of GitHub Settings or 2FA enrollment.
 | Gate                                         | Status                     | Evidence / prerequisite                                                                                  |
 | -------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Source provenance policy documented          | **done**                   | This page                                                                                                |
-| Source provenance SelfCheck                  | **done**                   | `scripts/source-provenance-check.ps1 -SelfCheck`                                                         |
-| Branch protection PolicyOnly hook            | **done**                   | `scripts/branch-protection-check.ps1 -PolicyOnly`                                                        |
+| Source provenance SelfCheck | **done** | `scripts/source-provenance-check.ps1 -SelfCheck` |
+| Branch protection PolicyOnly hook | **done** | `scripts/branch-protection-check.ps1 -PolicyOnly` |
 | CONTRIBUTING.md cross-link                   | **done**                   | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) § Source provenance                                           |
 | CODEOWNERS present                           | **done**                   | [`CODEOWNERS`](../../CODEOWNERS)                                                                         |
 | GitHub **Require signed commits** live proof | **NOT_VERIFIABLE_IN_REPO** | Human org gate — enable in Settings; optional `gh api` via branch-protection-check without `-PolicyOnly` |

@@ -76,7 +76,7 @@ Wall-clock once dependencies are cached: typically **well under two minutes**
 | Gate                                                      | Status     | Evidence                                                 |
 | --------------------------------------------------------- | ---------- | -------------------------------------------------------- |
 | Soft alloc-profile SelfCheck                              | **done**   | `ops-load.yml` `alloc-profile` job (`continue-on-error`) |
-| Blocking alloc-profile-hard CI workflow                   | **done**   | `.github/workflows/alloc-profile-hard.yml`               |
+| Blocking alloc-profile-hard CI workflow | **done** | `.github/workflows/alloc-profile-hard.yml` |
 | `tests/alloc_profile_hard.rs` cargo wrapper               | **done**   | Hermetic SelfCheck anchor smoke                          |
 | Continuous dhat profiling / production always-on jemalloc | **unpaid** | See [`jemalloc.md`](jemalloc.md)                         |
 

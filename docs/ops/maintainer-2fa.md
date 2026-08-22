@@ -49,7 +49,7 @@ Do **not** commit screenshots of 2FA settings or hardware-key serial numbers.
 | Gate                                        | Status                     | Evidence / prerequisite                                                                                                      |
 | ------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Maintainer 2FA policy documented            | **done**                   | This page                                                                                                                    |
-| Maintainer 2FA SelfCheck                    | **done**                   | `scripts/maintainer-2fa-check.ps1 -SelfCheck`                                                                                |
+| Maintainer 2FA SelfCheck | **done** | `scripts/maintainer-2fa-check.ps1 -SelfCheck` |
 | SECURITY.md cross-link                      | **done**                   | [`SECURITY.md`](../../SECURITY.md) § Commit signing                                                                          |
 | CONTRIBUTING.md cross-link                  | **done**                   | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) § Maintainer 2FA                                                                  |
 | Org 2FA + hardware-key enforcement          | **NOT_VERIFIABLE_IN_REPO** | Human attestation row — GitHub org/account 2FA cannot be confirmed from checkout; maintainer records attestation out-of-band |

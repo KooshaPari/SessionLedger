@@ -51,8 +51,9 @@ Hermetic wrapper: [`tests/daemon_graph_hard.rs`](../../tests/daemon_graph_hard.r
 
 | Gate                                             | Status     | Evidence                                  |
 | ------------------------------------------------ | ---------- | ----------------------------------------- |
-| Live tokio mpsc/broadcast/SSE daemon graph ports | **done**   | `tests/daemon_graph_tokio.rs`             |
-| Blocking daemon-graph-hard CI workflow           | **done**   | `.github/workflows/daemon-graph-hard.yml` |
+| Live tokio mpsc/broadcast/SSE daemon graph ports | **done** | `tests/daemon_graph_tokio.rs` |
+| Blocking daemon-graph-hard CI workflow | **done** | `.github/workflows/daemon-graph-hard.yml` |
+| Daemon-graph SelfCheck | **done** | `scripts/daemon-graph-hard-check.ps1 -SelfCheck` |
 | `tests/daemon_graph_hard.rs` cargo wrapper       | **done**   | Hermetic SelfCheck anchor smoke           |
 | Process-level HTTP SSE soak under loom           | **unpaid** | Effort M; beyond unit graph ports         |
 | Shuttle crate in default Cargo graph             | **unpaid** | C00 L7 residual                           |

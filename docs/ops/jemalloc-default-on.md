@@ -68,8 +68,8 @@ Hermetic wiring test: [`tests/jemalloc_default_on.rs`](../../tests/jemalloc_defa
 | Item                                             | Status     |
 | ------------------------------------------------ | ---------- |
 | Policy SSOT + JSON manifest                      | **done**   |
-| Unix default jemalloc                            | **done**   |
-| Windows mimalloc parity                          | **done**   |
-| Blocking jemalloc-default-on-hard CI workflow    | **done**   |
+| Unix default jemalloc | **done** |
+| Windows mimalloc parity | **done** |
+| Blocking jemalloc-default-on-hard CI workflow | **done** |
 | `tests/jemalloc_default_on.rs` cargo wrapper     | **done**   |
 | Continuous profiling push to production backends | **unpaid** | C00 L8 residual |

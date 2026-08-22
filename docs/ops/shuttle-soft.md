@@ -28,9 +28,9 @@ SelfCheck over adding a heavy permutation checker until a paid follow-up lands.
 
 | Gate                              | Status     | Evidence                                                                                 |
 | --------------------------------- | ---------- | ---------------------------------------------------------------------------------------- |
-| Soft shuttle SelfCheck            | **done**   | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`)                  |
+| Soft shuttle SelfCheck | **done** | `scripts/shuttle-soft-check.ps1 -SelfCheck` (+ `tests/shuttle_soft.rs`) |
 | Soft shuttle CI job               | **done**   | `.github/workflows/shuttle-soft.yml` (`continue-on-error`)                               |
-| Shuttle permutation SelfCheck     | **done**   | `scripts/shuttle-permutation-check.ps1 -SelfCheck` (+ `tests/shuttle_permutation.rs`)    |
+| Shuttle permutation SelfCheck | **done** | `scripts/shuttle-permutation-check.ps1 -SelfCheck` (+ `tests/shuttle_permutation.rs`) |
 | Shuttle permutation suite CI      | **done**   | `.github/workflows/shuttle-permutation.yml` (blocking on PR)                             |
 | Full shuttle permutation coverage | **unpaid** | Broad broadcast/SSE/daemon graph + shuttle crate exploration still outside hermetic lane |
 

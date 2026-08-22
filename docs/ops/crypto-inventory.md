@@ -92,7 +92,7 @@ not an open implementation gap without product scope.
 | Phase-0 deferred vs recommended deploy table                | **done**               | Table in this section                                                         |
 | Host FDE / ACL / secret-injection guidance                  | **done**               | Recommended host-side controls                                                |
 | TLS-at-edge samples (Caddy/nginx)                           | **done**               | [Remote daemon deploy](#remote-daemon-deploy-tls-at-the-edge)                 |
-| Crypto inventory SelfCheck                                  | **done**               | `scripts/crypto-inventory-check.ps1 -SelfCheck`                               |
+| Crypto inventory SelfCheck | **done** | `scripts/crypto-inventory-check.ps1 -SelfCheck` |
 | Envelope-crypto SelfCheck                                   | **done**               | `scripts/envelope-crypto-check.ps1 -SelfCheck` (+ `tests/envelope_crypto.rs`) |
 | Blocking envelope-crypto CI workflow                        | **done**               | `.github/workflows/envelope-crypto.yml`                                       |
 | Soft envelope helper (`src/envelope.rs`)                    | **done**               | SHA-256 keystream + `SL_ENVELOPE_KEY`; `envelope-crypto` marker feature       |

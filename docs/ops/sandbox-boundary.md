@@ -126,11 +126,11 @@ advisory DB refresh).
 
 | Gate                                            | Status     | Evidence / prerequisite                                                |
 | ----------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
-| Cargo-fetch no-net SelfCheck                    | **done**   | `scripts/cargo-nonet-check.ps1 -SelfCheck`                             |
-| Blocking security.yml anchor                    | **done**   | `cargo-nonet` job (no `continue-on-error`)                             |
+| Cargo-fetch no-net SelfCheck | **done** | `scripts/cargo-nonet-check.ps1 -SelfCheck` |
+| Blocking security.yml anchor | **done** | `cargo-nonet` job (no `continue-on-error`) |
 | cargo test wrapper                              | **done**   | `tests/cargo_nonet.rs`                                                 |
 | cargo audit / cargo deny fetch paths documented | **done**   | `security.yml` `cargo-audit` + `cargo-deny` jobs (network fetch today) |
-| Live no-net for cargo-fetch on runners          | **unpaid** | Would block `cargo install` / advisory DB refresh                      |
+| Live no-net for cargo-fetch on runners | **unpaid** | Would block `cargo install` / advisory DB refresh |
 
 ```powershell
 pwsh ./scripts/cargo-nonet-check.ps1 -SelfCheck

@@ -1,7 +1,7 @@
 {
   "repo": "SessionLedger",
-  "overall": 78,
-  "grade": "B+",
+  "overall": 80,
+  "grade": "A-",
   "generated": "2026-08-21",
   "details": {
     "source_files": 231,
@@ -49,14 +49,14 @@
     "L24 Migration": 50,
     "L25 Vendor Lockin": 100,
     "L26 Event Driven": 55,
-    "L27 Infrastructure": 45,
+    "L27 Infrastructure": 85,
     "L28 Cost Efficiency": 75,
     "L29 Monitoring": 75,
     "L30 Onboarding": 85
   },
   "regenerated": "2026-08-21",
-  "notes": "Regenerated after P2 pillar improvements",
-  "wave": "Wave 2 (L14)",
+  "notes": "Wave 3 L27: added Dockerfile/compose/k8s/INFRASTRUCTURE.md per repo. L27 = 85.",
+  "wave": "Wave 3 (L27 Infrastructure)",
   "wave1_bumps": [
     "L7 Extensibility=70->100 (+70)",
     "L16 Frontend=55->100 (+55)",

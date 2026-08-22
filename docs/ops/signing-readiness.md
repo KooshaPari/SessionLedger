@@ -59,7 +59,7 @@ gap without credentials.
 | Maintainer-held Apple Developer ID certificate in approved secret store | **unpaid** | No `codesign` / `notarytool` steps in CI |
 | Maintainer-held Windows Authenticode certificate in approved secret store | **unpaid** | No `signtool` steps in CI                                                                                                                                                         |
 | Signed clean-host install → launch → uninstall smoke (macOS + Windows) | **unpaid** | Authenticode / notarized evidence deferred per ADR 0003 |
-| ADR 0001 auto-update requirements satisfied or explicitly out of scope    | **unpaid** | Signature-mandatory updater remains out of scope                                                                                                                                  |
+| ADR 0001 auto-update requirements satisfied or explicitly out of scope | **unpaid** | Signature-mandatory updater remains out of scope |
 
 ### What CI would need (when credentials land)
 

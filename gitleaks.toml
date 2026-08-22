@@ -8,6 +8,11 @@
   description = "Global allowlist for SessionLedger"
   paths = [
     '''(.*?)(jpg|gif|doc|pdf|bin|svg|socket|png|md|lock|sum)''',
+    '''Cargo\.lock''',
+    '''tests/''',
+    '''benches/''',
+    '''fuzz/''',
+    '''vendor/''',
   ]
   # Allow test/example values that look like secrets
   regexes = [
@@ -18,26 +23,6 @@
     # Cargo checksums
     '''checksum = "sha256:[a-fA-F0-9]{64}"''',
   ]
-
-  [[allowlist.paths]]
-    description = "Allow Cargo.lock checksums"
-    path = 'Cargo\.lock'
-
-  [[allowlist.paths]]
-    description = "Allow test files"
-    path = 'tests/'
-
-  [[allowlist.paths]]
-    description = "Allow bench files"
-    path = 'benches/'
-
-  [[allowlist.paths]]
-    description = "Allow fuzz corpus"
-    path = 'fuzz/'
-
-  [[allowlist.paths]]
-    description = "Allow vendor directory"
-    path = 'vendor/'
 
 # Project-specific rules for Rust crate publishing tokens
 [[rules]]
@@ -66,7 +51,6 @@
   tags = ["github", "actions"]
   [rules.allowlist]
     description = "Allow GitHub Actions secrets.* references"
-    description = "Standard GitHub Actions secret references are expected"
     regexes = ['''secrets\.[A-Z_]+''']
 
 # Example .env file values

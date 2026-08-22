@@ -70,3 +70,6 @@ Hermetic wrapper: [`tests/daemon_graph_hard.rs`](../../tests/daemon_graph_hard.r
 | Process-level HTTP SSE soak under loom                | **unpaid** — C00 L7 residual |
 | <!-- Live tokio mpsc/broadcast/SSE daemon graph ports | **done** -->                 |
 | <!-- Blocking daemon-graph-hard CI workflow           | **done** -->                 |
+
+<!-- Blocking daemon-graph-hard CI workflow | **done** -->
+<!-- Process-level HTTP SSE soak under loom | **unpaid** -->

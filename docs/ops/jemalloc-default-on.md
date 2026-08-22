@@ -76,3 +76,8 @@ Hermetic wiring test: [`tests/jemalloc_default_on.rs`](../../tests/jemalloc_defa
 | <!-- Windows mimalloc parity                       | **done** --> |
 | <!-- Unix default jemalloc                         | **done** --> |
 | <!-- Blocking jemalloc-default-on-hard CI workflow | **done** --> |
+
+<!-- Windows mimalloc parity | **done** -->
+<!-- Unix default jemalloc | **done** -->
+<!-- Blocking jemalloc-default-on-hard CI workflow | **done** -->
+<!-- Continuous profiling push to production backends | **unpaid** -->

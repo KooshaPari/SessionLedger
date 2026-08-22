@@ -322,3 +322,4 @@ port of `race_model`'s `sync_channel` remain unpaid. Soft shuttle SelfCheck does
 <!-- Full shuttle crate permutation | **unpaid** -->
 <!-- Loom daemon-graph broadcast/SSE epoch permutations | **done** -->
 <!-- Loom tokio-shaped mpsc/broadcast/SSE daemon graph permutations | **done** -->
+<!-- Miri permutation race_model CI | **done** -->

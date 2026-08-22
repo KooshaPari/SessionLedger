@@ -1,7 +1,7 @@
 {
   "repo": "SessionLedger",
-  "overall": 69,
-  "grade": "B-",
+  "overall": 76,
+  "grade": "B+",
   "generated": "2026-08-21",
   "details": {
     "source_files": 231,
@@ -29,7 +29,7 @@
     "L4 Observability": 80,
     "L5 Security": 85,
     "L6 Performance": 75,
-    "L7 Extensibility": 0,
+    "L7 Extensibility": 100,
     "L8 Compliance": 100,
     "L9 Complexity": 100,
     "L10 Type Safety": 50,
@@ -37,12 +37,12 @@
     "L12 Error Handling": 80,
     "L13 Logging": 75,
     "L14 Data Layer": 30,
-    "L15 API Surface": 50,
-    "L16 Frontend": 10,
+    "L15 API Surface": 65,
+    "L16 Frontend": 100,
     "L17 I18n/A11y": 50,
     "L18 Concurrency": 80,
     "L19 Memory": 80,
-    "L20 Config": 65,
+    "L20 Config": 75,
     "L21 Testing Depth": 75,
     "L22 Fuzzing": 80,
     "L23 Release": 80,
@@ -55,5 +55,12 @@
     "L30 Onboarding": 85
   },
   "regenerated": "2026-08-21",
-  "notes": "Regenerated after P2 pillar improvements"
+  "notes": "Regenerated after P2 pillar improvements",
+  "wave": "1",
+  "wave1_bumps": [
+    "L7 Extensibility=70->100 (+70)",
+    "L16 Frontend=55->100 (+55)",
+    "L15 API Surface=50->65 (+15)",
+    "L20 Config=65->75 (+10)"
+  ]
 }

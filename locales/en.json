@@ -44,6 +44,9 @@
     "errors.not_found": "Page not found",
     "errors.forbidden": "Access denied",
     "errors.server_error": "Internal server error",
-    "errors.network_error": "Network connection error"
+    "errors.network_error": "Network connection error",
+    "session.start": "Start Session",
+    "session.end": "End Session",
+    "session.duration": "Duration"
   }
 }

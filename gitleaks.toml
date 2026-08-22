@@ -38,6 +38,9 @@
   regex = '''(?:features|optional)\s*=\s*(?:true|false|\[.*\])'''
   path = 'Cargo\.toml'
   tags = ["false-positive"]
+  [[rules.allowlists]]
+    description = "Allow Cargo.toml feature definitions"
+    paths = ['''Cargo\.toml$''']
 
 # CI workflow secrets (expected false positives)
 [[rules]]
@@ -46,6 +49,9 @@
   regex = '''secrets\.[A-Z_]+'''
   path = '\.github/workflows/'
   tags = ["github", "actions"]
+  [[rules.allowlists]]
+    description = "Allow GitHub Actions secrets.* references"
+    regexes = ['''secrets\.[A-Z_]+''']
 
 # Example .env file values
 [[rules]]
@@ -54,3 +60,6 @@
   regex = '''(?i)(?:api[_-]?key|secret|token|password)\s*=\s*(?:your[_-]?|example[_-]?|test[_-]?|placeholder)[a-zA-Z0-9_\-]*'''
   path = '\.env\.example'
   tags = ["false-positive"]
+  [[rules.allowlists]]
+    description = "Allow .env.example placeholder values"
+    paths = ['''\.env\.example$''']

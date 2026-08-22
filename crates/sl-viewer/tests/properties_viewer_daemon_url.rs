@@ -18,7 +18,7 @@
 //! `daemon_base_url()` directly rather than hardcoding a literal URL.
 
 use proptest::prelude::*;
-use sl_viewer::daemon_url::{daemon_api_url, daemon_host_display, daemon_base_url};
+use sl_viewer::daemon_url::{daemon_api_url, daemon_base_url, daemon_host_display};
 
 // ── daemon_api_url path joining ────────────────────────────────────────────
 

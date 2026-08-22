@@ -26,8 +26,8 @@
 
 use proptest::prelude::*;
 use session_ledger::{
-    validate_okf_document, OkfDocument, OkfEntity, OkfProvenance, OkfRelation,
-    OkfValidationError, ContinuationBundle,
+    validate_okf_document, ContinuationBundle, OkfDocument, OkfEntity, OkfProvenance, OkfRelation,
+    OkfValidationError,
 };
 
 // ── Strategies ─────────────────────────────────────────────────────────────

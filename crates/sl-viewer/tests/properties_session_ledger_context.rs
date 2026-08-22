@@ -21,15 +21,43 @@ const FILE_EXTENSIONS: &[&str] = &[
 ];
 
 const DECISION_PATTERNS: &[&str] = &[
-    "decided", "decision", "let's use", "lets use", "we should", "we chose", "chose",
-    "opted for", "went with", "picked", "settled on", "i'll go with", "going with",
-    "best to use", "prefer",
+    "decided",
+    "decision",
+    "let's use",
+    "lets use",
+    "we should",
+    "we chose",
+    "chose",
+    "opted for",
+    "went with",
+    "picked",
+    "settled on",
+    "i'll go with",
+    "going with",
+    "best to use",
+    "prefer",
 ];
 
 const ENVIRONMENT_PATTERNS: &[&str] = &[
-    "install", "installed", "setup", "set up", "configure", "version", "npm", "cargo",
-    "pip", "brew", "apt", "docker", "compose", "env", "export", "add ", "added ",
-    "upgrade", "updated",
+    "install",
+    "installed",
+    "setup",
+    "set up",
+    "configure",
+    "version",
+    "npm",
+    "cargo",
+    "pip",
+    "brew",
+    "apt",
+    "docker",
+    "compose",
+    "env",
+    "export",
+    "add ",
+    "added ",
+    "upgrade",
+    "updated",
 ];
 
 fn make_session(id: &str, messages: &[(Role, &str)]) -> Session {

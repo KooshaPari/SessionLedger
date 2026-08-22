@@ -65,9 +65,7 @@ fn session_strategy() -> impl Strategy<Value = Session> {
         // 0..8 messages.
         prop::collection::vec(message_strategy(), 0..8),
         // title — `Option<String>`.
-        prop::option::of(
-            prop::string::string_regex("[A-Za-z0-9 ._-]{0,40}").expect("valid regex"),
-        ),
+        prop::option::of(prop::string::string_regex("[A-Za-z0-9 ._-]{0,40}").expect("valid regex")),
         // corpus — pick one of the documented variants.
         prop::sample::select(vec![
             Corpus::Forge,
@@ -80,9 +78,7 @@ fn session_strategy() -> impl Strategy<Value = Session> {
             Corpus::GeminiWeb,
         ]),
         // cwd — `Option<String>`.
-        prop::option::of(
-            prop::string::string_regex("[/a-zA-Z0-9._-]{0,40}").expect("valid regex"),
-        ),
+        prop::option::of(prop::string::string_regex("[/a-zA-Z0-9._-]{0,40}").expect("valid regex")),
     )
         .prop_map(|(id, messages, title, corpus, cwd)| {
             let mut s = Session::new(id, corpus);

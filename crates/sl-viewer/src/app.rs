@@ -1297,7 +1297,6 @@ pub fn App() -> Element {
                     id: "viewer-settings-button",
                     class: "help-toggle",
                     r#type: "button",
-                    "aria-controls": "panel-settings",
                     onclick: move |_| activate(Tab::Settings),
                     "Settings"
                 }

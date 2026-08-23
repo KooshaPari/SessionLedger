@@ -1295,13 +1295,14 @@ pub fn App() -> Element {
                     r#type: "button",
                     "aria-label": "Toggle light and dark theme",
                     onclick: move |_| {
+                        let next_theme = match settings_signal().theme {
+                            Theme::Light => Theme::Dark,
+                            Theme::Dark | Theme::System => Theme::Light,
+                        };
                         settings_signal.with_mut(|settings| {
-                            settings.theme = match settings.theme {
-                                Theme::Light => Theme::Dark,
-                                Theme::Dark | Theme::System => Theme::Light,
-                            };
+                            settings.theme = next_theme;
                         });
-                        let resolved = match settings_signal().theme {
+                        let resolved = match next_theme {
                             Theme::Light => "light",
                             Theme::Dark => "dark",
                             Theme::System => "dark",

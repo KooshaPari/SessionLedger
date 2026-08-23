@@ -58,7 +58,7 @@ proptest! {
     #[test]
     fn extract_detail_is_callable(_unused in 0u8..1u8) {
         // Construct an empty bundle and verify the function is callable.
-        use session_ledger::domain::bundle::ContinuationBundle;
+        use session_ledger::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
         let cb = ContinuationBundle {
             source_id: "test-source-id".into(),
             bundles: vec![Bundle::new(BundleKind::Context, serde_json::json!({}))],
@@ -96,7 +96,7 @@ proptest! {
     fn extract_detail_preserves_source_id(
         source_id in "[a-z0-9-]{3,30}",
     ) {
-        use session_ledger::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
+        use session_ledger::domain::bundle::ContinuationBundle;
         let cb = ContinuationBundle {
             source_id: source_id.clone(),
             bundles: vec![],

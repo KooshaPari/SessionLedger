@@ -4,7 +4,9 @@ use session_ledger::domain::{
     session::{Role, Session},
 };
 
-use crate::async_states::{ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState};
+use crate::async_states::{
+    ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState, SkeletonLayout,
+};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::cli_help;
@@ -1347,6 +1349,12 @@ fn BundlesTab() -> Element {
                 message: "Loading bundles…".to_string(),
                 patience_hint: true,
             }
+        };
+    }
+    if query_fixture_active("skeleton") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ContentSkeleton { layout: SkeletonLayout::Bundles, list_rows: 4 }
         };
     }
     // Discovery is still running — show the same skeleton the visual

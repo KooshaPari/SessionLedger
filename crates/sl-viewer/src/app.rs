@@ -525,8 +525,10 @@ pub fn App() -> Element {
                   && window.matchMedia('(prefers-color-scheme: light)').matches;
                 const resolved = prefersLight ? 'light' : 'dark';
                 document.documentElement.dataset.theme = resolved;
+                window.localStorage.setItem('sl-viewer-theme', resolved);
               }} else {{
                 document.documentElement.dataset.theme = desired;
+                window.localStorage.setItem('sl-viewer-theme', desired);
               }}
             }})();
             "#,
@@ -1139,7 +1141,7 @@ pub fn App() -> Element {
                                 dangerous_inner_html: "{SPLASH_MASCOT_SVG}"
                             }
                             span { class: "launch-splash-mark", "SessionLedger" }
-                            span { class: "launch-splash-caption", "Session viewer" }
+                            span { class: "launch-splash-caption", "Viewer" }
                             div {
                                 class: "launch-splash-spinner",
                                 "data-testid": "launch-splash-spinner",

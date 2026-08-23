@@ -511,7 +511,12 @@ pub fn App() -> Element {
             eprintln!("[sl-viewer] could not persist settings: {err}");
         }
         // Mirror the persisted theme to the DOM dataset so CSS picks it up.
-        let theme_attr = match snapshot.theme {
+        let effective_theme = if query_fixture_active("launch-splash-light") {
+            Theme::Light
+        } else {
+            snapshot.theme
+        };
+        let theme_attr = match effective_theme {
             Theme::Light => "light",
             Theme::Dark => "dark",
             Theme::System => "system",

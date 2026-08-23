@@ -501,7 +501,7 @@ pub fn App() -> Element {
     // mutations propagate through `SettingsSignal` and the effect below
     // persists them back to `settings.json`.
     let initial_settings = Settings::load();
-    let settings_signal = use_signal(|| initial_settings);
+    let mut settings_signal = use_signal(|| initial_settings);
     use_context_provider(|| SettingsSignal(settings_signal));
     let settings_for_persist = settings_signal;
     use_effect(move || {
@@ -1191,19 +1191,35 @@ pub fn App() -> Element {
                                                 }
                                                 Key::ArrowRight => {
                                                     evt.prevent_default();
-                                                    activate(Tab::from_index(idx + 1));
+                                                    let next = Tab::from_index(idx + 1);
+                                                    activate(next);
+                                                    let _ = document::eval(&format!(
+                                                        "document.getElementById('{}')?.focus();",
+                                                        next.id()
+                                                    ));
                                                 }
                                                 Key::ArrowLeft => {
                                                     evt.prevent_default();
-                                                    activate(Tab::from_index(idx + len - 1));
+                                                    let next = Tab::from_index(idx + len - 1);
+                                                    activate(next);
+                                                    let _ = document::eval(&format!(
+                                                        "document.getElementById('{}')?.focus();",
+                                                        next.id()
+                                                    ));
                                                 }
                                                 Key::Home => {
                                                     evt.prevent_default();
                                                     activate(Tab::Bundles);
+                                                    let _ = document::eval(
+                                                        "document.getElementById('tab-bundles')?.focus();",
+                                                    );
                                                 }
                                                 Key::End => {
                                                     evt.prevent_default();
-                                                    activate(Tab::Settings);
+                                                    activate(Tab::Replay);
+                                                    let _ = document::eval(
+                                                        "document.getElementById('tab-replay')?.focus();",
+                                                    );
                                                 }
                                                 _ => {}
                                             }
@@ -1266,19 +1282,14 @@ pub fn App() -> Element {
                     id: "viewer-theme-toggle",
                     class: "theme-toggle",
                     r#type: "button",
-                    "aria-label": "Open settings to change theme",
+                    "aria-label": "Toggle light and dark theme",
                     onclick: move |_| {
-                        active_tab.set(Tab::Settings);
-                        let _ = document::eval(
-                            r#"
-                            window.requestAnimationFrame(() => {
-                              const focusable = document.querySelector(
-                                '#settings-theme-radios input[type="radio"]'
-                              );
-                              focusable?.focus();
-                            });
-                            "#,
-                        );
+                        settings_signal.with_mut(|settings| {
+                            settings.theme = match settings.theme {
+                                Theme::Light => Theme::Dark,
+                                Theme::Dark | Theme::System => Theme::Light,
+                            };
+                        });
                     },
                     "Theme"
                 }
@@ -1286,7 +1297,6 @@ pub fn App() -> Element {
                     id: "viewer-settings-button",
                     class: "help-toggle",
                     r#type: "button",
-                    "aria-haspopup": "tab",
                     "aria-controls": "panel-settings",
                     onclick: move |_| activate(Tab::Settings),
                     "Settings"

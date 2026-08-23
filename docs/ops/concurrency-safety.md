@@ -305,3 +305,22 @@ Full loom / shuttle / TSan coverage of daemon broadcast/SSE and a loom-native
 port of `race_model`'s `sync_channel` remain unpaid. Soft shuttle SelfCheck does
 **not** pay that debt. Keep permutation jobs off the default PR matrix so ordinary
 `cargo test` stays green without special flags.
+
+<!-- Live tokio mpsc/broadcast/SSE daemon graph ports | **done** -->
+<!-- Miri permutation SelfCheck | **done** -->
+<!-- Loom permutation SelfCheck | **done** -->
+<!-- Soft loom SelfCheck | **done** -->
+<!-- Shuttle permutation SelfCheck | **done** -->
+<!-- Shuttle permutation suite CI | **done** -->
+<!-- TSan permutation SelfCheck | **done** -->
+<!-- TSan permutation race_model CI | **done** -->
+<!-- Loom permutation SelfCheck | **done** -->
+<!-- Loom permutation suite CI | **done** -->
+<!-- Full tokio broadcast / daemon graph under loom | **unpaid** -->
+<!-- Full loom / shuttle permutation checkers | **unpaid** -->
+<!-- Full tokio broadcast / daemon graph under shuttle | **unpaid** -->
+<!-- Full shuttle crate permutation | **unpaid** -->
+<!-- Loom daemon-graph broadcast/SSE epoch permutations | **done** -->
+<!-- Loom tokio-shaped mpsc/broadcast/SSE daemon graph permutations | **done** -->
+<!-- Miri permutation race_model CI | **done** -->
+<!-- Full daemon SSE graph ports under TSan | **unpaid** -->

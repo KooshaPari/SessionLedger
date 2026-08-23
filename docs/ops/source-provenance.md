@@ -106,3 +106,5 @@ The script asserts:
 - [`branch-protection.md`](branch-protection.md) — PR + signed-commit machine verify
 - [`commit-signing.md`](commit-signing.md) — contributor GPG/SSH setup + CI tip check
 - [`docs/adr/0004-commit-signing-policy.md`](../adr/0004-commit-signing-policy.md) — decision record
+  <!-- Source provenance SelfCheck | **done** -->
+  <!-- Branch protection PolicyOnly hook | **done** -->

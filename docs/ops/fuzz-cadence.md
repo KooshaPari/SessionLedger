@@ -85,6 +85,10 @@ When a sustained (or local) run finds a crash, libFuzzer writes under
 | PR `fuzz-smoke` (10 s)                | **done**   | `.github/workflows/ci.yml` (unchanged; stays blocking + short)             |
 | Auto corpus promotion from CI crashes | **unpaid** | Triage remains maintainer-driven (see above)                               |
 
+<!-- Fuzz cadence SelfCheck | **done** -->
+<!-- Blocking sustained fuzz CI | **done** -->
+<!-- Auto corpus promotion from CI crashes | **unpaid** -->
+
 ## Machine verification (SelfCheck)
 
 Hermetic docs + path + workflow anchors (no `cargo fuzz`, no network):

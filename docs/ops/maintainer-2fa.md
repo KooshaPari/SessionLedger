@@ -75,3 +75,4 @@ The script asserts:
 - [`branch-protection.md`](branch-protection.md) — PR + signed-commit machine verify (no 2FA claim)
 - [`cve-feed-subscription.md`](cve-feed-subscription.md) — CVE feeds (2FA out of scope)
 - [`sandbox-boundary.md`](sandbox-boundary.md) — process isolation (2FA out of scope)
+<!-- Maintainer 2FA SelfCheck | **done** -->

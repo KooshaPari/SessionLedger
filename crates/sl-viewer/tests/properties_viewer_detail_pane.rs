@@ -96,7 +96,7 @@ proptest! {
     fn extract_detail_preserves_source_id(
         source_id in "[a-z0-9-]{3,30}",
     ) {
-        use session_ledger::domain::bundle::{Bundle, BundleKind, ContinuationBundle};
+        use session_ledger::domain::bundle::ContinuationBundle;
         let cb = ContinuationBundle {
             source_id: source_id.clone(),
             bundles: vec![],

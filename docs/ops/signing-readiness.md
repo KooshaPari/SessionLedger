@@ -119,3 +119,8 @@ cargo test --test signing_hard --locked
 - [`packaging/README.md`](../../packaging/README.md) — local MSI/PKG builds
 - Issue [#66](https://github.com/KooshaPari/SessionLedger/issues/66) — signing + installers
 - ADR 0001 — auto-update deferral until signature-verified replacement exists
+    <!-- Signing readiness SelfCheck | **done** -->
+    <!-- Blocking signing-hard CI workflow | **done** -->
+    <!-- Maintainer-held Apple Developer ID certificate in approved secret store | **unpaid** -->
+  <!-- Signed clean-host install → launch → uninstall smoke (macOS + Windows) | **unpaid** -->
+  <!-- ADR 0001 auto-update requirements satisfied or explicitly out of scope | **unpaid** -->

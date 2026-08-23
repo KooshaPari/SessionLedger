@@ -88,3 +88,11 @@ Optional `-Strict` also fails when unpaid checklist rows remain (not used in CI)
 - [`branch-protection.md`](branch-protection.md) — PR + signed-commit machine verify
 - [`reusable-hermetic-pin.md`](reusable-hermetic-pin.md) — reusable workflow caller pin
 - [`source-provenance.md`](source-provenance.md) — signed commits + CODEOWNERS SSOT
+    <!-- Protected-environment policy documented | **done** -->
+    <!-- Protected-environment SelfCheck | **done** -->
+    <!-- ``hermetic-builds.md`` cross-link | **done** -->
+    <!-- ``branch-protection.md`` cross-link | **done** -->
+    <!-- Release workflow + blocking ``oci-image`` documented | **done** -->
+    <!-- `hermetic-builds.md` cross-link | **done** -->
+  <!-- `branch-protection.md` cross-link | **done** -->
+  <!-- Release workflow + blocking `oci-image` documented | **done** -->

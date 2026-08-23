@@ -12,8 +12,7 @@
 
 use proptest::prelude::*;
 use sl_viewer::fixture::{
-    query_fixture_active, query_fixture_name, splash_hold_fixture_active,
-    visual_fixture_active,
+    query_fixture_active, query_fixture_name, splash_hold_fixture_active, visual_fixture_active,
 };
 
 // ── Callable invariants ──────────────────────────────────────────────────

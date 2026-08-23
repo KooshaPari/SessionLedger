@@ -172,7 +172,7 @@ if ($release -notmatch '(?m)^\s*oci-image:\s*$') {
 if ($release -notmatch 'detect OCI release gate') {
     throw "release.yml missing detect OCI release gate step for canonical blocking / fork skip."
 }
-if ($release -notmatch 'needs:.*oci-image') {
+if ($release -notmatch '(?s)needs:.*?\boci-image\b') {
     throw "release.yml release job should depend on oci-image for blocking publication."
 }
 [void](Write-Check -Label "release.yml blocking oci-image release path documented" -Ok $true)

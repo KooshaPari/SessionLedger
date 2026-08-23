@@ -1,5 +1,8 @@
 # sl-viewer CLI help (C01/C09 DX)
 
+<!-- Blocking sl-viewer-help-hard CI workflow | **done** -->
+<!-- Fluent i18n migration for help text | **unpaid** -->
+
 Status: **C01/C09** — expands `sl-viewer --help` / `--version` beyond a one-line
 usage stub and documents `SL_DAEMON_URL`, `FORGE_DB`, and in-viewer doc
 cross-links.

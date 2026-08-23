@@ -29,10 +29,7 @@ static CASE_COUNTER: AtomicUsize = AtomicUsize::new(0);
 fn unique_temp_dir() -> PathBuf {
     let n = CASE_COUNTER.fetch_add(1, Ordering::SeqCst);
     let pid = std::process::id();
-    std::env::temp_dir().join(format!(
-        "sl-viewer-corpus-paths-test-{}-{}",
-        pid, n
-    ))
+    std::env::temp_dir().join(format!("sl-viewer-corpus-paths-test-{}-{}", pid, n))
 }
 
 // ── CorpusPathConfig shape ────────────────────────────────────────────────

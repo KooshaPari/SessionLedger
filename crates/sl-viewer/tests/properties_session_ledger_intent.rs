@@ -14,17 +14,44 @@ use session_ledger::domain::session::{Corpus, Message, Role, Session};
 
 // Heuristic patterns mirrored from `extractor.rs`.
 const ACCEPTANCE_PATTERNS: &[&str] = &[
-    "looks good", "works", "that's correct", "correct", "done", "fixed",
-    "passes", "approved", "looks right", "looks great", "all good",
-    "that works", "nice", "perfect", "exactly", "confirmed",
+    "looks good",
+    "works",
+    "that's correct",
+    "correct",
+    "done",
+    "fixed",
+    "passes",
+    "approved",
+    "looks right",
+    "looks great",
+    "all good",
+    "that works",
+    "nice",
+    "perfect",
+    "exactly",
+    "confirmed",
 ];
 
 const CONSTRAINT_PATTERNS: &[&str] = &[
-    "don't change", "do not change", "must not", "should not",
-    "keep", "maintain", "preserve", "never", "don't touch",
-    "do not touch", "don't modify", "do not modify", "only",
-    "but don't", "but do not", "without changing", "without modifying",
-    "leave alone", "leave as is",
+    "don't change",
+    "do not change",
+    "must not",
+    "should not",
+    "keep",
+    "maintain",
+    "preserve",
+    "never",
+    "don't touch",
+    "do not touch",
+    "don't modify",
+    "do not modify",
+    "only",
+    "but don't",
+    "but do not",
+    "without changing",
+    "without modifying",
+    "leave alone",
+    "leave as is",
 ];
 
 fn make_session(id: &str, messages: &[(Role, &str)]) -> Session {

@@ -8,6 +8,11 @@
   description = "Global allowlist for SessionLedger"
   paths = [
     '''(.*?)(jpg|gif|doc|pdf|bin|svg|socket|png|md|lock|sum)''',
+    '''Cargo\.lock''',
+    '''tests/''',
+    '''benches/''',
+    '''fuzz/''',
+    '''vendor/''',
   ]
   # Allow test/example values that look like secrets
   regexes = [
@@ -18,26 +23,6 @@
     # Cargo checksums
     '''checksum = "sha256:[a-fA-F0-9]{64}"''',
   ]
-
-  [[allowlist.paths]]
-    description = "Allow Cargo.lock checksums"
-    path = 'Cargo\.lock'
-
-  [[allowlist.paths]]
-    description = "Allow test files"
-    path = 'tests/'
-
-  [[allowlist.paths]]
-    description = "Allow bench files"
-    path = 'benches/'
-
-  [[allowlist.paths]]
-    description = "Allow fuzz corpus"
-    path = 'fuzz/'
-
-  [[allowlist.paths]]
-    description = "Allow vendor directory"
-    path = 'vendor/'
 
 # Project-specific rules for Rust crate publishing tokens
 [[rules]]
@@ -53,7 +38,7 @@
   regex = '''(?:features|optional)\s*=\s*(?:true|false|\[.*\])'''
   path = 'Cargo\.toml'
   tags = ["false-positive"]
-  [rules.allowlist]
+  [[rules.allowlists]]
     description = "Allow Cargo.toml feature definitions"
     paths = ['''Cargo\.toml$''']
 
@@ -64,9 +49,8 @@
   regex = '''secrets\.[A-Z_]+'''
   path = '\.github/workflows/'
   tags = ["github", "actions"]
-  [rules.allowlist]
+  [[rules.allowlists]]
     description = "Allow GitHub Actions secrets.* references"
-    description = "Standard GitHub Actions secret references are expected"
     regexes = ['''secrets\.[A-Z_]+''']
 
 # Example .env file values
@@ -76,6 +60,6 @@
   regex = '''(?i)(?:api[_-]?key|secret|token|password)\s*=\s*(?:your[_-]?|example[_-]?|test[_-]?|placeholder)[a-zA-Z0-9_\-]*'''
   path = '\.env\.example'
   tags = ["false-positive"]
-  [rules.allowlist]
+  [[rules.allowlists]]
     description = "Allow .env.example placeholder values"
     paths = ['''\.env\.example$''']

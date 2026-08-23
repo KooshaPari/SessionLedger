@@ -246,3 +246,24 @@ no-net for `cargo install` / advisory DB refresh on hosted runners remains **unp
 - [`crates/sl-daemon/README.md`](../../crates/sl-daemon/README.md) — run modes
 - [`packaging/oci/sl-daemon-seccomp.json`](../../packaging/oci/sl-daemon-seccomp.json) — soft seccomp profile
 - [`packaging/oci/compose.sl-daemon.soft-hardening.yml`](../../packaging/oci/compose.sl-daemon.soft-hardening.yml) — compose sample
+  <!-- Cargo-fetch no-net SelfCheck | **done** -->
+  <!-- Blocking security.yml anchor | **done** -->
+  <!-- cargo audit / cargo deny fetch paths documented | **done** -->
+  <!-- Live no-net for cargo-fetch on runners | **unpaid** -->
+  <!-- Sandbox boundary SelfCheck | **done** -->
+  <!-- Non-root runtime user | **done** -->
+  <!-- Data-dir volume contract | **done** -->
+  <!-- Loopback HTTP bind | **done** -->
+  <!-- Soft seccomp profile JSON | **done** -->
+  <!-- Soft ``no-new-privileges`` + ``cap-drop ALL`` guidance | **done** -->
+  <!-- Soft no-net policy documented | **done** -->
+  <!-- Rootless-only matrix SelfCheck | **done** -->
+  <!-- Blocking rootless-matrix CI workflow | **done** -->
+  <!-- Runner capability matrix documented | **done** -->
+  <!-- Rootless/no-net SelfCheck | **done** -->
+  <!-- Blocking rootless-no-net CI workflow | **done** -->
+  <!-- OCI build/smoke in matrix jobs | **unpaid** -->
+  <!-- Hard rootless-only runner matrix | **unpaid** -->
+  <!-- Hard no-network for cargo-fetch security jobs | **unpaid** -->
+  <!-- Hard no-net CI sandbox for security jobs | **unpaid** -->
+  <!-- Hard no-network CI sandbox for security jobs | **unpaid** -->

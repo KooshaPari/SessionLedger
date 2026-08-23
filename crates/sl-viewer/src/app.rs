@@ -4,7 +4,9 @@ use session_ledger::domain::{
     session::{Role, Session},
 };
 
-use crate::async_states::{ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState};
+use crate::async_states::{
+    ContentSkeleton, ErrorColorFixture, ErrorState, FirstRunEmpty, LoadingState, SkeletonLayout,
+};
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
 use crate::cli_help;
@@ -499,7 +501,7 @@ pub fn App() -> Element {
     // mutations propagate through `SettingsSignal` and the effect below
     // persists them back to `settings.json`.
     let initial_settings = Settings::load();
-    let settings_signal = use_signal(|| initial_settings);
+    let mut settings_signal = use_signal(|| initial_settings);
     use_context_provider(|| SettingsSignal(settings_signal));
     let settings_for_persist = settings_signal;
     use_effect(move || {
@@ -509,7 +511,9 @@ pub fn App() -> Element {
             eprintln!("[sl-viewer] could not persist settings: {err}");
         }
         // Mirror the persisted theme to the DOM dataset so CSS picks it up.
-        let theme_attr = match snapshot.theme {
+        let effective_theme =
+            if query_fixture_active("launch-splash-light") { Theme::Light } else { snapshot.theme };
+        let theme_attr = match effective_theme {
             Theme::Light => "light",
             Theme::Dark => "dark",
             Theme::System => "system",
@@ -523,8 +527,10 @@ pub fn App() -> Element {
                   && window.matchMedia('(prefers-color-scheme: light)').matches;
                 const resolved = prefersLight ? 'light' : 'dark';
                 document.documentElement.dataset.theme = resolved;
+                window.localStorage.setItem('sl-viewer-theme', resolved);
               }} else {{
                 document.documentElement.dataset.theme = desired;
+                window.localStorage.setItem('sl-viewer-theme', desired);
               }}
             }})();
             "#,
@@ -1137,7 +1143,7 @@ pub fn App() -> Element {
                                 dangerous_inner_html: "{SPLASH_MASCOT_SVG}"
                             }
                             span { class: "launch-splash-mark", "SessionLedger" }
-                            span { class: "launch-splash-caption", "Session viewer" }
+                            span { class: "launch-splash-caption", "Viewer" }
                             div {
                                 class: "launch-splash-spinner",
                                 "data-testid": "launch-splash-spinner",
@@ -1189,19 +1195,35 @@ pub fn App() -> Element {
                                                 }
                                                 Key::ArrowRight => {
                                                     evt.prevent_default();
-                                                    activate(Tab::from_index(idx + 1));
+                                                    let next = Tab::from_index(idx + 1);
+                                                    activate(next);
+                                                    let _ = document::eval(&format!(
+                                                        "document.getElementById('{}')?.focus();",
+                                                        next.id()
+                                                    ));
                                                 }
                                                 Key::ArrowLeft => {
                                                     evt.prevent_default();
-                                                    activate(Tab::from_index(idx + len - 1));
+                                                    let next = Tab::from_index(idx + len - 1);
+                                                    activate(next);
+                                                    let _ = document::eval(&format!(
+                                                        "document.getElementById('{}')?.focus();",
+                                                        next.id()
+                                                    ));
                                                 }
                                                 Key::Home => {
                                                     evt.prevent_default();
                                                     activate(Tab::Bundles);
+                                                    let _ = document::eval(
+                                                        "document.getElementById('tab-bundles')?.focus();",
+                                                    );
                                                 }
                                                 Key::End => {
                                                     evt.prevent_default();
-                                                    activate(Tab::Settings);
+                                                    activate(Tab::Replay);
+                                                    let _ = document::eval(
+                                                        "document.getElementById('tab-replay')?.focus();",
+                                                    );
                                                 }
                                                 _ => {}
                                             }
@@ -1264,19 +1286,14 @@ pub fn App() -> Element {
                     id: "viewer-theme-toggle",
                     class: "theme-toggle",
                     r#type: "button",
-                    "aria-label": "Open settings to change theme",
+                    "aria-label": "Toggle light and dark theme",
                     onclick: move |_| {
-                        active_tab.set(Tab::Settings);
-                        let _ = document::eval(
-                            r#"
-                            window.requestAnimationFrame(() => {
-                              const focusable = document.querySelector(
-                                '#settings-theme-radios input[type="radio"]'
-                              );
-                              focusable?.focus();
-                            });
-                            "#,
-                        );
+                        settings_signal.with_mut(|settings| {
+                            settings.theme = match settings.theme {
+                                Theme::Light => Theme::Dark,
+                                Theme::Dark | Theme::System => Theme::Light,
+                            };
+                        });
                     },
                     "Theme"
                 }
@@ -1284,8 +1301,6 @@ pub fn App() -> Element {
                     id: "viewer-settings-button",
                     class: "help-toggle",
                     r#type: "button",
-                    "aria-haspopup": "tab",
-                    "aria-controls": "panel-settings",
                     onclick: move |_| activate(Tab::Settings),
                     "Settings"
                 }
@@ -1347,6 +1362,12 @@ fn BundlesTab() -> Element {
                 message: "Loading bundles…".to_string(),
                 patience_hint: true,
             }
+        };
+    }
+    if query_fixture_active("skeleton") {
+        return rsx! {
+            h2 { "Compiled Bundles" }
+            ContentSkeleton { layout: SkeletonLayout::Bundles, list_rows: 4 }
         };
     }
     // Discovery is still running — show the same skeleton the visual

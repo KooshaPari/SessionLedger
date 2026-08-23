@@ -15,7 +15,7 @@
 
 use proptest::prelude::*;
 use sl_viewer::corpus_cta::{
-    FORGE_DB_HINT_STORAGE_KEY, QUICKSTART_CORPUS_DOC, QUICKSTART_URL, CORPUS_PICKER_INPUT_ID,
+    CORPUS_PICKER_INPUT_ID, FORGE_DB_HINT_STORAGE_KEY, QUICKSTART_CORPUS_DOC, QUICKSTART_URL,
 };
 
 // ── URL invariants ────────────────────────────────────────────────────────

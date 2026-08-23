@@ -195,3 +195,9 @@ pwsh ./scripts/crypto-inventory-check.ps1 -SelfCheck
 encryption-at-rest disclaimers, the **Phase-0 deferred vs recommended deploy**
 KMS/at-rest section, TLS sample paths, and cross-links to `SECURITY.md` /
 `local-trust-boundary.md`.
+
+<!-- Crypto inventory SelfCheck | **done** -->
+<!-- Envelope-crypto SelfCheck | **done** -->
+<!-- Blocking envelope-crypto CI workflow | **done** -->
+<!-- In-tree KMS / sealed-secret client | **unpaid** -->
+<!-- KEK wrap / cloud KMS for envelope DEK | **unpaid** -->

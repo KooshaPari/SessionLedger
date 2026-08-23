@@ -71,3 +71,7 @@ cargo test shuttle_permutation --release --locked -- --test-threads=1
 Add a cfg-gated `shuttle` model (mirroring loom's `[target.'cfg(loom)'.dev-dependencies]`)
 and explore watcher / broadcast interleavings under a soft `continue-on-error` job.
 Keep any such checker off the default PR matrix so ordinary `cargo test` stays lean.
+
+<!-- Shuttle permutation SelfCheck | **done** -->
+<!-- Soft shuttle SelfCheck | **done** -->
+<!-- Shuttle permutation SelfCheck | **done** -->

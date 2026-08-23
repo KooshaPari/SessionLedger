@@ -16,16 +16,11 @@
 //!    "Claude"/"claude" -> Claude, otherwise -> Gemini
 
 use proptest::prelude::*;
-use sl_viewer::web_exports::{
-    web_export_roots_with_env, WebExportProvider,
-};
 use session_ledger::domain::session::Corpus;
+use sl_viewer::web_exports::{web_export_roots_with_env, WebExportProvider};
 
-const ALL_PROVIDERS: [WebExportProvider; 3] = [
-    WebExportProvider::ChatGpt,
-    WebExportProvider::Claude,
-    WebExportProvider::Gemini,
-];
+const ALL_PROVIDERS: [WebExportProvider; 3] =
+    [WebExportProvider::ChatGpt, WebExportProvider::Claude, WebExportProvider::Gemini];
 
 // ── WebExportProvider shape ───────────────────────────────────────────────
 

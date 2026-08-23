@@ -72,14 +72,14 @@ cargo test jemalloc --locked
 ## Gate status
 
 | Gate                                                          | Status                                                        |
-| ------------------------------------------------------------- | ------------------------------------------------------------- |
+| ------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
 | Soft jemalloc SelfCheck                                       | **done**                                                      |
 | Default / Windows builds unchanged (system allocator)         | **done**                                                      |
 | Soft Ubuntu `--features jemalloc` CI (`continue-on-error`)    | **done**                                                      |
 | Blocking jemalloc-hard CI workflow                            | **done**                                                      |
 | Default-on platform allocator policy                          | **done** — [`jemalloc-default-on.md`](jemalloc-default-on.md) |
 | Continuous jemalloc profiling / production always-on jemalloc | **unpaid**                                                    |
-| Windows mimalloc parity                                       | **done** — [`jemalloc-default-on.md`](jemalloc-default-on.md) |
+| Windows mimalloc parity                                       | **done**                                                      | [`jemalloc-default-on.md`](jemalloc-default-on.md) |
 
 ## CI / scheduling
 
@@ -107,3 +107,6 @@ cargo test jemalloc --locked
   L8 companions.
 - Continuous profiling push backends and always-on production telemetry remain
   unpaid. Default-on allocator install is [`jemalloc-default-on.md`](jemalloc-default-on.md).
+  <!-- Soft jemalloc SelfCheck | **done** -->
+  <!-- Blocking jemalloc-hard CI workflow | **done** -->
+  <!-- Windows mimalloc parity | **done** -->

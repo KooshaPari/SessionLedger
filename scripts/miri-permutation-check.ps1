@@ -70,7 +70,7 @@ function Test-DocPattern {
         [Parameter(Mandatory = $true)][string]$Label,
         [string]$Context = "docs/ops/concurrency-safety.md"
     )
-    $ok = $Doc -match $Pattern
+    $ok = $Doc -cmatch $Pattern
     [void](Write-Check -Label $Label -Ok $ok)
     if (-not $ok) {
         throw "$Context missing required pattern: '$Pattern'"

@@ -360,12 +360,6 @@ pub fn App() -> Element {
         } else {
             r#"
             document.documentElement.lang = 'en';
-            const fixture = new URLSearchParams(window.location.search).get('fixture');
-            if (fixture === 'launch-splash-light') {
-                document.documentElement.dataset.theme = 'light';
-                window.localStorage.setItem('sl-viewer-theme', 'light');
-                return;
-            }
             const stored = window.localStorage.getItem('sl-viewer-theme');
             const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
             const theme = stored === 'light' || stored === 'dark'

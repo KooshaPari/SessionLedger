@@ -49,7 +49,7 @@ function Write-Check {
     return $Ok
 }
 
-function Test-DocContains {
+function Test-DocContent {
     param(
         [Parameter(Mandatory = $true)][string]$Doc,
         [Parameter(Mandatory = $true)][string]$Needle,
@@ -70,7 +70,7 @@ function Test-DocPattern {
         [Parameter(Mandatory = $true)][string]$Label,
         [string]$Context = "docs/ops/concurrency-safety.md"
     )
-    $ok = $Doc -match $Pattern
+    $ok = $Doc -cmatch $Pattern
     [void](Write-Check -Label $Label -Ok $ok)
     if (-not $ok) {
         throw "$Context missing required pattern: '$Pattern'"
@@ -96,21 +96,21 @@ $raceModel = Get-Content -LiteralPath $raceModelPath -Raw
 $cargoToml = Get-Content -LiteralPath $cargoTomlPath -Raw
 
 Write-Host "Concurrency safety doc anchors (done vs unpaid):"
-Test-DocContains -Doc $doc -Needle "Miri permutation checkers" `
+Test-DocContent -Doc $doc -Needle "Miri permutation checkers" `
     -Label "miri permutation section heading"
-Test-DocContains -Doc $doc -Needle "scripts/miri-permutation-check.ps1" `
+Test-DocContent -Doc $doc -Needle "scripts/miri-permutation-check.ps1" `
     -Label "permutation SelfCheck script reference"
-Test-DocPattern -Doc $doc -Pattern "Miri permutation SelfCheck\s+\|\s+\*\*done\*\*" `
+Test-DocPattern -Doc $doc -Pattern "(?m)^\| Miri permutation SelfCheck\s+\|\s+\*\*done\*\*\s+\|" `
     -Label "permutation SelfCheck gate marked done"
-Test-DocPattern -Doc $doc -Pattern "Miri permutation race_model CI\s+\|\s+\*\*done\*\*" `
+Test-DocPattern -Doc $doc -Pattern "(?m)^\| Miri permutation race_model CI\s+\|\s+\*\*done\*\*\s+\|" `
     -Label "permutation race_model CI gate marked done"
-Test-DocContains -Doc $doc -Needle "miri-permutation.yml" `
+Test-DocContent -Doc $doc -Needle "miri-permutation.yml" `
     -Label "miri-permutation workflow reference"
-Test-DocContains -Doc $doc -Needle "miri-smoke.yml" `
+Test-DocContent -Doc $doc -Needle "miri-smoke.yml" `
     -Label "miri-smoke soft workflow reference retained"
-Test-DocPattern -Doc $doc -Pattern "loom_model under Miri\s+\|\s+\*\*unpaid\*\*" `
+Test-DocPattern -Doc $doc -Pattern "(?m)^\| loom_model under Miri\s+\|\s+\*\*unpaid\*\*\s+\|" `
     -Label "loom_model under Miri unpaid gate"
-Test-DocContains -Doc $doc -Needle "Full loom / shuttle permutation checkers | **unpaid**" `
+Test-DocContent -Doc $doc -Needle "Full loom / shuttle permutation checkers | **unpaid**" `
     -Label "shared loom/shuttle unpaid gate retained"
 
 Write-Host "Workflow blocking-gate anchors:"

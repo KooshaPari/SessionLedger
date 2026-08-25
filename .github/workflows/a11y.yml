@@ -31,7 +31,9 @@ jobs:
           tool: dioxus-cli@0.7.9
       - name: Build sl-viewer web surface
         working-directory: crates/sl-viewer
-        run: dx build --platform web --release --no-default-features --features web
+        # Avoid dx 0.7.9's release wasm-opt SIGABRT; validate a fresh debug
+        # web artifact rather than falling through to stale output.
+        run: dx build --platform web --debug-symbols false --no-default-features --features web
       - name: Install harness dependencies
         run: npm ci
       - name: Install Chromium

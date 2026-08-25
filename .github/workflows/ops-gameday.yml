@@ -46,7 +46,7 @@ jobs:
             -DaemonPath $daemon `
             -EvidencePath docs/ops/fixtures/gameday-evidence.json
       - name: upload game-day evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540448e36b4889f5b5a3db0 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: gameday-evidence
           path: docs/ops/fixtures/gameday-evidence.json

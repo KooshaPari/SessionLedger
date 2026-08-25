@@ -54,9 +54,9 @@
     "L29 Monitoring": 75,
     "L30 Onboarding": 85
   },
-  "regenerated": "2026-08-21",
+  "regenerated": "2026-08-24",
   "notes": "Wave 3 L27: added Dockerfile/compose/k8s/INFRASTRUCTURE.md per repo. L27 = 85.",
-  "wave": "Wave 3 (L27 Infrastructure)",
+  "wave": "Wave 4",
   "wave1_bumps": [
     "L7 Extensibility=70->100 (+70)",
     "L16 Frontend=55->100 (+55)",

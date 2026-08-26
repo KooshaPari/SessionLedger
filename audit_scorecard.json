@@ -1,6 +1,6 @@
 {
   "repo": "SessionLedger",
-  "overall": 82,
+  "overall": 84,
   "grade": "A-",
   "generated": "2026-08-21",
   "details": {
@@ -37,9 +37,9 @@
     "L12 Error Handling": 80,
     "L13 Logging": 75,
     "L14 Data Layer": 85,
-    "L15 API Surface": 65,
+    "L15 API Surface": 85,
     "L16 Frontend": 100,
-    "L17 I18n/A11y": 50,
+    "L17 I18n/A11y": 80,
     "L18 Concurrency": 80,
     "L19 Memory": 80,
     "L20 Config": 75,
@@ -48,15 +48,15 @@
     "L23 Release": 80,
     "L24 Migration": 85,
     "L25 Vendor Lockin": 100,
-    "L26 Event Driven": 55,
+    "L26 Event Driven": 85,
     "L27 Infrastructure": 85,
     "L28 Cost Efficiency": 75,
     "L29 Monitoring": 75,
     "L30 Onboarding": 85
   },
-  "regenerated": "2026-08-24",
+  "regenerated": "2026-08-25",
   "notes": "Wave 3 L27: added Dockerfile/compose/k8s/INFRASTRUCTURE.md per repo. L27 = 85.",
-  "wave": "Wave 5",
+  "wave": "Wave 6+7",
   "wave1_bumps": [
     "L7 Extensibility=70->100 (+70)",
     "L16 Frontend=55->100 (+55)",

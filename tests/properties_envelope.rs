@@ -215,17 +215,24 @@ mod serial_tests {
     /// and release the lock without poisoning subsequent envelope tests.
     #[test]
     fn env_override_restores_after_panic() {
-        let before = std::env::var(ENVELOPE_KEY_ENV).ok();
+        let before = {
+            let _guard = env_lock().lock().expect("envelope env lock");
+            std::env::var(ENVELOPE_KEY_ENV).ok()
+        };
         let panic_result = std::panic::catch_unwind(AssertUnwindSafe(|| {
             with_key_result(TEST_KEY, || panic!("intentional environment-guard panic"));
         }));
         assert!(panic_result.is_err(), "the regression must exercise unwinding");
-        assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok(), before);
+        {
+            let _guard = env_lock().lock().expect("envelope env lock");
+            assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok(), before);
+        }
 
         // Prove the mutex remains usable after the caught panic.
         with_key_result(TEST_KEY, || {
             assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok().as_deref(), Some(TEST_KEY));
         });
+        let _guard = env_lock().lock().expect("envelope env lock");
         assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok(), before);
     }
 }

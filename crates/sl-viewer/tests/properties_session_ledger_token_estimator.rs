@@ -21,10 +21,10 @@ use session_ledger::TokenEstimator;
 /// estimators without ceremony.
 #[test]
 fn estimator_default_construct_and_copy() {
-    let a = CharCountTokenEstimator;
+    let a = <CharCountTokenEstimator as Default>::default();
     let b = a; // Copy via move.
-    let c = a;
-    // Both `a` and `b` are usable: Copy + Clone are honest.
+    let c = Clone::clone(&a);
+    // Both `a` and `b` are usable: Copy + Clone + Default are exercised.
     assert_eq!(a.estimate_text("abcd"), b.estimate_text("abcd"));
     assert_eq!(a.estimate_text("abcd"), c.estimate_text("abcd"));
 }

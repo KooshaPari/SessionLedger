@@ -348,7 +348,7 @@ mod tests {
             assert!(id.starts_with("tab-"), "{id} must start with tab-");
             let value = variant.value_attr();
             assert!(!value.is_empty(), "value attr must be non-empty");
-            assert!(variant.label().len() > 0);
+            assert!(!variant.label().is_empty());
         }
     }
 

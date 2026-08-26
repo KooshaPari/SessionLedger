@@ -156,7 +156,7 @@ proptest! {
     fn palette_command_is_copy_and_clone(_unused in 0u8..1u8) {
         let cmd = COMMANDS[0];
         let copied = cmd; // Copy
-        let cloned = cmd.clone(); // Clone
+        let cloned = cmd; // Copy (and Clone-compatible)
         prop_assert_eq!(copied, cmd);
         prop_assert_eq!(cloned, cmd);
         prop_assert_eq!(copied, cloned);
@@ -167,7 +167,7 @@ proptest! {
     fn palette_action_is_copy_eq(_unused in 0u8..1u8) {
         let original = PaletteAction::ToggleTheme;
         let copied = original;
-        let cloned = original.clone();
+        let cloned = original;
         prop_assert_eq!(original, copied);
         prop_assert_eq!(original, cloned);
         prop_assert_eq!(copied, cloned);

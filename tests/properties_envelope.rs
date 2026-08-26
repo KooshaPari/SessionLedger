@@ -55,10 +55,11 @@ mod serial_tests {
     fn seal_output_format_is_v1_nonce_ct() {
         with_key_result(TEST_KEY, || {
             for size in [0_usize, 1, 5, 50, 100] {
-                let plaintext: Vec<u8> = (0..size as u8).collect();
+                let plaintext: Vec<u8> =
+                    (0..u8::try_from(size).expect("fixture size fits u8")).collect();
                 let blob = seal(&plaintext).expect("seal");
                 let parts: Vec<&str> = blob.split(':').collect();
-                assert_eq!(parts.len(), 3, "blob must have 3 colon-separated parts: {:?}", blob);
+                assert_eq!(parts.len(), 3, "blob must have 3 colon-separated parts: {blob:?}");
                 assert_eq!(parts[0], "v1", "version prefix must be 'v1'");
                 assert_eq!(parts[1].len(), 32, "nonce must be 32 hex chars");
                 assert_eq!(
@@ -80,8 +81,7 @@ mod serial_tests {
             for ch in blob.chars() {
                 assert!(
                     ch == ':' || ch.is_ascii_digit() || ch.is_ascii_lowercase(),
-                    "blob char {:?} must be ':' or lowercase hex",
-                    ch
+                    "blob char {ch:?} must be ':' or lowercase hex"
                 );
             }
         });
@@ -103,13 +103,14 @@ mod serial_tests {
     fn seal_open_round_trip() {
         with_key_result(TEST_KEY, || {
             for size in [0_usize, 1, 5, 50, 200] {
-                let plaintext: Vec<u8> = (0..size).map(|i| (i & 0xff) as u8).collect();
+                let plaintext: Vec<u8> = (0..size)
+                    .map(|i| u8::try_from(i & 0xff).expect("masked fixture byte fits u8"))
+                    .collect();
                 let blob = seal(&plaintext).expect("seal");
                 let decrypted = open(&blob).expect("open");
                 assert_eq!(
                     decrypted, plaintext,
-                    "round-trip mismatch: input {:?}, output {:?}",
-                    plaintext, decrypted
+                    "round-trip mismatch: input {plaintext:?}, output {decrypted:?}"
                 );
             }
         });
@@ -134,7 +135,7 @@ mod serial_tests {
             for prefix in ["v", "ver", "xyz"] {
                 let blob = format!("{prefix}:00:00");
                 let result = open(&blob);
-                assert!(result.is_err(), "open must reject malformed blob {:?}", blob);
+                assert!(result.is_err(), "open must reject malformed blob {blob:?}");
             }
         });
     }
@@ -171,7 +172,7 @@ mod serial_tests {
         });
     }
 
-    /// Property: `seal` returns Err (BadKey) when SL_ENVELOPE_KEY is unset.
+    /// Property: `seal` returns Err (`BadKey`) when `SL_ENVELOPE_KEY` is unset.
     #[test]
     fn seal_returns_err_on_missing_key() {
         let _guard = env_lock().lock().expect("envelope env lock");
@@ -181,12 +182,11 @@ mod serial_tests {
         assert!(result.is_err(), "seal must fail when SL_ENVELOPE_KEY is unset");
         assert!(
             matches!(result, Err(EnvelopeError::BadKey(_))),
-            "expected BadKey error, got {:?}",
-            result
+            "expected BadKey error, got {result:?}"
         );
     }
 
-    /// Property: `seal` returns Err (BadKey) when SL_ENVELOPE_KEY is the
+    /// Property: `seal` returns Err (`BadKey`) when `SL_ENVELOPE_KEY` is the
     /// wrong length (e.g. 8 hex chars instead of 64).
     #[test]
     fn seal_returns_err_on_short_key() {
@@ -194,7 +194,7 @@ mod serial_tests {
         let _restore = EnvRestoreGuard::capture();
         std::env::set_var(ENVELOPE_KEY_ENV, "deadbeef");
         let result = seal(b"hello");
-        assert!(result.is_err(), "seal must reject short key (got {:?})", result);
+        assert!(result.is_err(), "seal must reject short key (got {result:?})");
     }
 
     /// Property: `EnvelopeError` Debug format is non-empty (it's
@@ -202,9 +202,9 @@ mod serial_tests {
     #[test]
     fn envelope_error_debug_is_nonempty() {
         let err = EnvelopeError::BadKey("test");
-        let debug = format!("{:?}", err);
+        let debug = format!("{err:?}");
         assert!(!debug.is_empty());
-        let display = format!("{}", err);
+        let display = format!("{err}");
         assert!(!display.is_empty());
     }
 
@@ -212,12 +212,17 @@ mod serial_tests {
     /// and release the lock without poisoning subsequent envelope tests.
     #[test]
     fn env_override_restores_after_panic() {
+        let guard = env_lock().lock().expect("envelope env lock");
         let before = std::env::var(ENVELOPE_KEY_ENV).ok();
+        let restore = EnvRestoreGuard::capture();
+        std::env::set_var(ENVELOPE_KEY_ENV, TEST_KEY);
         let panic_result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-            with_key_result(TEST_KEY, || panic!("intentional environment-guard panic"));
+            panic!("intentional environment-guard panic");
         }));
+        drop(restore);
         assert!(panic_result.is_err(), "the regression must exercise unwinding");
         assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok(), before);
+        drop(guard);
 
         // Prove the mutex remains usable after the caught panic.
         with_key_result(TEST_KEY, || {
@@ -249,12 +254,12 @@ impl Drop for EnvRestoreGuard {
 
 /// Helper: set env, run closure, return its Result.
 fn with_key_result<T, F: FnOnce() -> T>(hex_key: &str, f: F) -> T {
-    let _guard = env_lock().lock().expect("envelope env lock");
-    let _restore = EnvRestoreGuard::capture();
+    let guard = env_lock().lock().expect("envelope env lock");
+    let restore = EnvRestoreGuard::capture();
     std::env::set_var(ENVELOPE_KEY_ENV, hex_key);
     let result = std::panic::catch_unwind(AssertUnwindSafe(f));
-    drop(_restore);
-    drop(_guard);
+    drop(restore);
+    drop(guard);
     match result {
         Ok(value) => value,
         Err(payload) => std::panic::resume_unwind(payload),

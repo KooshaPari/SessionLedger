@@ -1,12 +1,4 @@
-# Clippy lints configuration
-warn = [
-    "clippy::all",
-    "clippy::pedantic",
-]
-allow = [
-    "clippy::module_name_repetitions",
-    "clippy::must_use_candidate",
-    "clippy::missing_errors_doc",
-    "clippy::missing_panics_doc",
-]
-
+# Clippy configuration values belong in this file; lint levels and per-lint
+# exceptions are declared in Cargo.toml's `[lints.clippy]` table.  Older
+# Clippy versions accepted `warn`/`allow` here as lint lists, but current
+# Clippy parses those keys as configuration options and rejects them.

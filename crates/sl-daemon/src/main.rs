@@ -62,10 +62,10 @@ use std::sync::Arc;
 
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
+use sl_daemon::resolver;
 use std::path::Path;
 use tokio::sync::{broadcast, mpsc};
 use tracing::{error, info, info_span, warn, Instrument};
-use sl_daemon::resolver;
 
 /// Channel depth. Bounded so a slow consumer applies backpressure to the
 /// watcher instead of letting an unbounded queue grow without limit.

@@ -31,7 +31,7 @@ proptest! {
         n in 0usize..500,
     ) {
         let text: String = "a".repeat(n);
-        let expected = ((n as u32).saturating_add(3) / 4).max(0);
+        let expected = (u32::try_from(n).expect("generated n fits u32").saturating_add(3)) / 4;
         let actual = CharCountTokenEstimator.estimate_text(&text);
         prop_assert_eq!(actual, expected,
             "n = {} chars, expected {} tokens, got {}", n, expected, actual);
@@ -85,7 +85,7 @@ proptest! {
         text in ".*",
     ) {
         let n = text.chars().count();
-        let text_of_same_length: String = std::iter::repeat('a').take(n).collect();
+        let text_of_same_length = "a".repeat(n);
         let expected = CharCountTokenEstimator.estimate_text(&text_of_same_length);
         let actual = CharCountTokenEstimator.estimate_text(&text);
         prop_assert_eq!(actual, expected,
@@ -146,9 +146,9 @@ proptest! {
     #[test]
     fn char_count_estimator_derives_hold(_unused in 0u8..1u8) {
         let a = CharCountTokenEstimator;        // Copy
-        let b = a.clone();                       // Clone
-        let c = CharCountTokenEstimator::default();
-        let debug = format!("{:?}", a);
+        let b = a;                               // Copy
+        let c = CharCountTokenEstimator;         // Unit struct
+        let debug = format!("{a:?}");
         prop_assert!(!debug.is_empty());
         // All three values should produce the same estimate for the
         // same input (defensive assertion).

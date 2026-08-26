@@ -124,14 +124,11 @@ proptest! {
         for window in items.windows(2) {
             let prev = &window[0];
             let next = &window[1];
-            match (prev.last_activity_ms, next.last_activity_ms) {
-                (Some(a), Some(b)) => {
-                    prop_assert!(
-                        a >= b,
-                        "known timestamps must be non-increasing: {a} came before {b}",
-                    );
-                }
-                _ => {}
+            if let (Some(a), Some(b)) = (prev.last_activity_ms, next.last_activity_ms) {
+                prop_assert!(
+                    a >= b,
+                    "known timestamps must be non-increasing: {a} came before {b}",
+                );
             }
         }
 

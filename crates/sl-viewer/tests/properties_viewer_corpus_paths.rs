@@ -57,7 +57,7 @@ proptest! {
     ) {
         let cfg = CorpusPathConfig { custom_paths: paths };
         prop_assert!(!cfg.is_empty());
-        prop_assert!(cfg.custom_paths.len() >= 1);
+        prop_assert!(!cfg.custom_paths.is_empty());
     }
 
     /// Property: `is_empty()` agrees with `custom_paths.is_empty()` for

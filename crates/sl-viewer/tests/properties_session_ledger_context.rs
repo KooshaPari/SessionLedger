@@ -289,10 +289,10 @@ proptest! {
         let mut symbol_sources: Vec<String> = Vec::new();
         for body in &bodies {
             for token in body.split_whitespace() {
-                if token.contains("::") || token.contains("()") {
-                    if !symbol_sources.iter().any(|s| s == token) {
-                        symbol_sources.push(token.to_string());
-                    }
+                if (token.contains("::") || token.contains("()"))
+                    && !symbol_sources.iter().any(|s| s == token)
+                {
+                    symbol_sources.push(token.to_string());
                 }
             }
         }

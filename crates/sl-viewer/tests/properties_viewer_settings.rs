@@ -199,7 +199,7 @@ proptest! {
         ]),
     ) {
         let copied = sample;                  // Copy
-        let cloned = sample.clone();           // Clone (only need to support)
+        let cloned = sample;                  // Copy (and Clone-compatible)
         prop_assert_eq!(sample, copied);
         prop_assert_eq!(sample, cloned);
         let debug = format!("{:?}", sample);

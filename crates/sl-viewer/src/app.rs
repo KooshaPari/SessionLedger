@@ -351,8 +351,7 @@ fn icon_svg(tab_icon: &str) -> &'static str {
 pub fn App() -> Element {
     #[cfg(feature = "web")]
     use_effect(|| {
-        let force_light = query_fixture_active("launch-splash-light");
-        let script = if force_light {
+        let script = if query_fixture_active("launch-splash-light") {
             r#"
             document.documentElement.lang = 'en';
             document.documentElement.dataset.theme = 'light';
@@ -521,7 +520,9 @@ pub fn App() -> Element {
         let _ = document::eval(&format!(
             r#"
             (function() {{
-              const desired = {theme_attr:?};
+              const desired = new URLSearchParams(window.location.search).get('fixture') === 'launch-splash-light'
+                ? 'light'
+                : {theme_attr:?};
               if (desired === 'system') {{
                 const prefersLight = window.matchMedia
                   && window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -1288,12 +1289,21 @@ pub fn App() -> Element {
                     r#type: "button",
                     "aria-label": "Toggle light and dark theme",
                     onclick: move |_| {
+                        let next_theme = match settings_signal().theme {
+                            Theme::Light => Theme::Dark,
+                            Theme::Dark | Theme::System => Theme::Light,
+                        };
                         settings_signal.with_mut(|settings| {
-                            settings.theme = match settings.theme {
-                                Theme::Light => Theme::Dark,
-                                Theme::Dark | Theme::System => Theme::Light,
-                            };
+                            settings.theme = next_theme;
                         });
+                        let resolved = match next_theme {
+                            Theme::Light => "light",
+                            Theme::Dark => "dark",
+                            Theme::System => "dark",
+                        };
+                        let _ = document::eval(&format!(
+                            "document.documentElement.dataset.theme = '{resolved}'; window.localStorage.setItem('sl-viewer-theme', '{resolved}');"
+                        ));
                     },
                     "Theme"
                 }

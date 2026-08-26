@@ -33,8 +33,19 @@ jobs:
             ENFORCE=false
           fi
 
-          # Run audit in JSON mode
-          if ! python scripts/scorecard_ci.py . --output json --threshold "$THRESHOLD" --fail-on-drop > scorecard-report.json 2> scorecard-stderr.txt; then
+          # Run audit in JSON mode. Exit 1 means an advisory threshold drop;
+          # any other exit code is an execution/contract failure and must stop
+          # before attempting to parse a possibly empty report.
+          set +e
+          python scripts/scorecard_ci.py . --output json --threshold "$THRESHOLD" --fail-on-drop > scorecard-report.json 2> scorecard-stderr.txt
+          AUDIT_STATUS=$?
+          set -e
+          if [ "$AUDIT_STATUS" -ne 0 ] && [ "$AUDIT_STATUS" -ne 1 ]; then
+            echo "Scorecard audit failed with exit code $AUDIT_STATUS." >&2
+            cat scorecard-stderr.txt >&2
+            exit "$AUDIT_STATUS"
+          fi
+          if [ "$AUDIT_STATUS" -eq 1 ]; then
             echo "Scorecard is below the canonical-main threshold; continuing to publish the report."
           fi
 

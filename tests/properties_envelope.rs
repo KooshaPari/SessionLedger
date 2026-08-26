@@ -181,7 +181,7 @@ mod serial_tests {
         let result = seal(b"hello");
         assert!(result.is_err(), "seal must fail when SL_ENVELOPE_KEY is unset");
         assert!(
-            matches!(result, Err(EnvelopeError::BadKey(_))),
+            matches!(&result, Err(EnvelopeError::BadKey(_))),
             "expected BadKey error, got {result:?}"
         );
     }
@@ -195,7 +195,7 @@ mod serial_tests {
         std::env::set_var(ENVELOPE_KEY_ENV, "deadbeef");
         let result = seal(b"hello");
         assert!(
-            matches!(result, Err(EnvelopeError::BadKey(_))),
+            matches!(&result, Err(EnvelopeError::BadKey(_))),
             "seal must reject short key with BadKey (got {result:?})"
         );
     }
@@ -215,25 +215,18 @@ mod serial_tests {
     /// and release the lock without poisoning subsequent envelope tests.
     #[test]
     fn env_override_restores_after_panic() {
-        let guard = env_lock().lock().expect("envelope env lock");
         let before = std::env::var(ENVELOPE_KEY_ENV).ok();
-        let restore = EnvRestoreGuard::capture();
-        std::env::set_var(ENVELOPE_KEY_ENV, TEST_KEY);
         let panic_result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-            panic!("intentional environment-guard panic");
+            with_key_result(TEST_KEY, || panic!("intentional environment-guard panic"));
         }));
-        drop(restore);
         assert!(panic_result.is_err(), "the regression must exercise unwinding");
         assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok(), before);
-        drop(guard);
 
         // Prove the mutex remains usable after the caught panic.
         with_key_result(TEST_KEY, || {
             assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok().as_deref(), Some(TEST_KEY));
         });
-        let guard = env_lock().lock().expect("envelope env lock");
         assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok(), before);
-        drop(guard);
     }
 }
 

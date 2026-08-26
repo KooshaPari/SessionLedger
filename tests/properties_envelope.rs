@@ -194,7 +194,10 @@ mod serial_tests {
         let _restore = EnvRestoreGuard::capture();
         std::env::set_var(ENVELOPE_KEY_ENV, "deadbeef");
         let result = seal(b"hello");
-        assert!(result.is_err(), "seal must reject short key (got {result:?})");
+        assert!(
+            matches!(result, Err(EnvelopeError::BadKey(_))),
+            "seal must reject short key with BadKey (got {result:?})"
+        );
     }
 
     /// Property: `EnvelopeError` Debug format is non-empty (it's
@@ -228,7 +231,9 @@ mod serial_tests {
         with_key_result(TEST_KEY, || {
             assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok().as_deref(), Some(TEST_KEY));
         });
+        let guard = env_lock().lock().expect("envelope env lock");
         assert_eq!(std::env::var(ENVELOPE_KEY_ENV).ok(), before);
+        drop(guard);
     }
 }
 

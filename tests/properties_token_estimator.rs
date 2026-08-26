@@ -147,7 +147,8 @@ proptest! {
     fn char_count_estimator_derives_hold(_unused in 0u8..1u8) {
         let a = CharCountTokenEstimator;        // Copy
         let b = a;                               // Copy
-        let c = CharCountTokenEstimator;         // Unit struct
+        let c = Clone::clone(&a);                // Clone
+        let d = <CharCountTokenEstimator as Default>::default(); // Default
         let debug = format!("{a:?}");
         prop_assert!(!debug.is_empty());
         // All three values should produce the same estimate for the
@@ -156,8 +157,10 @@ proptest! {
         let ea = a.estimate_text(text);
         let eb = b.estimate_text(text);
         let ec = c.estimate_text(text);
+        let ed = d.estimate_text(text);
         prop_assert_eq!(ea, eb);
         prop_assert_eq!(eb, ec);
+        prop_assert_eq!(ec, ed);
     }
 }
 

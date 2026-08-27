@@ -42,6 +42,7 @@
 //! }
 //! ```
 
+pub mod event;
 pub mod shutdown;
 pub mod traceparent;
 pub mod watcher;

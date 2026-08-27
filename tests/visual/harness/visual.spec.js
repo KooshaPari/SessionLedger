@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const maxCrossPlatformVisualDiff = process.platform === "linux" ? 0.04 : 0.03;
+
 test("E1 bundle detail empty state matches its golden", async ({ page }) => {
   await page.goto("/");
   await expect(
@@ -11,7 +13,7 @@ test("E1 bundle detail empty state matches its golden", async ({ page }) => {
   // prove the screen's required structure and content.
   await expect(page).toHaveScreenshot("e1-bundle-empty.png", {
     animations: "disabled",
-    maxDiffPixelRatio: 0.04,
+    maxDiffPixelRatio: maxCrossPlatformVisualDiff,
   });
 });
 
@@ -27,7 +29,7 @@ test("E2 history detail empty state matches its golden", async ({ page }) => {
     animations: "disabled",
     // Linux CI deterministically differs by 3.10% from this pre-Linux golden.
     // Do not extend this allowance to unrelated viewer states.
-    maxDiffPixelRatio: 0.04,
+    maxDiffPixelRatio: maxCrossPlatformVisualDiff,
   });
 });
 
@@ -151,6 +153,24 @@ test("viewer exposes type tokens and persists theme preference", async ({
   await page.reload();
   await expect
     .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+    .toBe("light");
+});
+
+test("settings theme controls update the active browser theme", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByTestId("settings-tab")).toBeVisible();
+
+  await page.getByTestId("settings-theme-light").check();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+    .toBe("light");
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.localStorage.getItem("sl-viewer-theme")),
+    )
     .toBe("light");
 });
 

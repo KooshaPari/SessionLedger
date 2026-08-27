@@ -124,12 +124,11 @@ jobs:
           tool: dioxus-cli@0.7.9
       - name: Build sl-viewer web surface
         working-directory: crates/sl-viewer
-        # Binaryen bundled by dx 0.7.9 aborts when rewriting LLVM DWARF
-        # compile-unit metadata emitted by the pinned Rust toolchain. Release
-        # browser artifacts do not need DWARF (source maps are not shipped),
-        # so omit debug symbols and keep wasm-opt's production optimization
-        # pass enabled instead of accepting a non-deterministic SIGABRT.
-        run: dx build --platform web --release --debug-symbols false --no-default-features --features web
+        # Binaryen bundled by dx 0.7.9 aborts during its release wasm-opt pass
+        # with the pinned Rust/Dioxus toolchain. A debug web bundle is still a
+        # fresh, deterministic browser artifact and avoids silently testing a
+        # stale bundle after wasm-opt fails.
+        run: dx build --platform web --debug-symbols false --no-default-features --features web
       - name: Install harness dependencies
         run: npm ci
       - name: Install Chromium

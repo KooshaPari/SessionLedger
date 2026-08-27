@@ -2,9 +2,13 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
 
+const configuredRoot = process.env.A11Y_VIEWER_DIR;
+const buildRoot = resolve("../../../target/dx/sl-viewer");
 const root = resolve(
-  process.env.A11Y_VIEWER_DIR ??
-    "../../../target/dx/sl-viewer/release/web/public",
+  configuredRoot ??
+    (existsSync(join(buildRoot, "release/web/public/index.html"))
+      ? join(buildRoot, "release/web/public")
+      : join(buildRoot, "debug/web/public")),
 );
 const port = Number(process.env.A11Y_VIEWER_PORT ?? 4173);
 const types = {

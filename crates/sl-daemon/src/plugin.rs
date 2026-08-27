@@ -284,8 +284,8 @@ impl Exporter for CsvExporter {
         for r in records {
             buf.push_str(&format!(
                 "{},{},{},{},{},{}\n",
-                r.session_id,
-                r.tool,
+                csv_field(&r.session_id),
+                csv_field(&r.tool),
                 r.started_at_unix_millis,
                 r.ended_at_unix_millis,
                 r.token_count,
@@ -293,6 +293,14 @@ impl Exporter for CsvExporter {
             ));
         }
         Ok(buf.into_bytes())
+    }
+}
+
+fn csv_field(value: &str) -> String {
+    if value.bytes().any(|byte| matches!(byte, b',' | b'"' | b'\n' | b'\r')) {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_owned()
     }
 }
 
@@ -405,6 +413,20 @@ mod tests {
         let csv_str = String::from_utf8(csv).unwrap();
         assert!(csv_str.starts_with("session_id,"));
         assert!(csv_str.contains("s1,claude_code"));
+    }
+
+    #[test]
+    fn csv_exporter_quotes_delimiters_and_newlines() {
+        let record = SessionRecord {
+            session_id: "s,\"1".into(),
+            started_at_unix_millis: 0,
+            ended_at_unix_millis: 0,
+            tool: "tool\nname".into(),
+            token_count: 0,
+            events: vec![],
+        };
+        let csv = String::from_utf8(CsvExporter::new().export(&[record]).unwrap()).unwrap();
+        assert!(csv.contains("\"s,\"\"1\",\"tool\nname\",0,0,0,0"));
     }
 
     #[test]

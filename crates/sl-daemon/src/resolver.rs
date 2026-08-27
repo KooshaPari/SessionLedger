@@ -90,21 +90,20 @@ impl Resolver {
         Ok(Self { sessions: Arc::new(RwLock::new(sessions)), persistence: Some(Arc::new(path)) })
     }
 
-    pub fn register(&self, session: AgentSession) {
+    pub fn register(&self, session: AgentSession) -> std::io::Result<()> {
         let mut sessions = self.sessions.write().expect("resolver lock poisoned");
         sessions.retain(|existing| existing.session_id != session.session_id);
         sessions.push(session);
         if let Some(path) = &self.persistence {
             if let Some(parent) = path.parent() {
-                let _ = std::fs::create_dir_all(parent);
+                std::fs::create_dir_all(parent)?;
             }
-            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path.as_ref()) {
-                if let Some(session) = sessions.last() {
-                    let _ =
-                        writeln!(file, "{}", serde_json::to_string(session).expect("serializable"));
-                }
+            let mut file = OpenOptions::new().create(true).append(true).open(path.as_ref())?;
+            if let Some(session) = sessions.last() {
+                writeln!(file, "{}", serde_json::to_string(session).expect("serializable"))?;
             }
         }
+        Ok(())
     }
 
     pub fn resolve(&self, evidence: &ProcessEvidence) -> ResolveResponse {
@@ -183,7 +182,7 @@ mod tests {
     #[test]
     fn exact_pid_and_tty_match_wins() {
         let resolver = Resolver::default();
-        resolver.register(session());
+        resolver.register(session()).unwrap();
         let response = resolver.resolve(&ProcessEvidence {
             pid: Some(42),
             tty: Some("ttys001".into()),
@@ -196,7 +195,7 @@ mod tests {
     #[test]
     fn unrelated_evidence_returns_no_candidate() {
         let resolver = Resolver::default();
-        resolver.register(session());
+        resolver.register(session()).unwrap();
         let response = resolver.resolve(&ProcessEvidence {
             pid: Some(7),
             cwd: Some("/other".into()),
@@ -210,7 +209,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("native-sessions.jsonl");
         let resolver = Resolver::open(&path).unwrap();
-        resolver.register(session());
+        resolver.register(session()).unwrap();
         drop(resolver);
         let reopened = Resolver::open(&path).unwrap();
         assert_eq!(

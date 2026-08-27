@@ -23,10 +23,12 @@ use session_ledger::TokenEstimator;
 fn estimator_default_construct_and_copy() {
     let a = <CharCountTokenEstimator as Default>::default();
     let b = a; // Copy via move.
-    let c = Clone::clone(&a);
+    let c = a.clone();
+    let defaulted = CharCountTokenEstimator::default();
     // Both `a` and `b` are usable: Copy + Clone + Default are exercised.
     assert_eq!(a.estimate_text("abcd"), b.estimate_text("abcd"));
     assert_eq!(a.estimate_text("abcd"), c.estimate_text("abcd"));
+    assert_eq!(a.estimate_text("abcd"), defaulted.estimate_text("abcd"));
 }
 
 // ── fixed boundary values (the (chars + 3) / 4 contract) ──────────────────

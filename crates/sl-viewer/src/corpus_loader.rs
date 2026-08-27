@@ -431,6 +431,12 @@ fn load_from_sqlite(path: &std::path::Path) -> Result<Vec<Session>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // `HOME` is process-global. These two tests replace it to exercise native
+    // discovery, so they must not race each other under Rust's parallel test
+    // runner and accidentally scan the developer's real corpus.
+    static HOME_ENV_LOCK: Mutex<()> = Mutex::new(());
 
     // ── Mock source ───────────────────────────────────────────────────────────
 
@@ -947,6 +953,7 @@ mod tests {
 
     #[test]
     fn load_sessions_with_custom_layers_custom_paths_onto_defaults() {
+        let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
         // Custom path isolated from $HOME so the test doesn't depend on
         // which session stores happen to be installed on the runner.
         let prev_home = std::env::var_os("HOME");
@@ -974,6 +981,7 @@ mod tests {
 
     #[test]
     fn load_sessions_with_custom_skips_missing_custom_paths() {
+        let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
         let prev_home = std::env::var_os("HOME");
         let fake_home = tempfile::tempdir().expect("home");
         std::env::set_var("HOME", fake_home.path());

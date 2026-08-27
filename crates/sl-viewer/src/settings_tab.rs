@@ -443,6 +443,11 @@ fn render_theme_radio(
         Settings::THEME_DARK => crate::theme::Theme::Dark,
         _ => crate::theme::Theme::System,
     };
+    let theme_preference = match theme_value {
+        crate::theme::Theme::Light => "light",
+        crate::theme::Theme::Dark => "dark",
+        crate::theme::Theme::System => "system",
+    };
     let is_checked = current == theme_value;
     let id = format!("settings-theme-{variant}");
     rsx! {
@@ -459,6 +464,16 @@ fn render_theme_radio(
                 "data-testid": "settings-theme-{variant}",
                 onchange: move |_| {
                     settings.with_mut(|s| s.theme = theme_value);
+                    let _ = document::eval(&format!(
+                        r#"
+                        const desired = {theme_preference:?};
+                        const resolved = desired === 'system'
+                            ? (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+                            : desired;
+                        document.documentElement.dataset.theme = resolved;
+                        window.localStorage.setItem('sl-viewer-theme', resolved);
+                        "#,
+                    ));
                 },
             }
             span { "{theme_label(theme_value)}" }

@@ -88,7 +88,7 @@ pub fn trigger_open_corpus() {}
 /// folder picker today (browsers don't allow it without the
 /// File System Access API), so this returns `None` there. Headless
 /// builds also return `None` so unit tests stay hermetic.
-#[cfg(all(not(feature = "web"), feature = "desktop", not(target_arch = "wasm32")))]
+#[cfg(all(not(feature = "web"), feature = "desktop", not(target_arch = "wasm32"), not(test)))]
 pub fn pick_corpus_folder() -> Option<PathBuf> {
     let result = rfd::FileDialog::new().set_title("Pick a custom corpus folder").pick_folder();
     if let Some(ref path) = result {
@@ -98,7 +98,12 @@ pub fn pick_corpus_folder() -> Option<PathBuf> {
 }
 
 /// Non-desktop stub for the folder picker.
-#[cfg(not(all(not(feature = "web"), feature = "desktop", not(target_arch = "wasm32"))))]
+#[cfg(not(all(
+    not(feature = "web"),
+    feature = "desktop",
+    not(target_arch = "wasm32"),
+    not(test)
+)))]
 pub fn pick_corpus_folder() -> Option<PathBuf> {
     None
 }

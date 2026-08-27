@@ -509,33 +509,6 @@ pub fn App() -> Element {
         if let Err(err) = snapshot.save() {
             eprintln!("[sl-viewer] could not persist settings: {err}");
         }
-        // Mirror the persisted theme to the DOM dataset so CSS picks it up.
-        let effective_theme =
-            if query_fixture_active("launch-splash-light") { Theme::Light } else { snapshot.theme };
-        let theme_attr = match effective_theme {
-            Theme::Light => "light",
-            Theme::Dark => "dark",
-            Theme::System => "system",
-        };
-        let _ = document::eval(&format!(
-            r#"
-            (function() {{
-              const desired = new URLSearchParams(window.location.search).get('fixture') === 'launch-splash-light'
-                ? 'light'
-                : {theme_attr:?};
-              if (desired === 'system') {{
-                const prefersLight = window.matchMedia
-                  && window.matchMedia('(prefers-color-scheme: light)').matches;
-                const resolved = prefersLight ? 'light' : 'dark';
-                document.documentElement.dataset.theme = resolved;
-                window.localStorage.setItem('sl-viewer-theme', resolved);
-              }} else {{
-                document.documentElement.dataset.theme = desired;
-                window.localStorage.setItem('sl-viewer-theme', desired);
-              }}
-            }})();
-            "#,
-        ));
     });
     let mut help_open: Signal<bool> = use_signal(|| false);
     let mut palette_open: Signal<bool> = use_signal(|| false);

@@ -42,6 +42,7 @@
 //! }
 //! ```
 
+pub mod event;
 pub mod plugin;
 pub mod resolver;
 pub mod shutdown;

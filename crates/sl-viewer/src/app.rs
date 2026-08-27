@@ -512,8 +512,22 @@ pub fn App() -> Element {
     });
     let mut help_open: Signal<bool> = use_signal(|| false);
     let mut palette_open: Signal<bool> = use_signal(|| false);
+    let mut splash_visible: Signal<bool> = use_signal(|| true);
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let colors = ThemeColors::dark();
+
+    #[cfg(feature = "web")]
+    use_effect(move || {
+        if !splash_hold_fixture_active() {
+            spawn(async move {
+                let _ = document::eval(
+                    "await new Promise((resolve) => window.setTimeout(resolve, 1800));",
+                )
+                .await;
+                splash_visible.set(false);
+            });
+        }
+    });
 
     let mut close_help = move || {
         help_open.set(false);
@@ -561,19 +575,10 @@ pub fn App() -> Element {
     // handlers own state (avoids wasm Closure / eval bridge re-render gaps).
     #[cfg(feature = "web")]
     use_effect(|| {
-        let hold_splash = splash_hold_fixture_active();
-        let dismiss_script = if hold_splash {
-            // Hold fixture: do not auto-remove splash for golden capture.
-            String::new()
-        } else {
-            r#"
-            window.setTimeout(() => {
-              const splash = document.querySelector('.launch-splash');
-              if (splash) splash.remove();
-            }, 1800);
-            "#
-            .to_owned()
-        };
+        // Splash visibility is owned by a Dioxus signal above. Keeping the
+        // placeholder here avoids a direct DOM removal being reinserted by a
+        // later virtual-DOM render.
+        let dismiss_script = "";
         let script = format!(
             r#"
             {dismiss_script}
@@ -1098,37 +1103,41 @@ pub fn App() -> Element {
         div {
             class: "app",
             {
-                let splash_hold = splash_hold_fixture_active();
-                let splash_class = if splash_hold {
-                    "launch-splash launch-splash-hold"
-                } else {
-                    "launch-splash"
-                };
-                rsx! {
-                    div {
-                        class: "{splash_class}",
-                        role: "presentation",
-                        "data-testid": "launch-splash",
-                        div { class: "launch-splash-inner",
-                            div {
-                                class: "launch-splash-mascot",
-                                "data-testid": "launch-splash-mascot",
-                                "aria-hidden": "true",
-                                dangerous_inner_html: "{SPLASH_MASCOT_SVG}"
-                            }
-                            span { class: "launch-splash-mark", "SessionLedger" }
-                            span { class: "launch-splash-caption", "Viewer" }
-                            div {
-                                class: "launch-splash-spinner",
-                                "data-testid": "launch-splash-spinner",
-                                role: "progressbar",
-                                "aria-label": "Loading viewer",
-                                div { class: "launch-splash-spinner-dot" }
-                                div { class: "launch-splash-spinner-dot" }
-                                div { class: "launch-splash-spinner-dot" }
+                if splash_visible() {
+                    let splash_hold = splash_hold_fixture_active();
+                    let splash_class = if splash_hold {
+                        "launch-splash launch-splash-hold"
+                    } else {
+                        "launch-splash"
+                    };
+                    rsx! {
+                        div {
+                            class: "{splash_class}",
+                            role: "presentation",
+                            "data-testid": "launch-splash",
+                            div { class: "launch-splash-inner",
+                                div {
+                                    class: "launch-splash-mascot",
+                                    "data-testid": "launch-splash-mascot",
+                                    "aria-hidden": "true",
+                                    dangerous_inner_html: "{SPLASH_MASCOT_SVG}"
+                                }
+                                span { class: "launch-splash-mark", "SessionLedger" }
+                                span { class: "launch-splash-caption", "Viewer" }
+                                div {
+                                    class: "launch-splash-spinner",
+                                    "data-testid": "launch-splash-spinner",
+                                    role: "progressbar",
+                                    "aria-label": "Loading viewer",
+                                    div { class: "launch-splash-spinner-dot" }
+                                    div { class: "launch-splash-spinner-dot" }
+                                    div { class: "launch-splash-spinner-dot" }
+                                }
                             }
                         }
                     }
+                } else {
+                    rsx! {}
                 }
             }
             div { class: "sidebar",

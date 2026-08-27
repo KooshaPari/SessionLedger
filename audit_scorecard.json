@@ -43,7 +43,7 @@
     "L18 Concurrency": 80,
     "L19 Memory": 80,
     "L20 Config": 85,
-    "L21 Testing Depth": 75,
+    "L21 Testing Depth": 85,
     "L22 Fuzzing": 80,
     "L23 Release": 80,
     "L24 Migration": 85,

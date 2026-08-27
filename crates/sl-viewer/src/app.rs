@@ -575,14 +575,8 @@ pub fn App() -> Element {
     // handlers own state (avoids wasm Closure / eval bridge re-render gaps).
     #[cfg(feature = "web")]
     use_effect(|| {
-        // Splash visibility is owned by a Dioxus signal above. Keeping the
-        // placeholder here avoids a direct DOM removal being reinserted by a
-        // later virtual-DOM render.
-        let dismiss_script = "";
         let script = format!(
             r#"
-            {dismiss_script}
-
             if (!window.__slHelpKeyClickBridge) {{
               window.__slHelpKeyClickBridge = true;
               document.addEventListener('keydown', (e) => {{

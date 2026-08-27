@@ -91,18 +91,17 @@ impl Resolver {
     }
 
     pub fn register(&self, session: AgentSession) -> std::io::Result<()> {
-        let mut sessions = self.sessions.write().expect("resolver lock poisoned");
-        sessions.retain(|existing| existing.session_id != session.session_id);
-        sessions.push(session);
         if let Some(path) = &self.persistence {
+            let encoded = serde_json::to_string(&session).expect("serializable");
             if let Some(parent) = path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
             let mut file = OpenOptions::new().create(true).append(true).open(path.as_ref())?;
-            if let Some(session) = sessions.last() {
-                writeln!(file, "{}", serde_json::to_string(session).expect("serializable"))?;
-            }
+            writeln!(file, "{encoded}")?;
         }
+        let mut sessions = self.sessions.write().expect("resolver lock poisoned");
+        sessions.retain(|existing| existing.session_id != session.session_id);
+        sessions.push(session);
         Ok(())
     }
 

@@ -448,6 +448,11 @@ mod tests {
 
     #[test]
     fn auto_source_missing_store_is_an_explicit_error() {
+        // Hold the process-global HOME lock across both discovery and loading.
+        // Other tests temporarily replace HOME to exercise their own isolated
+        // stores; without this guard, the precondition and the loader could
+        // observe different homes under the parallel test runner.
+        let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
         let root = std::env::var_os("HOME").map(std::path::PathBuf::from).unwrap_or_default();
         if !root.join(".codex/sessions").exists()
             && !root.join(".claude/projects").exists()

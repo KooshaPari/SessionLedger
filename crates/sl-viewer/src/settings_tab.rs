@@ -459,6 +459,16 @@ fn render_theme_radio(
                 "data-testid": "settings-theme-{variant}",
                 onchange: move |_| {
                     settings.with_mut(|s| s.theme = theme_value);
+                    let _ = document::eval(&format!(
+                        r#"
+                        const desired = {variant:?};
+                        const resolved = desired === 'system'
+                            ? (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+                            : desired;
+                        document.documentElement.dataset.theme = resolved;
+                        window.localStorage.setItem('sl-viewer-theme', desired);
+                        "#,
+                    ));
                 },
             }
             span { "{theme_label(theme_value)}" }

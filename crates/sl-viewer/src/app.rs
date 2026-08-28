@@ -50,6 +50,20 @@ enum Tab {
     Settings,
 }
 
+fn splash_dismiss_delay() -> std::time::Duration {
+    std::time::Duration::from_millis(1800)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn splash_dismiss_delay_matches_the_launch_transition() {
+        assert_eq!(splash_dismiss_delay(), std::time::Duration::from_millis(1800));
+    }
+}
+
 impl Tab {
     const ALL: [Tab; 10] = [
         Tab::Bundles,
@@ -509,38 +523,40 @@ pub fn App() -> Element {
         if let Err(err) = snapshot.save() {
             eprintln!("[sl-viewer] could not persist settings: {err}");
         }
-        // Mirror the persisted theme to the DOM dataset so CSS picks it up.
-        let effective_theme =
-            if query_fixture_active("launch-splash-light") { Theme::Light } else { snapshot.theme };
-        let theme_attr = match effective_theme {
-            Theme::Light => "light",
-            Theme::Dark => "dark",
-            Theme::System => "system",
-        };
-        let _ = document::eval(&format!(
-            r#"
-            (function() {{
-              const desired = new URLSearchParams(window.location.search).get('fixture') === 'launch-splash-light'
-                ? 'light'
-                : {theme_attr:?};
-              if (desired === 'system') {{
-                const prefersLight = window.matchMedia
-                  && window.matchMedia('(prefers-color-scheme: light)').matches;
-                const resolved = prefersLight ? 'light' : 'dark';
-                document.documentElement.dataset.theme = resolved;
-                window.localStorage.setItem('sl-viewer-theme', resolved);
-              }} else {{
-                document.documentElement.dataset.theme = desired;
-                window.localStorage.setItem('sl-viewer-theme', desired);
-              }}
-            }})();
-            "#,
-        ));
     });
     let mut help_open: Signal<bool> = use_signal(|| false);
     let mut palette_open: Signal<bool> = use_signal(|| false);
+    #[cfg(feature = "web")]
+    let mut splash_visible: Signal<bool> = use_signal(|| true);
+    #[cfg(all(feature = "desktop", not(feature = "web")))]
+    let mut splash_visible: Signal<bool> = use_signal(|| true);
+    #[cfg(not(any(feature = "web", feature = "desktop")))]
+    let splash_visible: Signal<bool> = use_signal(|| true);
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let colors = ThemeColors::dark();
+
+    #[cfg(feature = "web")]
+    use_effect(move || {
+        if !splash_hold_fixture_active() {
+            spawn(async move {
+                let _ = document::eval(
+                    "await new Promise((resolve) => window.setTimeout(resolve, 1800));",
+                )
+                .await;
+                splash_visible.set(false);
+            });
+        }
+    });
+
+    #[cfg(all(feature = "desktop", not(feature = "web")))]
+    use_effect(move || {
+        if !splash_hold_fixture_active() {
+            spawn(async move {
+                tokio::time::sleep(splash_dismiss_delay()).await;
+                splash_visible.set(false);
+            });
+        }
+    });
 
     let mut close_help = move || {
         help_open.set(false);
@@ -588,23 +604,8 @@ pub fn App() -> Element {
     // handlers own state (avoids wasm Closure / eval bridge re-render gaps).
     #[cfg(feature = "web")]
     use_effect(|| {
-        let hold_splash = splash_hold_fixture_active();
-        let dismiss_script = if hold_splash {
-            // Hold fixture: do not auto-remove splash for golden capture.
-            String::new()
-        } else {
-            r#"
-            window.setTimeout(() => {
-              const splash = document.querySelector('.launch-splash');
-              if (splash) splash.remove();
-            }, 1800);
-            "#
-            .to_owned()
-        };
         let script = format!(
             r#"
-            {dismiss_script}
-
             if (!window.__slHelpKeyClickBridge) {{
               window.__slHelpKeyClickBridge = true;
               document.addEventListener('keydown', (e) => {{
@@ -1125,37 +1126,41 @@ pub fn App() -> Element {
         div {
             class: "app",
             {
-                let splash_hold = splash_hold_fixture_active();
-                let splash_class = if splash_hold {
-                    "launch-splash launch-splash-hold"
-                } else {
-                    "launch-splash"
-                };
-                rsx! {
-                    div {
-                        class: "{splash_class}",
-                        role: "presentation",
-                        "data-testid": "launch-splash",
-                        div { class: "launch-splash-inner",
-                            div {
-                                class: "launch-splash-mascot",
-                                "data-testid": "launch-splash-mascot",
-                                "aria-hidden": "true",
-                                dangerous_inner_html: "{SPLASH_MASCOT_SVG}"
-                            }
-                            span { class: "launch-splash-mark", "SessionLedger" }
-                            span { class: "launch-splash-caption", "Viewer" }
-                            div {
-                                class: "launch-splash-spinner",
-                                "data-testid": "launch-splash-spinner",
-                                role: "progressbar",
-                                "aria-label": "Loading viewer",
-                                div { class: "launch-splash-spinner-dot" }
-                                div { class: "launch-splash-spinner-dot" }
-                                div { class: "launch-splash-spinner-dot" }
+                if splash_visible() {
+                    let splash_hold = splash_hold_fixture_active();
+                    let splash_class = if splash_hold {
+                        "launch-splash launch-splash-hold"
+                    } else {
+                        "launch-splash"
+                    };
+                    rsx! {
+                        div {
+                            class: "{splash_class}",
+                            role: "presentation",
+                            "data-testid": "launch-splash",
+                            div { class: "launch-splash-inner",
+                                div {
+                                    class: "launch-splash-mascot",
+                                    "data-testid": "launch-splash-mascot",
+                                    "aria-hidden": "true",
+                                    dangerous_inner_html: "{SPLASH_MASCOT_SVG}"
+                                }
+                                span { class: "launch-splash-mark", "SessionLedger" }
+                                span { class: "launch-splash-caption", "Viewer" }
+                                div {
+                                    class: "launch-splash-spinner",
+                                    "data-testid": "launch-splash-spinner",
+                                    role: "progressbar",
+                                    "aria-label": "Loading viewer",
+                                    div { class: "launch-splash-spinner-dot" }
+                                    div { class: "launch-splash-spinner-dot" }
+                                    div { class: "launch-splash-spinner-dot" }
+                                }
                             }
                         }
                     }
+                } else {
+                    rsx! {}
                 }
             }
             div { class: "sidebar",

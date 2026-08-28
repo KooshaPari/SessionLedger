@@ -140,8 +140,8 @@ proptest! {
     fn contract_compiler_derives_hold(_unused in 0u8..1u8) {
         let compiler = ContractCompiler::new(CharCountTokenEstimator);
         let cloned = compiler.clone();
-        let debug = format!("{:?}", compiler);
-        let debug_clone = format!("{:?}", cloned);
+        let debug = format!("{compiler:?}");
+        let debug_clone = format!("{cloned:?}");
         prop_assert!(!debug.is_empty());
         prop_assert!(!debug_clone.is_empty());
         // Both should produce identical output (both have same estimator).

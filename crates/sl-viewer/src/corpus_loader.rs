@@ -431,6 +431,51 @@ fn load_from_sqlite(path: &std::path::Path) -> Result<Vec<Session>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // `HOME` is process-global. These two tests replace it to exercise native
+    // discovery, so they must not race each other under Rust's parallel test
+    // runner and accidentally scan the developer's real corpus.
+    static HOME_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Restores `HOME` on scope exit, including assertion panics.
+    struct HomeEnvGuard {
+        previous: Option<std::ffi::OsString>,
+    }
+
+    impl HomeEnvGuard {
+        fn set(path: &std::path::Path) -> Self {
+            let previous = std::env::var_os("HOME");
+            std::env::set_var("HOME", path);
+            Self { previous }
+        }
+    }
+
+    impl Drop for HomeEnvGuard {
+        fn drop(&mut self) {
+            match self.previous.take() {
+                Some(value) => std::env::set_var("HOME", value),
+                None => std::env::remove_var("HOME"),
+            }
+        }
+    }
+
+    #[test]
+    fn home_env_guard_restores_the_previous_value() {
+        let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
+        let previous = std::env::var_os("HOME");
+        let temporary_home = tempfile::tempdir().expect("temporary HOME");
+
+        {
+            let _temporary_home = HomeEnvGuard::set(temporary_home.path());
+            assert_eq!(
+                std::env::var_os("HOME"),
+                Some(temporary_home.path().as_os_str().to_os_string())
+            );
+        }
+
+        assert_eq!(std::env::var_os("HOME"), previous);
+    }
 
     // ── Mock source ───────────────────────────────────────────────────────────
 
@@ -442,6 +487,11 @@ mod tests {
 
     #[test]
     fn auto_source_missing_store_is_an_explicit_error() {
+        // Hold the process-global HOME lock across both discovery and loading.
+        // Other tests temporarily replace HOME to exercise their own isolated
+        // stores; without this guard, the precondition and the loader could
+        // observe different homes under the parallel test runner.
+        let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
         let root = std::env::var_os("HOME").map(std::path::PathBuf::from).unwrap_or_default();
         if !root.join(".codex/sessions").exists()
             && !root.join(".claude/projects").exists()
@@ -947,11 +997,11 @@ mod tests {
 
     #[test]
     fn load_sessions_with_custom_layers_custom_paths_onto_defaults() {
+        let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
         // Custom path isolated from $HOME so the test doesn't depend on
         // which session stores happen to be installed on the runner.
-        let prev_home = std::env::var_os("HOME");
         let fake_home = tempfile::tempdir().expect("home");
-        std::env::set_var("HOME", fake_home.path());
+        let _temporary_home = HomeEnvGuard::set(fake_home.path());
 
         let custom_root = tempfile::tempdir().expect("custom root");
         let project = custom_root.path().join("-Users-custom-repo");
@@ -965,18 +1015,13 @@ mod tests {
         // The custom path should contribute exactly one session.
         let custom_count = sessions.iter().filter(|s| s.id == "layered-1").count();
         assert_eq!(custom_count, 1, "custom path must contribute its session");
-
-        match prev_home {
-            Some(value) => std::env::set_var("HOME", value),
-            None => std::env::remove_var("HOME"),
-        }
     }
 
     #[test]
     fn load_sessions_with_custom_skips_missing_custom_paths() {
-        let prev_home = std::env::var_os("HOME");
+        let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
         let fake_home = tempfile::tempdir().expect("home");
-        std::env::set_var("HOME", fake_home.path());
+        let _temporary_home = HomeEnvGuard::set(fake_home.path());
 
         let custom =
             CustomCorpusPath::from_paths(vec![PathBuf::from("/tmp/does-not-exist-anywhere")]);
@@ -985,11 +1030,6 @@ mod tests {
         // surface a clear error rather than panic or silently succeed.
         let result = load_sessions_with_custom(&DataSource::Auto, &custom);
         assert!(result.is_err(), "missing custom path + no defaults must error");
-
-        match prev_home {
-            Some(value) => std::env::set_var("HOME", value),
-            None => std::env::remove_var("HOME"),
-        }
     }
 
     #[test]

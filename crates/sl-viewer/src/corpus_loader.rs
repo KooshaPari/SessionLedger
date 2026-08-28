@@ -438,6 +438,45 @@ mod tests {
     // runner and accidentally scan the developer's real corpus.
     static HOME_ENV_LOCK: Mutex<()> = Mutex::new(());
 
+    /// Restores `HOME` on scope exit, including assertion panics.
+    struct HomeEnvGuard {
+        previous: Option<std::ffi::OsString>,
+    }
+
+    impl HomeEnvGuard {
+        fn set(path: &std::path::Path) -> Self {
+            let previous = std::env::var_os("HOME");
+            std::env::set_var("HOME", path);
+            Self { previous }
+        }
+    }
+
+    impl Drop for HomeEnvGuard {
+        fn drop(&mut self) {
+            match self.previous.take() {
+                Some(value) => std::env::set_var("HOME", value),
+                None => std::env::remove_var("HOME"),
+            }
+        }
+    }
+
+    #[test]
+    fn home_env_guard_restores_the_previous_value() {
+        let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
+        let previous = std::env::var_os("HOME");
+        let temporary_home = tempfile::tempdir().expect("temporary HOME");
+
+        {
+            let _temporary_home = HomeEnvGuard::set(temporary_home.path());
+            assert_eq!(
+                std::env::var_os("HOME"),
+                Some(temporary_home.path().as_os_str().to_os_string())
+            );
+        }
+
+        assert_eq!(std::env::var_os("HOME"), previous);
+    }
+
     // ── Mock source ───────────────────────────────────────────────────────────
 
     #[test]
@@ -961,9 +1000,8 @@ mod tests {
         let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
         // Custom path isolated from $HOME so the test doesn't depend on
         // which session stores happen to be installed on the runner.
-        let prev_home = std::env::var_os("HOME");
         let fake_home = tempfile::tempdir().expect("home");
-        std::env::set_var("HOME", fake_home.path());
+        let _temporary_home = HomeEnvGuard::set(fake_home.path());
 
         let custom_root = tempfile::tempdir().expect("custom root");
         let project = custom_root.path().join("-Users-custom-repo");
@@ -977,19 +1015,13 @@ mod tests {
         // The custom path should contribute exactly one session.
         let custom_count = sessions.iter().filter(|s| s.id == "layered-1").count();
         assert_eq!(custom_count, 1, "custom path must contribute its session");
-
-        match prev_home {
-            Some(value) => std::env::set_var("HOME", value),
-            None => std::env::remove_var("HOME"),
-        }
     }
 
     #[test]
     fn load_sessions_with_custom_skips_missing_custom_paths() {
         let _home_guard = HOME_ENV_LOCK.lock().expect("HOME lock");
-        let prev_home = std::env::var_os("HOME");
         let fake_home = tempfile::tempdir().expect("home");
-        std::env::set_var("HOME", fake_home.path());
+        let _temporary_home = HomeEnvGuard::set(fake_home.path());
 
         let custom =
             CustomCorpusPath::from_paths(vec![PathBuf::from("/tmp/does-not-exist-anywhere")]);
@@ -998,11 +1030,6 @@ mod tests {
         // surface a clear error rather than panic or silently succeed.
         let result = load_sessions_with_custom(&DataSource::Auto, &custom);
         assert!(result.is_err(), "missing custom path + no defaults must error");
-
-        match prev_home {
-            Some(value) => std::env::set_var("HOME", value),
-            None => std::env::remove_var("HOME"),
-        }
     }
 
     #[test]

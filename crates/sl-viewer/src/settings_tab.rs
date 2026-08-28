@@ -471,7 +471,7 @@ fn render_theme_radio(
                             ? (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
                             : desired;
                         document.documentElement.dataset.theme = resolved;
-                        window.localStorage.setItem('sl-viewer-theme', resolved);
+                        window.localStorage.setItem('sl-viewer-theme', desired);
                         "#,
                     ));
                 },

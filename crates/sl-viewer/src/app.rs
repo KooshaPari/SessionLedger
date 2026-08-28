@@ -50,6 +50,20 @@ enum Tab {
     Settings,
 }
 
+fn splash_dismiss_delay() -> std::time::Duration {
+    std::time::Duration::from_millis(1800)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn splash_dismiss_delay_matches_the_launch_transition() {
+        assert_eq!(splash_dismiss_delay(), std::time::Duration::from_millis(1800));
+    }
+}
+
 impl Tab {
     const ALL: [Tab; 10] = [
         Tab::Bundles,
@@ -514,7 +528,9 @@ pub fn App() -> Element {
     let mut palette_open: Signal<bool> = use_signal(|| false);
     #[cfg(feature = "web")]
     let mut splash_visible: Signal<bool> = use_signal(|| true);
-    #[cfg(not(feature = "web"))]
+    #[cfg(all(feature = "desktop", not(feature = "web")))]
+    let mut splash_visible: Signal<bool> = use_signal(|| true);
+    #[cfg(not(any(feature = "web", feature = "desktop")))]
     let splash_visible: Signal<bool> = use_signal(|| true);
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let colors = ThemeColors::dark();
@@ -527,6 +543,16 @@ pub fn App() -> Element {
                     "await new Promise((resolve) => window.setTimeout(resolve, 1800));",
                 )
                 .await;
+                splash_visible.set(false);
+            });
+        }
+    });
+
+    #[cfg(all(feature = "desktop", not(feature = "web")))]
+    use_effect(move || {
+        if !splash_hold_fixture_active() {
+            spawn(async move {
+                tokio::time::sleep(splash_dismiss_delay()).await;
                 splash_visible.set(false);
             });
         }

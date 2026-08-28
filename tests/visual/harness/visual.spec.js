@@ -174,6 +174,31 @@ test("settings theme controls update the active browser theme", async ({
     .toBe("light");
 });
 
+test("System theme follows the browser preference after reload", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByTestId("settings-theme-light").check();
+  await page.getByTestId("settings-theme-system").check();
+
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+    .toBe("dark");
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.localStorage.getItem("sl-viewer-theme")),
+    )
+    .toBe("system");
+
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.reload();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+    .toBe("light");
+});
+
 test("prefers-reduced-motion flattens transition durations", async ({
   page,
 }) => {

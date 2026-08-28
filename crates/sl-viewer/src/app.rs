@@ -512,6 +512,9 @@ pub fn App() -> Element {
     });
     let mut help_open: Signal<bool> = use_signal(|| false);
     let mut palette_open: Signal<bool> = use_signal(|| false);
+    #[cfg(feature = "web")]
+    let mut splash_visible: Signal<bool> = use_signal(|| true);
+    #[cfg(not(feature = "web"))]
     let splash_visible: Signal<bool> = use_signal(|| true);
     let mut active_tab: Signal<Tab> = use_signal(initial_tab_for_viewer);
     let colors = ThemeColors::dark();

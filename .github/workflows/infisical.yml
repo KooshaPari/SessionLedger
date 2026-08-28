@@ -38,6 +38,10 @@ jobs:
         run: |
           # Validate required secrets are present
           if [ -z "$INFISICAL_TOKEN" ]; then
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              echo "::notice::INFISICAL_TOKEN is unavailable to this pull request; skipping secret sync"
+              exit 0
+            fi
             echo "::error::INFISICAL_TOKEN secret not configured in repo settings"
             exit 1
           fi

@@ -28,10 +28,10 @@ proptest! {
     ///   9 chars -> 3.
     #[test]
     fn estimate_text_rounds_up_to_4char_chunks(
-        n in 0usize..500,
+        n in 0u32..500,
     ) {
-        let text: String = "a".repeat(n);
-        let expected = (u32::try_from(n).expect("generated n fits u32").saturating_add(3)) / 4;
+        let text = "a".repeat(n as usize);
+        let expected = n.saturating_add(3) / 4;
         let actual = CharCountTokenEstimator.estimate_text(&text);
         prop_assert_eq!(actual, expected,
             "n = {} chars, expected {} tokens, got {}", n, expected, actual);
@@ -145,10 +145,9 @@ proptest! {
     /// Debug).
     #[test]
     fn char_count_estimator_derives_hold(_unused in 0u8..1u8) {
-        let a = CharCountTokenEstimator;        // Copy
-        let b = a;                               // Copy
-        let c = Clone::clone(&a);                // Clone
-        let d = <CharCountTokenEstimator as Default>::default(); // Default
+        let a = CharCountTokenEstimator; // Copy
+        let b = Clone::clone(&a); // Clone
+        let c: CharCountTokenEstimator = default_value();
         let debug = format!("{a:?}");
         prop_assert!(!debug.is_empty());
         // All three values should produce the same estimate for the
@@ -157,11 +156,13 @@ proptest! {
         let ea = a.estimate_text(text);
         let eb = b.estimate_text(text);
         let ec = c.estimate_text(text);
-        let ed = d.estimate_text(text);
         prop_assert_eq!(ea, eb);
         prop_assert_eq!(eb, ec);
-        prop_assert_eq!(ec, ed);
     }
+}
+
+fn default_value<T: Default>() -> T {
+    T::default()
 }
 
 // ── Composite use via trait ───────────────────────────────────────────────

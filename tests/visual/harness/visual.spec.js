@@ -163,6 +163,10 @@ test("settings theme controls update the active browser theme", async ({
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByTestId("settings-tab")).toBeVisible();
 
+  // Drive an actual radio transition: `check()` is deliberately a no-op for
+  // an already-selected control, so selecting Light alone would not prove its
+  // change handler updates the browser-facing theme state.
+  await page.getByTestId("settings-theme-dark").check();
   await page.getByTestId("settings-theme-light").check();
   await expect
     .poll(() => page.evaluate(() => document.documentElement.dataset.theme))

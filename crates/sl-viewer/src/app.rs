@@ -54,6 +54,21 @@ fn splash_dismiss_delay() -> std::time::Duration {
     std::time::Duration::from_millis(1800)
 }
 
+/// Monotonic token that lets a discovery task reject an obsolete completion.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct DiscoveryGeneration(u64);
+
+impl DiscoveryGeneration {
+    fn next(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(1);
+        self.0
+    }
+
+    fn is_current(self, request: u64) -> bool {
+        self.0 == request
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,6 +76,16 @@ mod tests {
     #[test]
     fn splash_dismiss_delay_matches_the_launch_transition() {
         assert_eq!(splash_dismiss_delay(), std::time::Duration::from_millis(1800));
+    }
+
+    #[test]
+    fn discovery_generation_rejects_obsolete_requests() {
+        let mut generation = DiscoveryGeneration::default();
+        let first = generation.next();
+        let second = generation.next();
+
+        assert!(!generation.is_current(first));
+        assert!(generation.is_current(second));
     }
 }
 
@@ -402,6 +427,7 @@ pub fn App() -> Element {
     let mut error_signal: Signal<Option<String>> = use_signal(|| None);
     let mut loading_signal: Signal<bool> = use_signal(|| true);
     let reload_trigger: Signal<u32> = use_signal(|| 0u32);
+    let mut discovery_generation = use_signal(DiscoveryGeneration::default);
     let custom_paths_signal: Signal<CustomCorpusPath> = use_signal(initial_custom_corpus_paths);
     use_context_provider(|| ReloadTrigger(reload_trigger));
     use_context_provider(|| CustomCorpusPaths(custom_paths_signal));
@@ -409,6 +435,7 @@ pub fn App() -> Element {
     use_effect(move || {
         let _ = reload_trigger();
         let _ = custom_paths_signal();
+        let request_generation = discovery_generation.with_mut(DiscoveryGeneration::next);
         loading_signal.set(true);
         error_signal.set(None);
 
@@ -422,6 +449,11 @@ pub fn App() -> Element {
                 } else {
                     crate::daemon_source::fetch_daemon_sessions().await
                 };
+                if !discovery_generation
+                    .with(|generation| generation.is_current(request_generation))
+                {
+                    return;
+                }
                 loading_signal.set(false);
                 match result {
                     Ok(sessions) => sessions_signal.set(sessions),
@@ -449,6 +481,11 @@ pub fn App() -> Element {
                         Ok(load_sessions_with_custom(&source, &custom_snapshot))
                     }
                 };
+                if !discovery_generation
+                    .with(|generation| generation.is_current(request_generation))
+                {
+                    return;
+                }
                 loading_signal.set(false);
                 match result {
                     Ok(Ok(sessions)) => {

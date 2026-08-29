@@ -32,10 +32,14 @@ pub async fn fetch_daemon_sessions() -> Result<Vec<Session>, String> {
 
 /// Parse the `GET /api/bundles` response into the viewer's shared session model.
 pub fn parse_daemon_bundles(body: &str) -> Result<Vec<Session>, String> {
-    let documents: Vec<OkfDocument> = serde_json::from_str(body)
+    let documents: Vec<serde_json::Value> = serde_json::from_str(body)
         .map_err(|error| format!("failed to parse daemon bundles: {error}"))?;
 
-    documents.into_iter().map(session_from_okf).collect()
+    Ok(documents
+        .into_iter()
+        .filter_map(|document| serde_json::from_value::<OkfDocument>(document).ok())
+        .filter_map(|document| session_from_okf(document).ok())
+        .collect())
 }
 
 fn session_from_okf(document: OkfDocument) -> Result<Session, String> {
@@ -100,10 +104,24 @@ mod tests {
 
     #[test]
     fn rejects_invalid_okf_response_without_mock_fallback() {
-        let error = parse_daemon_bundles(r#"[{"okf":"2.0"}]"#)
-            .expect_err("incomplete response is rejected");
+        let error = parse_daemon_bundles("not a JSON array")
+            .expect_err("a non-JSON daemon response is rejected");
 
         assert!(error.contains("failed to parse daemon bundles"));
+    }
+
+    #[test]
+    fn preserves_valid_sessions_when_response_contains_invalid_documents() {
+        let sessions = parse_daemon_bundles(
+            r#"[
+                {"okf":"1.0","source_id":"fuzz-a","entities":[],"provenance":{"corpus":"forge","source_id":"fuzz-a"},"tags":[]},
+                {"okf":"2.0"}
+            ]"#,
+        )
+        .expect("a malformed bundle must not hide valid daemon bundles");
+
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, "fuzz-a");
     }
 
     #[test]

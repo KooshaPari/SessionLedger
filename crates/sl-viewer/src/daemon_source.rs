@@ -35,11 +35,18 @@ pub fn parse_daemon_bundles(body: &str) -> Result<Vec<Session>, String> {
     let documents: Vec<serde_json::Value> = serde_json::from_str(body)
         .map_err(|error| format!("failed to parse daemon bundles: {error}"))?;
 
-    Ok(documents
+    let document_count = documents.len();
+    let sessions = documents
         .into_iter()
         .filter_map(|document| serde_json::from_value::<OkfDocument>(document).ok())
         .filter_map(|document| session_from_okf(document).ok())
-        .collect())
+        .collect::<Vec<_>>();
+
+    if document_count > 0 && sessions.is_empty() {
+        return Err("failed to parse daemon bundles: no valid sessions".to_owned());
+    }
+
+    Ok(sessions)
 }
 
 fn session_from_okf(document: OkfDocument) -> Result<Session, String> {
@@ -108,6 +115,14 @@ mod tests {
             .expect_err("a non-JSON daemon response is rejected");
 
         assert!(error.contains("failed to parse daemon bundles"));
+    }
+
+    #[test]
+    fn rejects_nonempty_response_without_valid_sessions() {
+        let error = parse_daemon_bundles(r#"[{"okf":"2.0"}]"#)
+            .expect_err("an entirely invalid daemon response must not look empty");
+
+        assert!(error.contains("no valid sessions"));
     }
 
     #[test]

@@ -33,7 +33,7 @@
 use proptest::prelude::*;
 use session_ledger::domain::intent::IntentState;
 use session_ledger::domain::session::{Corpus, Message, Role, Session};
-use sl_viewer::history_tab::{all_timeline_entries, to_timeline_entry};
+use sl_viewer::history_tab::{all_timeline_entries, session_for_timeline_entry, to_timeline_entry};
 
 // ── strategies ──────────────────────────────────────────────────────────────
 
@@ -219,6 +219,24 @@ proptest! {
 }
 
 // ── history_tab::all_timeline_entries ───────────────────────────────────────
+
+#[test]
+fn duplicate_session_ids_keep_distinct_source_rows() {
+    let mut first = Session::new("shared", Corpus::Forge);
+    first.messages.push(Message::new(Role::User, "first transcript"));
+    let mut second = Session::new("shared", Corpus::Forge);
+    second.messages.push(Message::new(Role::User, "second transcript"));
+    second.messages.push(Message::new(Role::Assistant, "second reply"));
+    let sessions = vec![first, second];
+
+    let entries = all_timeline_entries(&sessions);
+    let second_entry =
+        entries.iter().find(|entry| entry.source_index == 1).expect("second source row");
+    let selected = session_for_timeline_entry(&sessions, second_entry).expect("selected session");
+
+    assert_eq!(selected.messages[0].content, "second transcript");
+    assert_eq!(selected.messages.len(), 2);
+}
 
 proptest! {
     /// Property: output length equals input length.

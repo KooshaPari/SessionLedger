@@ -3,7 +3,7 @@
 /// Returns the `fixture` query parameter when present.
 #[must_use]
 pub fn query_fixture_name() -> Option<String> {
-    #[cfg(feature = "web")]
+    #[cfg(all(feature = "web", target_arch = "wasm32"))]
     {
         let window = web_sys::window()?;
         let location = window.location();
@@ -12,7 +12,7 @@ pub fn query_fixture_name() -> Option<String> {
         params.get("fixture").filter(|value| !value.trim().is_empty())
     }
 
-    #[cfg(not(feature = "web"))]
+    #[cfg(not(all(feature = "web", target_arch = "wasm32")))]
     {
         None
     }

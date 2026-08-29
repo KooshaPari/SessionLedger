@@ -11,7 +11,7 @@
 //!    (kebab-case)
 //!  * `pick_corpus_folder()` is callable from any build configuration
 //!    and never panics
-//!  * `trigger_open_corpus()` is callable from any build configuration
+//!  * the headless `trigger_open_corpus()` stub is callable without a UI runtime
 
 use proptest::prelude::*;
 use sl_viewer::corpus_cta::{
@@ -110,20 +110,22 @@ proptest! {
 // ── Callable functions ────────────────────────────────────────────────────
 
 proptest! {
-    /// Property: `trigger_open_corpus()` is callable from any build
-    /// configuration and never panics. (Web builds mount a file picker,
-    /// desktop builds open the quick-start, headless is no-op.)
-    #[test]
-    fn trigger_open_corpus_is_callable(_unused in 0u8..1u8) {
-        sl_viewer::corpus_cta::trigger_open_corpus();
-    }
-
     /// Property: `QUICKSTART_CORPUS_DOC` is non-empty (test fixtures
     /// reference this constant; an empty string would break the link).
     #[test]
     fn quickstart_corpus_doc_is_nonempty(_unused in 0u8..1u8) {
         prop_assert!(!QUICKSTART_CORPUS_DOC.is_empty());
     }
+}
+
+/// The headless implementation is intentionally a no-op, so it is the one
+/// configuration safe to invoke from a plain Rust test process. The web
+/// implementation needs a Dioxus runtime and is exercised by browser tests;
+/// desktop opens the operating-system browser and is intentionally not invoked.
+#[cfg(not(any(feature = "web", feature = "desktop")))]
+#[test]
+fn trigger_open_corpus_is_a_headless_noop() {
+    sl_viewer::corpus_cta::trigger_open_corpus();
 }
 
 // Note: `pick_corpus_folder()` requires the AppKit main thread (rfd's

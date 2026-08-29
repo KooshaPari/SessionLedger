@@ -25,7 +25,7 @@
 //!  * Output length matches input length.
 //!  * The output is sorted by `total_messages` descending (newest-first
 //!    by message count, per the documented comment).
-//!  * Every session's `id` appears in the output exactly once.
+//!  * The output preserves the input ID multiset, including collisions.
 //!
 //! proptest is added to `sl-viewer/[dev-dependencies]` (mirroring the
 //! workspace root); see PR #425 for the initial wiring.
@@ -250,17 +250,20 @@ proptest! {
         }
     }
 
-    /// Property: every session's id appears in the output exactly once.
+    /// Property: output preserves every input id, including duplicate ids.
+    ///
+    /// Session IDs come from external corpora and may collide; timeline
+    /// construction must retain each source row rather than silently dedupe it.
     #[test]
-    fn all_timeline_entries_unique_ids(
+    fn all_timeline_entries_preserve_id_multiset(
         sessions in prop::collection::vec(session_strategy(), 1..6),
     ) {
         let entries = all_timeline_entries(&sessions);
-        let mut ids: Vec<_> = entries.iter().map(|e| e.summary.id.clone()).collect();
-        ids.sort();
-        let mut unique = ids.clone();
-        unique.dedup();
-        prop_assert_eq!(ids.len(), unique.len(), "duplicate ids in output: {:?}", ids);
+        let mut expected_ids: Vec<_> = sessions.iter().map(|s| s.id.clone()).collect();
+        let mut actual_ids: Vec<_> = entries.iter().map(|e| e.summary.id.clone()).collect();
+        expected_ids.sort();
+        actual_ids.sort();
+        prop_assert_eq!(actual_ids, expected_ids);
     }
 
     /// Property: `all_timeline_entries` is deterministic — applying

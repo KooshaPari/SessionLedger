@@ -46,7 +46,10 @@ impl HealthStatus {
 #[component]
 pub fn SettingsTab(on_open_corpus_paths: EventHandler<()>) -> Element {
     let settings = use_context::<SettingsSignal>();
+    #[cfg(feature = "desktop")]
     let mut health: Signal<HealthStatus> = use_signal(|| HealthStatus::Unknown);
+    #[cfg(not(feature = "desktop"))]
+    let health: Signal<HealthStatus> = use_signal(|| HealthStatus::Unknown);
 
     // Probe the daemon once when the tab mounts. Failures leave the
     // indicator on "unreachable" so the operator knows the daemon is

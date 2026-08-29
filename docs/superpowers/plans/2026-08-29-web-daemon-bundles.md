@@ -16,16 +16,17 @@ tests, Dioxus CLI, Playwright.
 
 ## File map
 
-| File | Responsibility |
-| --- | --- |
+| File                                    | Responsibility                                                           |
+| --------------------------------------- | ------------------------------------------------------------------------ |
 | `crates/sl-viewer/src/daemon_source.rs` | Parse daemon JSON, map canonical OKF to `Session`, fetch `/api/bundles`. |
-| `crates/sl-viewer/src/lib.rs` | Export the module. |
-| `crates/sl-viewer/src/app.rs` | Choose daemon fetch for web, preserve desktop loader. |
-| `crates/sl-viewer/README.md` | Document the local web + daemon invocation. |
+| `crates/sl-viewer/src/lib.rs`           | Export the module.                                                       |
+| `crates/sl-viewer/src/app.rs`           | Choose daemon fetch for web, preserve desktop loader.                    |
+| `crates/sl-viewer/README.md`            | Document the local web + daemon invocation.                              |
 
 ### Task 1: Canonical OKF projection
 
 **Files:**
+
 - Create: `crates/sl-viewer/src/daemon_source.rs`
 - Modify: `crates/sl-viewer/src/lib.rs`
 - Test: `crates/sl-viewer/src/daemon_source.rs`
@@ -99,6 +100,7 @@ git commit -m "feat(sl-viewer): parse daemon bundles"
 ### Task 2: WASM daemon fetch selection
 
 **Files:**
+
 - Modify: `crates/sl-viewer/src/daemon_source.rs`
 - Modify: `crates/sl-viewer/src/app.rs:400-440`
 - Test: `crates/sl-viewer/src/daemon_source.rs`
@@ -154,13 +156,14 @@ git commit -m "fix(sl-viewer): load web bundles from daemon"
 ### Task 3: Local operator contract and browser proof
 
 **Files:**
+
 - Modify: `crates/sl-viewer/README.md`
 - Test: temporary daemon fixture plus static Dioxus artifact; no test output committed
 
 - [ ] **Step 1: Document the local pairing.** Add an example that runs a
-loopback daemon on `127.0.0.1:8080`, then invokes `dx serve --platform web
+      loopback daemon on `127.0.0.1:8080`, then invokes `dx serve --platform web
 --no-default-features --features web`; explicitly state that the web screen
-shows daemon bundles and desktop still scans local corpora.
+      shows daemon bundles and desktop still scans local corpora.
 
 - [ ] **Step 2: Build the web artifact.**
 
@@ -170,10 +173,10 @@ Expected: generated `target/dx/sl-viewer/release/web/public/index.html` plus
 WASM assets.
 
 - [ ] **Step 3: Run fixture-backed browser proof.** Start `sl-daemon serve`
-against `fuzz/corpus/jsonl_ingest/two_sessions.jsonl`, host the built static
-directory, then use Playwright to assert that the Bundles tab contains
-`fuzz-a` and `fuzz-b`, excludes `forge-session-001`, and records a successful
-`GET http://127.0.0.1:8080/api/bundles` request.
+      against `fuzz/corpus/jsonl_ingest/two_sessions.jsonl`, host the built static
+      directory, then use Playwright to assert that the Bundles tab contains
+      `fuzz-a` and `fuzz-b`, excludes `forge-session-001`, and records a successful
+      `GET http://127.0.0.1:8080/api/bundles` request.
 
 - [ ] **Step 4: Run final gates.**
 

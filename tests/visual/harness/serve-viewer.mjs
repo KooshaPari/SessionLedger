@@ -24,9 +24,17 @@ if (!existsSync(join(root, "index.html"))) {
 }
 
 createServer((request, response) => {
-  const pathname = decodeURIComponent(
-    new URL(request.url, `http://${request.headers.host}`).pathname,
-  );
+  const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+  const pathname = decodeURIComponent(requestUrl.pathname);
+
+  // Root-route tests exercise the canonical demo fixture. Production web
+  // builds intentionally fetch the loopback daemon instead, while explicit
+  // fixture routes below retain their individual error and splash states.
+  if (pathname === "/" && !requestUrl.search) {
+    response.writeHead(302, { Location: "/?fixture=demo" }).end();
+    return;
+  }
+
   const requested = resolve(root, `.${normalize(pathname)}`);
   if (requested !== root && !requested.startsWith(`${root}${sep}`)) {
     response.writeHead(403).end("Forbidden");

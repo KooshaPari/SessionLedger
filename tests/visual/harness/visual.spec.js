@@ -255,9 +255,10 @@ test("viewer exposes caption and measure typography tokens", async ({
 
 test("launch splash is present then dismisses", async ({ page }) => {
   // Default harness uses reduced motion, which pins splash hidden; exercise
-  // the real dismiss path with motion allowed.
+  // the real dismiss path with motion allowed. The harness redirects `/` to
+  // the demo fixture, so load the entry document directly for this lifecycle.
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto("/");
+  await page.goto("/index.html");
   const splash = page.locator(".launch-splash");
   await expect(splash).toBeVisible();
   await expect(splash).toHaveCount(0, { timeout: 5000 });

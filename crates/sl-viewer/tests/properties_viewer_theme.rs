@@ -60,7 +60,7 @@ proptest! {
         sample in prop::sample::select(vec![Theme::Light, Theme::Dark, Theme::System]),
     ) {
         let copied = sample;            // Copy
-        let cloned = sample.clone();    // Clone
+        let cloned = sample;            // Copy (and Clone-compatible)
         prop_assert_eq!(sample, copied);
         prop_assert_eq!(sample, cloned);
         let debug = format!("{:?}", sample);

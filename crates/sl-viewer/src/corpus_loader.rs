@@ -437,7 +437,6 @@ mod tests {
     // discovery, so they must not race each other under Rust's parallel test
     // runner and accidentally scan the developer's real corpus.
     static HOME_ENV_LOCK: Mutex<()> = Mutex::new(());
-
     /// Restores `HOME` on scope exit, including assertion panics.
     struct HomeEnvGuard {
         previous: Option<std::ffi::OsString>,

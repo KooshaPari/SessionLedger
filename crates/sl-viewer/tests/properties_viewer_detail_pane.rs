@@ -28,7 +28,7 @@ proptest! {
         // proptest input (it has many Vec fields); use a basic shape.
         let detail = BundleDetail {
             source_id: source_id.clone(),
-            intent_goal: intent_goal,
+            intent_goal,
             intent_state: session_ledger::domain::intent::IntentState::Extracted,
             acceptance_signals: Vec::new(),
             constraints: Vec::new(),

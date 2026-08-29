@@ -44,8 +44,12 @@ impl std::error::Error for PluginError {}
 /// Trait for ingestion adapters that convert raw input into session records.
 pub trait IngestionAdapter: Send + Sync {
     fn id(&self) -> PluginId;
-    fn version(&self) -> &str { "0.1.0" }
-    fn description(&self) -> &str { "" }
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+    fn description(&self) -> &str {
+        ""
+    }
     fn accept(&self, content_type: &str) -> bool;
     fn ingest(&self, payload: &[u8]) -> Result<Vec<SessionRecord>, PluginError>;
 }
@@ -73,16 +77,24 @@ pub struct SessionEvent {
 /// Trait for exporters that write session records in alternative formats.
 pub trait Exporter: Send + Sync {
     fn id(&self) -> PluginId;
-    fn version(&self) -> &str { "0.1.0" }
-    fn description(&self) -> &str { "" }
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+    fn description(&self) -> &str {
+        ""
+    }
     fn export(&self, records: &[SessionRecord]) -> Result<Vec<u8>, PluginError>;
 }
 
 /// Trait for storage ports.
 pub trait Port: Send + Sync {
     fn id(&self) -> PluginId;
-    fn version(&self) -> &str { "0.1.0" }
-    fn description(&self) -> &str { "" }
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+    fn description(&self) -> &str {
+        ""
+    }
     fn put(&self, key: &str, value: &[u8]) -> Result<(), PluginError>;
     fn get(&self, key: &str) -> Result<Option<Vec<u8>>, PluginError>;
     fn delete(&self, key: &str) -> Result<(), PluginError>;
@@ -97,7 +109,9 @@ pub struct PluginRegistry {
 }
 
 impl Default for PluginRegistry {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PluginRegistry {
@@ -123,31 +137,48 @@ impl PluginRegistry {
     }
 
     pub fn list_ingesters(&self) -> Vec<PluginMeta> {
-        self.ingesters.lock().unwrap().iter().map(|p| PluginMeta {
-            id: p.id(),
-            version: p.version().to_string(),
-            description: p.description().to_string(),
-        }).collect()
+        self.ingesters
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|p| PluginMeta {
+                id: p.id(),
+                version: p.version().to_string(),
+                description: p.description().to_string(),
+            })
+            .collect()
     }
 
     pub fn list_exporters(&self) -> Vec<PluginMeta> {
-        self.exporters.lock().unwrap().iter().map(|p| PluginMeta {
-            id: p.id(),
-            version: p.version().to_string(),
-            description: p.description().to_string(),
-        }).collect()
+        self.exporters
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|p| PluginMeta {
+                id: p.id(),
+                version: p.version().to_string(),
+                description: p.description().to_string(),
+            })
+            .collect()
     }
 
     pub fn list_ports(&self) -> Vec<PluginMeta> {
-        self.ports.lock().unwrap().iter().map(|p| PluginMeta {
-            id: p.id(),
-            version: p.version().to_string(),
-            description: p.description().to_string(),
-        }).collect()
+        self.ports
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|p| PluginMeta {
+                id: p.id(),
+                version: p.version().to_string(),
+                description: p.description().to_string(),
+            })
+            .collect()
     }
 
     pub fn find_ingester(&self, content_type: &str) -> Option<Arc<dyn IngestionAdapter>> {
-        if !*self.enabled.lock().unwrap() { return None; }
+        if !*self.enabled.lock().unwrap() {
+            return None;
+        }
         self.ingesters.lock().unwrap().iter().find(|p| p.accept(content_type)).cloned()
     }
 
@@ -157,23 +188,39 @@ impl PluginRegistry {
             + self.ports.lock().unwrap().len()
     }
 
-    pub fn disable(&self) { *self.enabled.lock().unwrap() = false; }
-    pub fn enable(&self) { *self.enabled.lock().unwrap() = true; }
-    pub fn is_enabled(&self) -> bool { *self.enabled.lock().unwrap() }
+    pub fn disable(&self) {
+        *self.enabled.lock().unwrap() = false;
+    }
+    pub fn enable(&self) {
+        *self.enabled.lock().unwrap() = true;
+    }
+    pub fn is_enabled(&self) -> bool {
+        *self.enabled.lock().unwrap()
+    }
 }
 
 /// Built-in JSONL ingestion adapter — parses one JSON object per line.
 pub struct JsonlIngester;
 
 impl JsonlIngester {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 }
 
-impl Default for JsonlIngester { fn default() -> Self { Self::new() } }
+impl Default for JsonlIngester {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl IngestionAdapter for JsonlIngester {
-    fn id(&self) -> PluginId { "jsonl".into() }
-    fn description(&self) -> &str { "JSONL one-record-per-line ingestion adapter" }
+    fn id(&self) -> PluginId {
+        "jsonl".into()
+    }
+    fn description(&self) -> &str {
+        "JSONL one-record-per-line ingestion adapter"
+    }
     fn accept(&self, content_type: &str) -> bool {
         content_type.contains("json") || content_type.contains("ndjson")
     }
@@ -182,11 +229,13 @@ impl IngestionAdapter for JsonlIngester {
             .map_err(|e| PluginError::InvalidPayload(format!("utf-8: {}", e)))?;
         let mut records = Vec::new();
         for (idx, line) in text.lines().enumerate() {
-            if line.trim().is_empty() { continue; }
+            if line.trim().is_empty() {
+                continue;
+            }
             let line_no = idx + 1;
             // Simple parse — accept JSON or fall back to a stub record.
             if line.trim_start().starts_with('{') {
-                records.push(SessionRecord{
+                records.push(SessionRecord {
                     session_id: format!("jsonl-{}", line_no),
                     started_at_unix_millis: 0,
                     ended_at_unix_millis: 0,
@@ -209,22 +258,34 @@ impl IngestionAdapter for JsonlIngester {
 pub struct CsvExporter;
 
 impl CsvExporter {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 }
 
-impl Default for CsvExporter { fn default() -> Self { Self::new() } }
+impl Default for CsvExporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Exporter for CsvExporter {
-    fn id(&self) -> PluginId { "csv".into() }
-    fn description(&self) -> &str { "CSV one-row-per-record exporter" }
+    fn id(&self) -> PluginId {
+        "csv".into()
+    }
+    fn description(&self) -> &str {
+        "CSV one-row-per-record exporter"
+    }
     fn export(&self, records: &[SessionRecord]) -> Result<Vec<u8>, PluginError> {
         let mut buf = String::new();
-        buf.push_str("session_id,tool,started_at_unix_millis,ended_at_unix_millis,token_count,event_count\n");
+        buf.push_str(
+            "session_id,tool,started_at_unix_millis,ended_at_unix_millis,token_count,event_count\n",
+        );
         for r in records {
             buf.push_str(&format!(
                 "{},{},{},{},{},{}\n",
-                r.session_id,
-                r.tool,
+                csv_field(&r.session_id),
+                csv_field(&r.tool),
                 r.started_at_unix_millis,
                 r.ended_at_unix_millis,
                 r.token_count,
@@ -235,22 +296,47 @@ impl Exporter for CsvExporter {
     }
 }
 
+fn csv_field(value: &str) -> String {
+    if value.bytes().any(|byte| matches!(byte, b',' | b'"' | b'\n' | b'\r')) {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_owned()
+    }
+}
+
 /// Built-in in-memory port — HashMap-backed storage for tests and ephemeral use.
 pub struct InMemoryPort {
     store: Mutex<HashMap<String, Vec<u8>>>,
 }
 
 impl InMemoryPort {
-    pub fn new() -> Self { Self { store: Mutex::new(HashMap::new()) } }
-    pub fn len(&self) -> usize { self.store.lock().unwrap().len() }
-    pub fn keys(&self) -> Vec<String> { self.store.lock().unwrap().keys().cloned().collect() }
+    pub fn new() -> Self {
+        Self { store: Mutex::new(HashMap::new()) }
+    }
+    pub fn len(&self) -> usize {
+        self.store.lock().unwrap().len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.store.lock().unwrap().is_empty()
+    }
+    pub fn keys(&self) -> Vec<String> {
+        self.store.lock().unwrap().keys().cloned().collect()
+    }
 }
 
-impl Default for InMemoryPort { fn default() -> Self { Self::new() } }
+impl Default for InMemoryPort {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Port for InMemoryPort {
-    fn id(&self) -> PluginId { "in-memory".into() }
-    fn description(&self) -> &str { "HashMap-backed in-memory port for tests and ephemeral use" }
+    fn id(&self) -> PluginId {
+        "in-memory".into()
+    }
+    fn description(&self) -> &str {
+        "HashMap-backed in-memory port for tests and ephemeral use"
+    }
     fn put(&self, key: &str, value: &[u8]) -> Result<(), PluginError> {
         self.store.lock().unwrap().insert(key.into(), value.to_vec());
         Ok(())
@@ -315,20 +401,32 @@ mod tests {
     #[test]
     fn csv_exporter_produces_csv_with_header() {
         let exp = CsvExporter::new();
-        let records = vec![
-            SessionRecord {
-                session_id: "s1".into(),
-                started_at_unix_millis: 1000,
-                ended_at_unix_millis: 2000,
-                tool: "claude_code".into(),
-                token_count: 500,
-                events: vec![],
-            }
-        ];
+        let records = vec![SessionRecord {
+            session_id: "s1".into(),
+            started_at_unix_millis: 1000,
+            ended_at_unix_millis: 2000,
+            tool: "claude_code".into(),
+            token_count: 500,
+            events: vec![],
+        }];
         let csv = exp.export(&records).unwrap();
         let csv_str = String::from_utf8(csv).unwrap();
         assert!(csv_str.starts_with("session_id,"));
         assert!(csv_str.contains("s1,claude_code"));
+    }
+
+    #[test]
+    fn csv_exporter_quotes_delimiters_and_newlines() {
+        let record = SessionRecord {
+            session_id: "s,\"1".into(),
+            started_at_unix_millis: 0,
+            ended_at_unix_millis: 0,
+            tool: "tool\nname".into(),
+            token_count: 0,
+            events: vec![],
+        };
+        let csv = String::from_utf8(CsvExporter::new().export(&[record]).unwrap()).unwrap();
+        assert!(csv.contains("\"s,\"\"1\",\"tool\nname\",0,0,0,0"));
     }
 
     #[test]

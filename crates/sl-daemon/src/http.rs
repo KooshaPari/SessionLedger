@@ -44,8 +44,8 @@ use crate::export::BundleMeta;
 use crate::filter::{apply_filters, FilterSpec};
 use crate::metrics::{compute_metrics, normalize_http_route, HttpMetrics};
 use crate::resilience::ApiCircuitBreaker;
-use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 use crate::resolver::{ResolveRequest, ResolveResponse, Resolver};
+use crate::validation::{validate_okf_bundle, PostBundle, ValidationResult};
 #[cfg(feature = "otel")]
 use opentelemetry::trace::{
     SpanContext, SpanId, TraceContextExt as _, TraceFlags, TraceId, TraceState,
@@ -1126,10 +1126,8 @@ fn read_matching_bundle_metas(
     for entry in rd {
         let entry = entry?;
         let path = entry.path();
-        let is_okf = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .is_some_and(|n| n.ends_with(".okf.json"));
+        let is_okf =
+            path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(".okf.json"));
         if !is_okf {
             continue;
         }

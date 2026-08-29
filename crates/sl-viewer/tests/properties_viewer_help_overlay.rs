@@ -180,7 +180,7 @@ proptest! {
         // Copy
         let copied = sample;
         // Clone
-        let cloned = sample.clone();
+        let cloned = sample;
         // PartialEq + Eq via ==
         prop_assert_eq!(sample, copied);
         prop_assert_eq!(sample, cloned);

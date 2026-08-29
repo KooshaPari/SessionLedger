@@ -65,9 +65,7 @@ proptest! {
     /// forces a deliberate `default()` change.
     #[test]
     fn skeleton_layout_default_is_first_arm(_seed in any::<u32>()) {
-        let first = match () {
-            () => SkeletonLayout::Bundles, // mirrors the first match arm in ContentSkeleton
-        };
+        let first = SkeletonLayout::Bundles;
         prop_assert_eq!(SkeletonLayout::default(), first);
     }
 

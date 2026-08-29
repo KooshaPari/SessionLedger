@@ -21,12 +21,14 @@ use session_ledger::TokenEstimator;
 /// estimators without ceremony.
 #[test]
 fn estimator_default_construct_and_copy() {
-    let a = CharCountTokenEstimator::default();
+    let a = <CharCountTokenEstimator as Default>::default();
     let b = a; // Copy via move.
-    let c = a.clone();
-    // Both `a` and `b` are usable: Copy + Clone are honest.
+    let c = Clone::clone(&a);
+    let defaulted = CharCountTokenEstimator::default();
+    // Both `a` and `b` are usable: Copy + Clone + Default are exercised.
     assert_eq!(a.estimate_text("abcd"), b.estimate_text("abcd"));
     assert_eq!(a.estimate_text("abcd"), c.estimate_text("abcd"));
+    assert_eq!(a.estimate_text("abcd"), defaulted.estimate_text("abcd"));
 }
 
 // ── fixed boundary values (the (chars + 3) / 4 contract) ──────────────────
@@ -275,10 +277,8 @@ proptest! {
             ("[1,2,3]", json!([1, 2, 3])),
             ("{}", json!({})),
         ];
-        for (label, v) in cases {
+        for (_label, v) in cases {
             let est = CharCountTokenEstimator.estimate_json(&v);
-            // Token estimate is u32 (so non-negative and bounded).
-            prop_assert!(est <= u32::MAX, "estimate for {label} overflowed");
             // Must match the compact text form.
             let ser = v.to_string();
             prop_assert_eq!(
@@ -363,7 +363,10 @@ proptest! {
     #[test]
     fn estimate_text_is_finite(s in "[a]{0,4096}") {
         let est = CharCountTokenEstimator.estimate_text(&s);
-        prop_assert!(est <= u32::MAX);
+        let expected =
+            (u32::try_from(s.chars().count()).expect("generated string fits u32").saturating_add(3))
+                / 4;
+        prop_assert_eq!(est, expected);
     }
 
     /// Sanity sweep across a wide distribution of lengths: every length

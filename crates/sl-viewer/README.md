@@ -1,6 +1,6 @@
 # sl-viewer — SessionLedger bundle viewer
 
-A Dioxus 0.6 single-codebase viewer for compiled SessionLedger bundles —
+A Dioxus 0.7 single-codebase viewer for compiled SessionLedger bundles —
 desktop (native) and web (WASM) from one source tree.
 
 ## Platform targets
@@ -21,11 +21,20 @@ The web target requires the `web` feature and the Dioxus CLI (`dx`):
 # Install the Dioxus CLI (one time)
 cargo install dioxus-cli
 
-# Serve on the web
-dx serve --platform web -p sl-viewer
+# Terminal 1: start the local daemon with a session watch directory and an output directory.
+cd ../sl-daemon
+cargo run -- serve --watch ./sessions --out ./okf-out --http-bind 127.0.0.1:8080
+
+# Terminal 2: build and serve the browser viewer against that loopback daemon.
+cd ../sl-viewer
+SL_DAEMON_URL=http://127.0.0.1:8080 dx serve --platform web --port 8081
 ```
 
-This compiles `sl-viewer` to WASM and serves it on `http://localhost:8080`.
+This compiles `sl-viewer` to WASM and serves it on `http://localhost:8081`.
+The **Bundles** screen calls `GET /api/bundles` on `SL_DAEMON_URL` and renders
+the daemon's current OKF documents. With the daemon unavailable, it shows a
+retryable error instead of embedded demo data. The desktop target remains
+local-corpus-first; its native discovery behavior is unchanged.
 
 ## Cargo features
 

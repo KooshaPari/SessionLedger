@@ -19,6 +19,7 @@ pub fn summarize(bundle: &ContinuationBundle) -> BundleSummary {
         .find(|b| b.kind == BundleKind::Intent)
         .and_then(|b| b.body.get("goal"))
         .and_then(|v| v.as_str())
+        .filter(|goal| !goal.trim().is_empty())
         .unwrap_or("(no goal)")
         .to_owned();
 
@@ -28,5 +29,21 @@ pub fn summarize(bundle: &ContinuationBundle) -> BundleSummary {
         bundle_count: bundle.bundles.len(),
         has_acceptance: bundle.has(BundleKind::Acceptance),
         has_contract: bundle.has(BundleKind::Contract),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use session_ledger::domain::bundle::Bundle;
+
+    #[test]
+    fn blank_intent_goal_uses_nonempty_fallback() {
+        let bundle = ContinuationBundle {
+            source_id: "blank-goal".to_owned(),
+            bundles: vec![Bundle::new(BundleKind::Intent, serde_json::json!({ "goal": "" }))],
+        };
+
+        assert_eq!(summarize(&bundle).intent_goal, "(no goal)");
     }
 }

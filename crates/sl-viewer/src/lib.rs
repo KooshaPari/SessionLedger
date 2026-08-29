@@ -20,6 +20,7 @@ pub mod corpus_cta;
 pub mod corpus_loader;
 pub mod corpus_paths;
 pub mod corpus_tab;
+pub mod daemon_source;
 pub mod daemon_url;
 pub mod detail_pane;
 pub mod fixture;

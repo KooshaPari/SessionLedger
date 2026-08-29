@@ -54,6 +54,21 @@ fn splash_dismiss_delay() -> std::time::Duration {
     std::time::Duration::from_millis(1800)
 }
 
+/// Monotonic token that lets a discovery task reject an obsolete completion.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct DiscoveryGeneration(u64);
+
+impl DiscoveryGeneration {
+    fn next(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(1);
+        self.0
+    }
+
+    fn is_current(self, request: u64) -> bool {
+        self.0 == request
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,6 +76,16 @@ mod tests {
     #[test]
     fn splash_dismiss_delay_matches_the_launch_transition() {
         assert_eq!(splash_dismiss_delay(), std::time::Duration::from_millis(1800));
+    }
+
+    #[test]
+    fn discovery_generation_rejects_obsolete_requests() {
+        let mut generation = DiscoveryGeneration::default();
+        let first = generation.next();
+        let second = generation.next();
+
+        assert!(!generation.is_current(first));
+        assert!(generation.is_current(second));
     }
 }
 
@@ -226,11 +251,11 @@ pub struct DiscoveryState {
 /// 1. `SL_VIEWER_DEMO=1` enables explicit in-memory demo data.
 /// 2. `FORGE_DB` loads a Forge SQLite corpus when the sqlite feature is enabled.
 /// 3. Default: discover native local session stores.
+///
+/// The WASM launch path interprets the default as the local daemon API,
+/// because a browser cannot read native corpus directories directly.
 fn resolve_data_source() -> DataSource {
-    if std::env::var("SL_VIEWER_DEMO").as_deref() == Ok("1")
-        || visual_fixture_active()
-        || cfg!(target_arch = "wasm32")
-    {
+    if std::env::var("SL_VIEWER_DEMO").as_deref() == Ok("1") || visual_fixture_active() {
         return DataSource::Mock;
     }
     #[cfg(feature = "sqlite")]
@@ -402,6 +427,7 @@ pub fn App() -> Element {
     let mut error_signal: Signal<Option<String>> = use_signal(|| None);
     let mut loading_signal: Signal<bool> = use_signal(|| true);
     let reload_trigger: Signal<u32> = use_signal(|| 0u32);
+    let mut discovery_generation = use_signal(DiscoveryGeneration::default);
     let custom_paths_signal: Signal<CustomCorpusPath> = use_signal(initial_custom_corpus_paths);
     use_context_provider(|| ReloadTrigger(reload_trigger));
     use_context_provider(|| CustomCorpusPaths(custom_paths_signal));
@@ -409,38 +435,71 @@ pub fn App() -> Element {
     use_effect(move || {
         let _ = reload_trigger();
         let _ = custom_paths_signal();
+        let request_generation = discovery_generation.with_mut(DiscoveryGeneration::next);
         loading_signal.set(true);
         error_signal.set(None);
-        let source = resolve_data_source();
-        let custom_snapshot = custom_paths_signal.cloned();
-        spawn(async move {
-            let result: std::result::Result<Result<Vec<Session>, String>, String> = {
-                #[cfg(feature = "desktop")]
+
+        #[cfg(all(feature = "web", not(feature = "desktop")))]
+        {
+            let source = resolve_data_source();
+            let custom_snapshot = custom_paths_signal.cloned();
+            spawn(async move {
+                let result = if matches!(&source, DataSource::Mock) {
+                    load_sessions_with_custom(&source, &custom_snapshot)
+                } else {
+                    crate::daemon_source::fetch_daemon_sessions().await
+                };
+                if !discovery_generation
+                    .with(|generation| generation.is_current(request_generation))
                 {
-                    tokio::task::spawn_blocking(move || {
-                        load_sessions_with_custom(&source, &custom_snapshot)
-                    })
-                    .await
-                    .map_err(|error| error.to_string())
+                    return;
                 }
-                #[cfg(not(feature = "desktop"))]
+                loading_signal.set(false);
+                match result {
+                    Ok(sessions) => sessions_signal.set(sessions),
+                    Err(error) => error_signal.set(Some(error)),
+                }
+            });
+        }
+
+        #[cfg(not(all(feature = "web", not(feature = "desktop"))))]
+        {
+            let source = resolve_data_source();
+            let custom_snapshot = custom_paths_signal.cloned();
+            spawn(async move {
+                let result: std::result::Result<Result<Vec<Session>, String>, String> = {
+                    #[cfg(feature = "desktop")]
+                    {
+                        tokio::task::spawn_blocking(move || {
+                            load_sessions_with_custom(&source, &custom_snapshot)
+                        })
+                        .await
+                        .map_err(|error| error.to_string())
+                    }
+                    #[cfg(not(feature = "desktop"))]
+                    {
+                        Ok(load_sessions_with_custom(&source, &custom_snapshot))
+                    }
+                };
+                if !discovery_generation
+                    .with(|generation| generation.is_current(request_generation))
                 {
-                    Ok(load_sessions_with_custom(&source, &custom_snapshot))
+                    return;
                 }
-            };
-            loading_signal.set(false);
-            match result {
-                Ok(Ok(sessions)) => {
-                    sessions_signal.set(sessions);
+                loading_signal.set(false);
+                match result {
+                    Ok(Ok(sessions)) => {
+                        sessions_signal.set(sessions);
+                    }
+                    Ok(Err(e)) => {
+                        error_signal.set(Some(e));
+                    }
+                    Err(e) => {
+                        error_signal.set(Some(format!("Internal error: {e}")));
+                    }
                 }
-                Ok(Err(e)) => {
-                    error_signal.set(Some(e));
-                }
-                Err(e) => {
-                    error_signal.set(Some(format!("Internal error: {e}")));
-                }
-            }
-        });
+            });
+        }
     });
     use_context_provider(|| SessionContext(sessions_signal));
 

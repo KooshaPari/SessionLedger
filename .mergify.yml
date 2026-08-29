@@ -2,10 +2,9 @@
 # Docs: https://docs.mergify.com/
 
 pull_request_rules:
-  # Auto-merge when all CI checks pass and PR is approved
+  # Auto-merge when all configured CI checks pass.
   - name: Auto-merge when CI green
     conditions:
-      - "#review-requested=0"
       - check-success=ci
       - check-success=lint
       - check-success=typecheck

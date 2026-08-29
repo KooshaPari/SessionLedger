@@ -59,6 +59,11 @@ use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 const DEFAULT_INGEST_MAX_BODY_BYTES: usize = 1_048_576;
 const DEFAULT_INGEST_MAX_CONCURRENCY: usize = 8;
+/// Largest explicit full-document page served by `/api/bundles`.
+///
+/// The unparameterized route remains backward compatible for existing local
+/// clients. New interactive consumers should request an explicit bound.
+const MAX_BUNDLE_LIST_LIMIT: usize = 500;
 /// Default `/api/*` throttle when the shared-key / non-loopback path is active.
 const DEFAULT_API_RATE_LIMIT: u64 = 60;
 /// Default throttle window (tower-style: N requests per period).
@@ -581,12 +586,25 @@ async fn readyz(headers: HeaderMap, State(state): State<AppState>) -> Response {
     "ready".into_response()
 }
 
-/// `GET /api/bundles` — return all `*.okf.json` documents as a JSON array.
+/// Query parameters accepted by `GET /api/bundles`.
+#[derive(Debug, Default, Deserialize)]
+struct BundleListParams {
+    /// Optional cap for full OKF documents. Explicit requests are capped to
+    /// prevent an interactive viewer from accidentally loading an entire corpus.
+    limit: Option<usize>,
+}
+
+/// `GET /api/bundles` — return all or a bounded page of `*.okf.json` documents.
 #[tracing::instrument(skip(state), fields(out_dir = %state.out_dir.display()))]
-async fn list_bundles(headers: HeaderMap, State(state): State<AppState>) -> Response {
-    match read_all_bundles(&state.out_dir) {
+async fn list_bundles(
+    headers: HeaderMap,
+    State(state): State<AppState>,
+    Query(params): Query<BundleListParams>,
+) -> Response {
+    let limit = params.limit.map(|limit| limit.min(MAX_BUNDLE_LIST_LIMIT));
+    match read_all_bundles(&state.out_dir, limit) {
         Ok(values) => {
-            info!(count = values.len(), "list_bundles");
+            info!(count = values.len(), ?limit, "list_bundles");
             Json(values).into_response()
         }
         Err(e) => {
@@ -1074,8 +1092,11 @@ async fn ingest_bundle(State(state): State<AppState>, request: Request) -> Respo
 /// Read every `*.okf.json` file in `out_dir` and parse each as
 /// [`serde_json::Value`].  Files that fail to parse are silently skipped so
 /// a single corrupt file does not poison the entire listing.
-fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
+fn read_all_bundles(out_dir: &Path, limit: Option<usize>) -> std::io::Result<Vec<Value>> {
     let mut results = Vec::new();
+    if limit == Some(0) {
+        return Ok(results);
+    }
 
     let rd = match std::fs::read_dir(out_dir) {
         Ok(rd) => rd,
@@ -1095,6 +1116,9 @@ fn read_all_bundles(out_dir: &Path) -> std::io::Result<Vec<Value>> {
         if let Ok(contents) = std::fs::read_to_string(&path) {
             if let Ok(value) = serde_json::from_str::<Value>(&contents) {
                 results.push(value);
+                if limit.is_some_and(|limit| results.len() >= limit) {
+                    break;
+                }
             }
         }
     }
@@ -1803,6 +1827,33 @@ mod tests {
         let response =
             reqwest::Client::new().get(format!("http://{addr}/api/bundles")).send().await.unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn bundle_listing_honors_an_optional_limit() {
+        let out_dir = tempfile::TempDir::new().unwrap();
+        for name in ["first", "second"] {
+            std::fs::write(
+                out_dir.path().join(format!("{name}.okf.json")),
+                format!(
+                    r#"{{"okf":"1.0","source_id":"{name}","entities":[],"relations":[],"provenance":{{"corpus":"forge","source_id":"{name}"}}}}"#
+                ),
+            )
+            .unwrap();
+        }
+
+        let (addr, server) = start_test_server(test_state(out_dir.path())).await;
+        let listed: Vec<Value> = reqwest::Client::new()
+            .get(format!("http://{addr}/api/bundles?limit=1"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+
+        assert_eq!(listed.len(), 1);
         server.abort();
     }
 

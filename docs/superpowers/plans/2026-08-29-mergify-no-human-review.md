@@ -13,6 +13,7 @@
 ### Task 1: Remove Mergify human-completion predicates while retaining CI gates
 
 **Files:**
+
 - Modify: `.mergify.yml:4-26,67-79`
 - Test: inline Ruby policy assertions against `.mergify.yml`
 
@@ -45,26 +46,26 @@ Expected: fail because the current merge rule still contains
 Replace the merge rule heading and name with:
 
 ```yaml
-  # Auto-merge when all configured CI checks pass.
-  - name: Auto-merge when CI green
+# Auto-merge when all configured CI checks pass.
+- name: Auto-merge when CI green
 ```
 
 Delete these human-completion condition entries, and no other safeguards:
 
 ```yaml
-      - "#approved-reviews-by>=1"
-      - "#review-requested=0"
+- "#approved-reviews-by>=1"
+- "#review-requested=0"
 ```
 
 Keep these merge conditions exactly:
 
 ```yaml
-      - check-success=ci
-      - check-success=lint
-      - check-success=typecheck
-      - check-success=test
-      - -conflict
-      - -closed
+- check-success=ci
+- check-success=lint
+- check-success=typecheck
+- check-success=test
+- -conflict
+- -closed
 ```
 
 - [ ] **Step 3: Run policy validation**

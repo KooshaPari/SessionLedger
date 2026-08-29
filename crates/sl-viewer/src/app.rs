@@ -226,11 +226,11 @@ pub struct DiscoveryState {
 /// 1. `SL_VIEWER_DEMO=1` enables explicit in-memory demo data.
 /// 2. `FORGE_DB` loads a Forge SQLite corpus when the sqlite feature is enabled.
 /// 3. Default: discover native local session stores.
+///
+/// The WASM launch path interprets the default as the local daemon API,
+/// because a browser cannot read native corpus directories directly.
 fn resolve_data_source() -> DataSource {
-    if std::env::var("SL_VIEWER_DEMO").as_deref() == Ok("1")
-        || visual_fixture_active()
-        || cfg!(target_arch = "wasm32")
-    {
+    if std::env::var("SL_VIEWER_DEMO").as_deref() == Ok("1") || visual_fixture_active() {
         return DataSource::Mock;
     }
     #[cfg(feature = "sqlite")]
@@ -411,36 +411,58 @@ pub fn App() -> Element {
         let _ = custom_paths_signal();
         loading_signal.set(true);
         error_signal.set(None);
-        let source = resolve_data_source();
-        let custom_snapshot = custom_paths_signal.cloned();
-        spawn(async move {
-            let result: std::result::Result<Result<Vec<Session>, String>, String> = {
-                #[cfg(feature = "desktop")]
-                {
-                    tokio::task::spawn_blocking(move || {
-                        load_sessions_with_custom(&source, &custom_snapshot)
-                    })
-                    .await
-                    .map_err(|error| error.to_string())
+
+        #[cfg(all(feature = "web", not(feature = "desktop")))]
+        {
+            let source = resolve_data_source();
+            let custom_snapshot = custom_paths_signal.cloned();
+            spawn(async move {
+                let result = if matches!(&source, DataSource::Mock) {
+                    load_sessions_with_custom(&source, &custom_snapshot)
+                } else {
+                    crate::daemon_source::fetch_daemon_sessions().await
+                };
+                loading_signal.set(false);
+                match result {
+                    Ok(sessions) => sessions_signal.set(sessions),
+                    Err(error) => error_signal.set(Some(error)),
                 }
-                #[cfg(not(feature = "desktop"))]
-                {
-                    Ok(load_sessions_with_custom(&source, &custom_snapshot))
+            });
+        }
+
+        #[cfg(not(all(feature = "web", not(feature = "desktop"))))]
+        {
+            let source = resolve_data_source();
+            let custom_snapshot = custom_paths_signal.cloned();
+            spawn(async move {
+                let result: std::result::Result<Result<Vec<Session>, String>, String> = {
+                    #[cfg(feature = "desktop")]
+                    {
+                        tokio::task::spawn_blocking(move || {
+                            load_sessions_with_custom(&source, &custom_snapshot)
+                        })
+                        .await
+                        .map_err(|error| error.to_string())
+                    }
+                    #[cfg(not(feature = "desktop"))]
+                    {
+                        Ok(load_sessions_with_custom(&source, &custom_snapshot))
+                    }
+                };
+                loading_signal.set(false);
+                match result {
+                    Ok(Ok(sessions)) => {
+                        sessions_signal.set(sessions);
+                    }
+                    Ok(Err(e)) => {
+                        error_signal.set(Some(e));
+                    }
+                    Err(e) => {
+                        error_signal.set(Some(format!("Internal error: {e}")));
+                    }
                 }
-            };
-            loading_signal.set(false);
-            match result {
-                Ok(Ok(sessions)) => {
-                    sessions_signal.set(sessions);
-                }
-                Ok(Err(e)) => {
-                    error_signal.set(Some(e));
-                }
-                Err(e) => {
-                    error_signal.set(Some(format!("Internal error: {e}")));
-                }
-            }
-        });
+            });
+        }
     });
     use_context_provider(|| SessionContext(sessions_signal));
 

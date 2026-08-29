@@ -5,6 +5,31 @@ use session_ledger::{
     validate_okf_document, OkfDocument,
 };
 
+use crate::daemon_url::daemon_api_url;
+
+/// Return the existing daemon endpoint used for listing compiled bundles.
+pub fn daemon_bundle_url() -> String {
+    daemon_api_url("/api/bundles")
+}
+
+/// Fetch and project every bundle currently exposed by the local daemon.
+#[cfg(any(feature = "desktop", feature = "web"))]
+pub async fn fetch_daemon_sessions() -> Result<Vec<Session>, String> {
+    let response = reqwest::Client::new()
+        .get(daemon_bundle_url())
+        .send()
+        .await
+        .map_err(|error| format!("daemon not reachable: {error}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("daemon returned {}", response.status()));
+    }
+
+    let body =
+        response.text().await.map_err(|error| format!("failed to read daemon bundles: {error}"))?;
+    parse_daemon_bundles(&body)
+}
+
 /// Parse the `GET /api/bundles` response into the viewer's shared session model.
 pub fn parse_daemon_bundles(body: &str) -> Result<Vec<Session>, String> {
     let documents: Vec<OkfDocument> = serde_json::from_str(body)
@@ -79,5 +104,10 @@ mod tests {
             .expect_err("incomplete response is rejected");
 
         assert!(error.contains("failed to parse daemon bundles"));
+    }
+
+    #[test]
+    fn daemon_bundle_url_uses_shared_daemon_base() {
+        assert_eq!(daemon_bundle_url(), "http://127.0.0.1:8080/api/bundles");
     }
 }

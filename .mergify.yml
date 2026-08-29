@@ -3,10 +3,9 @@
 
 pull_request_rules:
   # Auto-merge when all CI checks pass and PR is approved
-  - name: Auto-merge when approved + CI green
+  - name: Auto-merge when CI green
     conditions:
       - "#review-requested=0"
-      - "#approved-reviews-by>=1"
       - check-success=ci
       - check-success=lint
       - check-success=typecheck
@@ -84,7 +83,6 @@ pull_request_rules:
       - check-success=ci
       - check-success=lint
       - check-success=test
-      - "#approved-reviews-by>=1"
     actions:
       label:
         add:

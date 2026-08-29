@@ -189,6 +189,7 @@ proptest! {
             .find(|b| b.kind == BundleKind::Intent)
             .and_then(|b| b.body.get("goal"))
             .and_then(|v| v.as_str())
+            .filter(|goal| !goal.trim().is_empty())
             .unwrap_or("(no goal)");
         prop_assert_eq!(summary.intent_goal.as_str(), expected);
         prop_assert!(!summary.intent_goal.is_empty());

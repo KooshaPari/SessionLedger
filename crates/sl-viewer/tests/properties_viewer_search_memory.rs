@@ -138,13 +138,15 @@ proptest! {
         // Construct a query whose model field carries `input` and
         // verify the encoded form below.
         let q = build_query("", "", &input, "", "", "10");
+        let model_part = q.split('&').find_map(|kv| kv.strip_prefix("model="));
+        if input.trim().is_empty() {
+            prop_assert!(model_part.is_none(), "blank model leaked into query: {q}");
+            return Ok(());
+        }
+        let model_part = model_part.unwrap_or_else(|| panic!("model missing from query: {q}"));
         if input.contains([' ', ',', '#', '&', '=', '+']) {
             // The raw character must not appear unescaped in the model
             // value; the percent-encoded form must appear instead.
-            let model_part = q
-                .split('&')
-                .find_map(|kv| kv.strip_prefix("model="))
-                .unwrap_or_else(|| panic!("model missing from query: {q}"));
             for ch in input.chars() {
                 if [' ', ',', '#', '&', '=', '+'].contains(&ch) {
                     prop_assert!(
@@ -156,10 +158,6 @@ proptest! {
         } else {
             // All characters are safe ASCII alphanumerics; they should
             // round-trip unchanged.
-            let model_part = q
-                .split('&')
-                .find_map(|kv| kv.strip_prefix("model="))
-                .unwrap_or_else(|| panic!("model missing from query: {q}"));
             prop_assert_eq!(model_part, input.as_str());
         }
     }

@@ -9,6 +9,7 @@ use crate::async_states::{
 };
 use crate::bundle_diff::{BundleDiff, OkfBundle};
 use crate::bundle_list::{summarize, BundleSummary};
+#[cfg(feature = "desktop")]
 use crate::cli_help;
 use crate::command_palette::{CommandPalette, PaletteAction};
 use crate::corpus_loader::{load_sessions_with_custom, CustomCorpusPath, DataSource};
@@ -50,6 +51,7 @@ enum Tab {
     Settings,
 }
 
+#[cfg(all(feature = "desktop", not(feature = "web")))]
 fn splash_dismiss_delay() -> std::time::Duration {
     std::time::Duration::from_millis(1800)
 }
@@ -73,6 +75,7 @@ impl DiscoveryGeneration {
 mod tests {
     use super::*;
 
+    #[cfg(all(feature = "desktop", not(feature = "web")))]
     #[test]
     fn splash_dismiss_delay_matches_the_launch_transition() {
         assert_eq!(splash_dismiss_delay(), std::time::Duration::from_millis(1800));
@@ -663,65 +666,63 @@ pub fn App() -> Element {
     // handlers own state (avoids wasm Closure / eval bridge re-render gaps).
     #[cfg(feature = "web")]
     use_effect(|| {
-        let script = format!(
-            r#"
-            if (!window.__slHelpKeyClickBridge) {{
+        let script = r#"
+            if (!window.__slHelpKeyClickBridge) {
               window.__slHelpKeyClickBridge = true;
-              document.addEventListener('keydown', (e) => {{
+              document.addEventListener('keydown', (e) => {
                 // Cmd+K / Ctrl+K — open palette even while typing in fields.
-                if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {{
+                if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
                   e.preventDefault();
                   document.getElementById('viewer-palette-button')?.click();
                   return;
-                }}
+                }
 
                 // Modal overlays close on Escape before the typing guard so focus
                 // in a text field cannot trap the user behind help or the palette.
-                if (e.key === 'Escape') {{
+                if (e.key === 'Escape') {
                   const paletteClose = document.querySelector('.command-palette-close');
-                  if (paletteClose) {{
+                  if (paletteClose) {
                     e.preventDefault();
                     paletteClose.click();
                     return;
-                  }}
+                  }
                   const closeBtn = document.querySelector('.help-overlay-close');
-                  if (closeBtn) {{
+                  if (closeBtn) {
                     e.preventDefault();
                     closeBtn.click();
                     return;
-                  }}
+                  }
                   const clearCancel = document.querySelector('[data-testid="search-clear-cancel-btn"]');
-                  if (clearCancel) {{
+                  if (clearCancel) {
                     e.preventDefault();
                     clearCancel.click();
                     return;
-                  }}
-                }}
+                  }
+                }
 
                 const el = document.activeElement;
                 const tag = (el && el.tagName) || '';
                 const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (el && el.isContentEditable);
 
-                if (typing) {{
+                if (typing) {
                   return;
-                }}
+                }
                 const isHelp = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
-                if (isHelp) {{
+                if (isHelp) {
                   e.preventDefault();
                   document.getElementById('viewer-help-button')?.click();
                   return;
-                }}
-              }}, true);
-            }}
+                }
+              }, true);
+            }
 
             // Visual and browser harnesses must not send global shortcuts until
             // the document-level bridge above exists.  Publish readiness only
             // after installing (or confirming) that listener.
             document.documentElement.dataset.slHotkeysReady = 'true';
             window.dispatchEvent(new Event('sl-viewer-hotkeys-ready'));
-            "#
-        );
-        let _ = document::eval(&script);
+            "#;
+        let _ = document::eval(script);
     });
 
     let mut activate = move |tab: Tab| {

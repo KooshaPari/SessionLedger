@@ -711,11 +711,11 @@ mod tests {
 
         use super::*;
 
+        type FixtureRow<'a> =
+            (&'a str, Option<&'a str>, Option<&'a str>, Option<Vec<u8>>, Option<&'a str>);
+
         /// Build a minimal Forge SQLite fixture DB at `path` with `rows` rows.
-        fn write_fixture_db(
-            path: &Path,
-            rows: &[(&str, Option<&str>, Option<&str>, Option<Vec<u8>>, Option<&str>)],
-        ) {
+        fn write_fixture_db(path: &Path, rows: &[FixtureRow<'_>]) {
             let conn = Connection::open(path).expect("create fixture db");
             conn.execute_batch(
                 "CREATE TABLE IF NOT EXISTS conversations (

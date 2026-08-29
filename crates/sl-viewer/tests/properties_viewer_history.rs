@@ -25,7 +25,7 @@
 //!  * Output length matches input length.
 //!  * The output is sorted by `total_messages` descending (newest-first
 //!    by message count, per the documented comment).
-//!  * Every session's `id` appears in the output exactly once.
+//!  * The output preserves the input ID multiset, including collisions.
 //!
 //! proptest is added to `sl-viewer/[dev-dependencies]` (mirroring the
 //! workspace root); see PR #425 for the initial wiring.
@@ -33,7 +33,7 @@
 use proptest::prelude::*;
 use session_ledger::domain::intent::IntentState;
 use session_ledger::domain::session::{Corpus, Message, Role, Session};
-use sl_viewer::history_tab::{all_timeline_entries, to_timeline_entry};
+use sl_viewer::history_tab::{all_timeline_entries, session_for_timeline_entry, to_timeline_entry};
 
 // ── strategies ──────────────────────────────────────────────────────────────
 
@@ -220,6 +220,24 @@ proptest! {
 
 // ── history_tab::all_timeline_entries ───────────────────────────────────────
 
+#[test]
+fn duplicate_session_ids_keep_distinct_source_rows() {
+    let mut first = Session::new("shared", Corpus::Forge);
+    first.messages.push(Message::new(Role::User, "first transcript"));
+    let mut second = Session::new("shared", Corpus::Forge);
+    second.messages.push(Message::new(Role::User, "second transcript"));
+    second.messages.push(Message::new(Role::Assistant, "second reply"));
+    let sessions = vec![first, second];
+
+    let entries = all_timeline_entries(&sessions);
+    let second_entry =
+        entries.iter().find(|entry| entry.source_index == 1).expect("second source row");
+    let selected = session_for_timeline_entry(&sessions, second_entry).expect("selected session");
+
+    assert_eq!(selected.messages[0].content, "second transcript");
+    assert_eq!(selected.messages.len(), 2);
+}
+
 proptest! {
     /// Property: output length equals input length.
     #[test]
@@ -250,17 +268,20 @@ proptest! {
         }
     }
 
-    /// Property: every session's id appears in the output exactly once.
+    /// Property: output preserves every input id, including duplicate ids.
+    ///
+    /// Session IDs come from external corpora and may collide; timeline
+    /// construction must retain each source row rather than silently dedupe it.
     #[test]
-    fn all_timeline_entries_unique_ids(
+    fn all_timeline_entries_preserve_id_multiset(
         sessions in prop::collection::vec(session_strategy(), 1..6),
     ) {
         let entries = all_timeline_entries(&sessions);
-        let mut ids: Vec<_> = entries.iter().map(|e| e.summary.id.clone()).collect();
-        ids.sort();
-        let mut unique = ids.clone();
-        unique.dedup();
-        prop_assert_eq!(ids.len(), unique.len(), "duplicate ids in output: {:?}", ids);
+        let mut expected_ids: Vec<_> = sessions.iter().map(|s| s.id.clone()).collect();
+        let mut actual_ids: Vec<_> = entries.iter().map(|e| e.summary.id.clone()).collect();
+        expected_ids.sort();
+        actual_ids.sort();
+        prop_assert_eq!(actual_ids, expected_ids);
     }
 
     /// Property: `all_timeline_entries` is deterministic — applying

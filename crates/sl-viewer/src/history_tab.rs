@@ -13,6 +13,9 @@ use crate::app::SessionContext;
 /// A single entry in the history timeline.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TimelineEntry {
+    /// Position of this session in the source corpus. Unlike a session ID, it
+    /// remains unique when external sources contain colliding IDs.
+    pub source_index: usize,
     pub summary: SessionSummary,
     pub corpus: Corpus,
     pub cwd: Option<String>,
@@ -70,6 +73,7 @@ pub fn to_timeline_entry(session: &Session) -> TimelineEntry {
         .collect();
 
     TimelineEntry {
+        source_index: 0,
         summary,
         corpus: session.corpus,
         cwd: session.cwd.clone(),
@@ -81,10 +85,30 @@ pub fn to_timeline_entry(session: &Session) -> TimelineEntry {
 /// Build all timeline entries from a slice of sessions.
 #[must_use]
 pub fn all_timeline_entries(sessions: &[Session]) -> Vec<TimelineEntry> {
-    let mut entries: Vec<TimelineEntry> = sessions.iter().map(to_timeline_entry).collect();
+    let mut entries: Vec<TimelineEntry> = sessions
+        .iter()
+        .enumerate()
+        .map(|(source_index, session)| {
+            let mut entry = to_timeline_entry(session);
+            entry.source_index = source_index;
+            entry
+        })
+        .collect();
     // Sort newest-first by message count as a proxy for chronological order.
     entries.sort_by_key(|e| std::cmp::Reverse(e.total_messages));
     entries
+}
+
+/// Resolve an entry to the exact source session that produced it.
+///
+/// IDs are supplied by external corpus providers and can collide, so timeline
+/// detail selection must use the stable source position rather than `id`.
+#[must_use]
+pub fn session_for_timeline_entry<'a>(
+    sessions: &'a [Session],
+    entry: &TimelineEntry,
+) -> Option<&'a Session> {
+    sessions.get(entry.source_index)
 }
 
 /// Corpus badge colour.
@@ -113,9 +137,13 @@ pub fn HistoryTimeline() -> Element {
     // wrapper only ran the closure once at mount, so the timeline stayed
     // frozen on the (then-empty) initial value forever.
     let entries = all_timeline_entries(&ctx.0.read());
-    let mut selected_idx: Signal<Option<usize>> = use_signal(|| None);
+    let mut selected_source_index: Signal<Option<usize>> = use_signal(|| None);
 
-    let selected = selected_idx().and_then(|idx| entries.get(idx)).map(|r| (*r).clone());
+    let selected = selected_source_index()
+        .and_then(|source_index| entries.iter().find(|entry| entry.source_index == source_index))
+        .cloned();
+    let timeline_rows: Vec<_> =
+        entries.iter().cloned().map(|entry| (entry.source_index, entry)).collect();
 
     rsx! {
         style { r#"
@@ -194,12 +222,12 @@ pub fn HistoryTimeline() -> Element {
         "# }
         div { class: "sidebar",
             h2 { "Session History" }
-            for (i, entry) in entries.iter().enumerate() {
+            for (source_index, entry) in timeline_rows {
                 TimelineRow {
-                    key: "{entry.summary.id}",
-                    entry: entry.clone(),
-                    is_selected: selected_idx() == Some(i),
-                    on_click: move |_| { selected_idx.set(Some(i)); },
+                    key: "history-{source_index}",
+                    entry,
+                    is_selected: selected_source_index() == Some(source_index),
+                    on_click: move |_| { selected_source_index.set(Some(source_index)); },
                 }
             }
         }
@@ -258,7 +286,7 @@ fn TimelineRow(entry: TimelineEntry, is_selected: bool, on_click: EventHandler<(
 fn TimelineDetail(entry: TimelineEntry) -> Element {
     // Look up the full session from the injected context (real or mock data).
     let ctx = use_context::<SessionContext>();
-    let session = ctx.0.read().iter().find(|s| s.id == entry.summary.id).cloned();
+    let session = session_for_timeline_entry(&ctx.0.read(), &entry).cloned();
     let title_text = entry.summary.title.clone().unwrap_or_else(|| "Session Details".into());
     let status_text = if entry.summary.unfinished { "In Progress" } else { "Completed" };
 

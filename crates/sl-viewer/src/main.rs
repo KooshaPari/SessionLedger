@@ -4,8 +4,10 @@
 //! Web WASM : `dx serve --platform web -p sl-viewer`  (requires `web` feature)
 
 #[cfg(feature = "desktop")]
+use sl_viewer::cli_help;
+#[cfg(feature = "desktop")]
 use sl_viewer::menu;
-use sl_viewer::{cli_help, App};
+use sl_viewer::App;
 
 /// Human-readable window title — surfaced via the OS window chrome on
 /// desktop and the browser tab label on web (via the `[web.title]` field

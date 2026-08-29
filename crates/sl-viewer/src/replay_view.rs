@@ -110,9 +110,15 @@ pub fn ReplayView() -> Element {
     // Sending another request replaces the prior stream logically; stale
     // events are harmless because the UI is reset before each request.
     let replay_task = use_coroutine({
+        #[cfg(all(feature = "desktop", not(target_arch = "wasm32")))]
         let mut entries = entries;
+        #[cfg(not(all(feature = "desktop", not(target_arch = "wasm32"))))]
+        let entries = entries;
         let mut state = state;
+        #[cfg(all(feature = "desktop", not(target_arch = "wasm32")))]
         let mut progress = progress;
+        #[cfg(not(all(feature = "desktop", not(target_arch = "wasm32"))))]
+        let progress = progress;
         move |mut rx: UnboundedReceiver<(String, f64, String, u64)>| async move {
             while let Some((id, spd, daemon_url, token)) = rx.next().await {
                 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]

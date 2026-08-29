@@ -7,12 +7,16 @@ use session_ledger::{
 
 use crate::daemon_url::daemon_api_url;
 
-/// Return the existing daemon endpoint used for listing compiled bundles.
+/// Return the bounded daemon endpoint used for the viewer's initial bundle load.
+///
+/// Full OKF documents can be large on a real local corpus. The daemon keeps
+/// unparameterized listing available for compatibility, while the interactive
+/// viewer requests a bounded first page.
 pub fn daemon_bundle_url() -> String {
-    daemon_api_url("/api/bundles")
+    daemon_api_url("/api/bundles?limit=100")
 }
 
-/// Fetch and project every bundle currently exposed by the local daemon.
+/// Fetch and project the viewer's bounded initial page from the local daemon.
 #[cfg(any(feature = "desktop", feature = "web"))]
 pub async fn fetch_daemon_sessions() -> Result<Vec<Session>, String> {
     let response = reqwest::Client::new()
@@ -140,7 +144,7 @@ mod tests {
     }
 
     #[test]
-    fn daemon_bundle_url_uses_shared_daemon_base() {
-        assert_eq!(daemon_bundle_url(), "http://127.0.0.1:8080/api/bundles");
+    fn daemon_bundle_url_requests_a_bounded_initial_page() {
+        assert_eq!(daemon_bundle_url(), "http://127.0.0.1:8080/api/bundles?limit=100");
     }
 }

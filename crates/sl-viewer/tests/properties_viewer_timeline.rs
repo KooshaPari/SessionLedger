@@ -244,7 +244,7 @@ proptest! {
     /// `MAX_PX` (the bar scale is anchored at the maximum).
     #[test]
     fn normalize_widths_max_token_renders_max_px(
-        // First entry: heavy. Rest: light.
+        // First entry has an arbitrary count. Rest may be heavier.
         heavy_tokens in 1u64..1_000_000,
         light_tokens in 0u64..1000,
         rest in 0usize..6,
@@ -275,7 +275,12 @@ proptest! {
             });
         }
         let widths = normalize_widths(&entries);
-        prop_assert_eq!(widths[0], MAX_PX, "the heavy entry must render at MAX_PX");
+        let max_tokens = entries.iter().map(|entry| entry.token_count).max().unwrap_or_default();
+        for (entry, width) in entries.iter().zip(widths) {
+            if entry.token_count == max_tokens {
+                prop_assert_eq!(width, MAX_PX, "a maximum entry must render at MAX_PX");
+            }
+        }
     }
 }
 

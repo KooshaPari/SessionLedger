@@ -110,7 +110,7 @@ impl BundleMeta {
                     .iter()
                     .filter(|entity| entity.get("type").and_then(|kind| kind.as_str()) == Some("intent"))
                     .filter_map(|entity| entity.pointer("/properties/user_turn_count").and_then(|count| count.as_u64()))
-                    .sum()
+                    .fold(0u64, |total, count| total.saturating_add(count))
             })
             .unwrap_or_default();
         let duration_ms = get_u64("duration_ms");
@@ -163,7 +163,7 @@ impl std::str::FromStr for ExportFormat {
 /// commas or quotes are properly quoted per RFC 4180.
 pub fn render_csv(metas: &[BundleMeta]) -> String {
     let mut out = String::new();
-    out.push_str("session_id,created_at,model,token_count,message_count,duration_ms,tags\n");
+    out.push_str("session_id,created_at,model,token_count,message_count,user_turn_count,duration_ms,tags\n");
     for m in metas {
         let tags = m.tags.join(";");
         out.push_str(&csv_field(&m.session_id));
@@ -175,6 +175,8 @@ pub fn render_csv(metas: &[BundleMeta]) -> String {
         out.push_str(&m.token_count.to_string());
         out.push(',');
         out.push_str(&m.message_count.to_string());
+        out.push(',');
+        out.push_str(&m.user_turn_count.to_string());
         out.push(',');
         out.push_str(&m.duration_ms.to_string());
         out.push(',');
@@ -209,6 +211,7 @@ pub fn render_markdown(metas: &[BundleMeta]) -> String {
         md_row(&mut out, "model", &m.model);
         md_row(&mut out, "token_count", &m.token_count.to_string());
         md_row(&mut out, "message_count", &m.message_count.to_string());
+        md_row(&mut out, "user_turn_count", &m.user_turn_count.to_string());
         md_row(&mut out, "duration_ms", &m.duration_ms.to_string());
         md_row(&mut out, "tags", &m.tags.join(", "));
         out.push('\n');
@@ -232,6 +235,7 @@ pub fn render_json(metas: &[BundleMeta]) -> String {
                 "model": m.model,
                 "token_count": m.token_count,
                 "message_count": m.message_count,
+                "user_turn_count": m.user_turn_count,
                 "duration_ms": m.duration_ms,
                 "tags": m.tags,
             })
@@ -331,7 +335,7 @@ mod tests {
                 model: "claude-3-sonnet".into(),
                 token_count: 1000,
                 message_count: 10,
-                user_turn_count: 0,
+                user_turn_count: 3,
                 duration_ms: 500,
                 tags: vec!["rust".into(), "test".into()],
             },
@@ -341,7 +345,7 @@ mod tests {
                 model: "claude-3-sonnet".into(),
                 token_count: 2000,
                 message_count: 20,
-                user_turn_count: 0,
+                user_turn_count: 1,
                 duration_ms: 1000,
                 tags: vec![],
             },
@@ -371,6 +375,8 @@ mod tests {
         assert!(out.contains("claude-3-sonnet"));
         assert!(out.contains("1000"));
         assert!(out.contains("rust;test"));
+        assert!(out.contains("user_turn_count"));
+        assert!(out.contains(",3,"));
     }
 
     #[test]
@@ -426,6 +432,7 @@ mod tests {
     fn markdown_contains_tags() {
         let out = render_markdown(&sample_metas());
         assert!(out.contains("rust, test"));
+        assert!(out.contains("| user_turn_count | 3 |"));
     }
 
     #[test]
@@ -456,6 +463,8 @@ mod tests {
         assert!(out.contains("\"session_id\""));
         assert!(out.contains("\"token_count\""));
         assert!(out.contains("\"tags\""));
+        assert!(out.contains("\"user_turn_count\""));
+        assert!(out.contains("\"user_turn_count\": 3"));
     }
 
     #[test]
@@ -572,5 +581,17 @@ mod tests {
         assert!(m.model.is_empty());
         assert!(m.created_at.is_empty());
         assert_eq!(m.token_count, 0);
+    }
+
+    #[test]
+    fn from_value_saturates_graph_user_turn_counts() {
+        let v = serde_json::json!({
+            "entities": [
+                { "type": "intent", "properties": { "user_turn_count": u64::MAX } },
+                { "type": "intent", "properties": { "user_turn_count": 1 } }
+            ]
+        });
+
+        assert_eq!(BundleMeta::from_value(&v).user_turn_count, u64::MAX);
     }
 }

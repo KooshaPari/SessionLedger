@@ -242,6 +242,7 @@ fn linux_open_fds() -> Option<u64> {
 pub struct MetricsSummary {
     pub total_bundles: u64,
     pub total_tokens: u64,
+    #[serde(default)]
     pub total_user_turns: u64,
     pub avg_tokens: u64,
     pub model_counts: HashMap<String, u64>,
@@ -260,7 +261,7 @@ pub fn compute_metrics(out_dir: &Path) -> MetricsSummary {
         let Ok(content) = std::fs::read_to_string(&path) else { continue };
         let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) else { continue };
         s.total_bundles += 1;
-        s.total_user_turns += BundleMeta::from_value(&val).user_turn_count;
+        s.total_user_turns = s.total_user_turns.saturating_add(BundleMeta::from_value(&val).user_turn_count);
         if let Some(t) = val.get("total_tokens").and_then(|v| v.as_u64()) {
             s.total_tokens += t;
         }
@@ -375,6 +376,14 @@ mod tests {
         assert_eq!(m.total_bundles, 1);
         assert_eq!(m.total_user_turns, 4);
         assert_eq!(m.total_tokens, 0);
+    }
+
+    #[test]
+    fn metrics_deserializes_legacy_payload_without_user_turns() {
+        let legacy = r#"{"total_bundles":1,"total_tokens":42,"avg_tokens":42,"model_counts":{},"daily_counts":{}}"#;
+
+        let metrics: MetricsSummary = serde_json::from_str(legacy).expect("legacy metrics payload");
+        assert_eq!(metrics.total_user_turns, 0);
     }
 
     #[test]

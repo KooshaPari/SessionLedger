@@ -275,6 +275,7 @@ proptest! {
             });
         }
         let widths = normalize_widths(&entries);
+        prop_assert_eq!(entries.len(), widths.len());
         let max_tokens = entries.iter().map(|entry| entry.token_count).max().unwrap_or_default();
         for (entry, width) in entries.iter().zip(widths) {
             if entry.token_count == max_tokens {

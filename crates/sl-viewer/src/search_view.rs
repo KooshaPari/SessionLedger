@@ -24,6 +24,8 @@ pub struct SearchResult {
     #[serde(default)]
     pub message_count: u64,
     #[serde(default)]
+    pub user_turn_count: u64,
+    #[serde(default)]
     pub duration_ms: u64,
     #[serde(default)]
     pub tags: Vec<String>,
@@ -468,6 +470,9 @@ pub fn SearchView() -> Element {
                                 div { class: "session-goal", "model: {r.model}" }
                                 div { class: "session-meta",
                                     span { class: "meta-bundles", "{r.token_count} tokens" }
+                                    if r.user_turn_count > 0 {
+                                        span { class: "session-meta-muted", "{r.user_turn_count} user turns" }
+                                    }
                                     span { class: "session-meta-muted", "{r.created_at}" }
                                     if !tags_display.is_empty() {
                                         span { class: "badge badge-ok", "{tags_display}" }

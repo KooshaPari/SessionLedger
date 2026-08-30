@@ -22,6 +22,9 @@ pub struct BundleMeta {
     pub token_count: u64,
     #[serde(default)]
     pub message_count: u64,
+    /// User-authored turns projected from graph-native intent entities.
+    #[serde(default)]
+    pub user_turn_count: u64,
     #[serde(default)]
     pub duration_ms: u64,
     /// Free-form tags array, if present.
@@ -57,7 +60,16 @@ impl BundleMeta {
         let session_id = {
             let s = get_str("session_id");
             if s.is_empty() {
-                get_str("id")
+                let id = get_str("id");
+                if id.is_empty() {
+                    v.get("source_id")
+                        .or_else(|| v.pointer("/provenance/source_id"))
+                        .and_then(|x| x.as_str())
+                        .unwrap_or_default()
+                        .to_owned()
+                } else {
+                    id
+                }
             } else {
                 s
             }
@@ -90,6 +102,17 @@ impl BundleMeta {
             }
         };
         let message_count = get_u64("message_count");
+        let user_turn_count = v
+            .get("entities")
+            .and_then(|entities| entities.as_array())
+            .map(|entities| {
+                entities
+                    .iter()
+                    .filter(|entity| entity.get("type").and_then(|kind| kind.as_str()) == Some("intent"))
+                    .filter_map(|entity| entity.pointer("/properties/user_turn_count").and_then(|count| count.as_u64()))
+                    .sum()
+            })
+            .unwrap_or_default();
         let duration_ms = get_u64("duration_ms");
         let tags = v
             .get("tags")
@@ -97,7 +120,16 @@ impl BundleMeta {
             .map(|arr| arr.iter().filter_map(|t| t.as_str().map(str::to_owned)).collect())
             .unwrap_or_default();
 
-        Self { session_id, created_at, model, token_count, message_count, duration_ms, tags }
+        Self {
+            session_id,
+            created_at,
+            model,
+            token_count,
+            message_count,
+            user_turn_count,
+            duration_ms,
+            tags,
+        }
     }
 }
 
@@ -299,6 +331,7 @@ mod tests {
                 model: "claude-3-sonnet".into(),
                 token_count: 1000,
                 message_count: 10,
+                user_turn_count: 0,
                 duration_ms: 500,
                 tags: vec!["rust".into(), "test".into()],
             },
@@ -308,6 +341,7 @@ mod tests {
                 model: "claude-3-sonnet".into(),
                 token_count: 2000,
                 message_count: 20,
+                user_turn_count: 0,
                 duration_ms: 1000,
                 tags: vec![],
             },
@@ -512,5 +546,31 @@ mod tests {
         let v = serde_json::json!({ "usage": { "total_tokens": 999 } });
         let m = BundleMeta::from_value(&v);
         assert_eq!(m.token_count, 999);
+    }
+
+    #[test]
+    fn from_value_projects_graph_okf_identity_and_user_turns() {
+        let v = serde_json::json!({
+            "okf": "1.0",
+            "source_id": "codex-session-1",
+            "entities": [
+                {
+                    "id": "intent-0",
+                    "type": "intent",
+                    "label": "ship the metadata contract",
+                    "properties": { "user_turn_count": 3 }
+                }
+            ],
+            "relations": [],
+            "provenance": { "corpus": "codex", "source_id": "codex-session-1" }
+        });
+
+        let m = BundleMeta::from_value(&v);
+        assert_eq!(m.session_id, "codex-session-1");
+        assert_eq!(m.user_turn_count, 3);
+        assert_eq!(m.message_count, 0);
+        assert!(m.model.is_empty());
+        assert!(m.created_at.is_empty());
+        assert_eq!(m.token_count, 0);
     }
 }

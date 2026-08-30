@@ -118,6 +118,7 @@ mod tests {
             model: model.into(),
             token_count,
             message_count: 1,
+            user_turn_count: 0,
             duration_ms: 0,
             tags: tags.iter().map(|s| s.to_string()).collect(),
         }

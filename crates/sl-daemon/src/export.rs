@@ -22,6 +22,9 @@ pub struct BundleMeta {
     pub token_count: u64,
     #[serde(default)]
     pub message_count: u64,
+    /// User-authored turns projected from graph-native intent entities.
+    #[serde(default)]
+    pub user_turn_count: u64,
     #[serde(default)]
     pub duration_ms: u64,
     /// Free-form tags array, if present.
@@ -57,7 +60,16 @@ impl BundleMeta {
         let session_id = {
             let s = get_str("session_id");
             if s.is_empty() {
-                get_str("id")
+                let id = get_str("id");
+                if id.is_empty() {
+                    v.get("source_id")
+                        .or_else(|| v.pointer("/provenance/source_id"))
+                        .and_then(|x| x.as_str())
+                        .unwrap_or_default()
+                        .to_owned()
+                } else {
+                    id
+                }
             } else {
                 s
             }
@@ -90,6 +102,17 @@ impl BundleMeta {
             }
         };
         let message_count = get_u64("message_count");
+        let user_turn_count = v
+            .get("entities")
+            .and_then(|entities| entities.as_array())
+            .map(|entities| {
+                entities
+                    .iter()
+                    .filter(|entity| entity.get("type").and_then(|kind| kind.as_str()) == Some("intent"))
+                    .filter_map(|entity| entity.pointer("/properties/user_turn_count").and_then(|count| count.as_u64()))
+                    .fold(0u64, |total, count| total.saturating_add(count))
+            })
+            .unwrap_or_default();
         let duration_ms = get_u64("duration_ms");
         let tags = v
             .get("tags")
@@ -97,7 +120,16 @@ impl BundleMeta {
             .map(|arr| arr.iter().filter_map(|t| t.as_str().map(str::to_owned)).collect())
             .unwrap_or_default();
 
-        Self { session_id, created_at, model, token_count, message_count, duration_ms, tags }
+        Self {
+            session_id,
+            created_at,
+            model,
+            token_count,
+            message_count,
+            user_turn_count,
+            duration_ms,
+            tags,
+        }
     }
 }
 
@@ -131,7 +163,7 @@ impl std::str::FromStr for ExportFormat {
 /// commas or quotes are properly quoted per RFC 4180.
 pub fn render_csv(metas: &[BundleMeta]) -> String {
     let mut out = String::new();
-    out.push_str("session_id,created_at,model,token_count,message_count,duration_ms,tags\n");
+    out.push_str("session_id,created_at,model,token_count,message_count,user_turn_count,duration_ms,tags\n");
     for m in metas {
         let tags = m.tags.join(";");
         out.push_str(&csv_field(&m.session_id));
@@ -143,6 +175,8 @@ pub fn render_csv(metas: &[BundleMeta]) -> String {
         out.push_str(&m.token_count.to_string());
         out.push(',');
         out.push_str(&m.message_count.to_string());
+        out.push(',');
+        out.push_str(&m.user_turn_count.to_string());
         out.push(',');
         out.push_str(&m.duration_ms.to_string());
         out.push(',');
@@ -177,6 +211,7 @@ pub fn render_markdown(metas: &[BundleMeta]) -> String {
         md_row(&mut out, "model", &m.model);
         md_row(&mut out, "token_count", &m.token_count.to_string());
         md_row(&mut out, "message_count", &m.message_count.to_string());
+        md_row(&mut out, "user_turn_count", &m.user_turn_count.to_string());
         md_row(&mut out, "duration_ms", &m.duration_ms.to_string());
         md_row(&mut out, "tags", &m.tags.join(", "));
         out.push('\n');
@@ -200,6 +235,7 @@ pub fn render_json(metas: &[BundleMeta]) -> String {
                 "model": m.model,
                 "token_count": m.token_count,
                 "message_count": m.message_count,
+                "user_turn_count": m.user_turn_count,
                 "duration_ms": m.duration_ms,
                 "tags": m.tags,
             })
@@ -299,6 +335,7 @@ mod tests {
                 model: "claude-3-sonnet".into(),
                 token_count: 1000,
                 message_count: 10,
+                user_turn_count: 3,
                 duration_ms: 500,
                 tags: vec!["rust".into(), "test".into()],
             },
@@ -308,6 +345,7 @@ mod tests {
                 model: "claude-3-sonnet".into(),
                 token_count: 2000,
                 message_count: 20,
+                user_turn_count: 1,
                 duration_ms: 1000,
                 tags: vec![],
             },
@@ -337,6 +375,8 @@ mod tests {
         assert!(out.contains("claude-3-sonnet"));
         assert!(out.contains("1000"));
         assert!(out.contains("rust;test"));
+        assert!(out.contains("user_turn_count"));
+        assert!(out.contains(",3,"));
     }
 
     #[test]
@@ -392,6 +432,7 @@ mod tests {
     fn markdown_contains_tags() {
         let out = render_markdown(&sample_metas());
         assert!(out.contains("rust, test"));
+        assert!(out.contains("| user_turn_count | 3 |"));
     }
 
     #[test]
@@ -422,6 +463,8 @@ mod tests {
         assert!(out.contains("\"session_id\""));
         assert!(out.contains("\"token_count\""));
         assert!(out.contains("\"tags\""));
+        assert!(out.contains("\"user_turn_count\""));
+        assert!(out.contains("\"user_turn_count\": 3"));
     }
 
     #[test]
@@ -512,5 +555,43 @@ mod tests {
         let v = serde_json::json!({ "usage": { "total_tokens": 999 } });
         let m = BundleMeta::from_value(&v);
         assert_eq!(m.token_count, 999);
+    }
+
+    #[test]
+    fn from_value_projects_graph_okf_identity_and_user_turns() {
+        let v = serde_json::json!({
+            "okf": "1.0",
+            "source_id": "codex-session-1",
+            "entities": [
+                {
+                    "id": "intent-0",
+                    "type": "intent",
+                    "label": "ship the metadata contract",
+                    "properties": { "user_turn_count": 3 }
+                }
+            ],
+            "relations": [],
+            "provenance": { "corpus": "codex", "source_id": "codex-session-1" }
+        });
+
+        let m = BundleMeta::from_value(&v);
+        assert_eq!(m.session_id, "codex-session-1");
+        assert_eq!(m.user_turn_count, 3);
+        assert_eq!(m.message_count, 0);
+        assert!(m.model.is_empty());
+        assert!(m.created_at.is_empty());
+        assert_eq!(m.token_count, 0);
+    }
+
+    #[test]
+    fn from_value_saturates_graph_user_turn_counts() {
+        let v = serde_json::json!({
+            "entities": [
+                { "type": "intent", "properties": { "user_turn_count": u64::MAX } },
+                { "type": "intent", "properties": { "user_turn_count": 1 } }
+            ]
+        });
+
+        assert_eq!(BundleMeta::from_value(&v).user_turn_count, u64::MAX);
     }
 }

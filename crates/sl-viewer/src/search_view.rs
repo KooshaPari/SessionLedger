@@ -24,6 +24,8 @@ pub struct SearchResult {
     #[serde(default)]
     pub message_count: u64,
     #[serde(default)]
+    pub user_turn_count: u64,
+    #[serde(default)]
     pub duration_ms: u64,
     #[serde(default)]
     pub tags: Vec<String>,
@@ -84,6 +86,14 @@ fn urlencoding(s: &str) -> String {
             _ => vec![c],
         })
         .collect()
+}
+
+fn user_turn_label(user_turn_count: u64) -> &'static str {
+    if user_turn_count == 1 {
+        "user turn"
+    } else {
+        "user turns"
+    }
 }
 
 /// Stable id for search fetch errors — paired with `aria-errormessage` on fields.
@@ -459,6 +469,7 @@ pub fn SearchView() -> Element {
                         let cls = if is_selected { "session-item selected" } else { "session-item" };
                         let r = result.clone();
                         let tags_display = r.tags.join(", ");
+                        let user_turn_label = user_turn_label(r.user_turn_count);
                         rsx! {
                             div {
                                 key: "{r.session_id}-{idx}",
@@ -468,6 +479,9 @@ pub fn SearchView() -> Element {
                                 div { class: "session-goal", "model: {r.model}" }
                                 div { class: "session-meta",
                                     span { class: "meta-bundles", "{r.token_count} tokens" }
+                                    if r.user_turn_count > 0 {
+                                        span { class: "session-meta-muted", "{r.user_turn_count} {user_turn_label}" }
+                                    }
                                     span { class: "session-meta-muted", "{r.created_at}" }
                                     if !tags_display.is_empty() {
                                         span { class: "badge badge-ok", "{tags_display}" }
@@ -608,5 +622,11 @@ mod tests {
         assert_eq!(advanced_filter_active_count("1000", "rust", "10"), 3);
         assert_eq!(advanced_filter_active_count("", "rust", "50"), 1);
         assert_eq!(advanced_filter_active_count(" ", "  ", "50"), 0);
+    }
+
+    #[test]
+    fn user_turn_label_handles_singular_and_plural() {
+        assert_eq!(user_turn_label(1), "user turn");
+        assert_eq!(user_turn_label(2), "user turns");
     }
 }

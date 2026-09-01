@@ -2,6 +2,8 @@
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/KooshaPari/SessionLedger/badge)](https://securityscorecards.dev/viewer/?uri=github.com/KooshaPari/SessionLedger)
 
+[![AI slop inside](https://sladge.net/badge.svg)](https://sladge.net) [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/KooshaPari/SessionLedger/total)](https://github.com/KooshaPari/SessionLedger/releases)
+
 <p align="center">
   <a href="assets/brand/sessionledger-icon.svg"><img src="assets/brand/sessionledger-icon.svg" alt="SessionLedger" width="160" height="160"></a>
 </p>

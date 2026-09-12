@@ -16,7 +16,7 @@ serde = { version = "1", features = ["derive"] }
 base64 = "0.23"
 thiserror = "2"
 flate2 = "1"
-zstd = { version = "0.13", optional = true }
+zstd = { version = "0.14", optional = true }
 chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
 # HTTP server (axum-based SSE bridge)
 axum = { version = "0.8", features = ["macros"] }

@@ -35,7 +35,7 @@ thiserror = "2"
 sha2 = "0.11"
 time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
 rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
-zstd = { version = "0.13", optional = true }
+zstd = { version = "0.14", optional = true }
 fluent-bundle = { version = "0.16", optional = true }
 unic-langid = { version = "0.9", optional = true }
 tracing = "0.1"
@@ -45,7 +45,7 @@ tracing = "0.1"
 # pure-std smoke (see .github/workflows/miri-smoke.yml).
 [target.'cfg(not(miri))'.dev-dependencies]
 rusqlite = { version = "0.40", features = ["bundled"] }
-zstd = { version = "0.13" }
+zstd = { version = "0.14" }
 tempfile = "3"
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 proptest = "1.11.0"

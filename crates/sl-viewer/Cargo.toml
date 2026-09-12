@@ -18,7 +18,7 @@ js-sys = { version = "0.3", optional = true }
 chrono = { version = "0.4", features = ["clock"], default-features = false, optional = true }
 # sqlite feature: wire real Forge corpus into the viewer
 rusqlite = { version = "0.40", optional = true }
-zstd = { version = "0.13", optional = true }
+zstd = { version = "0.14", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 web-sys = { version = "0.3", optional = true, features = ["Document", "Element", "Event", "EventSource", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "UrlSearchParams", "Window"] }
 # parquet feature: ingest Claude conversation parquet exports under ~/.claude/projects.
@@ -34,7 +34,7 @@ dirs = "6"
 
 [dev-dependencies]
 rusqlite = "0.40"
-zstd = "0.13"
+zstd = "0.14"
 tempfile = "3"
 # Pull parquet into the test build so fixture writers and unit tests can exercise
 # the parquet source even when the production `parquet` feature is disabled.

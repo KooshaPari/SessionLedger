@@ -1,3 +1,9 @@
+# zz-pause
+
+Long pause. No active development. Code preserved.
+
+---
+
 # SessionLedger
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/KooshaPari/SessionLedger/badge)](https://securityscorecards.dev/viewer/?uri=github.com/KooshaPari/SessionLedger)

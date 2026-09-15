@@ -30,7 +30,7 @@ parquet = { version = "59", optional = true, default-features = false, features 
 # Linux so the dialog can talk to a portal service.
 rfd = { version = "0.17", optional = true }
 # Resolve the platform config directory for persisted corpus paths.
-dirs = "6"
+dirs = "7"
 
 [dev-dependencies]
 rusqlite = "0.40"
